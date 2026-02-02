@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>YouTube動画再生サンプル3(YouTube API使用)</title>
+    <style>
+        body {
+            background-color: #000000;
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #player {
+            margin: 0 auto;
+            display: block;
+        }
+        h2 {
+            color: #ffffff;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h2>YouTube動画再生サンプル3(YouTube API使用)</h2>
+    <div id="player"></div>
+
+    <script>
+        // YouTube Iframe API を非同期で読み込む
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        // プレイヤー変数
+        let player;
+
+        // API 読み込み後に自動で呼ばれるコールバック
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                height: '511',
+                width: '964',
+                videoId: 'dIdjyw9qKWs', // ← ここに再生したい動画のIDを指定
+                playerVars: {
+                    'accelerometer': 1,
+                    'autoplay': 1,
+                    'clipboard-write': 1,
+                    'encrypted-media': 1,
+                    'gyroscope': 1,
+                    'picture-in-picture': 1,
+                    'web-share': 1
+                },
+                events: {
+                    'onReady': onPlayerReady,
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        // プレイヤーが準備完了したとき
+        function onPlayerReady(event) {
+            console.log('プレイヤー準備完了');
+            // 必要なら自動再生（ブラウザポリシーで制限あり）
+            // event.target.playVideo();
+        }
+
+        // 再生状態が変更されたとき
+        function onPlayerStateChange(event) {
+            const states = {
+                '-1': '未開始',
+                '0': '終了',
+                '1': '再生中',
+                '2': '一時停止',
+                '3': 'バッファリング',
+                '5': '頭出し済み'
+            };
+            console.log('状態変更:', states[event.data] || event.data);
+        }
+
+        // 外部から操作できる関数（オプション）
+        window.playVideo = function() {
+            if (player && typeof player.playVideo === 'function') {
+                player.playVideo();
+            }
+        };
+
+        window.pauseVideo = function() {
+            if (player && typeof player.pauseVideo === 'function') {
+                player.pauseVideo();
+            }
+        };
+
+        window.stopVideo = function() {
+            if (player && typeof player.stopVideo === 'function') {
+                player.stopVideo();
+            }
+        };
+    </script>
+
+</body>
+</html>

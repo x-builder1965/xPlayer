@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube動画再生サンプル1(HTMLのみ)</title>
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #000000;
+            font-family: sans-serif;
+        }
+        h2 {
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 20px;
+            max-width: 964px;
+        }
+        iframe {
+            max-width: 100%;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <h2>YouTube動画再生サンプル1(HTMLのみ)</h2>
+    <iframe title="YouTube video player" class="youtube-player" type="text/html" 
+        width="560" height="345" 
+        src="https://www.youtube.com/embed/9YEEl52u8XE?rel=0" 
+        frameborder="0"
+    ></iframe></body>
+</html>

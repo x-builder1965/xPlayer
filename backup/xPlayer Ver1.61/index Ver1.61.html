@@ -1,0 +1,1576 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>xPlayer -動画プレイヤー-</title>
+    <link rel="icon" type="image/x-icon" href="xPlayer.ico">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1c2526;
+            color: #ffffff;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .video-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            cursor: auto;
+        }
+        video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            border: none;
+            touch-action: none;
+        }
+        iframe#youtubePlayer {
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            display: none;
+        }
+        .filename,
+        .controls {
+            position: absolute;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            transition: opacity 0.3s ease;
+        }
+        .filename {
+            top: 20px;
+        }
+        .controls {
+            bottom: 20px;
+        }
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .left-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 6px 12px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            min-width: 40px;
+            position: relative;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button#folderInput.resume-active,
+        button#videoInput.resume-active {
+            background-color: #ff0000;
+        }
+        button#folderInput.resume-active:hover,
+        button#videoInput.resume-active:hover {
+            background-color: #cc0000;
+        }
+        input[type="range"] {
+            flex: 1;
+            accent-color: #007bff;
+            height: 8px;
+            background: #555;
+            border-radius: 5px;
+            outline: none;
+            position: relative;
+        }
+        input[type="range"]:hover {
+            accent-color: #ff0000;
+        }
+        input[type="range"]#volumeBar {
+            flex: none;
+            width: 10%;
+        }
+        #seekBar:hover,
+        #volumeBar:hover {
+            background: rgba(0, 123, 255, 0.2);
+            cursor: pointer;
+        }
+        #seekBar::-webkit-slider-thumb,
+        #volumeBar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #007bff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #seekBar:hover::-webkit-slider-thumb,
+        #volumeBar:hover::-webkit-slider-thumb {
+            background: #ff0000;
+            transform: scale(1.5);
+        }
+        #seekBar::-moz-range-thumb,
+        #volumeBar::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #007bff;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #seekBar:hover::-moz-range-thumb,
+        #volumeBar:hover::-moz-range-thumb {
+            background: #ff0000;
+            transform: scale(1.5);
+        }
+        input[type="file"] {
+            display: none;
+        }
+        input#urlInput {
+            background: rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            padding: 6px 12px;
+            font-size: 16px;
+            width: 90%;
+            display: none;
+        }
+        select#filenameDisplay,
+        select#sizeSelect {
+            background: rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            padding: 6px 12px;
+            font-size: 16px;
+            box-sizing: border-box;
+            cursor: pointer;
+            position: relative;
+        }
+        select#filenameDisplay {
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        select#sizeSelect {
+            width: 100px;
+        }
+        select#filenameDisplay option,
+        select#sizeSelect option {
+            background: #1c2526;
+            color: #ffffff;
+        }
+        #timeDisplay, #volumeDisplay {
+            color: #ffffff;
+            font-size: 16px;
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+        }
+        .spacer {
+            min-width: 10px;
+        }
+        #overlayDisplay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            text-align: center;
+            white-space: normal;
+            word-wrap: break-word;
+            max-width: 80vw;
+        }
+        #overlayDisplay.active {
+            opacity: 1;
+        }
+        .app-name-and-copyright {
+            margin-left: auto;
+            color: #ffffff;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 5px;
+        }
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: #ffffff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            white-space: nowrap;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+        .tooltip.visible {
+            opacity: 1;
+        }
+        button:hover .tooltip,
+        input[type="range"]:hover .tooltip,
+        input#urlInput:hover .tooltip,
+        select:hover .tooltip {
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        #youtubeCloseBtn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            display: none;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        .url-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="video-container">
+        <video id="videoPlayer" src=""></video>
+        <iframe id="youtubePlayer" src="" allow="autoplay; fullscreen" allowfullscreen></iframe>
+        <div class="filename">
+            <select id="filenameDisplay" data-tooltip="再生動画リスト">
+                <option value=""></option>
+            </select>
+            <div class="url-controls">
+                <input id="urlInput" type="text" placeholder="YouTube URLを入力" data-tooltip="YouTube URLを入力">
+                <button id="urlConfirmBtn" data-tooltip="URL再生">✅</button>
+                <button id="urlCancelBtn" data-tooltip="キャンセル">❌</button>
+            </div>
+        </div>
+        <div id="overlayDisplay"></div>
+        <div class="controls">
+            <div class="control-row">
+                <div class="left-controls">
+                    <button id="folderInput" data-tooltip="フォルダ選択">📁</button>
+                    <button id="videoInput" data-tooltip="動画ファイル選択">🗒️</button>
+                    <button id="urlInputBtn" data-tooltip="ネット動画選択">🌐</button>
+                    <span class="spacer"></span>
+                    <button id="prevVideoBtn" data-tooltip="前の動画へ（PgUp）">⏮️</button>
+                    <button id="rewindBtn" data-tooltip="30秒戻る（←／Swipe Left）">⏪</button>
+                    <button id="playPauseBtn" data-tooltip="再生（Space）">▶️</button>
+                    <button id="fastForwardBtn" data-tooltip="30秒進む（→／Swipe Right）">⏩</button>
+                    <button id="nextVideoBtn" data-tooltip="次の動画へ（PgDw）">⏭️</button>
+                    <span class="spacer"></span>
+                    <button id="fitModeBtn" data-tooltip="横に合わせる">↕️</button>
+                    <select id="sizeSelect" data-tooltip="サイズ変更">
+                        <option value="10">10%</option>
+                        <option value="25">25%</option>
+                        <option value="50" selected>50%</option>
+                        <option value="75">75%</option>
+                        <option value="100">100%</option>
+                    </select>
+                    <button id="fullscreenBtn" data-tooltip="フルスクリーン表示">🖥️</button>
+                </div>
+                <label class="app-name-and-copyright" id="appNameAndCopyright" data-tooltip="アプリ情報"></label>
+            </div>
+            <div class="control-row">
+                <button id="volumeMuteBtn" data-tooltip="ミュート/ミュート解除">🔊</button>
+                <span id="volumeDisplay" data-tooltip="音量（↑↓／Swipe Up Down）">20%</span>
+                <input type="range" id="volumeBar" value="0.2" min="0" max="1" step="0.01" data-tooltip="音量変更（↑↓／Swipe Up Down）">
+                <span id="timeDisplay" data-tooltip="再生時間/動画時間（←→／Swipe Left Right）">0:00:00 / 0:00:00</span>
+                <input type="range" id="seekBar" value="0" min="0" max="100" data-tooltip="再生位置変更（←→／Swipe Left Right）">
+            </div>
+        </div>
+        <button id="youtubeCloseBtn" data-tooltip="ネット動画再生終了">❌</button>
+        <input type="file" id="hiddenFolderInput" webkitdirectory directory multiple accept="video/*,video/x-matroska" style="display: none;">
+        <input type="file" id="hiddenVideoInput" accept="video/*,video/x-matroska" style="display: none;">
+    </div>
+
+    <script>
+        // ---------------------------------------------------------------------
+        const copyright = 'Copyright © 2025 @x-builder, Japan';
+        const email = 'x-builder@gmail.com';
+        const appName = 'xPlayer -動画プレイヤー- Ver1.61';
+        // ---------------------------------------------------------------------
+        // [変更履歴]
+        // 2025-10-15 Ver1.00 新規開発
+        // 2025-10-18 Ver1.01 フォルダ選択、マウス操作（再生／一時停止、シーク、ボリューム、フルスクリーン）追加
+        // 2025-10-18 Ver1.02 マウス上下ドラッグでボリューム変更を追加
+        // 2025-10-18 Ver1.03 起動時にプレイリストにappNameを表示、再生時間/動画時間とボリューム量の表示を追加
+        // 2025-10-18 Ver1.04 timeDisplayを時:分:秒（0:00:00 / 0:00:00）形式に変更
+        // 2025-10-18 Ver1.05 playPauseBtnの左右に前動画/前30秒/次30秒/次動画ボタンを追加
+        // 2025-10-18 Ver1.06 volumeMuteBtnのミュート解除時にボリュームが0%になる問題を修正
+        // 2025-10-18 Ver1.07 custom-file-button、nextVideoBtnの右側にボタン1つ分の余白を追加
+        // 2025-10-19 Ver1.08 シーク中の時間とボリューム変更中の量を画面中央に表示
+        // 2025-10-19 Ver1.09 表示カスタマイズ、キーボードショートカット（矢印キー、スペース）、オーバーレイのフェードアニメーションを追加
+        // 2025-10-19 Ver1.10 PgUp/PgDnで前動画/次動画、Home/Endで先頭動画/最終動画のショートカットを追加
+        // 2025-10-19 Ver1.11 overlayDisplayの非表示タイミングを.filename、.controlsに同期
+        // 2025-10-19 Ver1.12 Firefox対応のため、フォルダ選択をwebkitdirectoryに変更
+        // 2025-10-19 Ver1.13 マウスカーソルの表示/非表示を.controls、.filenameに同期
+        // 2025-10-20 Ver1.14 appNameAndCopyrightに${appName}　　${copyright}を設定
+        // 2025-10-20 Ver1.15 フォルダ選択ダイアログでキャンセル時、プレイリストを維持
+        // 2025-10-20 Ver1.16 プレイリストにフルパスを設定
+        // 2025-10-20 Ver1.17 シーク中に映像も変える
+        // 2025-10-20 Ver1.18 シーク中のプレビュー強化、シーク速度調整
+        // 2025-10-20 Ver1.19 サムネイルに時間表示、シーク感度UI、デバウンス
+        // 2025-10-20 Ver1.20 シーク感度を低速（0.5）に固定
+        // 2025-10-20 Ver1.21 サムネイル表示の修正（デバウンス50ms、seekedフォールバック、ログ追加）
+        // 2025-10-20 Ver1.22 thumbnailPreviewを廃止
+        // 2025-10-20 Ver1.23 .filename、.controls、.overlayDisplayのマウスオーバー時、非表示を抑止
+        // 2025-10-20 Ver1.24 .overlayDisplay上でドラッグしてもシーク継続
+        // 2025-10-20 Ver1.25 シークバーにマウスホバーで時間表示、ドラッグ中の視覚フィードバック強化、動画ロードエラー通知
+        // 2025-10-20 Ver1.26 <title>からVer1.25を削除、appNameでバージョンをVer1.26にカウント
+        // 2025-10-20 Ver1.27 起動時の動画ロードエラー（alert）を抑制
+        // 2025-10-20 Ver1.28 起動時の誤ったエラー抑制を修正
+        // 2025-10-20 Ver1.29 シークバーの視覚強化（ホバー時の背景とカーソル）
+        // 2025-10-21 Ver1.30 volumeBarのマウスオーバー時に音量表示
+        // 2025-10-21 Ver1.31 volumeBar、seekBarのマウスオーバー解除時にoverlayDisplayを非表示
+        // 2025-10-21 Ver1.32 フルスクリーンアイコンを❌に変更、#overlayDisplay.draggingを削除
+        // 2025-10-21 Ver1.33 コントロールサイズ調整スライダーを追加
+        // 2025-10-21 Ver1.34 sizeSelect初期値を50%、スライダー選択左側を赤色、起動時のoverlayDisplay抑制
+        // 2025-10-21 Ver1.35 folderInput, videoInputを<button>に変更
+        // 2025-10-21 Ver1.36 input[type="range"]のaccent-colorを#007bffに変更、appearance関連プロパティ削除
+        // 2025-10-21 Ver1.37 sizeSelectの左横にサイズ（XX%）を表示、folderInputからfullscreenBtnを左寄せ、appNameAndCopyrightを右寄せ
+        // 2025-10-21 Ver1.38 sizeSelectをプルダウンリスト（10%〜100%）に変更、controlSizeDisplay削除、
+        //                   起動時のoverlayDisplayを50%で表示、overlayDisplayのサイズをコントロールサイズに連動
+        // 2025-10-21 Ver1.39 sizeSelectの選択値を10%,25%,50%,75%,100%に変更、sizeSelectの幅を100pxに固定
+        // 2025-10-21 Ver1.40 controlsが画面幅に収まらない場合に折り返す
+        // 2025-10-21 Ver1.41 sizeSelect、volumeBarの値をlocalStorageに保存、起動時に復元
+        // 2025-10-21 Ver1.42 プレイリストと再生状況をlocalStorageに保存、起動時に再開
+        // 2025-10-21 Ver1.43 フォルダ選択時のプレイリスト復元と再生位置適用を修正
+        // 2025-10-21 Ver1.44 再生時間が最初に戻る問題を修正、再生位置復元メッセージを改善
+        // 2025-10-21 Ver1.45 再生位置が0に戻る問題を修正、1秒間隔の定期保存を実装
+        // 2025-10-21 Ver1.46 オーバーレイメッセージの不整合を修正、自動再生失敗のハンドリングを改善
+        // 2025-10-21 Ver1.47 currentTime上書き防止、再生位置復元メッセージをファイルパスに変更
+        // 2025-10-21 Ver1.48 各コントロールにツールチップを追加
+        // 2025-10-21 Ver1.49 カスタムツールチップを適用、ツールチップ文言を変更
+        // 2025-10-22 Ver1.50 描画モード（↕️/↔️）ボタンをsizeSelectの左横に追加、クリックで縦に合わせる/横に合わせるをトグル
+        // 2025-10-22 Ver1.51 保存されたプレイリストに応じてfolderInputまたはvideoInputを赤色に変更、起動時に再開メッセージをオーバーレイ表示
+        // 2025-10-22 Ver1.52 overlayDisplayの幅をsizeSelectの値に連動
+        // 2025-10-22 Ver1.53 overlayDisplayの幅を文字数に連動、画面中央にセンタリング、画面幅を超える場合は折り返し、fitModeBtnクリック時のoverlayDisplay表示を削除
+        // 2025-10-22 Ver1.54 overlayDisplayの再開メッセージ表示を再開対象ボタンのマウスオーバー時に変更、マウスオーバー解除またはクリック時に非表示
+        // 2025-10-22 Ver1.55 スマホのスワイプ（シーク、ボリューム）に対応、再開メッセージを「前回と同一📁で再開可能」「前回と同一🗒️で再開可能」に変更
+        // 2025-10-22 Ver1.56 スマホのシングルタップでfilename、overlayDisplay、controlsを非表示、ダブルタップでフルスクリーン切替
+        // 2025-10-22 Ver1.57 スマホのシングルタップでfilename、overlayDisplay、controlsが非表示されない問題を修正
+        // 2025-10-22 Ver1.58 スマホのシングルタップをトグル表示/非表示に変更、スマホのダブルタップでフルスクリーン切替
+        // 2025-10-22 Ver1.59 シングルタップ判定閾値を750ms/15pxに調整、ダブルタップ時間間隔を400msに変更、スマホでツールチップ抑制、スワイプ感度を最適化
+        // 2025-10-23 Ver1.60 画面サイズに基づくsizeSelectの自動調整を追加（480px以下:25%,768px以下:50%,1200px以下:75%,それ以上:100%）、sizeSelectのサイズ変更機能を維持
+        // 2025-10-24 Ver1.61 YouTube再生機能を追加、ネット動画選択ボタン（🌐）、URL入力、確定・取消ボタン、再生終了ボタンを追加
+        // ---------------------------------------------------------------------
+
+        // 表示カスタマイズ
+        const overlayTimeout = 3000;
+        const seekSensitivity = 0.3;
+        const volumeStep = 0.005;
+        const appNameAndCopyrightValue = `${appName}　　${copyright}`;
+
+        const video = document.getElementById('videoPlayer');
+        const youtubePlayer = document.getElementById('youtubePlayer');
+        const videoContainer = document.querySelector('.video-container');
+        const controls = document.querySelector('.controls');
+        const folderInput = document.getElementById('folderInput');
+        const videoInput = document.getElementById('videoInput');
+        const urlInputBtn = document.getElementById('urlInputBtn');
+        const urlInput = document.getElementById('urlInput');
+        const urlConfirmBtn = document.getElementById('urlConfirmBtn');
+        const urlCancelBtn = document.getElementById('urlCancelBtn');
+        const urlControls = document.querySelector('.url-controls');
+        const youtubeCloseBtn = document.getElementById('youtubeCloseBtn');
+        const hiddenFolderInput = document.getElementById('hiddenFolderInput');
+        const hiddenVideoInput = document.getElementById('hiddenVideoInput');
+        const prevVideoBtn = document.getElementById('prevVideoBtn');
+        const rewindBtn = document.getElementById('rewindBtn');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const fastForwardBtn = document.getElementById('fastForwardBtn');
+        const nextVideoBtn = document.getElementById('nextVideoBtn');
+        const seekBar = document.getElementById('seekBar');
+        const volumeMuteBtn = document.getElementById('volumeMuteBtn');
+        const volumeBar = document.getElementById('volumeBar');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const sizeSelect = document.getElementById('sizeSelect');
+        const fitModeBtn = document.getElementById('fitModeBtn');
+        const filename = document.querySelector('.filename');
+        const filenameDisplay = document.getElementById('filenameDisplay');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const volumeDisplay = document.getElementById('volumeDisplay');
+        const overlayDisplay = document.getElementById('overlayDisplay');
+        const appNameAndCopyright = document.getElementById('appNameAndCopyright');
+
+        let playlist = [];
+        let currentVideoIndex = 0;
+        let timeout;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let touchStartTime = 0;
+        let lastTouchTime = 0;
+        let isVolumeDragging = false;
+        let lastVolume = 0.2;
+        let wasPlaying = false;
+        let isMouseOverControls = false;
+        let isInitialLoad = true;
+        let saveInterval = null;
+        let fitMode = 'contain';
+        let isYouTubeMode = false;
+        let controlTimeout;
+
+        // デバイス判別（スマホ検知）
+        function isMobileDevice() {
+            return navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches;
+        }
+
+        // 画面サイズに基づくコントロールサイズの計算
+        function calculateControlSize() {
+            const screenWidth = window.innerWidth;
+            let sizePercent;
+            if (screenWidth <= 480) {
+                sizePercent = 10;
+            } else if (screenWidth <= 768) {
+                sizePercent = 25;
+            } else if (screenWidth <= 1200) {
+                sizePercent = 50;
+            } else if (screenWidth <= 1700) {
+                sizePercent = 75;
+            } else {
+                sizePercent = 100;
+            }
+            return sizePercent;
+        }
+
+        // コントロールサイズの更新
+        function updateControlSize(value, isInitial = false) {
+            const fontSize = 8 + (value / 100) * (24 - 8);
+            const padding = 2 + (value / 100) * (10 - 2);
+            const appNameAndCopyrightFontSize = 8 + (value / 100) * (17 - 8);
+            const appNameAndCopyrightPadding = 2 + (value / 100) * (8 - 2);
+            const sizeSelectWidth = 40 + (value / 100) * (124 - 40);
+            const controls = document.querySelectorAll('button, select#filenameDisplay, select#sizeSelect, #timeDisplay, #volumeDisplay, #appNameAndCopyright, input#urlInput');
+            controls.forEach(control => {
+                if (control.id === 'appNameAndCopyright') {
+                    control.style.fontSize = `${appNameAndCopyrightFontSize}px`;
+                    control.style.padding = `${appNameAndCopyrightPadding}px ${appNameAndCopyrightPadding * 2}px`;
+                } else {
+                    control.style.fontSize = `${fontSize}px`;
+                    control.style.padding = `${padding}px ${padding * 2}px`;
+                }
+                if (control.id === 'sizeSelect') {
+                    control.style.width = `${sizeSelectWidth}px`;
+                }
+            });
+
+            const overlayFontSize = 20 + (value / 100) * (160 - 20);
+            overlayDisplay.style.fontSize = `${overlayFontSize}px`;
+            if (!isInitial) {
+                updateOverlayDisplay(`🖌️ ${value}%`);
+            }
+            isInitialLoad = false;
+        }
+
+        // ウィンドウリサイズ時にコントロールサイズを自動調整
+        window.addEventListener('resize', () => {
+            const autoSize = calculateControlSize();
+            sizeSelect.value = autoSize;
+            localStorage.setItem('controlSize', autoSize);
+            updateControlSize(autoSize);
+            showControlsAndFilename();
+        });
+
+        // 初期状態でvideo.srcを明示的に空に設定
+        video.src = '';
+
+        // 表示カスタマイズ適用
+        appNameAndCopyright.textContent = appNameAndCopyrightValue;
+
+        // 初期状態でプレイリストにappNameAndCopyrightを設定
+        filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+
+        // localStorageから復元
+        const savedControlSize = localStorage.getItem('controlSize');
+        const savedVolume = localStorage.getItem('volume');
+        const savedPlaylist = localStorage.getItem('playlist');
+        const savedCurrentVideoIndex = localStorage.getItem('currentVideoIndex');
+        const savedCurrentTime = localStorage.getItem('currentTime');
+        const savedFitMode = localStorage.getItem('fitMode');
+
+        let initialControlSize = savedControlSize && ['10', '25', '50', '75', '100'].includes(savedControlSize)
+            ? parseInt(savedControlSize)
+            : calculateControlSize();
+        sizeSelect.value = initialControlSize;
+        updateControlSize(initialControlSize, true);
+
+        if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
+            volumeBar.value = savedVolume;
+            video.volume = savedVolume;
+            lastVolume = savedVolume;
+            volumeMuteBtn.textContent = savedVolume == 0 ? '🔇' : '🔊';
+            volumeMuteBtn.setAttribute('data-tooltip', savedVolume == 0 ? 'ミュート解除' : 'ミュート');
+            updateVolumeDisplay();
+        } else {
+            volumeBar.value = 0.2;
+            video.volume = 0.2;
+            lastVolume = 0.2;
+            volumeMuteBtn.textContent = '🔊';
+            volumeMuteBtn.setAttribute('data-tooltip', 'ミュート');
+            updateVolumeDisplay();
+        }
+
+        if (savedFitMode && ['contain', 'cover'].includes(savedFitMode)) {
+            fitMode = savedFitMode;
+            video.style.objectFit = fitMode;
+            fitModeBtn.textContent = fitMode === 'contain' ? '↕️' : '↔️';
+            fitModeBtn.setAttribute('data-tooltip', fitMode === 'contain' ? '横に合わせる' : '縦に合わせる');
+        } else {
+            fitMode = 'contain';
+            video.style.objectFit = fitMode;
+            fitModeBtn.textContent = '↕️';
+            fitModeBtn.setAttribute('data-tooltip', '横に合わせる');
+        }
+
+        let isResumeAvailable = false;
+        if (savedPlaylist && savedCurrentVideoIndex && savedCurrentTime) {
+            try {
+                const parsedPlaylist = JSON.parse(savedPlaylist);
+                const parsedCurrentVideoIndex = parseInt(savedCurrentVideoIndex);
+                if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0 && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
+                    filenameDisplay.innerHTML = `<option value="">再生途中:▶️ ${parsedPlaylist[parsedCurrentVideoIndex]}</option>`;
+                    currentVideoIndex = parsedCurrentVideoIndex;
+                    if (parsedPlaylist.length === 1) {
+                        videoInput.classList.add('resume-active');
+                        isResumeAvailable = true;
+                    } else if (parsedPlaylist.length >= 2) {
+                        folderInput.classList.add('resume-active');
+                        isResumeAvailable = true;
+                    }
+                } else {
+                    filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                }
+            } catch (e) {
+                filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+            }
+        } else {
+            filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+        }
+
+        // 定期保存
+        function startPeriodicSave() {
+            if (saveInterval) clearInterval(saveInterval);
+            saveInterval = setInterval(() => {
+                if (!video.paused && playlist.length > 0 && !isYouTubeMode) {
+                    localStorage.setItem('currentTime', video.currentTime);
+                }
+            }, 1000);
+        }
+
+        function stopPeriodicSave() {
+            if (saveInterval) {
+                clearInterval(saveInterval);
+                saveInterval = null;
+            }
+        }
+
+        function savePlaylistAndPlaybackState() {
+            if (playlist.length > 0 && !isYouTubeMode) {
+                const playlistNames = playlist.map(item => item.name);
+                localStorage.setItem('playlist', JSON.stringify(playlistNames));
+                localStorage.setItem('currentVideoIndex', currentVideoIndex);
+                localStorage.setItem('currentTime', video.currentTime || 0);
+            } else {
+                localStorage.removeItem('playlist');
+                localStorage.removeItem('currentVideoIndex');
+                localStorage.removeItem('currentTime');
+            }
+        }
+
+        // ツールチップ関連
+        function showTooltip(element) {
+            if (isMobileDevice()) return;
+            if (element.dataset.tooltip) {
+                let tooltip = element.querySelector('.tooltip');
+                if (!tooltip) {
+                    tooltip = document.createElement('div');
+                    tooltip.className = 'tooltip';
+                    tooltip.textContent = element.dataset.tooltip;
+                    element.appendChild(tooltip);
+                }
+                tooltip.classList.add('visible');
+            }
+        }
+
+        function hideTooltip(element) {
+            if (isMobileDevice()) return;
+            const tooltip = element.querySelector('.tooltip');
+            if (tooltip) {
+                tooltip.classList.remove('visible');
+            }
+        }
+
+        const tooltipElements = document.querySelectorAll('[data-tooltip]');
+        tooltipElements.forEach(element => {
+            element.addEventListener('mouseenter', () => showTooltip(element));
+            element.addEventListener('mouseleave', () => hideTooltip(element));
+        });
+
+        // ボタンクリック
+        folderInput.addEventListener('click', () => {
+            folderInput.classList.remove('resume-active');
+            videoInput.classList.remove('resume-active');
+            hideOverlayDisplay();
+            hiddenFolderInput.click();
+            switchToLocalMode();
+        });
+        videoInput.addEventListener('click', () => {
+            folderInput.classList.remove('resume-active');
+            videoInput.classList.remove('resume-active');
+            hideOverlayDisplay();
+            hiddenVideoInput.click();
+            switchToLocalMode();
+        });
+
+        folderInput.addEventListener('mouseenter', () => {
+            if (folderInput.classList.contains('resume-active')) {
+                updateOverlayDisplay('前回と同一📁で再開可能');
+            }
+        });
+        folderInput.addEventListener('mouseleave', () => {
+            if (folderInput.classList.contains('resume-active')) {
+                hideOverlayDisplay();
+            }
+        });
+
+        videoInput.addEventListener('mouseenter', () => {
+            if (videoInput.classList.contains('resume-active')) {
+                updateOverlayDisplay('前回と同一🗒️で再開可能');
+            }
+        });
+        videoInput.addEventListener('mouseleave', () => {
+            if (videoInput.classList.contains('resume-active')) {
+                hideOverlayDisplay();
+            }
+        });
+
+        urlInputBtn.addEventListener('click', () => {
+            filenameDisplay.style.display = 'none';
+            urlControls.style.display = 'flex';
+            urlInput.style.display = 'inline-block';
+            urlConfirmBtn.style.display = 'inline-block';
+            urlCancelBtn.style.display = 'inline-block';
+            urlInput.focus();
+            showControlsAndFilename();
+        });
+
+        urlConfirmBtn.addEventListener('click', () => {
+            const url = urlInput.value.trim();
+            if (url) {
+                const videoId = extractYouTubeVideoId(url);
+                if (videoId) {
+                    video.pause();
+                    isYouTubeMode = true;
+                    video.style.display = 'none';
+                    youtubePlayer.style.display = 'block';
+                    youtubePlayer.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1`;
+                    filename.style.display = 'none';
+                    controls.style.display = 'none';
+                    overlayDisplay.style.display = 'none';
+                    youtubeCloseBtn.style.display = 'block';
+                    showYouTubeControls();
+                } else {
+                    updateOverlayDisplay('無効なYouTube URLです');
+                }
+            }
+            hideURLInputControls();
+        });
+
+        urlCancelBtn.addEventListener('click', () => {
+            hideURLInputControls();
+            filenameDisplay.style.display = 'block';
+            showControlsAndFilename();
+        });
+
+        youtubeCloseBtn.addEventListener('click', () => {
+            switchToLocalMode();
+        });
+
+        function extractYouTubeVideoId(url) {
+            const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+            const match = url.match(regex);
+            return match ? match[1] : null;
+        }
+
+        function switchToLocalMode() {
+            isYouTubeMode = false;
+            video.style.display = 'block';
+            youtubePlayer.style.display = 'none';
+            youtubePlayer.src = '';
+            filename.style.display = 'block';
+            controls.style.display = 'flex';
+            urlControls.style.display = 'none';
+            filenameDisplay.style.display = 'block';
+            youtubeCloseBtn.style.display = 'none';
+            // updatePlaylistDisplay();
+            if (playlist.length > 0) {
+                filenameDisplay.innerHTML = `<option value="">再生途中:▶️ ${parsedPlaylist[parsedCurrentVideoIndex]}</option>`;
+            } else {
+                video.src = '';
+                filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+            }
+            showControlsAndFilename();
+            startPeriodicSave();
+        }
+
+        function hideURLInputControls() {
+            urlControls.style.display = 'none';
+            urlInput.style.display = 'none';
+            urlConfirmBtn.style.display = 'none';
+            urlCancelBtn.style.display = 'none';
+            urlInput.value = '';
+        }
+
+        function showYouTubeControls() {
+            clearTimeout(controlTimeout);
+            youtubeCloseBtn.style.opacity = '1';
+            controlTimeout = setTimeout(() => {
+                if (!isMouseOverControls) {
+                    youtubeCloseBtn.style.opacity = '0';
+                }
+            }, overlayTimeout);
+        }
+
+        youtubeCloseBtn.addEventListener('mouseover', () => {
+            isMouseOverControls = true;
+            clearTimeout(controlTimeout);
+            youtubeCloseBtn.style.opacity = '1';
+        });
+
+        youtubeCloseBtn.addEventListener('mouseleave', () => {
+            isMouseOverControls = false;
+            showYouTubeControls();
+        });
+
+        videoContainer.addEventListener('mousemove', () => {
+            if (isYouTubeMode) {
+                showYouTubeControls();
+            } else {
+                showControlsAndFilename();
+            }
+        });
+
+        // 描画モード
+        fitModeBtn.addEventListener('click', () => {
+            fitMode = fitMode === 'contain' ? 'cover' : 'contain';
+            video.style.objectFit = fitMode;
+            fitModeBtn.textContent = fitMode === 'contain' ? '↕️' : '↔️';
+            fitModeBtn.setAttribute('data-tooltip', fitMode === 'contain' ? '横に合わせる' : '縦に合わせる');
+            localStorage.setItem('fitMode', fitMode);
+            showControlsAndFilename();
+        });
+
+        // コントロールとファイル名の表示管理
+        function showControlsAndFilename() {
+            if (isYouTubeMode) {
+                showYouTubeControls();
+                return;
+            }
+            controls.style.opacity = '1';
+            filename.style.opacity = '1';
+            videoContainer.style.cursor = 'auto';
+            if (overlayDisplay.classList.contains('active')) {
+                overlayDisplay.style.display = 'block';
+                overlayDisplay.classList.add('active');
+            }
+            clearTimeout(timeout);
+            if (!isMouseOverControls) {
+                timeout = setTimeout(() => {
+                    if (!isMouseOverControls) {
+                        controls.style.opacity = '0';
+                        filename.style.opacity = '0';
+                        overlayDisplay.classList.remove('active');
+                        videoContainer.style.cursor = 'none';
+                        setTimeout(() => {
+                            overlayDisplay.style.display = 'none';
+                        }, 300);
+                    }
+                }, overlayTimeout);
+            }
+        }
+
+        function hideControlsAndFilename() {
+            if (isYouTubeMode) {
+                youtubeCloseBtn.style.opacity = '0';
+                return;
+            }
+            controls.style.opacity = '0';
+            filename.style.opacity = '0';
+            overlayDisplay.classList.remove('active');
+            videoContainer.style.cursor = 'none';
+            clearTimeout(timeout);
+            setTimeout(() => {
+                overlayDisplay.style.display = 'none';
+            }, 300);
+        }
+
+        controls.addEventListener('mouseover', () => {
+            isMouseOverControls = true;
+            clearTimeout(timeout);
+            controls.style.opacity = '1';
+            filename.style.opacity = '1';
+            videoContainer.style.cursor = 'auto';
+            if (overlayDisplay.classList.contains('active')) {
+                overlayDisplay.style.display = 'block';
+                overlayDisplay.classList.add('active');
+            }
+        });
+
+        controls.addEventListener('mouseleave', () => {
+            isMouseOverControls = false;
+            showControlsAndFilename();
+        });
+
+        filename.addEventListener('mouseover', () => {
+            isMouseOverControls = true;
+            clearTimeout(timeout);
+            controls.style.opacity = '1';
+            filename.style.opacity = '1';
+            videoContainer.style.cursor = 'auto';
+            if (overlayDisplay.classList.contains('active')) {
+                overlayDisplay.style.display = 'block';
+                overlayDisplay.classList.add('active');
+            }
+        });
+
+        filename.addEventListener('mouseleave', () => {
+            isMouseOverControls = false;
+            showControlsAndFilename();
+        });
+
+        // 時間フォーマット
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00:00';
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateTimeDisplay() {
+            const currentTime = formatTime(video.currentTime);
+            const duration = formatTime(video.duration);
+            timeDisplay.textContent = `${currentTime} / ${duration}`;
+        }
+
+        function updateVolumeDisplay() {
+            const volumePercent = Math.round(video.volume * 100);
+            volumeDisplay.textContent = `${volumePercent}%`;
+        }
+
+        function updateOverlayDisplay(content, isInitial = false) {
+            overlayDisplay.textContent = content;
+            const overlayFontSize = parseFloat(overlayDisplay.style.fontSize) || 90;
+            const charCount = content.length;
+            const charWidth = overlayFontSize * 0.6;
+            let overlayWidth = charCount * charWidth + 40;
+            overlayWidth = Math.max(200, Math.min(overlayWidth, window.innerWidth * 0.8));
+            overlayDisplay.style.width = `${overlayWidth}px`;
+            overlayDisplay.style.display = 'block';
+            overlayDisplay.classList.add('active');
+            if (!isInitial) {
+                showControlsAndFilename();
+            }
+        }
+
+        function hideOverlayDisplay() {
+            overlayDisplay.classList.remove('active');
+            setTimeout(() => {
+                overlayDisplay.style.display = 'none';
+            }, 300);
+        }
+
+        // 動画メタデータ読み込み
+        video.addEventListener('loadedmetadata', () => {
+            seekBar.max = 100;
+            updateTimeDisplay();
+            updateVolumeDisplay();
+            const rawCurrentTime = localStorage.getItem('currentTime');
+            const savedCurrentTime = parseFloat(rawCurrentTime);
+            if (!isNaN(savedCurrentTime) && savedCurrentTime > 0 && savedCurrentTime <= video.duration) {
+                video.currentTime = savedCurrentTime;
+                updateTimeDisplay();
+                video.play().catch(() => {
+                    playPauseBtn.textContent = '▶️';
+                    playPauseBtn.setAttribute('data-tooltip', '再生（Space）');
+                });
+                playPauseBtn.textContent = '⏸️';
+                playPauseBtn.setAttribute('data-tooltip', '一時停止（Space）');
+                startPeriodicSave();
+                savePlaylistAndPlaybackState();
+            } else {
+                video.currentTime = 0;
+                video.play().catch(() => {
+                    playPauseBtn.textContent = '▶️';
+                    playPauseBtn.setAttribute('data-tooltip', '再生（Space）');
+                });
+                playPauseBtn.textContent = '⏸️';
+                playPauseBtn.setAttribute('data-tooltip', '一時停止（Space）');
+                startPeriodicSave();
+                savePlaylistAndPlaybackState();
+            }
+        });
+
+        video.addEventListener('error', () => {
+            if (video.src && /\.(mp4|mkv|webm)$/i.test(video.src)) {
+                stopPeriodicSave();
+                playPauseBtn.textContent = '▶️';
+                playPauseBtn.setAttribute('data-tooltip', '再生（Space）');
+            }
+        });
+
+        video.addEventListener('mousemove', showControlsAndFilename);
+
+        video.addEventListener('click', (event) => {
+            event.preventDefault();
+            showControlsAndFilename();
+        });
+
+        video.addEventListener('dblclick', (event) => {
+            event.preventDefault();
+            if (!document.fullscreenElement) {
+                if (videoContainer.requestFullscreen) {
+                    videoContainer.requestFullscreen();
+                    fullscreenBtn.textContent = '❌';
+                    fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除');
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    fullscreenBtn.textContent = '🖥️';
+                    fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示');
+                }
+            }
+            showControlsAndFilename();
+        });
+
+        video.addEventListener('touchstart', (event) => {
+            event.preventDefault({ passive: false });
+            isDragging = false;
+            touchStartTime = Date.now();
+            const currentTime = touchStartTime;
+            if (currentTime - lastTouchTime < 400) {
+                event.stopPropagation();
+                if (!document.fullscreenElement) {
+                    if (videoContainer.requestFullscreen) {
+                        videoContainer.requestFullscreen();
+                        fullscreenBtn.textContent = '❌';
+                        fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除');
+                    }
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                        fullscreenBtn.textContent = '🖥️';
+                        fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示');
+                    }
+                }
+                showControlsAndFilename();
+            } else {
+                const touch = event.touches[0];
+                dragStartX = touch.clientX;
+                dragStartY = touch.clientY;
+                wasPlaying = !video.paused;
+                lastTouchTime = currentTime;
+            }
+        }, { passive: false });
+
+        video.addEventListener('touchmove', (event) => {
+            if (isYouTubeMode) return;
+            event.preventDefault({ passive: false });
+            const touch = event.touches[0];
+            const deltaX = touch.clientX - dragStartX;
+            const deltaY = touch.clientY - dragStartY;
+            const absDeltaX = Math.abs(deltaX);
+            const absDeltaY = Math.abs(deltaY);
+
+            if (absDeltaX > 5 || absDeltaY > 5) {
+                isDragging = true;
+            }
+
+            if (isDragging && video.duration) {
+                if (absDeltaX > absDeltaY && absDeltaX > 5) {
+                    isVolumeDragging = false;
+                    const seekStep = video.duration / 1000;
+                    const seekTime = deltaX * seekStep * seekSensitivity;
+                    let newTime = video.currentTime + seekTime;
+                    newTime = Math.max(0, Math.min(video.duration, newTime));
+                    video.currentTime = newTime;
+                    seekBar.value = (100 / video.duration) * newTime;
+                    updateTimeDisplay();
+                    updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+                    localStorage.setItem('currentTime', newTime);
+                } else if (absDeltaY > absDeltaX && absDeltaY > 5) {
+                    isVolumeDragging = true;
+                    const newVolume = video.volume - (deltaY * volumeStep);
+                    video.volume = Math.max(0, Math.min(1, newVolume));
+                    volumeBar.value = video.volume;
+                    lastVolume = video.volume;
+                    volumeMuteBtn.textContent = video.volume === 0 ? '🔇' : '🔊';
+                    volumeMuteBtn.setAttribute('data-tooltip', video.volume === 0 ? 'ミュート解除' : 'ミュート');
+                    updateVolumeDisplay();
+                    updateOverlayDisplay(`${video.volume === 0 ? '🔇' : '🔊'} ${Math.round(video.volume * 100)}%`);
+                    localStorage.setItem('volume', video.volume);
+                }
+                dragStartX = touch.clientX;
+                dragStartY = touch.clientY;
+                showControlsAndFilename();
+            }
+        }, { passive: false });
+
+        video.addEventListener('touchend', (event) => {
+            if (isYouTubeMode) return;
+            event.preventDefault({ passive: false });
+            event.stopPropagation();
+            const touchEndTime = Date.now();
+            const touch = event.changedTouches[0];
+            const deltaX = touch.clientX - dragStartX;
+            const deltaY = touch.clientY - dragStartY;
+            const absDeltaX = Math.abs(deltaX);
+            const absDeltaY = Math.abs(deltaY);
+            const touchDuration = touchEndTime - touchStartTime;
+
+            if (!isDragging && touchDuration < 750 && absDeltaX < 15 && absDeltaY < 15) {
+                if (controls.style.opacity === '1') {
+                    isMouseOverControls = false;
+                    hideControlsAndFilename();
+                } else {
+                    showControlsAndFilename();
+                }
+            } else if (isDragging) {
+                isDragging = false;
+                isVolumeDragging = false;
+                showControlsAndFilename();
+            }
+        }, { passive: false });
+
+        video.addEventListener('mousedown', (event) => {
+            if (isYouTubeMode) return;
+            if (event.button === 0) {
+                isDragging = true;
+                dragStartX = event.clientX;
+                dragStartY = event.clientY;
+                wasPlaying = !video.paused;
+                event.preventDefault();
+            }
+        });
+
+        video.addEventListener('mousemove', (event) => {
+            if (isYouTubeMode) return;
+            if (isDragging && video.duration) {
+                const deltaX = event.clientX - dragStartX;
+                const deltaY = event.clientY - dragStartY;
+                const absDeltaX = Math.abs(deltaX);
+                const absDeltaY = Math.abs(deltaY);
+
+                if (absDeltaX > absDeltaY && absDeltaX > 5) {
+                    isVolumeDragging = false;
+                    const seekStep = video.duration / 1000;
+                    const seekTime = deltaX * seekStep * seekSensitivity;
+                    let newTime = video.currentTime + seekTime;
+                    newTime = Math.max(0, Math.min(video.duration, newTime));
+                    video.currentTime = newTime;
+                    seekBar.value = (100 / video.duration) * newTime;
+                    updateTimeDisplay();
+                    updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+                    localStorage.setItem('currentTime', newTime);
+                } else if (absDeltaY > absDeltaX && absDeltaY > 5) {
+                    isVolumeDragging = true;
+                    const newVolume = video.volume - (deltaY * volumeStep);
+                    video.volume = Math.max(0, Math.min(1, newVolume));
+                    volumeBar.value = video.volume;
+                    lastVolume = video.volume;
+                    volumeMuteBtn.textContent = video.volume === 0 ? '🔇' : '🔊';
+                    volumeMuteBtn.setAttribute('data-tooltip', video.volume === 0 ? 'ミュート解除' : 'ミュート');
+                    updateVolumeDisplay();
+                    updateOverlayDisplay(`${video.volume === 0 ? '🔇' : '🔊'} ${Math.round(video.volume * 100)}%`);
+                    localStorage.setItem('volume', video.volume);
+                }
+
+                dragStartX = event.clientX;
+                dragStartY = event.clientY;
+                showControlsAndFilename();
+            }
+        });
+
+        video.addEventListener('mouseup', () => {
+            if (isYouTubeMode) return;
+            isDragging = false;
+            isVolumeDragging = false;
+            showControlsAndFilename();
+        });
+
+        video.addEventListener('mouseleave', () => {
+            if (isYouTubeMode) return;
+            isDragging = false;
+            isVolumeDragging = false;
+            showControlsAndFilename();
+        });
+
+        seekBar.addEventListener('mousemove', (e) => {
+            if (isYouTubeMode) return;
+            e.stopPropagation();
+            if (video.duration) {
+                const rect = seekBar.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                if (x >= 0 && x <= rect.width) {
+                    const time = video.duration * (x / rect.width);
+                    updateOverlayDisplay(`🕓 ${formatTime(time)}`);
+                }
+                showControlsAndFilename();
+            }
+        });
+
+        seekBar.addEventListener('mouseleave', () => {
+            if (isYouTubeMode) return;
+            if (!isDragging && !seekBar.matches(':active')) {
+                hideOverlayDisplay();
+            }
+        });
+
+        volumeBar.addEventListener('mousemove', (e) => {
+            if (isYouTubeMode) return;
+            e.stopPropagation();
+            const rect = volumeBar.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            if (x >= 0 && x <= rect.width) {
+                const volume = (x / rect.width);
+                const volumePercent = Math.round(volume * 100);
+                updateOverlayDisplay(`${volume === 0 ? '🔇' : '🔊'} ${volumePercent}%`);
+            }
+            showControlsAndFilename();
+        });
+
+        volumeBar.addEventListener('mouseleave', () => {
+            if (isYouTubeMode) return;
+            if (!isVolumeDragging && !volumeBar.matches(':active')) {
+                hideOverlayDisplay();
+            }
+        });
+
+        sizeSelect.addEventListener('change', () => {
+            const value = parseInt(sizeSelect.value);
+            localStorage.setItem('controlSize', value);
+            updateControlSize(value);
+            showControlsAndFilename();
+        });
+
+        video.addEventListener('timeupdate', () => {
+            if (isYouTubeMode) return;
+            if (!isDragging && !seekBar.matches(':active')) {
+                const value = (100 / video.duration) * video.currentTime;
+                seekBar.value = value;
+                updateTimeDisplay();
+            }
+        });
+
+        function updatePlaylistDisplay() {
+            filenameDisplay.innerHTML = '';
+            if (playlist.length === 0) {
+                const savedPlaylist = localStorage.getItem('playlist');
+                if (savedPlaylist) {
+                    try {
+                        const parsedPlaylist = JSON.parse(savedPlaylist);
+                        if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0) {
+		                    filenameDisplay.innerHTML = `<option value="">再生途中:▶️ ${parsedPlaylist[parsedCurrentVideoIndex]}</option>`;
+                        } else {
+                            filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                        }
+                    } catch (e) {
+                        filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                    }
+                } else {
+                    filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                }
+                return;
+            }
+            playlist.forEach((item, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = (index === currentVideoIndex ? '▶️ ' : '') + item.name;
+                filenameDisplay.appendChild(option);
+            });
+            filenameDisplay.value = currentVideoIndex;
+        }
+
+        filenameDisplay.addEventListener('change', () => {
+            if (isYouTubeMode) return;
+            const selectedIndex = parseInt(filenameDisplay.value);
+            if (!isNaN(selectedIndex)) {
+                currentVideoIndex = selectedIndex;
+                localStorage.setItem('currentTime', 0);
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+            }
+        });
+
+        hiddenFolderInput.addEventListener('change', (event) => {
+            const files = event.target.files;
+            if (files.length === 0) return;
+            playlist = [];
+            const savedPlaylist = localStorage.getItem('playlist');
+            let parsedSavedPlaylist = [];
+            if (savedPlaylist) {
+                parsedSavedPlaylist = JSON.parse(savedPlaylist);
+            }
+
+            for (const file of files) {
+                if (file.name.match(/\.(mp4|mkv|webm)$/i)) {
+                    playlist.push({ file, name: file.webkitRelativePath || file.name });
+                }
+            }
+            playlist.sort((a, b) => a.name.localeCompare(b.name));
+
+            if (playlist.length > 0) {
+                const playlistNames = playlist.map(item => item.name);
+                const matchesSavedPlaylist = savedPlaylist && JSON.stringify(playlistNames) === savedPlaylist;
+                if (matchesSavedPlaylist && savedCurrentVideoIndex) {
+                    currentVideoIndex = Math.min(parseInt(savedCurrentVideoIndex), playlist.length - 1);
+                } else {
+                    currentVideoIndex = 0;
+                    localStorage.setItem('currentTime', 0);
+                }
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+            } else {
+                filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                appNameAndCopyright.textContent = appNameAndCopyrightValue;
+                stopPeriodicSave();
+                savePlaylistAndPlaybackState();
+            }
+        });
+
+        hiddenVideoInput.addEventListener('change', (event) => {
+            const files = event.target.files;
+            if (files.length === 0) return;
+            const file = files[0];
+            if (file) {
+                try {
+                    playlist = [{ file, name: file.name }];
+                    const savedPlaylist = localStorage.getItem('playlist');
+                    let matchesSavedPlaylist = false;
+                    if (savedPlaylist) {
+                        try {
+                            const parsedSavedPlaylist = JSON.parse(savedPlaylist);
+                            matchesSavedPlaylist = parsedSavedPlaylist.length === 1 && parsedSavedPlaylist[0] === file.name;
+                        } catch (e) {
+                            console.error('保存されたプレイリストの解析に失敗:', e);
+                        }
+                    }
+                    if (matchesSavedPlaylist && savedCurrentVideoIndex) {
+                        currentVideoIndex = parseInt(savedCurrentVideoIndex) || 0;
+                    } else {
+                        currentVideoIndex = 0;
+                        localStorage.setItem('currentTime', 0);
+                    }
+                    updatePlaylistDisplay();
+                    playVideo(file);
+                } catch (e) {
+                    stopPeriodicSave();
+                    savePlaylistAndPlaybackState();
+                }
+            }
+        });
+
+        video.addEventListener('ended', () => {
+            if (isYouTubeMode) return;
+            video.currentTime = 0;
+            localStorage.setItem('currentTime', video.currentTime);
+            if (currentVideoIndex < playlist.length - 1) {
+                currentVideoIndex++;
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+            } else {
+                video.src = '';
+                savePlaylistAndPlaybackState();
+                stopPeriodicSave();
+            }
+        });
+
+        function playVideo(file) {
+            video.src = URL.createObjectURL(file);
+            updatePlaylistDisplay();
+            const savedVolume = localStorage.getItem('volume');
+            if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
+                video.volume = savedVolume;
+                volumeBar.value = savedVolume;
+                lastVolume = savedVolume;
+                volumeMuteBtn.textContent = savedVolume == 0 ? '🔇' : '🔊';
+                volumeMuteBtn.setAttribute('data-tooltip', savedVolume == 0 ? 'ミュート解除' : 'ミュート');
+            } else {
+                video.volume = volumeBar.value || 0.2;
+                lastVolume = video.volume;
+                volumeMuteBtn.textContent = '🔊';
+                volumeMuteBtn.setAttribute('data-tooltip', 'ミュート');
+            }
+            updateVolumeDisplay();
+            video.load();
+            showControlsAndFilename();
+        }
+
+        function togglePlayPause() {
+            if (isYouTubeMode) return;
+            if (video.paused) {
+                video.play().catch(() => {
+                    playPauseBtn.textContent = '▶️';
+                    playPauseBtn.setAttribute('data-tooltip', '再生（Space）');
+                });
+                playPauseBtn.textContent = '⏸️';
+                playPauseBtn.setAttribute('data-tooltip', '一時停止（Space）');
+                startPeriodicSave();
+            } else {
+                video.pause();
+                playPauseBtn.textContent = '▶️';
+                playPauseBtn.setAttribute('data-tooltip', '再生（Space）');
+                localStorage.setItem('currentTime', video.currentTime);
+                stopPeriodicSave();
+            }
+            showControlsAndFilename();
+        }
+
+        playPauseBtn.addEventListener('click', togglePlayPause);
+
+        video.addEventListener('contextmenu', (event) => {
+            if (isYouTubeMode) return;
+            event.preventDefault();
+            event.stopPropagation();
+            togglePlayPause();
+        });
+
+        prevVideoBtn.addEventListener('click', () => {
+            if (isYouTubeMode) return;
+            if (currentVideoIndex > 0) {
+                currentVideoIndex--;
+                localStorage.setItem('currentTime', 0);
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+            }
+            showControlsAndFilename();
+        });
+
+        rewindBtn.addEventListener('click', () => {
+            if (isYouTubeMode) return;
+            if (video.duration) {
+                wasPlaying = !video.paused;
+                let newTime = video.currentTime - 30;
+                newTime = Math.max(0, newTime);
+                video.currentTime = newTime;
+                seekBar.value = (100 / video.duration) * newTime;
+                updateTimeDisplay();
+                updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+                localStorage.setItem('currentTime', newTime);
+                showControlsAndFilename();
+            }
+        });
+
+        fastForwardBtn.addEventListener('click', () => {
+            if (isYouTubeMode) return;
+            if (video.duration) {
+                wasPlaying = !video.paused;
+                let newTime = video.currentTime + 30;
+                newTime = Math.min(video.duration, newTime);
+                video.currentTime = newTime;
+                seekBar.value = (100 / video.duration) * newTime;
+                updateTimeDisplay();
+                updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+                localStorage.setItem('currentTime', newTime);
+                showControlsAndFilename();
+            }
+        });
+
+        nextVideoBtn.addEventListener('click', () => {
+            if (isYouTubeMode) return;
+            if (currentVideoIndex < playlist.length - 1) {
+                currentVideoIndex++;
+                localStorage.setItem('currentTime', 0);
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+            }
+            showControlsAndFilename();
+        });
+
+        video.addEventListener('wheel', (event) => {
+            if (isYouTubeMode) return;
+            event.preventDefault();
+            const volumeStep = 0.05;
+            if (event.deltaY < 0) {
+                video.volume = Math.min(1, video.volume + volumeStep);
+            } else if (event.deltaY > 0) {
+                video.volume = Math.max(0, video.volume - volumeStep);
+            }
+            volumeBar.value = video.volume;
+            lastVolume = video.volume;
+            volumeMuteBtn.textContent = video.volume === 0 ? '🔇' : '🔊';
+            volumeMuteBtn.setAttribute('data-tooltip', video.volume === 0 ? 'ミュート解除' : 'ミュート');
+            updateVolumeDisplay();
+            updateOverlayDisplay(`${video.volume === 0 ? '🔇' : '🔊'} ${Math.round(video.volume * 100)}%`);
+            localStorage.setItem('volume', video.volume);
+            showControlsAndFilename();
+        });
+
+        seekBar.addEventListener('input', () => {
+            if (isYouTubeMode) return;
+            wasPlaying = !video.paused;
+            const time = video.duration * (seekBar.value / 100);
+            video.currentTime = time;
+            updateTimeDisplay();
+            updateOverlayDisplay(`🕓 ${formatTime(time)}`);
+            localStorage.setItem('currentTime', time);
+        });
+
+        volumeMuteBtn.addEventListener('click', () => {
+            if (isYouTubeMode) return;
+            if (video.volume === 0) {
+                video.volume = lastVolume || 0.2;
+                volumeBar.value = video.volume;
+                volumeMuteBtn.textContent = '🔊';
+                volumeMuteBtn.setAttribute('data-tooltip', 'ミュート');
+            } else {
+                lastVolume = video.volume;
+                video.volume = 0;
+                volumeBar.value = 0;
+                volumeMuteBtn.textContent = '🔇';
+                volumeMuteBtn.setAttribute('data-tooltip', 'ミュート解除');
+            }
+            updateVolumeDisplay();
+            updateOverlayDisplay(`${video.volume === 0 ? '🔇' : '🔊'} ${Math.round(video.volume * 100)}%`);
+            localStorage.setItem('volume', video.volume);
+        });
+
+        volumeBar.addEventListener('input', () => {
+            if (isYouTubeMode) return;
+            video.volume = volumeBar.value;
+            lastVolume = video.volume;
+            volumeMuteBtn.textContent = video.volume === 0 ? '🔇' : '🔊';
+            volumeMuteBtn.setAttribute('data-tooltip', video.volume === 0 ? 'ミュート解除' : 'ミュート');
+            updateVolumeDisplay();
+            updateOverlayDisplay(`${video.volume === 0 ? '🔇' : '🔊'} ${Math.round(video.volume * 100)}%`);
+            localStorage.setItem('volume', video.volume);
+        });
+
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                if (videoContainer.requestFullscreen) {
+                    videoContainer.requestFullscreen();
+                    fullscreenBtn.textContent = '❌';
+                    fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除');
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    fullscreenBtn.textContent = '🖥️';
+                    fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示');
+                }
+            }
+            showControlsAndFilename();
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                fullscreenBtn.textContent = '🖥️';
+                fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示');
+            } else {
+                fullscreenBtn.textContent = '❌';
+                fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除');
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (isYouTubeMode) return;
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                if (video.duration) {
+                    wasPlaying = !video.paused;
+                    const delta = event.key === 'ArrowLeft' ? -5 : 5;
+                    let newTime = video.currentTime + delta;
+                    newTime = Math.max(0, Math.min(video.duration, newTime));
+                    video.currentTime = newTime;
+                    seekBar.value = (100 / video.duration) * newTime;
+                    updateTimeDisplay();
+                    updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+                    localStorage.setItem('currentTime', newTime);
+                    showControlsAndFilename();
+                }
+            } else if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                const delta = event.key === 'ArrowUp' ? 0.05 : -0.05;
+                video.volume = Math.max(0, Math.min(1, video.volume + delta));
+                volumeBar.value = video.volume;
+                lastVolume = video.volume;
+                volumeMuteBtn.textContent = video.volume === 0 ? '🔇' : '🔊';
+                volumeMuteBtn.setAttribute('data-tooltip', video.volume === 0 ? 'ミュート解除' : 'ミュート');
+                updateVolumeDisplay();
+                updateOverlayDisplay(`${video.volume === 0 ? '🔇' : '🔊'} ${Math.round(video.volume * 100)}%`);
+                localStorage.setItem('volume', video.volume);
+                showControlsAndFilename();
+            } else if (event.key === ' ') {
+                event.preventDefault();
+                togglePlayPause();
+            } else if (event.key === 'PageUp' && playlist.length > 0) {
+                if (currentVideoIndex > 0) {
+                    currentVideoIndex--;
+                    localStorage.setItem('currentTime', 0);
+                    updatePlaylistDisplay();
+                    playVideo(playlist[currentVideoIndex].file);
+                    savePlaylistAndPlaybackState();
+                    showControlsAndFilename();
+                }
+            } else if (event.key === 'PageDown' && playlist.length > 0) {
+                if (currentVideoIndex < playlist.length - 1) {
+                    currentVideoIndex++;
+                    localStorage.setItem('currentTime', 0);
+                    updatePlaylistDisplay();
+                    playVideo(playlist[currentVideoIndex].file);
+                    savePlaylistAndPlaybackState();
+                    showControlsAndFilename();
+                }
+            } else if (event.key === 'Home' && playlist.length > 0) {
+                currentVideoIndex = 0;
+                localStorage.setItem('currentTime', 0);
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+                showControlsAndFilename();
+            } else if (event.key === 'End' && playlist.length > 0) {
+                currentVideoIndex = playlist.length - 1;
+                localStorage.setItem('currentTime', 0);
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+                showControlsAndFilename();
+            }
+        });
+    </script>
+</body>
+</html>
