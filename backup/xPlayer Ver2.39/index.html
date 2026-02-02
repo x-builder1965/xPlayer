@@ -1,0 +1,2966 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>xPlayer -動画プレイヤー-</title>
+    <link rel="icon" type="image/x-icon" href="xPlayer.ico">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1c2526;
+            color: #ffffff;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .video-container {
+            width: 100vw;
+            height: 100vh;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            cursor: auto;
+            display: flex;
+        }
+        video {
+            width: 100vw;
+            height: 100vh;
+            object-fit: contain;
+            border: none;
+        }
+        /* プレビュー動画（ワイプ） */
+        #videoPreview {
+            position: absolute;
+            width: 180px;
+            height: 100px;
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.6);
+            pointer-events: none;
+            z-index: 950;
+            display: none;
+            object-fit: contain;
+            background: #000;
+        }
+        /* ビデオ暗転オーバーレイ */
+        #darkOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 800;
+            pointer-events: none;
+            display: none;
+            transition: opacity 0.2s ease;
+        }
+        .filename,
+        .controls {
+            position: absolute;
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            transition: opacity 0.3s ease;
+            z-index: 900;
+            /* pointer-events は JS で動的に設定 */
+        }
+        .filename {
+            top: 20px;
+        }
+        .controls {
+            bottom: 20px;
+        }
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .left-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5vw;
+            flex-wrap: wrap;
+        }
+        .filename-controls {
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            width: 100%;
+        }
+        .filename-menus {
+            display: none; 
+            gap: 10px; 
+        }
+        button {
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            min-width: 40px;
+            position: relative;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        input[type="range"] {
+            flex: 1;
+            accent-color: #007bff;
+            height: 8px;
+            background: #555;
+            border-radius: 5px;
+            outline: none;
+            position: relative;
+        }
+        input[type="range"]:hover {
+            accent-color: #ff0000;
+        }
+        input[type="range"]#volumeBar {
+            flex: none;
+            width: 10%;
+        }
+        #seekBar:hover,
+        #volumeBar:hover {
+            background: rgba(0, 123, 255, 0.2);
+            cursor: pointer;
+        }
+        #seekBar::-webkit-slider-thumb,
+        #volumeBar::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #007bff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #seekBar:hover::-webkit-slider-thumb,
+        #volumeBar:hover::-webkit-slider-thumb {
+            background: #ff0000;
+            transform: scale(1.5);
+        }
+        #seekBar::-moz-range-thumb,
+        #volumeBar::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #007bff;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        #seekBar:hover::-moz-range-thumb,
+        #volumeBar:hover::-moz-range-thumb {
+            background: #ff0000;
+            transform: scale(1.5);
+        }
+        input[type="file"] {
+            display: none;
+        }
+        input#urlInput {
+            background: rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            padding: 6px 12px;
+            font-size: 16px;
+            width: 90%;
+            display: none;
+        }
+        select#filenameDisplay,
+        select#sizeSelect {
+            background: rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+            border: 1px solid #007bff;
+            border-radius: 5px;
+            padding: 6px 12px;
+            font-size: 16px;
+            box-sizing: border-box;
+            cursor: pointer;
+            position: relative;
+        }
+        select#filenameDisplay {
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        select#sizeSelect {
+            width: 100px;
+        }
+        select#filenameDisplay option,
+        select#sizeSelect option {
+            background: #1c2526;
+            color: #ffffff;
+        }
+        #timeDisplay, #volumeDisplay {
+            color: #ffffff;
+            font-size: 16px;
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+        }
+        .spacer {
+            min-width: 10px;
+        }
+        #overlayDisplay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 1000;
+            transition: opacity 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+            text-align: center;
+            white-space: normal;
+            word-wrap: break-word;
+            max-width: 80vw;
+        }
+        #overlayDisplay.active {
+            opacity: 1;
+        }
+        .app-name-and-copyright {
+            margin-left: auto;
+            color: #ffffff;
+            font-size: 12px;
+            padding: 6px 12px;
+            border-radius: 5px;
+        }
+        [data-tooltip] {
+            position: relative;
+        }
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: #ffffff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            white-space: nowrap;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+        .tooltip.visible {
+            opacity: 1;
+        }
+        button:hover .tooltip,
+        input[type="range"]:hover .tooltip,
+        input#urlInput:hover .tooltip,
+        select:hover .tooltip {
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        button#modeChangeBtn.convert-active {
+            background-color: #9c0000;
+        }
+        button#modeChangeBtn.convert-active:hover {
+            background-color: #630000;
+        }
+        button#urlInputBtn.embed-active {
+            background-color: #9c8c00;
+        }
+        button#urlInputBtn.embed-active:hover {
+            background-color: #635400;
+        }
+        .url-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            display: none;
+        }
+        .icon-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100vw;
+            height: 100vw;
+            background-image: url('xPlayer-slide.gif');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 1;
+            display: none;
+            opacity: 1;
+            pointer-events: none;
+        }
+        .icon-overlay.active {
+            display: block;
+        }
+
+        /* ヘルプ用設定 */
+        .help-container {
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+            font-size: calc(0.8vw + 0.8vh + 0.2vmin);
+            padding: 1em;
+            display: none;
+            flex-direction: column;
+        }
+        .header-row {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin-bottom: 0.5em;
+        }
+        h1 {
+            font-size: 2.2em;
+            color: #aaccff;
+            text-shadow: 0 0 0.8em rgba(0, 212, 255, 0.5);
+            margin: 0;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+        #helpCloseBtn {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #555;
+            border-radius: 50%;
+            width: 2.2em;
+            height: 2.2em;
+            font-size: 1.3em;
+            color: #ff6b6b;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 0.6em rgba(0, 0, 0, 0.5);
+            transition: all 0.2s ease;
+            z-index: 1000;
+        }
+        #helpCloseBtn:hover {
+            background: rgba(255, 107, 107, 0.3);
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 0 1em rgba(255, 107, 107, 0.6);
+        }
+        #helpCloseBtn:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+        .table-container {
+            width: 100%;
+            height: calc(100vh - 6em);
+            margin: 0 auto;
+            border: 1px solid #333;
+            border-radius: 1.2em;
+            overflow: hidden;
+            box-shadow: 0 0.6em 2em rgba(0, 0, 0, 0.6);
+            background-color: #1a1a1a;
+            font-size: 1.0em;
+            font-weight: 400;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            max-width: none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+        .colgroup col:nth-child(1) { width: 24%; }
+        .colgroup col:nth-child(2) { width: 9%; }
+        .colgroup col:nth-child(3) { width: 9%; }
+        .colgroup col:nth-child(4) { width: 18%; }
+        .colgroup col:nth-child(5) { width: auto; }
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .body-table {
+            flex: 1;
+            overflow-y: auto;
+            display: block;
+        }        
+        .body-table tr:hover {
+            background-color: #404040;
+            transition: background-color 0.3s ease;
+        }
+        .header-table th {
+            background-color: #0066cc;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.5em 0.5em;
+            text-align: center;
+            border-bottom: 1px solid #333;
+            white-space: normal;
+            word-wrap: break-word;
+            font-size: 0.9em;
+            line-height: 1.2;
+        }
+        .body-table td {
+            padding: 0.5em 0.8em;
+            text-align: center;
+            border-bottom: 1px solid #333;
+            white-space: normal;
+            word-wrap: break-word;
+            font-size: 0.9em;
+            line-height: 1.0;
+        }
+        .body-table td:nth-child(1) {
+            text-align: left;
+            font-weight: 600;
+        }
+        .body-table td:nth-child(2) {
+            font-size: 1.1em;
+        }
+        .body-table td:nth-child(5) {
+            text-align: left;
+            font-size: 0.7em;
+        }
+        .no-data { 
+            color: #666;
+        }
+        caption {
+            caption-side: top;
+            font-size: 1.05em;
+            color: #aaa;
+            font-weight: 100;
+            text-align: center;
+            padding: 0.6em;
+            background-color: #1a1a1a;
+            line-height: 1.3;
+        }
+        .icon { font-size: 1.2em; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="video-container">
+            <video id="videoPlayer" src=""></video>
+            <video id="videoPreview" src="" muted></video>
+            <div id="darkOverlay"></div>
+            <div class="filename">
+                <div class="filename-controls">
+                    <button id="modeChangeBtn" data-tooltip="視聴モード（Ctrl+v）">🎬</button>
+                    <select id="filenameDisplay" data-tooltip="再生動画リスト">
+                        <option value=""></option>
+                    </select>
+                    <div class="filename-menus">
+                        <button id="upMovePlaylistBtn" data-tooltip="上へ">🔼</button>
+                        <button id="downMovePlaylistBtn" data-tooltip="下へ">🔽</button>
+                        <button id="addPlaylistBtn" data-tooltip="追加">➕</button>
+                        <button id="removePlaylistBtn" data-tooltip="削除">➖</button>
+                        <button id="clearPlaylistBtn" data-tooltip="クリア">🆑</button>
+                        <button id="savePlaylistBtn" data-tooltip="保存">💾</button>
+                        <span class="spacer"></span>
+                    </div>
+                    <button id="filenameMenu" data-tooltip="プレイリスト編集">🚥</button>
+                </div>
+                <div class="url-controls">
+                    <input id="urlInput" type="text" placeholder="動画のURLを入力" data-tooltip="動画のURLを入力">
+                    <button id="urlConfirmBtn" data-tooltip="URL再生（Enter）">✅</button>
+                    <button id="urlCancelBtn" data-tooltip="キャンセル（Escape）">❌</button>
+                </div>
+            </div>
+            <div id="overlayDisplay"></div>
+            <div id="iconOverlay" class="icon-overlay"></div>
+            <div class="controls">
+                <div class="control-row">
+                    <div class="left-controls">
+                        <button id="urlInputBtn" data-tooltip="ネット動画選択（Ctrl+n）">🌐</button>
+                        <button id="folderInput" data-tooltip="フォルダ選択（Ctrl+d）">📁</button>
+                        <button id="videoInput" data-tooltip="ファイル選択（Ctrl+f）">🗒️</button>
+                        <span class="spacer"></span>
+                        <button id="prevVideoBtn" data-tooltip="前の動画へ（PgUp）">⏮️</button>
+                        <button id="rewindBtn" data-tooltip="30秒戻る（Ctrl+←）">⏪</button>
+                        <button id="playStopBtn" data-tooltip="停止（Ctrl+Space／Ctrl+Right Click）">⏹️</button>
+                        <button id="playPauseBtn" data-tooltip="再生（Space／Right Click）">▶️</button>
+                        <button id="fastForwardBtn" data-tooltip="30秒進む（Ctrl+→）">⏩</button>
+                        <button id="nextVideoBtn" data-tooltip="次の動画へ（PgDw）">⏭️</button>
+                        <span class="spacer"></span>
+                        <button id="fitModeBtn" data-tooltip="横に合わせる（Ctrl+x）">↔️</button>
+                        <select id="sizeSelect" data-tooltip="サイズ変更（Ctrl+s）">
+                            <option value="10">10%</option>
+                            <option value="25">25%</option>
+                            <option value="50" selected>50%</option>
+                            <option value="75">75%</option>
+                            <option value="100">100%</option>
+                        </select>
+                        <button id="fullscreenBtn" data-tooltip="フルスクリーン表示（Ctrl+z／Double Click）">🖥️</button>
+                        <button id="helpOpenBtn" data-tooltip="ヘルプ開く（Ctrl+h）">❔</button>
+                    </div>
+                    <label class="app-name-and-copyright" id="appNameAndCopyright"></label>
+                </div>
+                <div class="control-row">
+                    <button id="volumeMuteBtn" data-tooltip="ミュート（Ctrl+m）">🔊</button>
+                    <span id="volumeDisplay" data-tooltip="音量（↑↓／Swipe Up Down／Wheel）">20%</span>
+                    <input type="range" id="volumeBar" value="0.2" min="0" max="1" step="0.01" data-tooltip="音量変更（↑↓／Swipe Up Down）">
+                    <span id="timeDisplay" data-tooltip="再生時間/動画時間（←→／Swipe Left Right）">0:00:00 / 0:00:00</span>
+                    <input type="range" id="seekBar" value="0" min="0" max="100" data-tooltip="再生位置変更（←→／Swipe Left Right）">
+                </div>
+            </div>
+        </div>
+        <div class="help-container">
+            <div class="header-row">
+                <h1>xPlayer Ver2.38 ヘルプ</h1>
+                <button id="helpCloseBtn" data-tooltip="ヘルプ閉じる（Escape）">❌</button>
+            </div>
+            <div class="table-container">
+                <table class="header-table">
+                    <caption>機能別ボタン・キー操作・マウス操作対応表</caption>
+                    <colgroup class="colgroup">
+                        <col><col><col><col><col>
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>機能</th>
+                            <th>ボタン</th>
+                            <th>キー操作</th>
+                            <th>マウス操作</th>
+                            <th>説明</th>
+                        </tr>
+                    </thead>
+                </table>
+                <div class="body-table">
+                    <table>
+                        <colgroup class="colgroup">
+                            <col><col><col><col><col>
+                        </colgroup>
+                        <tbody>
+                            <tr>
+                                <td>《プレイリスト》</td>
+                                <td class="icon no-data"></td>
+                                <td class="key no-data"></td>
+                                <td class="mouse no-data"></td>
+                                <td class="note no-data"></td>
+                            </tr>
+                            <tr>
+                                <td>　　・動作モード切替</td>
+                                <td class="icon">🎬／🔄️</td>
+                                <td class="key">Ctrl+v</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・xPlayerの動作を視聴モード（青）／変換モード（赤）でトグル。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・プレイリスト編集 表示／非表示</td>
+                                <td class="icon">🚥</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリスト編集を表示／非表示でトグル。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・プレイリスト編集 上へ移動</td>
+                                <td class="icon">🔼</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択した動画を上へ移動。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・プレイリスト編集 下へ移動</td>
+                                <td class="icon">🔽</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択した動画を下へ移動。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・プレイリスト編集 動画追加</td>
+                                <td class="icon">➕</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択位置に動画ファイル・プレイリスト内の動画ファイルを追加。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・プレイリスト編集 動画削除</td>
+                                <td class="icon">➖</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択位置の動画を削除。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・プレイリスト編集 クリア</td>
+                                <td class="icon">🆑</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの全動画をクリア。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・プレイリスト編集 保存</td>
+                                <td class="icon">💾</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストを名前をつけて保存。</td>
+                            </tr>
+                            <tr>
+                                <td>《ネット動画》</td>
+                                <td class="icon no-data"></td>
+                                <td class="key no-data"></td>
+                                <td class="mouse no-data"></td>
+                                <td class="note no-data"></td>
+                            </tr>
+                            <tr>
+                                <td>　　・ネット動画再生 URL確定</td>
+                                <td class="icon">✅</td>
+                                <td class="key">Enter</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・ネット動画のURLを確定しポップアウト再生。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・ネット動画再生 キャンセル</td>
+                                <td class="icon">❌</td>
+                                <td class="key">Escape</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・ネット動画のURLをキャンセル。</td>
+                            </tr>
+                            <tr>
+                                <td>《コントロールパネル》</td>
+                                <td class="icon no-data"></td>
+                                <td class="key no-data"></td>
+                                <td class="mouse no-data"></td>
+                                <td class="note no-data"></td>
+                            </tr>
+                            <tr>
+                                <td>　　・ネット動画選択</td>
+                                <td class="icon">🌐</td>
+                                <td class="key">Ctrl+n</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・YouTube・Twichなどの動画をポップアウトで再生。（青：通常／黄：埋め込み）</td>
+                            </tr>
+                            <tr>
+                                <td>　　・YouTube動画再生アドレス切替</td>
+                                <td class="icon no-data">なし</td>
+                                <td class="key">Ctrl+y</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・YouTube動画再生アドレスを通常（青）／埋め込み（黄）でトグル。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・フォルダ選択</td>
+                                <td class="icon">📁</td>
+                                <td class="key">Ctrl+d</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・選択したフォルダ内（階層フォルダ含む）の動画およびプレイリスト内の動画を再生。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・ファイル選択</td>
+                                <td class="icon">🗒️</td>
+                                <td class="key">Ctrl+f</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・選択した動画（mp4、mkv、webm）またはプレイリスト（amppl）内の動画を再生。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・リスト先頭</td>
+                                <td class="icon no-data">なし</td>
+                                <td class="key">Home</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの先頭動画を再生。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・前の動画へ</td>
+                                <td class="icon">⏮️</td>
+                                <td class="key">PgUp</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの再生中動画の前動画を再生。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・30秒戻る</td>
+                                <td class="icon">⏪</td>
+                                <td class="key">Ctrl+←</td>
+                                <td class="mouse">Ctrl+Swipe Left</td>
+                                <td class="note">・再生中のまたは一時停止中動画を30秒前に戻す。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・5秒戻る</td>
+                                <td class="icon no-data">なし</td>
+                                <td class="key">←</td>
+                                <td class="mouse">Swipe Left</td>
+                                <td class="note">・再生中のまたは一時停止中動画を5秒前に戻す。（スライダー操作可能）</td>
+                            </tr>
+                            <tr>
+                                <td>　　・停止</td>
+                                <td class="icon">⏹️</td>
+                                <td class="key">Ctrl+Space</td>
+                                <td class="mouse">Ctrl+Right Click</td>
+                                <td class="note">・再生中の動画を停止。再開時は先頭から再生。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・再生／一時停止</td>
+                                <td class="icon">▶️／⏸️</td>
+                                <td class="key">Space</td>
+                                <td class="mouse">Right Click</td>
+                                <td class="note">・プレイリストで選択中の動画を再生（再開）または再生中の動画を一時停止。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・5秒進む</td>
+                                <td class="icon no-data">なし</td>
+                                <td class="key">→</td>
+                                <td class="mouse">Swipe Right</td>
+                                <td class="note">・再生中のまたは一時停止中動画を5秒先に進める。（スライダー操作可能）</td>
+                            </tr>
+                            <tr>
+                                <td>　　・30秒進む</td>
+                                <td class="icon">⏩</td>
+                                <td class="key">Ctrl+→</td>
+                                <td class="mouse">Ctrl+Swipe Right</td>
+                                <td class="note">・再生中のまたは一時停止中動画を30秒先に進める。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・次の動画へ</td>
+                                <td class="icon">⏭️</td>
+                                <td class="key">PgDw</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの再生中動画の次動画を再生。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・リスト最終</td>
+                                <td class="icon no-data">なし</td>
+                                <td class="key">End</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの最終動画を再生。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・横に合わせる／縦に合わせる</td>
+                                <td class="icon">↔️／↕️</td>
+                                <td class="key">Ctrl+x</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・再生動画を画面の横幅または縦幅に合わせて拡大・縮小。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・サイズ変更</td>
+                                <td class="icon no-data">なし</td>
+                                <td class="key">Ctrl+s</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイヤーの操作ボタンなどのサイズを変更。（スライダー操作可能）</td>
+                            </tr>
+                            <tr>
+                                <td>　　・フルスクリーン表示／解除</td>
+                                <td class="icon">🖥️／❌</td>
+                                <td class="key">Ctrl+z</td>
+                                <td class="mouse">Double Click</td>
+                                <td class="note">・プレイヤーのフルスクリーン表示またはウィンドウ表示を切り替える。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・ヘルプ開く</td>
+                                <td class="icon">❔</td>
+                                <td class="key">Ctrl+h</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイヤーの操作説明（当画面）を開く。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・ミュート設定／解除</td>
+                                <td class="icon">🔇／🔊</td>
+                                <td class="key">Ctrl+m</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・再生中の動画の音声をミュートまたはミュート解除を切り替える。</td>
+                            </tr>
+                            <tr>
+                                <td>　　・音量－</td>
+                                <td class="icon no-data">なし</td>
+                                <td class="key">↑</td>
+                                <td class="mouse">Swipe Up／Wheel Up</td>
+                                <td class="note">・再生中の動画の音量を下げる。（スライダー操作可能）</td>
+                            </tr>
+                            <tr>
+                                <td>　　・音量＋</td>
+                                <td class="icon no-data">なし</td>
+                                <td class="key">↓</td>
+                                <td class="mouse">Swipe Down／Wheel Down</td>
+                                <td class="note">・再生中の動画の音量を上げる。（スライダー操作可能）</td>
+                            </tr>
+                            <tr>
+                                <td>《その他》</td>
+                                <td class="icon no-data"></td>
+                                <td class="key no-data"></td>
+                                <td class="mouse no-data"></td>
+                                <td class="note no-data"></td>
+                            </tr>
+                            <tr>
+                                <td>　　・ﾌﾟﾚｲﾘｽﾄ・ｺﾝﾄﾛｰﾙ表示／非表示</td>
+                                <td class="icon no-data">なし</td>
+                                <td class="key">Ctrl+c</td>
+                                <td class="mouse">Click</td>
+                                <td class="note">・左クリックでプレイリスト・コントロール表示／非表示をトグル。（3秒で自動非表示）</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ---------------------------------------------------------------------
+        const copyright = 'Copyright © 2025 @x-builder, Japan';
+        const email = 'x-builder@gmail.com';
+        const appName = 'xPlayer -動画プレイヤー- Ver2.39';
+        // ---------------------------------------------------------------------
+        // [変更履歴]
+        // 2025-10-24 Ver2.00 （Windows版）の開発
+        //    ・folderInput、videoInputのWindows APIダイアログ対応（node.js使用）
+        //    ・folderInputクリック時の階層フォルダ読込対応（node.js使用）
+        //    ・folderInput、videoInputクリック時のプレイリストファイル（.amppl）の読込対応（node.js使用）
+        //    ・filenameDisplayに動画ファイルのフルパスを表示
+        // 2025-10-24 Ver2.01 起動（リロード）時、前回の動画ファイル、時間で再開されない。
+        // 2025-10-24 Ver2.02 再開対象ボタンの判定方法の変更
+        //    ・変更前：プレイリスト内の件数が1件の場合videoInput、2件以上の場合folderInput
+        //    ・変更後：選択ボタンのクリック時にlocalStorageに選択ボタン（videoInput、folderInput）を保存、判定時にlocalStorageから選択ボタンを取得
+        // 2025-10-24 Ver2.03 ネット動画再生時、volumeBar、volumeMuteBtnの状態を反映。
+        // 2025-10-24 Ver2.04 ネット動画再生中、overlayDisplayを非表示。
+        // 2025-10-24 Ver2.05 YouTube動画再生時に発生する1エラーに対応。
+        // 2025-10-25 Ver2.06 コントロールサイズ変更時のoverlayDisplay表示を削除。
+        // 2025-10-25 Ver2.07 YouTube動画の再生方法を外部（Chrome）起動に変更。🌐クリック時のURL自動貼り付け機能追加。
+        // 2025-10-25 Ver2.08 Twitch、YouTubeショートの動画再生機能追加。（不要な起動時リスナー削除）
+        // 2025-10-25 Ver2.09 再生停止ボタン（⏹️）の追加。
+        // 2025-10-26 Ver2.10 再生途中の動画の再生タイミングに起動直後に一時停止を追加
+        //    ・起動（リロード）時にlocalStorageに保存されている情報を取得
+        //    ・ボリューム量、ミュート状態、描画モードを設定
+        //    ・プレイリストを前回の状態に復元
+        //    ・再生動画のマーク（▶️）を設定
+        //    ・再生途中の時間で再生
+        //    ・再生直後に一時停止
+        // 2025-10-26 Ver2.11 フォルダ選択、ファイル選択の機能見直し。
+        //    ・起動（リロード）後のフォルダ選択、ファイル選択の再生再開機能の削除。
+        //    ・起動（リロード）後のフォルダ選択、ファイル選択の赤色の削除。
+        //    ・起動（リロード）後のフォルダ選択、ファイル選択のマウスオーバー時の再開メッセージの削除。
+        // 2025-10-26 Ver2.12 YouTubeAPI使用の廃止に伴う見直し。
+        // 2025-10-26 Ver2.13 Twitchライブの動画再生機能追加。
+        // 2025-10-26 Ver2.14 再生停止中、画面中央にアイコン（特大）を表示。動画再生中、一時停止中は非表示。
+        // 2025-10-26 Ver2.15 起動時、再生終了時にiconOverlayを表示。
+        //　　・起動時に復元するプレイリスト（動画ファイル）存在しない場合、iconOverlayを表示。
+        //　　・プレイリストの動画を全て再生した場合、iconOverlayを表示。
+        // 2025-10-27 Ver2.16 ネット動画URL入力時、ENTERでURK再生（✅）、CANCELでキャンセル（❌）を実行。
+        // 2025-10-27 Ver2.17 右クリックの再生／一時停止機能を左クリックに変更。ネット動画の自動再生機能追加。
+        // 2025-10-27 Ver2.18 アイコン操作とキー操作の処理共通化、キー割当、マウス操作割当の見直し。
+        // 2025-10-28 Ver2.19 ホイールの増減量の見直し、マウス移動時のfilename、controlsの表示を見直し。
+        // 2025-10-28 Ver2.20 マウスの左クリックでfilename、overlayDisplay、controlsの表示／非表示をトグル。
+        // 2025-10-28 Ver2.21 再生停止中のロゴをGIFアニメーションに変更
+        // 2025-10-29 Ver2.22 ヘルプ表示機能の追加
+        // 2025-10-30 Ver2.23 シークバーのドラック中にシークバービュー（ワイプ表示）機能追加。
+        // 2025-10-30 Ver2.24 filename、controlsの表示／非表示タイミング見直し
+        // 2025-10-31 Ver2.25 YouTube動画再生アドレス切替機能追加。
+        // 2025-11-01 Ver2.26 プレビュー（ワイプ）機能完全削除
+        // 2025-11-01 Ver2.27 seekBarホバー時のプレビュー（ワイプ）表示の実装見直し。
+        // 2025-11-01 Ver2.29 ControlSize計算の閾値の見直し。
+        // 2025-11-01 Ver2.30 初期処理、関数、グローバルイベント、イベントリスナーの整理。
+        // 2025-11-02 Ver2.31 コマンドライン引数再生機能追加。
+        // 2025-11-03 Ver2.32 コントロールのサイズ・位置調整。
+        // 2025-11-03 Ver2.33 非表示中プレイリスト、コントロールパネル内のオブジェクト完全無効化。
+        // 2025-11-04 Ver2.34 外部コーデック（FFmpeg）でHTML5非対応コーデックの動画再生
+        // 2025-11-07 Ver2.35 プレイリスト編集・保存機能追加
+        // 2025-11-08 Ver2.36 実行環境が無いためタッチ機能削除、その他不要変数・処理を削除。
+        // 2025-11-08 Ver2.37 FFmpeg変換で作成された一時mp4ファイル削除／非削除／入替を制御。変換中の中断機能追加。
+        // 2025-11-09 Ver2.38 動作モードを視聴（🎬）／変換（🔄️）で切り替える。一時ファイル削除制御を無効化。
+        // 2025-11-09 Ver2.39 FFmpeg変換で日本語の音声、字幕でコンバートする機能追加。
+        // ---------------------------------------------------------------------
+
+        // 🔲初期処理🔲
+        // Electronモジュールインポート
+        const { ipcRenderer } = require('electron');
+        const { exec } = require('child_process');
+
+        // 表示設定
+        const overlayTimeout = 3000;
+        const seekSensitivity = 0.3;
+        const volumeStep = 0.005;
+        const appNameAndCopyrightValue = `${appName}　${copyright}`;
+        const localAppData = process.env.LOCALAPPDATA;
+        const application = `${localAppData}\\Google\\Chrome\\Application\\chrome.exe`;
+        const fs = require('fs');
+        const path = require('path');
+        const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
+        const HTML5_SUPPORTED_CONVERT = ['.mp4'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
+
+        // DOM要素取得
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoPreview = document.getElementById('videoPreview');
+        const mainContainer = document.querySelector('.main-container');
+        const videoContainer = document.querySelector('.video-container');
+        const controls = document.querySelector('.controls');
+        const folderInput = document.getElementById('folderInput');
+        const videoInput = document.getElementById('videoInput');
+        const urlInputBtn = document.getElementById('urlInputBtn');
+        const urlInput = document.getElementById('urlInput');
+        const urlConfirmBtn = document.getElementById('urlConfirmBtn');
+        const urlCancelBtn = document.getElementById('urlCancelBtn');
+        const urlControls = document.querySelector('.url-controls');
+        const prevVideoBtn = document.getElementById('prevVideoBtn');
+        const rewindBtn = document.getElementById('rewindBtn');
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const playStopBtn = document.getElementById('playStopBtn');
+        const fastForwardBtn = document.getElementById('fastForwardBtn');
+        const nextVideoBtn = document.getElementById('nextVideoBtn');
+        const seekBar = document.getElementById('seekBar');
+        const volumeMuteBtn = document.getElementById('volumeMuteBtn');
+        const volumeBar = document.getElementById('volumeBar');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const sizeSelect = document.getElementById('sizeSelect');
+        const fitModeBtn = document.getElementById('fitModeBtn');
+        const filename = document.querySelector('.filename');
+        const filenameControls = document.querySelector('.filename-controls');
+        const filenameDisplay = document.getElementById('filenameDisplay');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const volumeDisplay = document.getElementById('volumeDisplay');
+        const overlayDisplay = document.getElementById('overlayDisplay');
+        const iconOverlay = document.getElementById('iconOverlay');
+        const appNameAndCopyright = document.getElementById('appNameAndCopyright');
+        const helpOpenBtn = document.getElementById('helpOpenBtn');
+        const helpCloseBtn = document.getElementById('helpCloseBtn');
+        const helpContainer = document.querySelector('.help-container');
+        const helpTitle = helpContainer.querySelector('h1');
+        const tooltipElements = document.querySelectorAll('[data-tooltip]');
+        const filenameMenus = document.querySelector('.filename-menus');
+        const filenameMenu = document.getElementById('filenameMenu');
+        const upMovePlaylistBtn = document.getElementById('upMovePlaylistBtn');
+        const downMovePlaylistBtn = document.getElementById('downMovePlaylistBtn');
+        const addPlaylistBtn = document.getElementById('addPlaylistBtn');
+        const removePlaylistBtn = document.getElementById('removePlaylistBtn');
+        const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
+        const savePlaylistBtn = document.getElementById('savePlaylistBtn');
+        const modeChangeBtn = document.getElementById('modeChangeBtn');
+
+        // localStorage から復元
+        const savedControlSize = localStorage.getItem('controlSize');
+        const savedVolume = localStorage.getItem('volume');
+        const savedPlaylist = localStorage.getItem('playlist');
+        const savedCurrentVideoIndex = localStorage.getItem('currentVideoIndex');
+        const savedCurrentTime = localStorage.getItem('currentTime');
+        const savedFitMode = localStorage.getItem('fitMode');
+        const savedYoutubeAdd = localStorage.getItem('youtubeAdd');
+
+        // 状態変数初期化
+        let playlist = [];
+        let currentVideoIndex = 0;
+        let timeout;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let isVolumeDragging = false;
+        let lastVolume = 0.2;
+        let wasPlaying = false;
+        let isMouseOverControls = false;
+        let isInitialLoad = true;
+        let saveInterval = null;
+        let fitMode = 'contain';
+        let controlTimeout;
+        let isHelpOpen = false;
+        let isSeekDragging = false;
+        let isMouseOverSeekBar = false;
+        let seekUpdateInterval = null;
+        let youtubeAdd = savedYoutubeAdd;
+        let isConverting = false;   // 変換中フラグ
+        let currentConvertPromise = null;  // Promise保持
+        let videoPlayerActive = false;
+        let modeChange = 'video';
+
+        // 初期状態設定
+        videoPlayer.src = '';
+        videoPreview.src = videoPlayer.src;
+        appNameAndCopyright.textContent = appNameAndCopyrightValue;
+        filenameMenus.style.display = 'none';
+
+        // コントロールサイズ適用
+        let initialControlSize = savedControlSize && ['10', '25', '50', '75', '100'].includes(savedControlSize)
+            ? parseInt(savedControlSize) : calculateControlSize();
+        sizeSelect.value = initialControlSize;
+        updateControlSize(initialControlSize, true);
+
+        // ネット動画選択色変更
+        if (youtubeAdd === 'embed') {
+            urlInputBtn.classList.add('embed-active');
+        } else {
+            urlInputBtn.classList.remove('embed-active');
+            youtubeAdd = 'normal';
+        }
+        localStorage.setItem('youtubeAdd', youtubeAdd);
+
+        // ボリューム復元
+        if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
+            volumeBar.value = savedVolume;
+            videoPlayer.volume = savedVolume;
+            lastVolume = savedVolume;
+            volumeMuteBtn.textContent = savedVolume == 0 ? '🔇' : '🔊';
+            volumeMuteBtn.setAttribute('data-tooltip', savedVolume == 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
+            updateVolumeDisplay();
+        } else {
+            volumeBar.value = 0.2;
+            videoPlayer.volume = 0.2;
+            lastVolume = 0.2;
+            volumeMuteBtn.textContent = '🔊';
+            volumeMuteBtn.setAttribute('data-tooltip', 'ミュート（Ctrl+m）');
+            updateVolumeDisplay();
+        }
+
+        // 描画モード復元
+        if (savedFitMode && ['contain', 'cover'].includes(savedFitMode)) {
+            fitMode = savedFitMode;
+            videoPlayer.style.objectFit = fitMode;
+            fitModeBtn.textContent = fitMode === 'contain' ? '↔️' : '↕️';
+            fitModeBtn.setAttribute('data-tooltip', fitMode === 'contain' ? '横に合わせる（Ctrl+x）' : '縦に合わせる（Ctrl+x）');
+        } else {
+            fitMode = 'contain';
+            videoPlayer.style.objectFit = fitMode;
+            fitModeBtn.textContent = '↔️';
+            fitModeBtn.setAttribute('data-tooltip', '横に合わせる（Ctrl+x）');
+        }
+
+        // 起動時の引数有無判定
+        (async () => {
+            const args = await ipcRenderer.invoke('get-command-line-args');
+            if (args && args.length > 0) {
+                // main.js が auto-play-files を送信するので、ここでは何もしない
+                return;
+            }
+
+            // 引数なし → プレイリストと再生状態復元
+            if (savedPlaylist && savedCurrentVideoIndex && savedCurrentTime) {
+                try {
+                    const parsedPlaylist = JSON.parse(savedPlaylist);
+                    const parsedCurrentVideoIndex = parseInt(savedCurrentVideoIndex);
+                    if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0 && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
+                        playlist = parsedPlaylist.map(path => ({
+                            file: { path },
+                            name: path
+                        }));
+                        currentVideoIndex = parsedCurrentVideoIndex;
+                        playVideo(playlist[currentVideoIndex].file);
+                        videoPlayer.pause();          // 常に一時停止
+                    } else {
+                        filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                        iconOverlay.classList.add('active');
+                    }
+                } catch (e) {
+                    console.error('プレイリスト復元エラー:', e);
+                    filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                    iconOverlay.classList.add('active');
+                }
+            } else {
+                filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                iconOverlay.classList.add('active');
+            }
+        })();
+
+        // 🔲関数🔲
+        // 時間フォーマット変換
+        function formatTime(seconds) {
+            if (isNaN(seconds)) return '0:00:00';
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // クリップボード貼り付け
+        async function pasteFromClipboard() {
+            return new Promise(async (resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('タイムアウト: クリップボードの読み込みに1000ms以上かかりました'));
+                }, 3000);
+
+                try {
+                    const text = await navigator.clipboard.readText();
+                    const platform = isTwitchOrYouTube(text);
+
+                    let videoId = null;
+                    if (platform === 'Twitch') {
+                        videoId = extractTwitchVideoId(text);
+                    } else if (platform === 'YouTube') {
+                        videoId = extractYouTubeVideoId(text);
+                    } else if (platform === 'Other') {
+                        videoId = text;
+                    }
+                    if (!videoId) {
+                        resolve(null);
+                    } else {
+                        urlInput.value = text;
+                        clearTimeout(timeout);
+                        resolve(text);
+                    }
+                } catch (err) {
+                    clearTimeout(timeout);
+                    reject(new Error(`クリップボードの読み込みに失敗: ${err.message}`));
+                }
+            });
+        }
+        
+        // 画面幅からコントロールサイズ計算
+        function calculateControlSize() {
+            const screenWidth = window.innerWidth;
+            let sizePercent;
+            if (screenWidth <= 680) {
+                sizePercent = 10;
+            } else if (screenWidth <= 1310) {
+                sizePercent = 25;
+            } else if (screenWidth <= 1623) {
+                sizePercent = 50;
+            } else if (screenWidth <= 1940) {
+                sizePercent = 75;
+            } else {
+                sizePercent = 100;
+            }
+            return sizePercent;
+        }
+
+        // フォント・パディング動的更新
+        function updateControlSize(value, isInitial = false) {
+            const fontSize = 8 + (value / 100) * (24 - 8);
+            const padding = 2 + (value / 100) * (10 - 2);
+            const appNameAndCopyrightFontSize = 8 + (value / 100) * (17 - 8);
+            const appNameAndCopyrightPadding = 2 + (value / 100) * (8 - 2);
+            const sizeSelectWidth = 40 + (value / 100) * (124 - 40);
+            const controls = document.querySelectorAll('button, select#filenameDisplay, select#sizeSelect, #timeDisplay, #volumeDisplay, #appNameAndCopyright, input#urlInput');
+            controls.forEach(control => {
+                if (control.id === 'appNameAndCopyright') {
+                    control.style.fontSize = `${appNameAndCopyrightFontSize}px`;
+                    control.style.padding = `${appNameAndCopyrightPadding}px ${appNameAndCopyrightPadding * 2}px`;
+                } else {
+                    control.style.fontSize = `${fontSize}px`;
+                    control.style.padding = `${padding}px ${padding * 2}px`;
+                }
+                if (control.id === 'sizeSelect') {
+                    control.style.width = `${sizeSelectWidth}px`;
+                }
+            });
+
+            const overlayFontSize = 20 + (value / 100) * (160 - 20);
+            overlayDisplay.style.fontSize = `${overlayFontSize}px`;
+            isInitialLoad = false;
+        }
+
+        // ツールチップ表示
+        function showTooltip(element) {
+            if (element.dataset.tooltip) {
+                let tooltip = element.querySelector('.tooltip');
+                if (!tooltip) {
+                    tooltip = document.createElement('div');
+                    tooltip.className = 'tooltip';
+                    tooltip.textContent = element.dataset.tooltip;
+                    element.appendChild(tooltip);
+                }
+                tooltip.classList.add('visible');
+            }
+        }
+
+        // ツールチップ非表示
+        function hideTooltip(element) {
+            const tooltip = element.querySelector('.tooltip');
+            if (tooltip) {
+                tooltip.classList.remove('visible');
+            }
+        }
+
+        // コントロール＋ファイル名表示（タイマー付き）
+        function showControlsAndFilename() {
+            disabledControls(false);
+            disabledfilename(false);
+            videoContainer.style.cursor = 'auto';
+            if (overlayDisplay.classList.contains('active')) {
+                overlayDisplay.style.display = 'block';
+                overlayDisplay.classList.add('active');
+            }
+            clearTimeout(timeout);
+            if (!isMouseOverControls) {
+                timeout = setTimeout(() => {
+                    if (!isMouseOverControls) {
+                        hideControlsAndFilename(); // ここで無効化
+                    }
+                }, overlayTimeout);
+            }
+            updateIconOverlay();
+        }
+
+        // コントロール＋ファイル名非表示
+        function hideControlsAndFilename() {
+            disabledControls(true);
+            disabledfilename(true);
+            overlayDisplay.classList.remove('active');
+            videoContainer.style.cursor = 'none';
+            clearTimeout(timeout);
+            setTimeout(() => {
+                overlayDisplay.style.display = 'none';
+            }, 300);
+            updateIconOverlay();
+        }
+
+        // コントロールパネル有効化／無効化
+        function disabledControls(disable) {
+            if (disable) {
+                controls.style.opacity = '0';
+                controls.style.pointerEvents = 'none';
+            } else {
+                controls.style.opacity = '1';
+                controls.style.pointerEvents = 'auto';
+            }
+            urlInputBtn.disable = disable;
+            folderInput.disable = disable;
+            videoInput.disable = disable;
+            prevVideoBtn.disable = disable;
+            rewindBtn.disable = disable;
+            playStopBtn.disable = disable;
+            playPauseBtn.disable = disable;
+            fastForwardBtn.disable = disable;
+            nextVideoBtn.disable = disable;
+            fitModeBtn.disable = disable;
+            sizeSelect.disable = disable;
+            fullscreenBtn.disable = disable;
+            helpOpenBtn.disable = disable;
+            volumeMuteBtn.disable = disable;
+            volumeBar.disable = disable;
+            seekBar.disable = disable;
+        }
+
+        // プレイリスト有効化／無効化
+        function disabledfilename(disable) {
+            if (disable) {
+                filename.style.opacity = '0';
+                // 【追加】pointer-events無効化 → 内包オブジェクト操作不可
+                filename.style.pointerEvents = 'none';
+            } else {
+                filename.style.opacity = '1';
+                // 【追加】pointer-events有効化
+                filename.style.pointerEvents = 'auto';
+            }
+            filenameDisplay.disable = disable;
+        }
+
+        // 再生時間表示更新
+        function updateTimeDisplay() {
+            const currentTime = formatTime(videoPlayer.currentTime);
+            const duration = formatTime(videoPlayer.duration);
+            timeDisplay.textContent = `${currentTime} / ${duration}`;
+            updateIconOverlay();
+        }
+
+        // 音量表示更新
+        function updateVolumeDisplay() {
+            const volumePercent = Math.round(videoPlayer.volume * 100);
+            volumeDisplay.textContent = `${volumePercent}%`;
+            updateIconOverlay();
+        }
+
+        // オーバーレイ表示
+        function updateOverlayDisplay(content, isInitial = false) {
+            overlayDisplay.textContent = content;
+            const overlayFontSize = parseFloat(overlayDisplay.style.fontSize) || 90;
+            const charCount = content.length;
+            const charWidth = overlayFontSize * 0.6;
+            let overlayWidth = charCount * charWidth + 40;
+            overlayWidth = Math.max(200, Math.min(overlayWidth, window.innerWidth * 0.8));
+            overlayDisplay.style.width = `${overlayWidth}px`;
+            overlayDisplay.style.display = 'block';
+            overlayDisplay.classList.add('active');
+            if (!isInitial) {
+                showControlsAndFilename();
+            }
+            updateIconOverlay();
+        }
+
+        // オーバーレイ非表示
+        function hideOverlayDisplay() {
+            overlayDisplay.classList.remove('active');
+            setTimeout(() => {
+                overlayDisplay.style.display = 'none';
+            }, 300);
+            updateIconOverlay();
+        }
+
+        // プレビュー位置更新関数
+        function updatePreviewPosition(e) {
+            const previewWidth = 180;
+            const previewHeight = 100;
+            const seekRect = seekBar.getBoundingClientRect();
+
+            // カーソルを中心に横位置を計算
+            let x = e.clientX - previewWidth / 2;
+
+            // 画面外に出ないよう調整
+            // 右側がはみ出る場合
+            if (x + previewWidth > window.innerWidth) {
+                x = window.innerWidth - previewWidth - 10;
+            }
+            // 左側がはみ出る場合
+            if (x < 0) {
+                x = 10;
+            }
+            // Y軸：seekBarの直上に固定（プレビュー高さ + 余白）
+            const y = seekRect.top - previewHeight - 20; // seekBarの上に10pxの隙間
+
+            videoPreview.style.left = `${x}px`;
+            videoPreview.style.top = `${y}px`;
+        }
+
+        // アイコンオーバーレイ更新
+        function updateIconOverlay() {
+            if (playlist.length === 0 || 
+                (currentVideoIndex >= playlist.length && videoPlayer.paused) || 
+                isVideoStopped()) {
+                iconOverlay.classList.add('active');
+            } else {
+                iconOverlay.classList.remove('active');
+            }
+        }
+
+        // URL入力欄非表示
+        function hideURLInputControls() {
+            urlControls.style.display = 'none';
+            urlInput.style.display = 'none';
+            urlConfirmBtn.style.display = 'none';
+            urlCancelBtn.style.display = 'none';
+            urlInput.value = '';
+        }
+
+        // 定期保存開始
+        function startPeriodicSave() {
+            if (saveInterval) clearInterval(saveInterval);
+            saveInterval = setInterval(() => {
+                if (!videoPlayer.paused && playlist.length > 0) {
+                    localStorage.setItem('currentTime', videoPlayer.currentTime);
+                }
+            }, 1000);
+        }
+
+        // 定期保存停止
+        function stopPeriodicSave() {
+            if (saveInterval) {
+                clearInterval(saveInterval);
+                saveInterval = null;
+            }
+        }
+
+        // プレイリストと再生状態保存
+        function savePlaylistAndPlaybackState() {
+            if (playlist.length > 0) {
+                const playlistPaths = playlist.map(item => item.file.path);
+                localStorage.setItem('playlist', JSON.stringify(playlistPaths));
+                localStorage.setItem('currentVideoIndex', currentVideoIndex);
+                localStorage.setItem('currentTime', videoPlayer.currentTime || 0);
+            } else {
+                localStorage.removeItem('playlist');
+                localStorage.removeItem('currentVideoIndex');
+                localStorage.removeItem('currentTime');
+                iconOverlay.classList.add('active');
+            }
+        }
+
+        // プレイリスト表示更新
+        function updatePlaylistDisplay() {
+            // videoPlayer は常に存在 → チェック不要
+            const isPlaybackActive = videoPlayer.src !== '';
+            filenameDisplay.innerHTML = '';
+            if (playlist.length === 0) {
+                const savedPlaylist = localStorage.getItem('playlist');
+                if (savedPlaylist) {
+                    try {
+                        const parsedPlaylist = JSON.parse(savedPlaylist);
+                        if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0) {
+                            filenameDisplay.innerHTML = `<option value="">再生途中:▶️ ${parsedPlaylist[currentVideoIndex]}</option>`;
+                        } else {
+                            filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                            iconOverlay.classList.add('active');
+                        }
+                    } catch (e) {
+                        filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                        iconOverlay.classList.add('active');
+                    }
+                } else {
+                    filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                    iconOverlay.classList.add('active');
+                }
+                updateIconOverlay();
+                return;
+            }
+            playlist.forEach((item, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = (index === currentVideoIndex && videoPlayerActive ? '▶️ ' : '') + item.name;
+                filenameDisplay.appendChild(option);
+            });
+            filenameDisplay.value = currentVideoIndex;
+            updateIconOverlay();
+        }
+
+        // 動画再生
+        async function playVideo(file) {
+            // 動画ソース設定
+            await setVideoSrc(file);
+        
+            // 共通再生処理
+            videoPlayer.load();
+            videoPreview.load();
+            videoPreview.pause();
+            videoPlayerActive = true;
+
+            // ボリューム復元
+            const savedVolume = localStorage.getItem('volume');
+            if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
+                videoPlayer.volume = savedVolume;
+                volumeBar.value = savedVolume;
+                lastVolume = savedVolume;
+                volumeMuteBtn.textContent = savedVolume == 0 ? '🔇' : '🔊';
+                volumeMuteBtn.setAttribute('data-tooltip', savedVolume == 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
+            } else {
+                videoPlayer.volume = volumeBar.value || 0.2;
+                lastVolume = videoPlayer.volume;
+                volumeMuteBtn.textContent = '🔊';
+                volumeMuteBtn.setAttribute('data-tooltip', 'ミュート（Ctrl+m）');
+            }
+            updateVolumeDisplay();
+
+            if (modeChange === 'convert') {
+                // 再生即終了 → 最後尾へ
+                setVideoDurationTime(); // duration が NaN でも安全に処理
+            } else {
+                // 再生時間復元
+                const savedCurrentTime = parseFloat(localStorage.getItem('currentTime'));
+                if (!isNaN(savedCurrentTime) && savedCurrentTime >= 0) {
+                    videoPlayer.currentTime = savedCurrentTime;
+                }
+            }
+
+            // 再生開始
+            videoPlayer.play().catch(() => {
+                playPauseBtn.textContent = '▶️';
+                playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            });
+            playPauseBtn.textContent = '⏸️';
+            playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+
+            startPeriodicSave();
+            showControlsAndFilename();
+            updatePlaylistDisplay();
+            updateIconOverlay();
+        }
+
+        // 動画のメタデータがロードされてから currentTime を操作するヘルパー
+        function setVideoDurationTime() {
+            if (videoPlayer.readyState >= 1) { // HAVE_METADATA 以上
+                videoPlayer.currentTime = videoPlayer.duration;
+            } else {
+                // メタデータがまだない → ロード後に設定
+                const handler = () => {
+                    videoPlayer.currentTime = videoPlayer.duration;
+                    videoPlayer.removeEventListener('loadedmetadata', handler);
+                };
+                videoPlayer.addEventListener('loadedmetadata', handler);
+            }
+        }
+
+        // 再生/一時停止切替
+        async function togglePlayPause() {
+            videoPlayerActive = true;
+            if (videoPlayer.paused) {
+                if (isVideoStopped()) {
+                    const file = playlist[currentVideoIndex].file;
+                    // 動画ソース設定
+                    await setVideoSrc(file);
+
+                    // 共通再生処理
+                    videoPlayer.load();
+                    videoPreview.load();
+                    videoPreview.pause();
+                    updatePlaylistDisplay();
+                }
+
+                if (modeChange === 'convert') {
+                    // 再生即終了 → 最後尾へ
+                    setVideoDurationTime(); // duration が NaN でも安全に処理
+                }
+                
+                videoPlayer.play().catch(() => {
+                    playPauseBtn.textContent = '▶️';
+                    playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+                    updateIconOverlay();
+                });
+                playPauseBtn.textContent = '⏸️';
+                playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+                startPeriodicSave();
+            } else {
+                videoPlayer.pause();
+                playPauseBtn.textContent = '▶️';
+                playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+                localStorage.setItem('currentTime', videoPlayer.currentTime);
+                stopPeriodicSave();
+            }
+            showControlsAndFilename();
+            updateIconOverlay();
+        }
+
+        // 動画ソース設定
+        async function setVideoSrc(file) {
+            const ext = path.extname(file.path).toLowerCase();
+
+            // HTML5 ネイティブ対応
+            if (isHTML5_SUPPORTED(ext)) {
+                videoPlayer.src = file.path;
+                videoPreview.src = videoPlayer.src;
+            } 
+            // 非対応 → FFmpeg変換
+            else {
+                videoPlayer.src = '';
+                videoPreview.src = videoPlayer.src;
+                if (isConverting) {
+                    updateOverlayDisplay('変換中… しばらくお待ちください');
+                    return;
+                }
+
+                updatePlaylistDisplay();
+                try {
+                    isConverting = true;
+                    updateOverlayDisplay('変換中…（FFmpeg）');
+                    currentConvertPromise = ipcRenderer.invoke('convert-video', file.path);
+                    const convertedPath = await currentConvertPromise;
+        
+                    const response = await fetch(`file://${convertedPath}`);
+                    const blob = await response.blob();
+                    const blobUrl = URL.createObjectURL(blob);
+        
+                    videoPlayer.src = blobUrl;
+                    videoPreview.src = videoPlayer.src;
+                    isConverting = false;
+        
+                    if (modeChange === 'video') {
+                        // 一時ファイル削除
+                        videoPlayer.onloadedmetadata = () => {
+                            if (convertedPath) {
+                                ipcRenderer.invoke('delete-temp-file', convertedPath)
+                                    .catch(e => console.warn('一時ファイル削除失敗:', e));
+                            }
+                            const revoke = () => {
+                                URL.revokeObjectURL(blobUrl);
+                                videoPlayer.removeEventListener('ended', revoke);
+                                videoPlayer.removeEventListener('error', revoke);
+                            };
+                            videoPlayer.addEventListener('ended', revoke);
+                            videoPlayer.addEventListener('error', revoke);
+                        };
+                    } else if (modeChange === 'convert') {
+                        // 動画ファイル削除
+                        videoPlayer.onloadedmetadata = () => {
+                            if (file.path) {
+                                ipcRenderer.invoke('delete-temp-file', file.path)
+                                    .catch(e => console.warn('動画ファイル削除失敗:', e));
+                            }
+                            const revoke = () => {
+                                URL.revokeObjectURL(blobUrl);
+                                videoPlayer.removeEventListener('ended', revoke);
+                                videoPlayer.removeEventListener('error', revoke);
+                            };
+                            videoPlayer.addEventListener('ended', revoke);
+                            videoPlayer.addEventListener('error', revoke);
+                        };
+                        // プレイリスト更新
+                        const currentIndex = playlist.findIndex(item => item.file.path === file.path);
+                        if (currentIndex !== -1) {
+                            // プレイリストの該当エントリを更新
+                            playlist[currentIndex] = {
+                                file: { path: convertedPath },
+                                name: convertedPath
+                            };
+                            // 必要に応じて UI のプレイリスト表示も更新（例: 再描画）
+                            updatePlaylistDisplay();
+                        }
+                    }
+                } catch (err) {
+                    console.error("変換失敗:", err);
+                    isConverting = false;
+                    updateOverlayDisplay(`変換失敗`);
+                    filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                    iconOverlay.classList.add('active');
+                    setTimeout(hideOverlayDisplay, 3000);
+                    return;
+                }
+            }
+        }
+
+        // 動画／停止中判定
+        function isVideoStopped() {
+            return videoPlayer.paused && 
+                   playlist.length > 0 && 
+                   !Array.from(filenameDisplay.options).some(option => option.text.includes('▶️'));
+        }
+
+        // Url再生完成
+        function urlInputEnter() {
+            const url = urlInput.value.trim();
+            if (!url) {
+                updateOverlayDisplay('動画のURLを入力してください');
+                updateIconOverlay();
+                return;
+            }
+
+            const platform = isTwitchOrYouTube(url);
+            let playlistId = null;
+            let videoId = null;
+            let videoUrl = null;
+
+            if (platform === 'Twitch') {
+                videoId = extractTwitchVideoId(url);
+                if (!videoId) {
+                    updateOverlayDisplay('無効なTwitch URLです。');
+                    updateIconOverlay();
+                    return;
+                }
+                videoUrl = `https://player.twitch.tv/?video=${videoId}&parent=twitch.tv&player=popout`;
+            } else if (platform === 'YouTube') {
+                playlistId = extractYouTubePlaylistId(url);
+                videoId = extractYouTubeVideoId(url);
+                if (!videoId && !playlistId) {
+                    updateOverlayDisplay('無効なYouTube URLです。');
+                    updateIconOverlay();
+                    return;
+                }
+                if (youtubeAdd === 'embed') {
+                    videoUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&cc_load_policy=0`;
+                } else if (youtubeAdd === 'normal') {
+                    videoUrl = `https://www.youtube.com/watch?v=${videoId}?autoplay=1&cc_load_policy=0`;
+                }
+                if (playlistId) {
+                    if (youtubeAdd === 'embed') {
+                        videoUrl = `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&controls=1&cc_load_policy=0`;
+                    } else if (youtubeAdd === 'normal') {
+                        videoUrl = `https://www.youtube.com/watch?v=${videoId}&list=${playlistId}&autoplay=1`;
+                    }
+                }
+            } else if (platform === 'Other') {
+                videoUrl = url;
+            } else {
+                updateOverlayDisplay('無効なURLです。');
+                updateIconOverlay();
+                return;
+            }
+
+            try {
+                const command = `${application} --profile-directory=Default --app="${videoUrl}"`;
+                exec(command);
+
+                console.log("再生動画>", command);
+
+                hideURLInputControls();
+                filenameControls.style.display = 'flex';
+                showControlsAndFilename();
+                updateIconOverlay();
+            } catch (error) {
+                console.error('YouTube Or Twitch Player Setup Error:', error.message, error.stack);
+                updateOverlayDisplay(`動画プレーヤーの設定に失敗しました（${error.message}）。別の動画を試してください。`);
+                updateIconOverlay();
+            }
+        }
+
+        // Url入力キャンセル
+        function urlInputCancel() {
+            hideURLInputControls();
+            filenameControls.style.display = 'flex';
+            showControlsAndFilename();
+            updateIconOverlay();
+        }
+
+        // 動画プラットフォーム判定
+        function isTwitchOrYouTube(url) {
+            if (url.includes('http')) {
+                if (url.includes('twitch.tv')) {
+                    if (url.includes('videos')) {
+                        return 'Twitch';
+                    } else {              
+                        return 'Other';
+                    }
+                } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+                    return 'YouTube';
+                }
+            }
+            return null;
+        }
+    
+        // Twitch動画ID抽出
+        function extractTwitchVideoId(url) {
+            const regex = /twitch\.tv\/videos\/(\d+)/;
+            const match = url.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // YouTube動画リストID抽出
+        function extractYouTubePlaylistId(url) {
+            const regex = /[?&]list=([^&#]+)/;
+            const match = url.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // YouTube動画ID抽出
+        function extractYouTubeVideoId(url) {
+            const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+            const match = url.match(regex);
+            return match ? match[1] : null;
+        }
+
+        // クリップボード貼り付け処理
+        async function handlePaste() {
+            try {
+                const pastedText = await pasteFromClipboard();
+            } catch (err) {
+                console.error(err.message);
+            }
+        }
+
+        // ヘルプを開く
+        function openHelp() {
+            videoContainer.style.display = 'none';
+            helpContainer.style.display = 'block';
+            helpTitle.textContent = `${appName}の操作`;
+            isHelpOpen = true;
+        }
+
+        // ヘルプを閉じる
+        function closeHelp() {
+            videoContainer.style.display = 'flex';
+            helpContainer.style.display = 'none';
+            isHelpOpen = false;
+            showControlsAndFilename();
+            updateIconOverlay();
+        }
+
+        // フォルダ設定
+        async function folderInputSet(videoFiles) {
+            if (videoFiles.length > 0) {
+                // FFmpeg変換中断
+                if (isConverting) {
+                    await ipcRenderer.invoke('cancel-conversion');  // 即中断
+                    isConverting = false;
+                    setTimeout(hideOverlayDisplay, 1000);
+                }
+        
+                playlist = videoFiles.map(file => ({
+                    file: { path: file.path },
+                    name: file.path
+                }));
+                // playlist.sort((a, b) => a.name.localeCompare(b.name));
+    
+                currentVideoIndex = 0;
+                localStorage.setItem('currentTime', 0);
+    
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+                updateIconOverlay();
+            } else {
+                iconOverlay.classList.add('active');
+            }
+        }
+
+        // ファイル設定
+        async function videoInputSet(videoFiles) {
+            if (videoFiles.length > 0) {
+                // FFmpeg変換中断
+                if (isConverting) {
+                    await ipcRenderer.invoke('cancel-conversion');  // 即中断
+                    isConverting = false;
+                    setTimeout(hideOverlayDisplay, 1000);
+                }
+        
+                playlist = videoFiles.map(file => ({
+                    file: { path: file.path },
+                    name: file.path
+                }));
+    
+                currentVideoIndex = 0;
+                localStorage.setItem('currentTime', 0);
+    
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+                updateIconOverlay();
+            } else {
+                iconOverlay.classList.add('active');
+            }
+        }
+
+        // HTML5対応拡張子判定
+        function isHTML5_SUPPORTED(ext) {
+            if (modeChange === 'video') {
+                return HTML5_SUPPORTED.includes(ext.toLowerCase());
+            } else {
+                return HTML5_SUPPORTED_CONVERT.includes(ext.toLowerCase());
+            }
+        }
+
+        // 上へ移動
+        function upMovePlaylist() {
+            const currentIndex = parseInt(filenameDisplay.value);
+            if (isNaN(currentIndex) || currentIndex <= 0 || playlist.length === 0) return;
+        
+            // 配列から移動
+            const [movedItem] = playlist.splice(currentIndex, 1);
+            playlist.splice(currentIndex - 1, 0, movedItem);
+        
+            // 再生中インデックスが影響を受ける場合の調整
+            if (currentVideoIndex === currentIndex) {
+                currentVideoIndex -= 1;
+            } 
+        
+            updatePlaylistDisplay();
+            savePlaylistAndPlaybackState();
+        }
+        
+        // 下へ移動
+        function downMovePlaylist() {
+            const currentIndex = parseInt(filenameDisplay.value);
+            if (isNaN(currentIndex) || currentIndex >= playlist.length - 1 || playlist.length === 0) return;
+        
+            // 配列から移動
+            const [movedItem] = playlist.splice(currentIndex, 1);
+            playlist.splice(currentIndex + 1, 0, movedItem);
+        
+            // 再生中インデックスが影響を受ける場合の調整
+            if (currentVideoIndex === currentIndex) {
+                currentVideoIndex += 1;
+            } 
+        
+            updatePlaylistDisplay();
+            savePlaylistAndPlaybackState();
+        }
+
+        // プレイリスト追加
+        async function addToPlaylist() {
+            try {
+                const files = await ipcRenderer.invoke('open-video-dialog');
+                if (!files || files.length === 0) return;
+        
+                const newFiles = [];
+                for (const file of files) {
+                    newFiles.push({ path: file.path, name: file.path });
+                }
+        
+                if (newFiles.length > 0) {
+                    // 現在の選択位置（挿入位置）
+                    let insertIndex = parseInt(filenameDisplay.value);
+                    if (isNaN(insertIndex) || insertIndex < 0 || insertIndex >= playlist.length) {
+                        insertIndex = playlist.length; // 無効な選択 → 末尾
+                    } else {
+                        insertIndex += 1; // 選択行の「下」に挿入
+                    }
+
+                    // 修正点：insertIndex の位置に newFiles を挿入
+                    const formattedFiles = newFiles.map(f => ({ file: { path: f.path }, name: f.name }));
+                    playlist.splice(insertIndex, 0, ...formattedFiles);
+        
+                    if (filenameDisplay.index < 0) {
+                        filenameDisplay.index = 0;
+                    }
+
+                    updatePlaylistDisplay();
+                    savePlaylistAndPlaybackState();
+                    showControlsAndFilename();
+                }
+            } catch (e) {
+                console.error('追加エラー:', e);
+                updateOverlayDisplay('動画追加に失敗');
+                setTimeout(hideOverlayDisplay, 2000);
+            }
+        }
+
+        // プレイリスト削除
+        async function removeFromPlaylist() {
+            const selectedIndex = parseInt(filenameDisplay.value);
+            if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= playlist.length) {
+                updateOverlayDisplay('削除する動画を選択してください');
+                setTimeout(hideOverlayDisplay, 2000);
+                return;
+            }
+
+            // FFmpeg変換中断
+            if (isConverting) {
+                await ipcRenderer.invoke('cancel-conversion');  // 即中断
+                isConverting = false;
+                setTimeout(hideOverlayDisplay, 1000);
+            }
+            
+            // 再生中かどうかの判定
+            const isCurrentlyPlaying = currentVideoIndex === selectedIndex && !videoPlayer.paused;
+        
+            // 削除実行
+            playlist.splice(selectedIndex, 1);
+        
+            // 新しいインデックスを計算
+            let newIndex;
+            if (selectedIndex < playlist.length) {
+                // 次がある → 次を選択
+                newIndex = selectedIndex;
+            } else {
+                // 次がない（最終行）→ 前を選択
+                newIndex = Math.max(0, playlist.length - 1);
+            }
+
+            if (playlist.length > 0) {
+                // プレイリストに動画が存在する場合。
+                if (isCurrentlyPlaying) {
+                    // 動画が再生中の場合。
+                    if (selectedIndex < playlist.length) {
+                        // 次動画が存在する場合。
+                        currentVideoIndex = newIndex;
+                        updatePlaylistDisplay();
+                        playVideo(playlist[currentVideoIndex].file);
+                    } else {
+                        // 次動画が存在しない（プレイリストの最後）場合。
+                        currentVideoIndex = newIndex;
+                        updatePlaylistDisplay();
+                        playStopBtn.click();
+                        filenameDisplay.value = currentVideoIndex;
+                    }
+                } else {
+                    // 動画が停止の場合。
+                    currentVideoIndex = newIndex;
+                    updatePlaylistDisplay();
+                    playStopBtn.click();
+                    filenameDisplay.value = currentVideoIndex;
+                } 
+            } else {
+                // プレイリストが空になった場合
+                filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                iconOverlay.classList.add('active');
+                playStopBtn.click();
+            }
+            savePlaylistAndPlaybackState();
+            showControlsAndFilename();
+        }
+
+        // プレイリストクリア
+        async function clearPlaylist() {
+            if (playlist.length === 0) return;
+            // FFmpeg変換中断
+            if (isConverting) {
+                await ipcRenderer.invoke('cancel-conversion');  // 即中断
+                isConverting = false;
+                setTimeout(hideOverlayDisplay, 1000);
+            }
+        
+            // 再生中の動画を停止
+            filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+            iconOverlay.classList.add('active');
+            playStopBtn.click();
+        
+            // プレイリストと状態をクリア
+            playlist.length = 0;
+            currentVideoIndex = -1;
+        
+            // UIと状態を更新
+            // updatePlaylistDisplay();
+            savePlaylistAndPlaybackState();
+            showControlsAndFilename();
+        }
+        
+        // プレイリスト保存
+        async function savePlaylist() {
+            if (playlist.length === 0) {
+                updateOverlayDisplay('保存する動画がありません');
+                setTimeout(hideOverlayDisplay, 2000);
+                return;
+            }
+        
+            // 常に保存ダイアログを表示
+            const result = await ipcRenderer.invoke('save-playlist-dialog');
+            if (result.canceled) {
+                return; // キャンセル → 何もしない
+            }
+        
+            const savePath = result.filePath;
+        
+            try {
+                const paths = playlist.map(item => item.file.path);
+                const content = paths.join('\n');
+                fs.writeFileSync(savePath, content, 'utf-8');
+        
+                updateOverlayDisplay(`💾: ${path.basename(savePath)}`);
+                setTimeout(hideOverlayDisplay, 2000);
+            } catch (e) {
+                console.error('保存エラー:', e);
+                updateOverlayDisplay('保存に失敗しました');
+                setTimeout(hideOverlayDisplay, 2000);
+            }
+        }
+
+        // 🔲レンダラーイベント🔲
+        // main.js からの自動再生指示を受信
+        ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
+            if (!videoFiles || videoFiles.length === 0) return;
+        
+            let isFolderMode = videoFiles.length > 1;
+            if (videoFiles.length === 1) {
+                try {
+                    const stat = await fs.promises.stat(videoFiles[0].path);
+                    isFolderMode = stat.isDirectory();
+                } catch (e) {
+                    console.warn("フォルダ判定失敗:", e);
+                    isFolderMode = false;
+                }
+            }
+            if (isFolderMode) {
+                folderInputSet(videoFiles);
+            } else {
+                videoInputSet(videoFiles);
+            }
+        });
+
+        // 変換進捗受信
+        ipcRenderer.on('convert-progress', (event, { percent }) => {
+            updateOverlayDisplay(`変換中… ${Math.round(percent)}%`);
+        });
+    
+        // 変換エラー
+        ipcRenderer.on('convert-error', (event, msg) => {
+            console.error("変換失敗:", err);
+            isConverting = false;
+            updateOverlayDisplay(`変換失敗`);
+            filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+            iconOverlay.classList.add('active');
+            setTimeout(hideOverlayDisplay, 3000);
+        });
+
+        // 🔲グローバルイベント🔲
+        // ウィンドウリサイズ
+        window.addEventListener('resize', () => {
+            const autoSize = calculateControlSize();
+            sizeSelect.value = autoSize;
+            localStorage.setItem('controlSize', autoSize);
+            updateControlSize(autoSize);
+            showControlsAndFilename();
+            updateIconOverlay();
+        });
+
+        // キー入力（イベントリスナー）
+        document.addEventListener('keydown', (event) => {
+            if (isHelpOpen) {
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeHelp();
+                } else {
+                    event.preventDefault();
+                }
+                return;
+            }
+
+            // 🌐Url入力状態
+            if (urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
+                // ✅Url入力確定（Enter）
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    urlInputEnter();
+                    return;
+                }
+                
+                // ❌Url入力キャンセル（Escape）
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    urlInputCancel();
+                    return;
+                }
+            }
+
+            // ❓ヘルプ開く（Ctrl+h）
+            if (event.ctrlKey && event.key === 'h') {
+                event.preventDefault();
+                openHelp();
+                return;
+            }
+
+            // 🎬／🔄️ファイル選択（Ctrl+r）
+            if (event.ctrlKey && event.key === 'v') {
+                event.preventDefault();
+                modeChangeBtn.click();
+                return;
+            }
+
+            // 🌐ネット動画選択（Ctrl+n）
+            if (event.ctrlKey && event.key === 'n') {
+                event.preventDefault();
+                urlInputBtn.click();
+                return;
+            }
+
+            // 📁フォルダ選択（Ctrl+d）
+            if (event.ctrlKey && event.key === 'd') {
+                event.preventDefault();
+                folderInput.click();
+                return;
+            }
+
+            // 🗒️ファイル選択（Ctrl+f）
+            if (event.ctrlKey && event.key === 'f') {
+                event.preventDefault();
+                videoInput.click();
+                return;
+            }
+
+            // ⏮️前の動画へ（PgUp）
+            if (event.key === 'PageUp' && playlist.length > 0) {
+                event.preventDefault();
+                prevVideoBtn.click();
+                return;
+            } 
+
+            // ⏪30秒戻る（Ctrl+←／Swipe Left）
+            if (event.ctrlKey && event.key === 'ArrowLeft') {
+                event.preventDefault();
+                rewindBtn.click();
+                return;
+            } 
+
+            // ▶️再生／⏸️一時停止（Space／Right Click）
+            if (!event.ctrlKey && event.key === ' ') {
+                event.preventDefault();
+                playPauseBtn.click();
+                return;
+            }
+
+            // ⏹️停止（Ctrl+Space／Ctrl+Right Clickk）
+            if (event.ctrlKey && event.key === ' ') {
+                event.preventDefault();
+                playStopBtn.click();
+                return;
+            } 
+
+            // ⏩30秒進む（Ctrl+→／Swipe Right）
+            if (event.ctrlKey && event.key === 'ArrowRight') {
+                event.preventDefault();
+                fastForwardBtn.click();
+                return;
+            } 
+
+            // ⏭️次の動画へ（PgDw）
+            if (event.key === 'PageDown' && playlist.length > 0) {
+                event.preventDefault();
+                nextVideoBtn.click();
+                return;
+            }
+
+            // ↔️横に合わせる／↕️縦に合わせる（Ctrl+x）
+            if (event.ctrlKey && event.key === 'x') {
+                event.preventDefault();
+                fitModeBtn.click();
+                return;
+            }
+
+            // サイズ変更（Ctrl+s）
+            if (event.ctrlKey && event.key === 's') {
+                event.preventDefault(); // ブラウザのデフォルト動作（保存ダイアログなど）を防止
+                const sizes = [100, 75, 50, 25, 10];
+                const currentSize = parseInt(sizeSelect.value);
+                const currentIndex = sizes.indexOf(currentSize);
+                const nextIndex = (currentIndex + 1) % sizes.length; // 次のインデックス（循環）
+                sizeSelect.value = sizes[nextIndex]; // 次のサイズに変更
+                sizeSelect.dispatchEvent(new Event('change')); // changeイベントをトリガー
+                return;
+            }
+
+            // 🖥️フルスクリーン表示／❌フルスクリーン解除（Ctrl+z／Double Click）
+            if (event.ctrlKey && event.key === 'z') {
+                event.preventDefault();
+                fullscreenBtn.click();
+                return;
+            }
+
+            // 🔊ミュート／🔇ミュート解除（Ctrl+m）
+            if (event.ctrlKey && event.key === 'm') {
+                event.preventDefault();
+                volumeMuteBtn.click();
+                return;
+            }
+
+            // 音量変更（↓／↑）
+            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                const delta = event.key === 'ArrowUp' ? 0.05 : -0.05;
+                videoPlayer.volume = Math.max(0, Math.min(1, videoPlayer.volume + delta));
+                volumeBar.value = videoPlayer.volume;
+                lastVolume = videoPlayer.volume;
+                volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
+                volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
+                updateVolumeDisplay();
+                updateOverlayDisplay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+                localStorage.setItem('volume', videoPlayer.volume);
+                showControlsAndFilename();
+                updateIconOverlay();
+                return;
+            }
+            
+            // 5秒戻る／5秒進む（←／→）
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                if (videoPlayer.duration) {
+                    wasPlaying = !videoPlayer.paused;
+                    const delta = event.key === 'ArrowLeft' ? -5 : 5;
+                    let newTime = videoPlayer.currentTime + delta;
+                    newTime = Math.max(0, Math.min(videoPlayer.duration, newTime));
+                    videoPlayer.currentTime = newTime;
+                    seekBar.value = (100 / videoPlayer.duration) * newTime;
+                    updateTimeDisplay();
+                    updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+                    localStorage.setItem('currentTime', newTime);
+                    showControlsAndFilename();
+                    updateIconOverlay();
+                }
+                return;
+            } 
+            
+            // 先頭動画再生（Home）
+            if (event.key === 'Home' && playlist.length > 0) {
+                currentVideoIndex = 0;
+                localStorage.setItem('currentTime', 0);
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+                showControlsAndFilename();
+                updateIconOverlay();
+                return;
+            }
+            
+            // 最終動画再生（End）
+            if (event.key === 'End' && playlist.length > 0) {
+                currentVideoIndex = playlist.length - 1;
+                localStorage.setItem('currentTime', 0);
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+                showControlsAndFilename();
+                updateIconOverlay();
+                return;
+            }
+
+            // プレイリスト・コントロール表示／非表示（Ctrl+c／Click）
+            if (event.ctrlKey && event.key === 'c') {
+                event.preventDefault();
+                videoPlayer.click();
+                return;
+            }
+
+            // YouTube生成アドレス（Ctrl+y）
+            if (event.ctrlKey && event.key === 'y') {
+                // 通常：normal／埋め込み：embed
+                if (youtubeAdd === 'embed') {
+                    urlInputBtn.classList.remove('embed-active');
+                    youtubeAdd = 'normal';
+                } else {
+                    urlInputBtn.classList.add('embed-active');
+                    youtubeAdd = 'embed';
+                }
+                localStorage.setItem('youtubeAdd', youtubeAdd);
+                return;
+            }
+        });
+
+        // グローバル mouseup でドラッグ終了を確実に検知
+        document.addEventListener('mouseup', (e) => {
+            if (isSeekDragging) {
+                isSeekDragging = false;
+                isDragging = false;
+                darkOverlay.style.display = 'none';
+                hideOverlayDisplay();
+                
+                if (videoPlayer.duration) {
+                    const time = videoPlayer.duration * (seekBar.value / 100);
+                    videoPlayer.currentTime = time;
+                    updateTimeDisplay();
+                    localStorage.setItem('currentTime', time);
+                }
+        
+                if (isMouseOverSeekBar) {
+                    videoPreview.style.display = 'block';
+                }
+            }
+        });
+
+        // フルスクリーン変更
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                fullscreenBtn.textContent = '🖥️';
+                fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示（Ctrl+z／Double Click）');
+            } else {
+                fullscreenBtn.textContent = '❌';
+                fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除（Ctrl+z／Double Click）');
+            }
+            updateIconOverlay();
+        });
+
+        // 🔲イベントリスナー🔲
+        // ネット動画選択
+        urlInputBtn.addEventListener('click', async () => {
+            await handlePaste();
+            if (!urlInput.value) {
+                filenameControls.style.display = 'none';
+                urlControls.style.display = 'flex';
+                urlInput.style.display = 'inline-block';
+                urlConfirmBtn.style.display = 'inline-block';
+                urlCancelBtn.style.display = 'inline-block';
+                urlInput.focus();
+                showControlsAndFilename();
+                updateIconOverlay();
+            } else {
+                urlInputEnter();
+            }
+        });
+
+        // フォルダ選択
+        folderInput.addEventListener('click', async () => {
+            hideOverlayDisplay();
+            try {
+                const videoFiles = await ipcRenderer.invoke('open-folder-dialog');
+                folderInputSet(videoFiles);
+            } catch (e) {
+                updateOverlayDisplay('フォルダ選択エラー');
+                console.error('フォルダ選択エラー:', e);
+                iconOverlay.classList.add('active');
+            }
+        });
+        
+        // ファイル選択
+        videoInput.addEventListener('click', async () => {
+            hideOverlayDisplay();
+            try {
+                const videoFiles = await ipcRenderer.invoke('open-video-dialog');
+                videoInputSet(videoFiles);
+            } catch (e) {
+                updateOverlayDisplay('ファイル選択エラー');
+                console.error('ファイル選択エラー:', e);
+                iconOverlay.classList.add('active');
+            }
+        });
+
+        // 動作モード切替（視聴／変換）
+        modeChangeBtn.addEventListener('click', () => {
+            if (modeChange === 'convert') {
+                modeChange = 'video';
+                modeChangeBtn.classList.remove('convert-active');
+            } else {
+                modeChange = 'convert';
+                modeChangeBtn.classList.add('convert-active');
+            }
+            modeChangeBtn.textContent = modeChange === 'video' ? '🎬' : '🔄️';
+            modeChangeBtn.setAttribute('data-tooltip', modeChange === 'video' ? '視聴モード（Ctrl+v）' : '変換モード（Ctrl+v）');
+            localStorage.setItem('modeChange', modeChange);
+        });
+        
+        // URL再生
+        urlConfirmBtn.addEventListener('click', () => {
+            urlInputEnter();
+        });
+
+        // URL入力キャンセル
+        urlCancelBtn.addEventListener('click', () => {
+            urlInputCancel();
+        });
+
+        // 再生/一時停止
+        playPauseBtn.addEventListener('click', togglePlayPause);
+
+        // 再生停止
+        playStopBtn.addEventListener('click', async () => {
+            const options = filenameDisplay.options;
+            
+            videoPlayer.pause();
+            playPauseBtn.textContent = '▶️';
+            playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            videoPlayer.src = '';
+            videoPreview.src = videoPlayer.src;         // プレビューも解放
+            videoPlayer.load();
+            videoPreview.load();
+            for (let i = 0; i < options.length; i++) {
+                options[i].text = options[i].text.replace('▶️ ', '');
+            }
+            videoPlayerActive = false;
+            stopPeriodicSave();
+            showControlsAndFilename();
+            updateIconOverlay();
+        
+            // FFmpeg変換中断
+            if (isConverting) {
+                await ipcRenderer.invoke('cancel-conversion');
+                isConverting = false;
+                setTimeout(hideOverlayDisplay, 1000);
+            }
+        });
+
+        // 前の動画
+        prevVideoBtn.addEventListener('click', () => {
+            if (currentVideoIndex > 0) {
+                currentVideoIndex--;
+                localStorage.setItem('currentTime', 0);
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+                updateIconOverlay();
+            }
+            showControlsAndFilename();
+        });
+
+        // 30秒戻る
+        rewindBtn.addEventListener('click', () => {
+            if (videoPlayer.duration) {
+                wasPlaying = !videoPlayer.paused;
+                let newTime = videoPlayer.currentTime - 30;
+                newTime = Math.max(0, newTime);
+                videoPlayer.currentTime = newTime;
+                seekBar.value = (100 / videoPlayer.duration) * newTime;
+                updateTimeDisplay();
+                updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+                localStorage.setItem('currentTime', newTime);
+                showControlsAndFilename();
+                updateIconOverlay();
+            }
+        });
+
+        // 30秒進む
+        fastForwardBtn.addEventListener('click', () => {
+            if (videoPlayer.duration) {
+                wasPlaying = !videoPlayer.paused;
+                let newTime = videoPlayer.currentTime + 30;
+                newTime = Math.min(videoPlayer.duration, newTime);
+                videoPlayer.currentTime = newTime;
+                seekBar.value = (100 / videoPlayer.duration) * newTime;
+                updateTimeDisplay();
+                updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+                localStorage.setItem('currentTime', newTime);
+                showControlsAndFilename();
+                updateIconOverlay();
+            }
+        });
+
+        // 次の動画
+        nextVideoBtn.addEventListener('click', () => {
+            if (currentVideoIndex < playlist.length - 1) {
+                currentVideoIndex++;
+                localStorage.setItem('currentTime', 0);
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+                showControlsAndFilename();
+                updateIconOverlay();
+            } else {
+                videoPlayer.src = '';
+                videoPreview.src = videoPlayer.src;
+                savePlaylistAndPlaybackState();
+                stopPeriodicSave();
+                iconOverlay.classList.add('active');
+            }
+            showControlsAndFilename();
+        });
+
+        // ミュート/解除
+        volumeMuteBtn.addEventListener('click', () => {
+            if (videoPlayer.volume === 0) {
+                videoPlayer.volume = lastVolume || 0.2;
+                volumeBar.value = videoPlayer.volume;
+                volumeMuteBtn.textContent = '🔊';
+                volumeMuteBtn.setAttribute('data-tooltip', 'ミュート（Ctrl+m）');
+            } else {
+                lastVolume = videoPlayer.volume;
+                videoPlayer.volume = 0;
+                volumeBar.value = 0;
+                volumeMuteBtn.textContent = '🔇';
+                volumeMuteBtn.setAttribute('data-tooltip', 'ミュート解除（Ctrl+m）');
+            }
+            updateVolumeDisplay();
+            updateOverlayDisplay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+            localStorage.setItem('volume', videoPlayer.volume);
+            updateIconOverlay();
+        });
+
+        // フルスクリーン切替
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                if (mainContainer.requestFullscreen) {
+                    mainContainer.requestFullscreen();
+                    fullscreenBtn.textContent = '❌';
+                    fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除（Ctrl+z／Double Click）');
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    fullscreenBtn.textContent = '🖥️';
+                    fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示（Ctrl+z／Double Click）');
+                }
+            }
+            showControlsAndFilename();
+            updateIconOverlay();
+        });
+
+        // 描画モード切替
+        fitModeBtn.addEventListener('click', () => {
+            fitMode = fitMode === 'contain' ? 'cover' : 'contain';
+            videoPlayer.style.objectFit = fitMode;
+            fitModeBtn.textContent = fitMode === 'contain' ? '↔️' : '↕️';
+            fitModeBtn.setAttribute('data-tooltip', fitMode === 'contain' ? '横に合わせる（Ctrl+x）' : '縦に合わせる（Ctrl+x）');
+            localStorage.setItem('fitMode', fitMode);
+            showControlsAndFilename();
+            updateIconOverlay();
+        });
+
+        // コントロールサイズ変更
+        sizeSelect.addEventListener('change', () => {
+            const value = parseInt(sizeSelect.value);
+            localStorage.setItem('controlSize', value);
+            updateControlSize(value);
+            showControlsAndFilename();
+            updateIconOverlay();
+        });
+
+        // プレイリスト選択
+        filenameDisplay.addEventListener('change', async () => {
+            if (filename.style.opacity !== '1') return;
+            const selectedIndex = parseInt(filenameDisplay.value);
+            if (!isNaN(selectedIndex)) {
+                // FFmpeg変換中断
+                if (isConverting) {
+                    await ipcRenderer.invoke('cancel-conversion');  // 即中断
+                    isConverting = false;
+                    setTimeout(hideOverlayDisplay, 1000);
+                }
+                currentVideoIndex = selectedIndex;
+                localStorage.setItem('currentTime', 0);
+                playVideo(playlist[currentVideoIndex].file);
+                savePlaylistAndPlaybackState();
+                updateIconOverlay();
+            }
+        });
+
+        // ヘルプ（開く）イベントリスナー
+        helpOpenBtn.addEventListener('click', openHelp);
+
+        // ヘルプ（閉じる）イベントリスナー
+        helpCloseBtn.addEventListener('click', closeHelp);
+
+        // 動画メタデータ読み込み
+        videoPlayer.addEventListener('loadedmetadata', () => {
+            seekBar.max = 100;
+            updateTimeDisplay();
+            updateVolumeDisplay();
+            updateIconOverlay();
+        });
+
+        // 動画エラー
+        videoPlayer.addEventListener('error', () => {
+            if (videoPlayer.src && /\.(mp4|mkv|webm)$/i.test(videoPlayer.src)) {
+                stopPeriodicSave();
+                playPauseBtn.textContent = '▶️';
+                playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+                iconOverlay.classList.add('active');
+            }
+        });
+
+        // 再生時間更新
+        videoPlayer.addEventListener('timeupdate', () => {
+            if (!isDragging && !seekBar.matches(':active') && !isMouseOverSeekBar) {
+                const value = videoPlayer.duration ? (100 / videoPlayer.duration) * videoPlayer.currentTime : 0;
+                seekBar.value = value;
+                updateTimeDisplay();
+                updateIconOverlay();
+            }
+        });
+
+        // 動画終了：Blob URL 解放 + 次の動画へ
+        videoPlayer.addEventListener('ended', async () => {
+            // Blob URL 解放
+            if (playlist[currentVideoIndex]?.isConverted) {
+                URL.revokeObjectURL(videoPlayer.src);
+                playlist[currentVideoIndex].isConverted = false;
+            }
+        
+            // 一時ファイル削除（非同期）
+            if (playlist[currentVideoIndex]?.tempFilePath) {
+                try {
+                    await fs.promises.unlink(playlist[currentVideoIndex].tempFilePath);
+                    delete playlist[currentVideoIndex].tempFilePath;
+                } catch (err) {
+                    console.warn('一時ファイル削除失敗:', err);
+                }
+            }
+            videoPlayer.currentTime = 0;
+            localStorage.setItem('currentTime', 0);
+        
+            if (currentVideoIndex < playlist.length - 1) {
+                currentVideoIndex++;
+                updatePlaylistDisplay();
+                playVideo(playlist[currentVideoIndex].file);
+            } else {
+                videoPlayer.pause();
+                playPauseBtn.textContent = '▶️';
+                videoPlayer.src = '';
+                videoPreview.src = videoPlayer.src;
+                videoPlayerActive = false;
+        
+                // プレイリストの再生マーク（Play）削除
+                const options = filenameDisplay.options;
+                for (let i = 0; i < options.length; i++) {
+                    options[i].text = options[i].text.replace(/^▶️ /, '');
+                }
+        
+                stopPeriodicSave();
+                iconOverlay.classList.add('active');
+                updateIconOverlay();
+            }
+        });
+
+        // 動画クリック
+        videoPlayer.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            if (event.ctrlKey) {
+                playStopBtn.click();
+            } else {
+                togglePlayPause();
+                showControlsAndFilename();
+                updateIconOverlay();
+            }
+        });
+
+        // 動画ダブルクリック
+        videoPlayer.addEventListener('dblclick', (event) => {
+            event.preventDefault();
+            if (!document.fullscreenElement) {
+                if (mainContainer.requestFullscreen) {
+                    mainContainer.requestFullscreen();
+                    fullscreenBtn.textContent = '❌';
+                    fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除（Ctrl+z／Double Click）');
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                    fullscreenBtn.textContent = '🖥️';
+                    fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示（Ctrl+z／Double Click）');
+                }
+            }
+            showControlsAndFilename();
+            updateIconOverlay();
+        });
+
+        // マウス押下
+        videoPlayer.addEventListener('mousedown', (event) => {
+            if (event.button === 0) {
+                isDragging = true;
+                dragStartX = event.clientX;
+                dragStartY = event.clientY;
+                wasPlaying = !videoPlayer.paused;
+                event.preventDefault();
+            }
+        });
+
+        // マウス移動
+        videoPlayer.addEventListener('mousemove', (event) => {
+            if (isDragging && videoPlayer.duration) {
+                const deltaX = event.clientX - dragStartX;
+                const deltaY = event.clientY - dragStartY;
+                const absDeltaX = Math.abs(deltaX);
+                const absDeltaY = Math.abs(deltaY);
+
+                if (absDeltaX > absDeltaY && absDeltaX > 5) {
+                    isVolumeDragging = false;
+                    const seekStep = videoPlayer.duration / 1000;
+                    const seekTime = deltaX * seekStep * seekSensitivity;
+                    let newTime = videoPlayer.currentTime + seekTime;
+                    newTime = Math.max(0, Math.min(videoPlayer.duration, newTime));
+                    videoPlayer.currentTime = newTime;
+                    seekBar.value = (100 / videoPlayer.duration) * newTime;
+                    updateTimeDisplay();
+                    updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+                    localStorage.setItem('currentTime', newTime);
+                } else if (absDeltaY > absDeltaX && absDeltaY > 5) {
+                    isVolumeDragging = true;
+                    const newVolume = videoPlayer.volume - (deltaY * volumeStep);
+                    videoPlayer.volume = Math.max(0, Math.min(1, newVolume));
+                    volumeBar.value = videoPlayer.volume;
+                    lastVolume = videoPlayer.volume;
+                    volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
+                    volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
+                    updateVolumeDisplay();
+                    updateOverlayDisplay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+                    localStorage.setItem('volume', videoPlayer.volume);
+                }
+
+                dragStartX = event.clientX;
+                dragStartY = event.clientY;
+                updateIconOverlay();
+            }
+        });
+        
+        // マウス解放
+        videoPlayer.addEventListener('mouseup', (e) => {
+            if (e.button === 0) {
+                isDragging = false;
+                isVolumeDragging = false;
+                if (isDragging || isVolumeDragging) {
+                    showControlsAndFilename();
+                    updateIconOverlay();
+                }
+            }
+        });
+
+        // マウスリーブ
+        videoPlayer.addEventListener('mouseleave', () => {
+            isDragging = false;
+            isVolumeDragging = false;
+            updateIconOverlay();
+        });
+
+        // マウス左クリックで表示/非表示をトグル
+        videoPlayer.addEventListener('click', (e) => {
+            if (e.button === 0) {
+                if (!isDragging && !isVolumeDragging) {
+                    if (controls.style.opacity === '1' || filename.style.opacity === '1') {
+                        hideControlsAndFilename();
+                    } else {
+                        showControlsAndFilename();
+                    }
+                }
+                e.stopPropagation();
+            }
+        });
+
+        // マウスホイール
+        videoPlayer.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const volumeStep = 0.01;
+            if (event.deltaY < 0) {
+                videoPlayer.volume = Math.min(1, videoPlayer.volume + volumeStep);
+            } else if (event.deltaY > 0) {
+                videoPlayer.volume = Math.max(0, videoPlayer.volume - volumeStep);
+            }
+            volumeBar.value = videoPlayer.volume;
+            lastVolume = videoPlayer.volume;
+            volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
+            volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
+            updateVolumeDisplay();
+            updateOverlayDisplay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+            localStorage.setItem('volume', videoPlayer.volume);
+            showControlsAndFilename();
+            updateIconOverlay();
+        });
+
+        // シークバー ドラッグ
+        seekBar.addEventListener('input', (e) => {
+            if (controls.style.opacity !== '1') return;
+            if (!videoPlayer.duration) return;
+            const time = videoPlayer.duration * (seekBar.value / 100);
+            videoPlayer.currentTime = time;
+            updateTimeDisplay();
+            updateOverlayDisplay(`🕓 ${formatTime(time)}`);
+        });
+
+        // シークバー スライダー変更
+        seekBar.addEventListener('change', () => {
+            if (controls.style.opacity !== '1') return;
+            if (!videoPlayer.duration) return;
+            // mouseup で既に処理済みなので、最終同期のみ
+            updateTimeDisplay();
+            localStorage.setItem('currentTime', videoPlayer.currentTime);
+        });
+
+        // シークバー マウスクリック
+        seekBar.addEventListener('mousedown', (e) => {
+            if (controls.style.opacity !== '1') return;
+            if (e.button === 0 && videoPlayer.duration) {
+                videoPlayer.currentTime = videoPreview.currentTime;
+                isDragging = true;
+                isSeekDragging = true;
+                darkOverlay.style.display = 'block';
+            }
+        });
+
+        // シークバー マウスオーバー
+        seekBar.addEventListener('mouseover', (e) => {
+            if (controls.style.opacity !== '1') return;
+            if (!videoPlayer.duration || playlist.length === 0) return;
+            isMouseOverSeekBar = true;
+            videoPreview.style.display = 'block';
+            updatePreviewPosition(e);
+        });
+
+        // シークバー マウス移動
+        seekBar.addEventListener('mousemove', (e) => {
+            if (controls.style.opacity !== '1') return;
+            if (!videoPlayer.duration || !isMouseOverSeekBar) return;
+            const rect = seekBar.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const time = videoPlayer.duration * percent;
+
+            // プレビュー時間更新
+            if (Math.abs(videoPreview.currentTime - time) > 0.5) {
+                videoPreview.currentTime = time;
+            }
+
+            // プレビュー位置更新
+            updatePreviewPosition(e);
+
+            // シークバー表示更新（ドラッグ中は無視）
+            if (!isSeekDragging) {
+                seekBar.value = percent * 100;
+                timeDisplay.textContent = `${formatTime(time)} / ${formatTime(videoPlayer.duration)}`;
+            }
+        });
+
+        // シークバー マウスアウト
+        seekBar.addEventListener('mouseout', () => {
+            if (controls.style.opacity !== '1') return;
+            isMouseOverSeekBar = false;
+            videoPreview.style.display = 'none';
+            // 通常の時間表示に戻す
+            if (!isSeekDragging && videoPlayer.duration) {
+                const value = (100 / videoPlayer.duration) * videoPlayer.currentTime;
+                seekBar.value = value;
+                updateTimeDisplay();
+            }
+        });
+        
+        // シークバー マウスリーブ
+        seekBar.addEventListener('mouseleave', () => {
+            if (controls.style.opacity !== '1') return;
+            if (isSeekDragging && !seekBar.matches(':active')) {
+                isSeekDragging = false;
+                darkOverlay.style.display = 'none';
+            }
+        });
+
+        // 音量バー入力
+        volumeBar.addEventListener('input', () => {
+            if (controls.style.opacity !== '1') return;
+            videoPlayer.volume = volumeBar.value;
+            lastVolume = videoPlayer.volume;
+            volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
+            volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
+            updateVolumeDisplay();
+            updateOverlayDisplay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+            localStorage.setItem('volume', videoPlayer.volume);
+            updateIconOverlay();
+        });
+
+        // 音量バーマウス移動
+        volumeBar.addEventListener('mousemove', (e) => {
+            if (controls.style.opacity !== '1') return;
+            if (volumeBar.matches(':active') || e.buttons === 1) {
+                e.stopPropagation();
+                const rect = volumeBar.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                if (x >= 0 && x <= rect.width) {
+                    const volume = (x / rect.width);
+                    const volumePercent = Math.round(volume * 100);
+                    updateOverlayDisplay(`${volume === 0 ? '🔇' : '🔊'} ${volumePercent}%`);
+                }
+                showControlsAndFilename();
+                updateIconOverlay();
+            }
+        });
+
+        // 音量バーマウスリーブ
+        volumeBar.addEventListener('mouseleave', () => {
+            if (controls.style.opacity !== '1') return;
+            if (!isDragging && !volumeBar.matches(':active')) {
+                if (!isVolumeDragging && !volumeBar.matches(':active')) {
+                    hideOverlayDisplay();
+                }
+                updateIconOverlay();
+            }
+        });
+
+        // コントロールマウスオーバー
+        controls.addEventListener('mouseover', () => {
+            if (controls.style.opacity === '1' || filename.style.opacity === '1') {
+                isMouseOverControls = true;
+                clearTimeout(timeout);
+                controls.style.opacity = '1';
+                filename.style.opacity = '1';
+                videoContainer.style.cursor = 'auto';
+                if (overlayDisplay.classList.contains('active')) {
+                    overlayDisplay.style.display = 'block';
+                    overlayDisplay.classList.add('active');
+                }
+                updateIconOverlay();
+            }
+        });
+
+        // コントロールマウスリーブ
+        controls.addEventListener('mouseleave', () => {
+            if (controls.style.opacity === '1' || filename.style.opacity === '1') {
+                isMouseOverControls = false;
+                showControlsAndFilename();
+                updateIconOverlay();
+            }
+        });
+
+        // ファイル名マウスオーバー
+        filename.addEventListener('mouseover', () => {
+            if (controls.style.opacity === '1' || filename.style.opacity === '1') {
+                isMouseOverControls = true;
+                showControlsAndFilename();
+                updateIconOverlay();
+            }
+        });
+
+        // ファイル名マウスリーブ
+        filename.addEventListener('mouseleave', () => {
+            if (controls.style.opacity === '1' || filename.style.opacity === '1') {
+                isMouseOverControls = false;
+                showControlsAndFilename();
+                updateIconOverlay();
+            }
+        });
+
+        // 動画マウス移動
+        videoContainer.addEventListener('mousemove', () => {
+            videoContainer.style.cursor = 'auto';
+            updateIconOverlay();
+        });
+
+        // ツールチップイベント設定
+        tooltipElements.forEach(element => {
+            element.addEventListener('mouseenter', () => showTooltip(element));
+            element.addEventListener('mouseleave', () => hideTooltip(element));
+        });
+
+        // 上へボタン
+        upMovePlaylistBtn.addEventListener('click', () => {
+            upMovePlaylist();
+        });
+        
+        // 下へボタン
+        downMovePlaylistBtn.addEventListener('click', () => {
+            downMovePlaylist();
+        });
+        
+        // 追加ボタン
+        addPlaylistBtn.addEventListener('click', () => {
+            addToPlaylist();
+        });
+        
+        // 削除ボタン
+        removePlaylistBtn.addEventListener('click', () => {
+            removeFromPlaylist();
+        });
+        
+        // クリアボタン
+        clearPlaylistBtn.addEventListener('click', () => {
+            clearPlaylist();
+        });        
+
+        // 保存ボタン
+        savePlaylistBtn.addEventListener('click', () => {
+            savePlaylist();
+        });
+
+        // プレイリスト編集メニュー
+        filenameMenu.addEventListener('click', () => {
+            if (filenameMenus.style.display === 'none') {
+                filenameMenus.style.display = 'flex';
+            } else {
+                filenameMenus.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

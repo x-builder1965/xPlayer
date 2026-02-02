@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>動画自動変換プレイヤー（クラッシュ防止・完全版）</title>
+    <style>
+        body, html {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #000;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        #drop-zone {
+            border: 2px dashed #ccc;
+            padding: 40px;
+            text-align: center;
+            border-radius: 12px;
+            background: #111;
+            cursor: pointer;
+            margin: 20px 0;
+            width: 80%;
+            max-width: 800px;
+        }
+        video { 
+            max-width:100%; 
+            height:auto; 
+            margin-top: 20px; 
+            border-radius: 8px; 
+            background: #000;
+        }
+        .info { 
+            font-family: monospace; 
+            margin: 10px 0; 
+            white-space: pre-line; 
+            background: #222; 
+            padding: 12px; 
+            border-radius: 8px; 
+            max-width: 800px;
+            width: 100%;
+            min-height: 60px;
+            border: 1px solid #444;
+        }
+        .error { color: #ff6b6b; }
+        .success { color: #51cf66; }
+    </style>
+</head>
+<body>
+
+<h2>動画をドロップしてください</h2>
+<div id="drop-zone">ここに動画ファイルをドラッグ＆ドロップ</div>
+<div class="info" id="info">待機中...</div>
+<video id="video" controls style="display:none; max-width:800px;"></video>
+
+<!-- 正しい UMD ビルド -->
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/ffmpeg.min.js"></script>
+
+<script>
+    // FFmpeg ロード待機
+    function waitForFFmpeg(callback) {
+        if (window.FFmpeg && window.FFmpeg.createFFmpeg) {
+            console.log('FFmpeg ロード完了');
+            callback();
+        } else {
+            console.log('FFmpeg 読み込み中...');
+            setTimeout(() => waitForFFmpeg(callback), 100);
+        }
+    }
+
+    waitForFFmpeg(() => {
+        const { createFFmpeg, fetchFile } = window.FFmpeg;
+        const info = document.getElementById('info');
+        const videoEl = document.getElementById('video');
+        const dropZone = document.getElementById('drop-zone');
+
+        // 安全なログ関数
+        const log = (msg, type = '') => {
+            const span = document.createElement('div');
+            span.textContent = msg;
+            if (type) span.className = type;
+            info.appendChild(span);
+            console.log(msg);
+        };
+
+        const ffmpeg = createFFmpeg({
+            log: true,  // デバッグ用にログON
+            corePath: 'https://unpkg.com/@ffmpeg/core@0.12.0/dist/ffmpeg-core.js',
+            wasmPath: 'https://unpkg.com/@ffmpeg/core@0.12.0/dist/ffmpeg-core.wasm'
+        });
+
+        let isLoaded = false;
+
+        // ドラッグ＆ドロップ
+        dropZone.ondragover = e => e.preventDefault();
+        dropZone.ondrop = async e => {
+            e.preventDefault();
+            info.innerHTML = ''; // クリア
+
+            const file = e.dataTransfer.files[0];
+            if (!file) {
+                log('ファイルが選択されていません', 'error');
+                return;
+            }
+            if (!file.type.startsWith('video/')) {
+                log('動画ファイルを選択してください', 'error');
+                return;
+            }
+
+            const ext = '.' + file.name.split('.').pop().toLowerCase();
+            log(`ファイル: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`);
+
+            // ネイティブ対応
+            if (['.mp4', '.webm', '.ogg'].includes(ext)) {
+                log(`${ext} → ネイティブ再生`, 'success');
+                const url = URL.createObjectURL(file);
+                videoEl.src = url;
+                videoEl.style.display = 'block';
+                return;
+            }
+
+            log(`${ext} → 変換開始...`);
+            await transcodeAndPlay(file, ext);
+        };
+
+        // 変換処理（全エラー捕捉）
+        async function transcodeAndPlay(file, ext) {
+            try {
+                if (!isLoaded) {
+                    log('FFmpeg 初期化中...');
+                    await ffmpeg.load();
+                    isLoaded = true;
+                    log('FFmpeg 初期化完了', 'success');
+                }
+
+                const inName = `input${ext}`;
+                const outName = 'output.mp4';
+
+                log(`ファイル書き込み: ${inName}`);
+                ffmpeg.FS('writeFile', inName, await fetchFile(file));
+
+                log('変換実行中... (H.264 + AAC)');
+                await ffmpeg.run(
+                    '-i', inName,
+                    '-c:v', 'libx264', '-preset', 'ultrafast',
+                    '-c:a', 'aac', '-b:a', '128k',
+                    '-movflags', 'frag_keyframe+empty_moov',
+                    outName
+                );
+
+                log('変換完了 → 再生準備');
+                const data = ffmpeg.FS('readFile', outName);
+                const blob = new Blob([data.buffer], { type: 'video/mp4' });
+                const url = URL.createObjectURL(blob);
+
+                videoEl.src = url;
+                videoEl.style.display = 'block';
+                log(`${ext} → MP4変換完了 → 再生中`, 'success');
+
+            } catch (err) {
+                log(`エラー: ${err.message}`, 'error');
+                console.error('FFmpeg エラー詳細:', err);
+                // スタックトレースも表示
+                if (err.stack) console.error(err.stack);
+            }
+        }
+
+        // 初期化完了
+        log('システム準備完了。動画をドロップしてください。', 'success');
+    });
+</script>
+
+</body>
+</html>

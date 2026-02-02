@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube URL 全パラメータ一覧</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #4a6da7;
+            border-bottom: 1px solid #4a6da7;
+            padding-bottom: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #1e1e1e;
+        }
+        th, td {
+            border: 1px solid #333;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #2c2c2c;
+            color: #a0c4ff;
+        }
+        .example {
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-family: monospace;
+            position: relative;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #4a6da7;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background: #5a7db7;
+        }
+        .section {
+            margin-bottom: 40px;
+        }
+    </style>
+</head>
+<body>
+    <h1>YouTube URL 全パラメータ一覧</h1>
+    
+    <div class="section">
+        <p><strong>使用例：</strong> <code>v=dQw4w9WgXcQ</code></p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>パラメータ</th>
+                    <th>説明</th>
+                    <th>通常</th>
+                    <th>再生リスト</th>
+                    <th>ショート</th>
+                    <th>埋め込み</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>v</code></td>
+                    <td>動画ID（必須）</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                    <td>❌（アドレス記載）</td>
+                    <td>❌（アドレス記載）</td>
+                </tr>
+                <tr>
+                    <td><code>list</code></td>
+                    <td>再生リストID</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>index</code></td>
+                    <td>再生リスト内の開始位置</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                </tr>
+                <tr>
+                    <td><code>t</code> / <code>start</code></td>
+                    <td>開始時間（秒）</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>end</code></td>
+                    <td>終了時間（秒）</td>
+                    <td>✅</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>autoplay</code></td>
+                    <td>自動再生（0/1）</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>mute</code></td>
+                    <td>ミュート（0/1）</td>
+                    <td>✅</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>loop</code></td>
+                    <td>ループ再生（1 + playlist=v）</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>controls</code></td>
+                    <td>コントロール表示（0/1/2）</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>rel</code></td>
+                    <td>関連動画表示（0/1）</td>
+                    <td>✅</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>modestbranding</code></td>
+                    <td>ロゴ非表示（1）</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>playsinline</code></td>
+                    <td>インライン再生（1）</td>
+                    <td>✅</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>enablejsapi</code></td>
+                    <td>JavaScript API有効化（1）</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>cc_load_policy</code></td>
+                    <td>字幕強制表示（1）</td>
+                    <td>✅</td>
+                    <td>❌</td>
+                    <td>❌</td>
+                    <td>✅</td>
+                </tr>
+                <tr>
+                    <td><code>hl</code></td>
+                    <td>言語設定（ja,en…）</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                    <td>✅</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>通常動画</h2>
+        <div class="example">
+            https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10s&autoplay=1
+            <button class="copy-btn" onclick="copyToClipboard(this)">コピー</button>
+        </div>
+
+        <h2>再生リスト</h2>
+        <div class="example">
+            https://www.youtube.com/watch?v=dQw4w9WgXcQ&list=PLABC123XYZ&t=5s&index=3
+            <button class="copy-btn" onclick="copyToClipboard(this)">コピー</button>
+        </div>
+
+        <h2>ショート動画</h2>
+        <div class="example">
+            https://www.youtube.com/shorts/dQw4w9WgXcQ?playsinline=1
+            <button class="copy-btn" onclick="copyToClipboard(this)">コピー</button>
+        </div>
+
+        <h2>埋め込み</h2>
+        <div class="example">
+            https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&loop=1&playlist=dQw4w9WgXcQ
+            <button class="copy-btn" onclick="copyToClipboard(this)">コピー</button>
+        </div>
+    </div>
+
+    <script>
+        function copyToClipboard(button) {
+            const text = button.parentElement.textContent.trim().replace('コピー', '').trim();
+            navigator.clipboard.writeText(text).then(() => {
+                const original = button.textContent;
+                button.textContent = 'コピー済み';
+                setTimeout(() => {
+                    button.textContent = original;
+                }, 1500);
+            });
+        }
+    </script>
+</body>
+</html>

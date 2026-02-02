@@ -1,0 +1,39 @@
+{
+    "name": "xplayer",
+    "version": "2.04.0",
+    "description": "xPlayer - Video Player",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron .",
+        "build": "electron-builder --win nsis"
+    },
+    "author": "x-builder",
+    "license": "MIT",
+    "devDependencies": {
+        "electron": "^38.4.0",
+        "electron-builder": "^26.0.12"
+    },
+    "build": {
+        "appId": "com.xbuilder.xplayer",
+        "productName": "xPlayer",
+        "files": [
+            "main.js",
+            "index.html",
+            "xPlayer.ico"
+        ],
+        "win": {
+            "icon": "xPlayer.ico",
+            "target": ["nsis"],
+            "asarUnpack": ["**\\*.{node,dll}"],
+            "extraResources": ["node_modules/7zip-bin/**"]
+        },
+        "nsis": {
+            "oneClick": false,
+            "allowToChangeInstallationDirectory": true,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "xPlayer",
+            "installerLanguages": ["ja_JP"]
+        }
+    }
+}
