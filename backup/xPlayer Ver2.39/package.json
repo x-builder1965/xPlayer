@@ -1,0 +1,78 @@
+{
+  "name": "xplayer",
+  "version": "2.39.0",
+  "description": "xPlayer - Video Player",
+  "main": "main.js",
+  "scripts": {
+    "start": "chcp 65001 && electron .",
+    "build": "electron-builder --win nsis"
+  },
+  "author": "x-builder",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^38.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "fluent-ffmpeg": "^2.1.3"
+  },
+  "build": {
+    "appId": "com.xbuilder.xplayer",
+    "productName": "xPlayer",
+    "files": [
+      "main.js",
+      "index.html",
+      "xPlayer.ico",
+      "xPlayer.png",
+      "xPlayer.gif",
+      "xPlayer-slide.gif",
+      "xPlayer-zoom.gif"
+    ],
+    "fileAssociations": [
+        {
+            "ext": "mp4",
+            "name": "MP4 Video File",
+            "description": "MP4 動画ファイル",
+            "icon": "xPlayer.ico",
+            "role": "Viewer"
+        },
+        {
+            "ext": "webm",
+            "name": "WebM Video",
+            "description": "WebM 動画",
+            "icon": "xPlayer.ico",
+            "role": "Viewer"
+        },
+        {
+            "ext": "amppl",
+            "name": "xPlayer Play List",
+            "description": "xPlayer プレイリスト",
+            "icon": "xPlayer.ico",
+            "role": "Viewer"
+        }
+    ],
+    "win": {
+      "icon": "xPlayer.ico",
+      "target": [
+        "nsis"
+      ],
+      "asarUnpack": [
+        "**/ffmpeg-static/**",
+        "**/*.node"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "xPlayer",
+      "installerLanguages": [
+        "ja_JP"
+      ],
+      "include": "build/installer.nsh"
+    }
+  }
+}
