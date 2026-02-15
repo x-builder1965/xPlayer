@@ -2369,7 +2369,6 @@ editModeBtn.addEventListener('click', () => {
         editOutMark = -1;
         inMarkDisplay.textContent = '--:--:--';
         outMarkDisplay.textContent = '--:--:--';
-        updateOverlayDisplay('編集モード: インマークを設定');
     } else {
         editControls.style.display = 'none';
         editModeBtn.classList.remove('active');
@@ -2383,10 +2382,6 @@ setInMarkBtn.addEventListener('click', () => {
         editInMark = videoPlayer.currentTime;
         inMarkDisplay.textContent = formatTime(editInMark);
         updateOverlayDisplay(`📍IN: ${formatTime(editInMark)}`);
-        // 自動でアウトマーク設定に移行
-        setTimeout(() => {
-            updateOverlayDisplay('編集モード: アウトマークを設定');
-        }, 1000);
     }
 });
 
@@ -2424,7 +2419,6 @@ cancelEditBtn.addEventListener('click', () => {
     editOutMark = -1;
     inMarkDisplay.textContent = '--:--:--';
     outMarkDisplay.textContent = '--:--:--';
-    updateOverlayDisplay('編集モードをキャンセル');
     setTimeout(hideOverlayDisplay, 1000);
 });
 
@@ -2462,8 +2456,9 @@ executeCutBtn.addEventListener('click', async () => {
             outTime: editOutMark
         });
 
-        updateOverlayDisplay(`✅ カット完了: ${path.basename(outputPath)}`);
-        
+        updateOverlayDisplay(`✂️ カット完了`);
+        console.log('カット完了:', outputPath);
+
         // 出力フォルダを開く（オプション）
         const outputDir = path.dirname(outputPath);
         await ipcRenderer.invoke('open-folder', outputDir);
