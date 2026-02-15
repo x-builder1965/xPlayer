@@ -462,12 +462,7 @@ caption {
 
 /* 動画カット編集機能のスタイル */
 #editControls {
-    background: rgba(0, 50, 100, 0.7);
-    padding: 10px;
-    border-radius: 8px;
-    gap: 8px;
     flex-wrap: wrap;
-    border-left: 4px solid #007bff;
 }
 
 #editModeBtn {
