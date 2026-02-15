@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.22'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.24'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -459,3 +459,71 @@ caption {
     line-height: 1.3;
 }
 .icon { font-size: 1.2em; }
+
+/* 動画カット編集機能のスタイル */
+#editControls {
+    background: rgba(0, 50, 100, 0.7);
+    padding: 10px;
+    border-radius: 8px;
+    gap: 8px;
+    flex-wrap: wrap;
+    border-left: 4px solid #007bff;
+}
+
+#editModeBtn {
+    background-color: #007bff;
+    min-width: 40px;
+}
+
+#editModeBtn.active {
+    background-color: #0056b3;
+    border: 2px solid #ffff00;
+}
+
+#setInMarkBtn, #setOutMarkBtn {
+    background-color: #007bff;
+    min-width: 60px;
+}
+
+#setInMarkBtn:hover, #setOutMarkBtn:hover {
+    background-color: #0056b3;
+}
+
+#executeCutBtn {
+    background-color: #007bff;
+    min-width: 50px;
+}
+
+#executeCutBtn:hover {
+    background-color: #0056b3;
+}
+
+#cancelEditBtn {
+    background-color: #007bff;
+    min-width: 50px;
+}
+
+#cancelEditBtn:hover {
+    background-color: #0056b3;
+}
+
+#editSeekBar {
+    flex: 1;
+    min-width: 200px;
+}
+
+#inMarkDisplay, #outMarkDisplay {
+    color: #ffff00;
+    font-weight: bold;
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 4px;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+/* シークバーのカラーリング */
+#seekBar.converting {
+    accent-color: #ff0000;
+    background: rgba(255, 0, 0, 0.2);
+}
+
