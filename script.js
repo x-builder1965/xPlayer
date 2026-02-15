@@ -307,6 +307,14 @@ function formatTime(seconds) {
     return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
+// ファイル名用時間フォーマット（HHMMSS形式）
+function formatTimeForFilename(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hours.toString().padStart(2, '0')}${minutes.toString().padStart(2, '0')}${secs.toString().padStart(2, '0')}`;
+}
+
 // クリップボード貼り付け
 async function pasteFromClipboard() {
     return new Promise(async (resolve, reject) => {
@@ -2447,13 +2455,34 @@ executeCutBtn.addEventListener('click', async () => {
         const currentFile = playlist[currentVideoIndex];
         if (!currentFile) return;
 
+        // カット出力ファイル名を生成
+        const fileName = path.basename(currentFile.file.path);
+        const baseNameWithoutExt = path.parse(fileName).name;
+        const ext = path.extname(fileName);
+        const inStr = formatTimeForFilename(editInMark);
+        const outStr = formatTimeForFilename(editOutMark);
+        const defaultOutName = `${baseNameWithoutExt}_cut_${inStr}-${outStr}${ext}`;
+
+        // 保存先ダイアログを表示
+        updateOverlayDisplay('保存先を選択してください…');
+        const saveResult = await ipcRenderer.invoke('show-save-cut-dialog', {
+            fileName: defaultOutName
+        });
+
+        if (saveResult.canceled) {
+            updateOverlayDisplay('❌ カット編集がキャンセルされました');
+            setTimeout(hideOverlayDisplay, 1500);
+            return;
+        }
+
         updateOverlayDisplay('カット処理中…');
         
-        // main.jsのcut-videoハンドラーを呼び出し
+        // main.jsのcut-videoハンドラーを呼び出し（保存先パスを指定）
         const outputPath = await ipcRenderer.invoke('cut-video', {
             inputPath: currentFile.file.path,
             inTime: editInMark,
-            outTime: editOutMark
+            outTime: editOutMark,
+            outputPath: saveResult.filePath
         });
 
         updateOverlayDisplay(`✂️ カット完了`);
