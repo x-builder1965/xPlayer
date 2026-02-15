@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.22'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.24'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -59,6 +59,7 @@
                         <span class="spacer"></span>
                         <button id="fitModeBtn" data-tooltip="横に合わせる（Ctrl+x）">↔️</button>
                         <button id="fullscreenBtn" data-tooltip="フルスクリーン表示（Ctrl+z／Double Click）">🖥️</button>
+                        <button id="editModeBtn" data-tooltip="編集モード（Ctrl+e）">✂️</button>
                         <button id="helpOpenBtn" data-tooltip="ヘルプ開く（Ctrl+h）">❔</button>
                     </div>
                     <label class="app-name-and-copyright" id="appNameAndCopyright"></label>
@@ -79,6 +80,15 @@
                         <option value="2.00">2.00x</option>
                     </select>
                     <input type="range" id="seekBar" value="0" min="0" max="100" data-tooltip="再生位置変更（←→／Swipe Left Right）">
+                </div>
+                <div class="control-row" id="editControls" style="display:none;">
+                    <button id="setInMarkBtn" data-tooltip="インマークを設定">📍IN</button>
+                    <span id="inMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
+                    <input type="range" id="editSeekBar" value="0" min="0" max="100" data-tooltip="カット編集位置">
+                    <span id="outMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
+                    <button id="setOutMarkBtn" data-tooltip="アウトマークを設定">OUT📍</button>
+                    <button id="executeCutBtn" data-tooltip="カットを実行">🎬</button>
+                    <button id="cancelEditBtn" data-tooltip="編集をキャンセル">🚫</button>
                 </div>
             </div>
         </div>
@@ -353,6 +363,13 @@
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・フォルダ、動画ファイル、プレイリストのドラッグ＆ドロップで再生。</td>
+                            </tr>
+                            <tr>
+                                <td>　・動画カット編集</td>
+                                <td class="icon">✂️</td>
+                                <td class="key">Ctrl+e</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・編集モードを起動。📍INと OUT📍でカット範囲を指定して動画をカット。</td>
                             </tr>
                         </tbody>
                     </table>
