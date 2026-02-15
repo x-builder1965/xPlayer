@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.24';
+const appName = 'xPlayer -動画プレイヤー- Ver3.25';
 // ---------------------------------------------------------------------
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
@@ -9,6 +9,7 @@ const { promises: fs } = require('fs');  // ← これで await 可能！
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
 const os = require('os');
+const { spawn } = require('child_process');
 
 // 🔧 キャッシュ対策（起動前に設定）
 // - 書き込み可能なキャッシュディレクトリを事前に作成
@@ -585,4 +586,177 @@ function formatTimeForFilename(seconds) {
 // ============================================================
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
+});
+
+// 複数範囲を削除して結合して保存する（ranges: [{in, out}, ...]）
+ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPath }) => {
+    return new Promise((resolve, reject) => {
+        try {
+            // ffprobeで再生時間取得
+            ffmpeg.ffprobe(inputPath, (err, metadata) => {
+                if (err) {
+                    console.error('ffprobe エラー:', err);
+                    return reject(new Error('メタデータ取得失敗'));
+                }
+                const duration = metadata.format.duration || 0;
+
+                // 正規化・ソート・マージ
+                const normalized = (ranges || []).map(r => ({ in: Math.max(0, Math.min(duration, r.in)), out: Math.max(0, Math.min(duration, r.out)) }));
+                normalized.sort((a, b) => a.in - b.in || a.out - b.out);
+                const merged = [];
+                for (const r of normalized) {
+                    if (r.out <= r.in) continue;
+                    if (merged.length === 0) {
+                        merged.push({ ...r });
+                    } else {
+                        const last = merged[merged.length - 1];
+                        if (r.in <= last.out) {
+                            last.out = Math.max(last.out, r.out);
+                        } else {
+                            merged.push({ ...r });
+                        }
+                    }
+                }
+
+                // 残す（keep）セグメントを生成
+                const keeps = [];
+                let cursor = 0;
+                for (const m of merged) {
+                    if (m.in > cursor) {
+                        keeps.push({ start: cursor, end: m.in });
+                    }
+                    cursor = Math.min(duration, m.out);
+                }
+                if (cursor < duration) {
+                    keeps.push({ start: cursor, end: duration });
+                }
+
+                if (keeps.length === 0) {
+                    return reject(new Error('指定された範囲で動画が空になります'));
+                }
+
+                // 出力パス決定
+                let outPath;
+                if (outputPath) {
+                    outPath = outputPath;
+                } else {
+                    const fileName = path.basename(inputPath);
+                    const baseNameWithoutExt = path.parse(fileName).name;
+                    const ext = path.extname(fileName);
+                    outPath = path.join(path.dirname(inputPath), `${baseNameWithoutExt}_trimmed${ext}`);
+                }
+
+                // フィルター構築
+                const filters = [];
+                const concatInputs = [];
+                keeps.forEach((k, i) => {
+                    // trim/atrim
+                    filters.push(`[0:v]trim=start=${k.start}:end=${k.end},setpts=PTS-STARTPTS[v${i}]`);
+                    filters.push(`[0:a]atrim=start=${k.start}:end=${k.end},asetpts=PTS-STARTPTS[a${i}]`);
+                    concatInputs.push(`[v${i}]`);
+                    concatInputs.push(`[a${i}]`);
+                });
+                filters.push(`${concatInputs.join('') }concat=n=${keeps.length}:v=1:a=1[v][a]`);
+
+                mainWindow.webContents.send('cut-progress', { percent: 0 });
+
+                // まずストリームコピーでセグメントを切り出して concat してみる（低CPU）
+                (async () => {
+                    const tmpDir = path.join(os.tmpdir(), `xplayer_cut_${Date.now()}`);
+                    try {
+                        await fs.mkdir(tmpDir, { recursive: true });
+                        const ext = path.extname(inputPath) || '.mp4';
+                        const segmentFiles = [];
+
+                        // セグメントを順次切り出す（逐次実行でCPUの山を抑える）
+                        for (let i = 0; i < keeps.length; i++) {
+                            const k = keeps[i];
+                            const segPath = path.join(tmpDir, `seg_${i}${ext}`);
+                            segmentFiles.push(segPath);
+                            const durationSeg = (k.end - k.start).toFixed(3);
+
+                            await new Promise((res, rej) => {
+                                const args = [
+                                    '-y',
+                                    '-ss', String(k.start),
+                                    '-i', inputPath,
+                                    '-t', String(durationSeg),
+                                    '-c', 'copy',
+                                    '-avoid_negative_ts', '1',
+                                    segPath
+                                ];
+                                const proc = spawn(ffmpegStatic, args);
+                                proc.on('error', (e) => rej(e));
+                                proc.on('close', (code) => {
+                                    if (code === 0) {
+                                        // 進捗はセグメント単位で報告
+                                        const pct = Math.round(((i + 1) / (keeps.length + 1)) * 100);
+                                        mainWindow.webContents.send('cut-progress', { percent: pct });
+                                        res();
+                                    } else {
+                                        rej(new Error(`segment ffmpeg failed (code ${code})`));
+                                    }
+                                });
+                            });
+                        }
+
+                        // concat 用リストファイル作成
+                        const listFile = path.join(tmpDir, 'list.txt');
+                        const listContent = segmentFiles.map(f => `file '${f.replace(/'/g, "'\\''")}'`).join('\n');
+                        await fs.writeFile(listFile, listContent, 'utf8');
+
+                        // concat 実行
+                        await new Promise((res, rej) => {
+                            const args = ['-y', '-f', 'concat', '-safe', '0', '-i', listFile, '-c', 'copy', outPath];
+                            const proc = spawn(ffmpegStatic, args);
+                            proc.on('error', (e) => rej(e));
+                            proc.on('close', (code) => {
+                                if (code === 0) {
+                                    mainWindow.webContents.send('cut-progress', { percent: 100 });
+                                    res();
+                                } else {
+                                    rej(new Error(`concat ffmpeg failed (code ${code})`));
+                                }
+                            });
+                        });
+
+                        // 一時ファイル削除
+                        try { await fs.rm(tmpDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
+
+                        console.log(`複数範囲カット（copy/concat）完了: ${outPath}`);
+                        resolve(outPath);
+                    } catch (copyErr) {
+                        console.warn('copy/concat 法が失敗、再エンコードにフォールバックします:', copyErr.message);
+                        // 一時ファイルのクリーンアップを試みる
+                        try { await fs.rm(path.join(os.tmpdir(), `xplayer_cut_${Date.now()}`), { recursive: true, force: true }); } catch (e) { /* ignore */ }
+
+                        // フォールバック：従来の再エンコード方式
+                        const cmd = ffmpeg(inputPath)
+                            .complexFilter(filters)
+                            .outputOptions('-map', '[v]', '-map', '[a]')
+                            .outputOptions('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28')
+                            .outputOptions('-c:a', 'aac', '-b:a', '128k')
+                            .outputOptions('-movflags', '+faststart')
+                            .on('progress', (progress) => {
+                                if (progress.percent !== undefined) {
+                                    mainWindow.webContents.send('cut-progress', { percent: progress.percent });
+                                }
+                            })
+                            .on('end', () => {
+                                console.log(`複数範囲カット完了 (reencode): ${outPath}`);
+                                resolve(outPath);
+                            })
+                            .on('error', (err) => {
+                                console.error('複数範囲カット処理エラー (reencode):', err.message);
+                                mainWindow.webContents.send('cut-error', err.message);
+                                reject(new Error(`カット処理失敗: ${err.message}`));
+                            })
+                            .save(outPath);
+                    }
+                })();
+            });
+        } catch (e) {
+            reject(e);
+        }
+    });
 });
