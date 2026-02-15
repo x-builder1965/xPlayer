@@ -112,6 +112,37 @@ const inMarkDisplay = document.getElementById('inMarkDisplay');
 const outMarkDisplay = document.getElementById('outMarkDisplay');
 const editSeekBar = document.getElementById('editSeekBar');
 
+// 処理中キャンセルボタン（動的に表示）
+const processCancelBtn = document.createElement('button');
+processCancelBtn.id = 'processCancelBtn';
+processCancelBtn.textContent = '中止';
+processCancelBtn.style.position = 'fixed';
+processCancelBtn.style.right = '20px';
+processCancelBtn.style.bottom = '20px';
+processCancelBtn.style.zIndex = '9999';
+processCancelBtn.style.padding = '8px 12px';
+processCancelBtn.style.fontSize = '14px';
+processCancelBtn.style.display = 'none';
+processCancelBtn.style.background = '#ff5555';
+processCancelBtn.style.color = '#fff';
+processCancelBtn.style.border = 'none';
+processCancelBtn.style.borderRadius = '6px';
+processCancelBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
+document.body.appendChild(processCancelBtn);
+
+processCancelBtn.addEventListener('click', async () => {
+    try {
+        await ipcRenderer.invoke('cancel-cut');
+        updateOverlayDisplay('中断しました');
+    } catch (e) {
+        console.error('cancel-cut failed:', e);
+        updateOverlayDisplay('中断に失敗しました');
+    } finally {
+        processCancelBtn.style.display = 'none';
+        setTimeout(hideOverlayDisplay, 1200);
+    }
+});
+
 // localStorage から復元
 const savedVolume = localStorage.getItem('volume');
 const savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
@@ -145,6 +176,9 @@ let isEditMode = false;
 let editInMark = -1;  // インマーク（秒）
 let editOutMark = -1; // アウトマーク（秒）
 let cutRanges = []; // 配列 of { in: seconds, out: seconds }
+// 編集時のフレームレート（フレーム単位で移動するための基準）。変更したければ
+// `localStorage.setItem('editFrameRate', '24')` のように保存してください。
+const editFrameRate = localStorage.getItem('editFrameRate') ? parseFloat(localStorage.getItem('editFrameRate')) : 30;
 
 // 初期状態設定
 videoPlayer.removeAttribute('src');
@@ -1194,9 +1228,57 @@ ipcRenderer.on('convert-progress', (event, { percent }) => {
     seekBar.value = percent;
 });
 
-// カット進捗受信
-ipcRenderer.on('cut-progress', (event, { percent }) => {
-    updateOverlayDisplay(`✂️ カット（削除）処理中… ${Math.round(percent)}%`);
+// カット進捗受信（詳細ペイロード対応）
+ipcRenderer.on('cut-progress', (event, payload) => {
+    try {
+        const stage = payload && payload.stage ? payload.stage : 'progress';
+        switch (stage) {
+            case 'start':
+                updateOverlayDisplay(`✂️ カット準備中…` , true);
+                processCancelBtn.style.display = 'inline-block';
+                break;
+            case 'extract-start':
+                updateOverlayDisplay(`✂️ 切出開始 ${payload.index + 1}/${payload.total} ${formatTime(payload.segStart)} - ${formatTime(payload.segEnd)}` , true);
+                processCancelBtn.style.display = 'inline-block';
+                break;
+            case 'extract-done':
+                updateOverlayDisplay(`✂️ 切出済 ${payload.index + 1}/${payload.total} (${Math.round(payload.percent)}%)` , true);
+                break;
+            case 'concat-start':
+                updateOverlayDisplay(`✂️ 結合中…` , true);
+                processCancelBtn.style.display = 'inline-block';
+                break;
+            case 'concat-done':
+                updateOverlayDisplay(`✂️ 結合完了` , false);
+                processCancelBtn.style.display = 'none';
+                setTimeout(hideOverlayDisplay, 1200);
+                break;
+            case 'reencode':
+                const p = payload.percent !== undefined ? Math.round(payload.percent) : 0;
+                const fm = payload.frames !== undefined ? `${payload.frames}f` : '';
+                const tm = payload.timemark ? ` [${payload.timemark}]` : '';
+                updateOverlayDisplay(`✂️ カット実行中… ${p}% ${fm}${tm}` , true);
+                processCancelBtn.style.display = 'inline-block';
+                break;
+            case 'done':
+                updateOverlayDisplay(`✂️ 保存完了` , false);
+                processCancelBtn.style.display = 'none';
+                setTimeout(hideOverlayDisplay, 1500);
+                break;
+            case 'error':
+                updateOverlayDisplay(`❌ カット失敗: ${payload.message || 'エラー'}` , false);
+                processCancelBtn.style.display = 'none';
+                setTimeout(hideOverlayDisplay, 3000);
+                break;
+            default:
+                // 旧スタイル or unknown
+                const percent = payload && payload.percent ? Math.round(payload.percent) : 0;
+                updateOverlayDisplay(`✂️ カット（削除）処理中… ${percent}%`, true);
+                break;
+        }
+    } catch (e) {
+        updateOverlayDisplay('✂️ カット処理中…', true);
+    }
 });
 
 // 変換エラー
@@ -1405,10 +1487,11 @@ document.addEventListener('keydown', async (event) => {
         try { event.preventDefault(); } catch (e) {}
 
         if (videoPlayer.duration) {
-            // 編集モード中（または編集コントロール表示中）は1秒刻み、それ以外は5秒刻み
+            // 編集モード中（または編集コントロール表示中）はフレーム刻み（秒→フレーム変換）、
+            // それ以外は5秒刻み
             const editVisible = (typeof editControls !== 'undefined' && editControls && editControls.style.display !== 'none');
-            const step = (isEditMode || editVisible) ? 1 : 5;
-            const delta = event.key === 'ArrowLeft' ? -step : step;
+            const stepSeconds = (isEditMode || editVisible) ? (1 / editFrameRate) : 5;
+            const delta = event.key === 'ArrowLeft' ? -stepSeconds : stepSeconds;
             let newTime = videoPlayer.currentTime + delta;
             newTime = Math.max(0, Math.min(videoPlayer.duration, newTime));
             videoPlayer.currentTime = newTime;
@@ -1418,7 +1501,11 @@ document.addEventListener('keydown', async (event) => {
                 editSeekBar.value = (newTime / videoPlayer.duration) * 100;
             }
             updateTimeDisplay();
-            updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+            if (isEditMode || editVisible) {
+                updateOverlayDisplay(`🕓 ${formatTime(newTime)} (${Math.round(newTime * editFrameRate)}f)`);
+            } else {
+                updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+            }
             localStorage.setItem('currentTime', newTime);
             showControlsAndFilename();
             updateIconOverlay();
@@ -2398,7 +2485,7 @@ editModeBtn.addEventListener('click', () => {
 setInMarkBtn.addEventListener('click', () => {
     if (videoPlayer.duration) {
         editInMark = videoPlayer.currentTime;
-        inMarkDisplay.textContent = formatTime(editInMark);
+        inMarkDisplay.textContent = `${formatTime(editInMark)} (${Math.round(editInMark * editFrameRate)}f)`;
     }
 });
 
@@ -2410,10 +2497,10 @@ setOutMarkBtn.addEventListener('click', () => {
         // アウトマークがインマークより前ならスワップ
         if (editOutMark < editInMark) {
             [editInMark, editOutMark] = [editOutMark, editInMark];
-            inMarkDisplay.textContent = formatTime(editInMark);
+            inMarkDisplay.textContent = `${formatTime(editInMark)} (${Math.round(editInMark * editFrameRate)}f)`;
         }
         
-        outMarkDisplay.textContent = formatTime(editOutMark);
+        outMarkDisplay.textContent = `${formatTime(editOutMark)} (${Math.round(editOutMark * editFrameRate)}f)`;
     }
 });
 
@@ -2474,7 +2561,7 @@ function renderCutRanges() {
         div.style.alignItems = 'center';
         div.style.padding = '2px 4px';
         const label = document.createElement('div');
-        label.textContent = `カット${idx + 1}: ${formatTime(r.in)} - ${formatTime(r.out)}`;
+        label.textContent = `カット${idx + 1}: ${formatTime(r.in)} (${Math.round(r.in * editFrameRate)}f) - ${formatTime(r.out)} (${Math.round(r.out * editFrameRate)}f)`;
         label.style.flex = '1';
         const del = document.createElement('button');
         del.textContent = '削除';
@@ -2522,15 +2609,30 @@ saveVideoBtn.addEventListener('click', async () => {
 
         updateOverlayDisplay('✂️ カット（削除）処理中… 0%', true);
 
+        // フレーム単位へ丸めたレンジを作成して main.js に送る
+        const alignedRanges = (cutRanges || []).map(r => {
+            const startFrame = Math.round(r.in * editFrameRate);
+            const endFrame = Math.round(r.out * editFrameRate);
+            const start = startFrame / editFrameRate;
+            const end = endFrame / editFrameRate;
+            return { in: start, out: end };
+        });
+
         // main.js に複数範囲削除のハンドラを呼ぶ
         const outputPath = await ipcRenderer.invoke('cut-video-multiple', {
             inputPath: currentFile.file.path,
-            ranges: cutRanges,
-            outputPath: saveResult.filePath
+            ranges: alignedRanges,
+            outputPath: saveResult.filePath,
+            frameRate: editFrameRate
         });
 
-        updateOverlayDisplay(`✂️ 保存完了`);
-        console.log('カット（複数）完了:', outputPath);
+        if (!outputPath) {
+            updateOverlayDisplay('✂️ 中断されました');
+            console.log('カット（複数）中断');
+        } else {
+            updateOverlayDisplay(`✂️ 保存完了`);
+            console.log('カット（複数）完了:', outputPath);
+        }
 
         // カット篆囲は保持し適用可能にして保持
         setTimeout(hideOverlayDisplay, 2000);
