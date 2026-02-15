@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.24';
+const appName = 'xPlayer -動画プレイヤー- Ver3.25';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -29,6 +29,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.24';
 // 2026-01-23 Ver3.22 YouTuneの埋め込み再生廃止。
 // 2026-01-28 Ver3.23 変換モードの実行時の進捗状況をシークバーに表示。
 // 2026-02-15 Ver3.24 カット編集機能追加。
+// 2026-02-15 Ver3.25 カット編集機能の改善。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -103,7 +104,9 @@ const editControls = document.getElementById('editControls');
 const editModeBtn = document.getElementById('editModeBtn');
 const setInMarkBtn = document.getElementById('setInMarkBtn');
 const setOutMarkBtn = document.getElementById('setOutMarkBtn');
-const executeCutBtn = document.getElementById('executeCutBtn');
+const addCutRangeBtn = document.getElementById('addCutRangeBtn');
+const saveVideoBtn = document.getElementById('saveVideoBtn');
+const cutRangesList = document.getElementById('cutRangesList');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
 const inMarkDisplay = document.getElementById('inMarkDisplay');
 const outMarkDisplay = document.getElementById('outMarkDisplay');
@@ -141,6 +144,7 @@ let tempConvertFile = null;
 let isEditMode = false;
 let editInMark = -1;  // インマーク（秒）
 let editOutMark = -1; // アウトマーク（秒）
+let cutRanges = []; // 配列 of { in: seconds, out: seconds }
 
 // 初期状態設定
 videoPlayer.removeAttribute('src');
@@ -2377,6 +2381,7 @@ editModeBtn.addEventListener('click', () => {
         editOutMark = -1;
         inMarkDisplay.textContent = '--:--:--';
         outMarkDisplay.textContent = '--:--:--';
+        renderCutRanges();
     } else {
         editControls.style.display = 'none';
         editModeBtn.classList.remove('active');
@@ -2389,7 +2394,6 @@ setInMarkBtn.addEventListener('click', () => {
     if (videoPlayer.duration) {
         editInMark = videoPlayer.currentTime;
         inMarkDisplay.textContent = formatTime(editInMark);
-        updateOverlayDisplay(`📍IN: ${formatTime(editInMark)}`);
     }
 });
 
@@ -2405,7 +2409,6 @@ setOutMarkBtn.addEventListener('click', () => {
         }
         
         outMarkDisplay.textContent = formatTime(editOutMark);
-        updateOverlayDisplay(`OUT: ${formatTime(editOutMark)}`);
     }
 });
 
@@ -2427,74 +2430,113 @@ cancelEditBtn.addEventListener('click', () => {
     editOutMark = -1;
     inMarkDisplay.textContent = '--:--:--';
     outMarkDisplay.textContent = '--:--:--';
-    setTimeout(hideOverlayDisplay, 1000);
+    // カット設定を全クリア
+    cutRanges = [];
+    renderCutRanges();
+    setTimeout(hideOverlayDisplay, 1500);
 });
 
-// カット実行
-executeCutBtn.addEventListener('click', async () => {
-    // バリデーション
+// --- カット設定追加ボタン ---
+addCutRangeBtn.addEventListener('click', () => {
     if (editInMark < 0 || editOutMark < 0) {
-        updateOverlayDisplay('❌ インマークとアウトマークを両方設定してください');
+        updateOverlayDisplay('❌ INマークとOUTマークを両方設定してください');
         return;
     }
-    if (editInMark >= editOutMark) {
-        updateOverlayDisplay('❌ インマーク < アウトマークになるように設定してください');
+    let a = editInMark;
+    let b = editOutMark;
+    if (a >= b) {
+        // スワップして正規化
+        [a, b] = [b, a];
+    }
+    cutRanges.push({ in: a, out: b });
+    renderCutRanges();
+    // 追加後はマークをクリア
+    editInMark = -1;
+    editOutMark = -1;
+    inMarkDisplay.textContent = '--:--:--';
+    outMarkDisplay.textContent = '--:--:--';
+});
+
+// レンジ一覧描画
+function renderCutRanges() {
+    cutRangesList.innerHTML = '';
+    if (!cutRanges || cutRanges.length === 0) {
+        cutRangesList.textContent = '（なし）';
         return;
     }
+    cutRanges.forEach((r, idx) => {
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.justifyContent = 'space-between';
+        div.style.alignItems = 'center';
+        div.style.padding = '2px 4px';
+        const label = document.createElement('div');
+        label.textContent = `カット${idx + 1}: ${formatTime(r.in)} - ${formatTime(r.out)}`;
+        label.style.flex = '1';
+        const del = document.createElement('button');
+        del.textContent = '削除';
+        del.style.marginLeft = '8px';
+        del.addEventListener('click', () => {
+            cutRanges.splice(idx, 1);
+            renderCutRanges();
+        });
+        div.appendChild(label);
+        div.appendChild(del);
+        cutRangesList.appendChild(div);
+    });
+}
+
+// --- 動画保存（設定した複数範囲を削除して保存） ---
+saveVideoBtn.addEventListener('click', async () => {
     if (!videoPlayer.src) {
         updateOverlayDisplay('❌ 動画が読み込まれていません');
         return;
     }
+    if (!cutRanges || cutRanges.length === 0) {
+        updateOverlayDisplay('❌ 保存するためのカット範囲が設定されていません');
+        return;
+    }
 
     try {
+        // 非編集モードに
         isEditMode = false;
         editControls.style.display = 'none';
         editModeBtn.classList.remove('active');
-        
-        // 元ファイルを取得
+
         const currentFile = playlist[currentVideoIndex];
         if (!currentFile) return;
 
-        // カット出力ファイル名を生成
         const fileName = path.basename(currentFile.file.path);
         const baseNameWithoutExt = path.parse(fileName).name;
         const ext = path.extname(fileName);
-        const inStr = formatTimeForFilename(editInMark);
-        const outStr = formatTimeForFilename(editOutMark);
-        const defaultOutName = `${baseNameWithoutExt}_cut_${inStr}-${outStr}${ext}`;
+        const defaultOutName = `${baseNameWithoutExt}_trimmed${ext}`;
 
-        // 保存先ダイアログを表示
-        updateOverlayDisplay('保存先を選択してください…');
-        const saveResult = await ipcRenderer.invoke('show-save-cut-dialog', {
-            fileName: defaultOutName
-        });
-
+        const saveResult = await ipcRenderer.invoke('show-save-cut-dialog', { fileName: defaultOutName });
         if (saveResult.canceled) {
-            updateOverlayDisplay('❌ カット編集がキャンセルされました');
             setTimeout(hideOverlayDisplay, 1500);
             return;
         }
 
-        updateOverlayDisplay('カット処理中…');
-        
-        // main.jsのcut-videoハンドラーを呼び出し（保存先パスを指定）
-        const outputPath = await ipcRenderer.invoke('cut-video', {
+        updateOverlayDisplay('✂️ カット（削除）処理中…', true);
+
+        // main.js に複数範囲削除のハンドラを呼ぶ
+        const outputPath = await ipcRenderer.invoke('cut-video-multiple', {
             inputPath: currentFile.file.path,
-            inTime: editInMark,
-            outTime: editOutMark,
+            ranges: cutRanges,
             outputPath: saveResult.filePath
         });
 
-        updateOverlayDisplay(`✂️ カット完了`);
-        console.log('カット完了:', outputPath);
-
-        // 出力フォルダを開く（オプション）
+        updateOverlayDisplay(`✂️ 保存完了`);
+        console.log('カット（複数）完了:', outputPath);
         const outputDir = path.dirname(outputPath);
         await ipcRenderer.invoke('open-folder', outputDir);
-        
+
+        // 成功したら設定をクリア
+        cutRanges = [];
+        renderCutRanges();
         setTimeout(hideOverlayDisplay, 2000);
     } catch (err) {
-        console.error('カット処理エラー:', err);
+        console.error('カット（複数）処理エラー:', err);
         updateOverlayDisplay(`❌ カット失敗: ${err.message}`);
         setTimeout(hideOverlayDisplay, 3000);
     } finally {
