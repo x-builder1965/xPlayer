@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.20';
+const appName = 'xPlayer -動画プレイヤー- Ver3.24';
 // ---------------------------------------------------------------------
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
@@ -475,6 +475,90 @@ ipcMain.handle('classify-path', async (event, fullPath) => {
         return { type: 'error', files: [], error: err.message };
     }
 });
+
+// ============================================================
+// 動画カット編集機能
+// ============================================================
+ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime }) => {
+    return new Promise((resolve, reject) => {
+        const fileName = path.basename(inputPath);
+        const baseNameWithoutExt = path.parse(fileName).name;
+        const ext = path.extname(fileName);
+        
+        // 出力ファイル名: 元ファイル名_cut_HHMMSS-HHMMSS.拡張子
+        const inStr = formatTimeForFilename(inTime);
+        const outStr = formatTimeForFilename(outTime);
+        const outName = `${baseNameWithoutExt}_cut_${inStr}-${outStr}${ext}`;
+        const outPath = path.join(path.dirname(inputPath), outName);
+
+        mainWindow.webContents.send('cut-progress', { percent: 0 });
+
+        // FFmpeg でカット処理
+        const inTimeStr = formatFFmpegTime(inTime);
+        const durationStr = formatFFmpegTime(outTime - inTime);
+
+        const ff = ffmpeg(inputPath)
+            .setStartTime(inTimeStr)
+            .setDuration(durationStr)
+            .outputOptions('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23')
+            .outputOptions('-c:a', 'aac', '-b:a', '192k')
+            .outputOptions('-c:s', 'mov_text')  // 字幕があれば含める
+            .outputOptions('-movflags', '+faststart')
+            .on('progress', (progress) => {
+                if (progress.percent !== undefined) {
+                    mainWindow.webContents.send('cut-progress', { percent: progress.percent });
+                }
+            })
+            .on('end', () => {
+                console.log(`カット完了: ${outPath}`);
+                resolve(outPath);
+            })
+            .on('error', (err, stdout, stderr) => {
+                console.error('カット処理エラー:', err.message);
+                mainWindow.webContents.send('cut-error', err.message);
+                reject(new Error(`カット処理失敗: ${err.message}`));
+            })
+            .save(outPath);
+    });
+});
+
+// フォルダを開く（Windows のエクスプローラー）
+ipcMain.handle('open-folder', async (event, folderPath) => {
+    try {
+        if (process.platform === 'win32') {
+            const { spawn } = require('child_process');
+            spawn('explorer', [folderPath]);
+        } else if (process.platform === 'darwin') {
+            const { exec } = require('child_process');
+            exec(`open "${folderPath}"`);
+        } else {
+            const { spawn } = require('child_process');
+            spawn('xdg-open', [folderPath]);
+        }
+        return true;
+    } catch (err) {
+        console.error('フォルダを開く失敗:', err);
+        return false;
+    }
+});
+
+// ============================================================
+// ユーティリティ関数
+// ============================================================
+function formatFFmpegTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    const ms = Math.floor((seconds % 1) * 100);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+}
+
+function formatTimeForFilename(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hours.toString().padStart(2, '0')}${minutes.toString().padStart(2, '0')}${secs.toString().padStart(2, '0')}`;
+}
 
 // ============================================================
 // ウインドウクローズでプロセス解放
