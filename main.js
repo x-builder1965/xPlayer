@@ -241,6 +241,20 @@ ipcMain.handle('save-playlist-dialog', async () => {
     return result;
 });
 
+// カット動画保存ダイアログ
+ipcMain.handle('show-save-cut-dialog', async (event, { fileName }) => {
+    const result = await dialog.showSaveDialog({
+        title: '動画をカット保存',
+        defaultPath: fileName,
+        filters: [
+            { name: '動画ファイル', extensions: ['mp4', 'mkv', 'webm', 'avi', 'mov'] },
+            { name: 'すべてのファイル', extensions: ['*'] }
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation']
+    });
+    return result;
+});
+
 // コマンドライン引数取得
 ipcMain.handle('get-command-line-args', () => {
     const args = process.argv.slice(app.isPackaged ? 1 : 2);
@@ -479,17 +493,23 @@ ipcMain.handle('classify-path', async (event, fullPath) => {
 // ============================================================
 // 動画カット編集機能
 // ============================================================
-ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime }) => {
+ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPath }) => {
     return new Promise((resolve, reject) => {
         const fileName = path.basename(inputPath);
         const baseNameWithoutExt = path.parse(fileName).name;
         const ext = path.extname(fileName);
         
-        // 出力ファイル名: 元ファイル名_cut_HHMMSS-HHMMSS.拡張子
-        const inStr = formatTimeForFilename(inTime);
-        const outStr = formatTimeForFilename(outTime);
-        const outName = `${baseNameWithoutExt}_cut_${inStr}-${outStr}${ext}`;
-        const outPath = path.join(path.dirname(inputPath), outName);
+        // outputPathが指定されていればそれを使用、なければ元ファイルと同じディレクトリに生成
+        let outPath;
+        if (outputPath) {
+            outPath = outputPath;
+        } else {
+            // 出力ファイル名: 元ファイル名_cut_HHMMSS-HHMMSS.拡張子
+            const inStr = formatTimeForFilename(inTime);
+            const outStr = formatTimeForFilename(outTime);
+            const outName = `${baseNameWithoutExt}_cut_${inStr}-${outStr}${ext}`;
+            outPath = path.join(path.dirname(inputPath), outName);
+        }
 
         mainWindow.webContents.send('cut-progress', { percent: 0 });
 
