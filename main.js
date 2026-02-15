@@ -56,6 +56,8 @@ const VIDEO_PLAYLIST_REGEX = new RegExp(`\\.(${VIDEO_PLAYLIST.join('|')})$`, 'i'
 let mainWindow = null;
 let currentFFmpeg = null;
 let currentOutputPath = null;
+let currentSegmentProcs = [];
+let currentTmpDir = null;
 
 // ウィンドウ作成
 function createWindow() {
@@ -416,6 +418,89 @@ ipcMain.handle('cancel-conversion', async () => {
     return true;
 });
 
+// カット処理キャンセル（変換キャンセルと類似の処理、seg/proc も扱う）
+ipcMain.handle('cancel-cut', async () => {
+    // まず再エンコード中の ffmpeg を殺す
+    if (currentFFmpeg) {
+        try {
+            currentFFmpeg.kill ? currentFFmpeg.kill('SIGKILL') : null;
+        } catch (e) {
+            console.warn('cut: FFmpeg kill failed:', e);
+        }
+        currentFFmpeg = null;
+    }
+
+    // 次にコピー/concat 用に spawn したプロセスを殺す
+    if (currentSegmentProcs && currentSegmentProcs.length > 0) {
+        for (const p of currentSegmentProcs.slice()) {
+            try {
+                if (p && p.kill) p.kill('SIGKILL');
+            } catch (e) {
+                console.warn('cut: segment kill failed:', e);
+            }
+        }
+        currentSegmentProcs = [];
+    }
+
+    // 一時ディレクトリのクリーンアップ
+    if (currentTmpDir) {
+        try {
+            await fs.rm(currentTmpDir, { recursive: true, force: true });
+            console.log('cut: 一時ディレクトリ削除成功:', currentTmpDir);
+        } catch (e) {
+            console.warn('cut: 一時ディレクトリ削除失敗:', e);
+        }
+        currentTmpDir = null;
+    }
+
+    // 出力ファイルが存在すれば削除を試みる（ロック待ち）
+    {
+        // capture to avoid race where currentOutputPath becomes null concurrently
+        const targetPath = currentOutputPath;
+        if (targetPath) {
+            const maxWait = 5000;
+            const interval = 100;
+            let elapsed = 0;
+
+            while (elapsed < maxWait) {
+                try {
+                    // if targetPath became null elsewhere, break
+                    if (!targetPath) break;
+                    await fs.access(targetPath, fs.constants.F_OK | fs.constants.W_OK);
+                    await fs.unlink(targetPath);
+                    console.log('cut: 中断 一時ファイル削除成功:', targetPath);
+                    break;
+                } catch (err) {
+                    // If the error is due to bad argument (null/undefined), stop trying
+                    if (err && err.code === 'ERR_INVALID_ARG_TYPE') {
+                        console.warn('cut: 削除スキップ (無効なパス):', err);
+                        break;
+                    }
+                    if (err && (err.code === 'EBUSY' || err.code === 'EPERM')) {
+                        await new Promise(r => setTimeout(r, interval));
+                        elapsed += interval;
+                        continue;
+                    } else if (err && err.code === 'ENOENT') {
+                        console.log('cut: 中断 ファイルは既に存在しません:', targetPath);
+                        break;
+                    } else {
+                        console.error('cut: 削除エラー:', err);
+                        break;
+                    }
+                }
+            }
+            if (elapsed >= maxWait) {
+                console.warn('cut: 中断 ファイル削除タイムアウト:', targetPath);
+            }
+        }
+        currentOutputPath = null;
+    }
+
+    // 通知
+    try { mainWindow.webContents.send('cut-progress', { stage: 'error', message: 'ユーザーにより中断されました' }); } catch (e) {}
+    return true;
+});
+
 // 一時ファイル削除用（ゴミ箱移動）
 ipcMain.handle('delete-temp-file', async (event, filePath) => {
     if (!filePath) {
@@ -512,7 +597,7 @@ ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPa
             outPath = path.join(path.dirname(inputPath), outName);
         }
 
-        mainWindow.webContents.send('cut-progress', { percent: 0 });
+        mainWindow.webContents.send('cut-progress', { stage: 'start', type: 'single', percent: 0, inTime, outTime, duration: outTime - inTime });
 
         // FFmpeg でカット処理
         const inTimeStr = formatFFmpegTime(inTime);
@@ -526,18 +611,43 @@ ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPa
             .outputOptions('-c:s', 'mov_text')  // 字幕があれば含める
             .outputOptions('-movflags', '+faststart')
             .on('progress', (progress) => {
-                if (progress.percent !== undefined) {
-                    mainWindow.webContents.send('cut-progress', { percent: progress.percent });
-                }
+                mainWindow.webContents.send('cut-progress', {
+                    stage: 'reencode',
+                    type: 'single',
+                    percent: progress.percent !== undefined ? progress.percent : 0,
+                    frames: progress.frames,
+                    currentFps: progress.currentFps,
+                    currentKbps: progress.currentKbps,
+                    timemark: progress.timemark
+                });
+            })
+            .on('start', () => {
+                currentFFmpeg = ff;
+                currentOutputPath = outPath;
             })
             .on('end', () => {
                 console.log(`カット完了: ${outPath}`);
+                currentFFmpeg = null;
+                currentOutputPath = null;
+                mainWindow.webContents.send('cut-progress', { stage: 'done', type: 'single', percent: 100, outPath });
                 resolve(outPath);
             })
             .on('error', (err, stdout, stderr) => {
-                console.error('カット処理エラー:', err.message);
-                mainWindow.webContents.send('cut-error', err.message);
-                reject(new Error(`カット処理失敗: ${err.message}`));
+                const msg = err && err.message ? err.message : String(err);
+                // ユーザーによる kill はエラー扱いにしない
+                if (msg.includes('ffmpeg was killed') || msg.includes('was killed with signal')) {
+                    console.log('カットがユーザーにより中断されました (single):', msg);
+                    try { mainWindow.webContents.send('cut-progress', { stage: 'cancelled', message: 'ユーザーにより中断されました' }); } catch (e) {}
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    return resolve(null);
+                }
+                console.error('カット処理エラー:', msg);
+                currentFFmpeg = null;
+                currentOutputPath = null;
+                mainWindow.webContents.send('cut-progress', { stage: 'error', message: msg });
+                mainWindow.webContents.send('cut-error', msg);
+                reject(new Error(`カット処理失敗: ${msg}`));
             })
             .save(outPath);
     });
@@ -589,7 +699,7 @@ app.on('window-all-closed', () => {
 });
 
 // 複数範囲を削除して結合して保存する（ranges: [{in, out}, ...]）
-ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPath }) => {
+ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPath, frameRate }) => {
     return new Promise((resolve, reject) => {
         try {
             // ffprobeで再生時間取得
@@ -658,11 +768,63 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                 });
                 filters.push(`${concatInputs.join('') }concat=n=${keeps.length}:v=1:a=1[v][a]`);
 
-                mainWindow.webContents.send('cut-progress', { percent: 0 });
+                mainWindow.webContents.send('cut-progress', { stage: 'start', type: 'multiple', percent: 0, keeps: keeps.length, duration });
+
+                // 指定があればフレーム精度を優先して再エンコード経路を直接実行
+                if (frameRate) {
+                    const cmd = ffmpeg(inputPath)
+                        .complexFilter(filters)
+                        .outputOptions('-map', '[v]', '-map', '[a]')
+                        .outputOptions('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28')
+                        .outputOptions('-c:a', 'aac', '-b:a', '128k')
+                        .outputOptions('-movflags', '+faststart')
+                        .on('start', () => {
+                            currentFFmpeg = cmd;
+                            currentOutputPath = outPath;
+                        })
+                        .on('progress', (progress) => {
+                            mainWindow.webContents.send('cut-progress', {
+                                stage: 'reencode',
+                                type: 'multiple',
+                                percent: progress.percent !== undefined ? progress.percent : 0,
+                                frames: progress.frames,
+                                currentFps: progress.currentFps,
+                                timemark: progress.timemark
+                            });
+                        })
+                        .on('end', () => {
+                            console.log(`複数範囲カット完了 (reencode): ${outPath}`);
+                            currentFFmpeg = null;
+                            currentOutputPath = null;
+                            mainWindow.webContents.send('cut-progress', { stage: 'done', type: 'multiple', percent: 100, outPath });
+                            resolve(outPath);
+                        })
+                        .on('error', (err) => {
+                            const msg = err && err.message ? err.message : String(err);
+                            if (msg.includes('ffmpeg was killed') || msg.includes('was killed with signal')) {
+                                console.log('複数範囲カットがユーザーにより中断されました (reencode):', msg);
+                                currentFFmpeg = null;
+                                currentOutputPath = null;
+                                try { mainWindow.webContents.send('cut-progress', { stage: 'cancelled', message: 'ユーザーにより中断されました' }); } catch (e) {}
+                                return resolve(null);
+                            }
+                            console.error('複数範囲カット処理エラー (reencode):', msg);
+                            currentFFmpeg = null;
+                            currentOutputPath = null;
+                            mainWindow.webContents.send('cut-progress', { stage: 'error', message: msg });
+                            mainWindow.webContents.send('cut-error', msg);
+                            reject(new Error(`カット処理失敗: ${msg}`));
+                        })
+                        .save(outPath);
+
+                    return; // 再エンコード経路で処理したため終了
+                }
 
                 // まずストリームコピーでセグメントを切り出して concat してみる（低CPU）
                 (async () => {
                     const tmpDir = path.join(os.tmpdir(), `xplayer_cut_${Date.now()}`);
+                    currentTmpDir = tmpDir;
+                    currentSegmentProcs = [];
                     try {
                         await fs.mkdir(tmpDir, { recursive: true });
                         const ext = path.extname(inputPath) || '.mp4';
@@ -686,12 +848,23 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                                     segPath
                                 ];
                                 const proc = spawn(ffmpegStatic, args);
+                                currentSegmentProcs.push(proc);
                                 proc.on('error', (e) => rej(e));
                                 proc.on('close', (code) => {
+                                    const idx = currentSegmentProcs.indexOf(proc);
+                                    if (idx >= 0) currentSegmentProcs.splice(idx, 1);
                                     if (code === 0) {
-                                        // 進捗はセグメント単位で報告
+                                        // セグメント完了を段階的に報告
                                         const pct = Math.round(((i + 1) / (keeps.length + 1)) * 100);
-                                        mainWindow.webContents.send('cut-progress', { percent: pct });
+                                        mainWindow.webContents.send('cut-progress', {
+                                            stage: 'extract-done',
+                                            type: 'multiple',
+                                            index: i,
+                                            total: keeps.length,
+                                            percent: pct,
+                                            segStart: k.start,
+                                            segEnd: k.end
+                                        });
                                         res();
                                     } else {
                                         rej(new Error(`segment ffmpeg failed (code ${code})`));
@@ -706,13 +879,17 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                         await fs.writeFile(listFile, listContent, 'utf8');
 
                         // concat 実行
+                        mainWindow.webContents.send('cut-progress', { stage: 'concat-start', type: 'multiple', percent: Math.round(((keeps.length) / (keeps.length + 1)) * 100) });
                         await new Promise((res, rej) => {
                             const args = ['-y', '-f', 'concat', '-safe', '0', '-i', listFile, '-c', 'copy', outPath];
                             const proc = spawn(ffmpegStatic, args);
+                            currentSegmentProcs.push(proc);
                             proc.on('error', (e) => rej(e));
                             proc.on('close', (code) => {
+                                const idx = currentSegmentProcs.indexOf(proc);
+                                if (idx >= 0) currentSegmentProcs.splice(idx, 1);
                                 if (code === 0) {
-                                    mainWindow.webContents.send('cut-progress', { percent: 100 });
+                                    mainWindow.webContents.send('cut-progress', { stage: 'concat-done', type: 'multiple', percent: 100 });
                                     res();
                                 } else {
                                     rej(new Error(`concat ffmpeg failed (code ${code})`));
@@ -722,6 +899,8 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
 
                         // 一時ファイル削除
                         try { await fs.rm(tmpDir, { recursive: true, force: true }); } catch (e) { /* ignore */ }
+                        currentTmpDir = null;
+                        currentSegmentProcs = [];
 
                         console.log(`複数範囲カット（copy/concat）完了: ${outPath}`);
                         resolve(outPath);
@@ -737,19 +916,42 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                             .outputOptions('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28')
                             .outputOptions('-c:a', 'aac', '-b:a', '128k')
                             .outputOptions('-movflags', '+faststart')
+                            .on('start', () => {
+                                currentFFmpeg = cmd;
+                                currentOutputPath = outPath;
+                            })
                             .on('progress', (progress) => {
-                                if (progress.percent !== undefined) {
-                                    mainWindow.webContents.send('cut-progress', { percent: progress.percent });
-                                }
+                                mainWindow.webContents.send('cut-progress', {
+                                    stage: 'reencode',
+                                    type: 'multiple',
+                                    percent: progress.percent !== undefined ? progress.percent : 0,
+                                    frames: progress.frames,
+                                    currentFps: progress.currentFps,
+                                    timemark: progress.timemark
+                                });
                             })
                             .on('end', () => {
                                 console.log(`複数範囲カット完了 (reencode): ${outPath}`);
+                                currentFFmpeg = null;
+                                currentOutputPath = null;
+                                mainWindow.webContents.send('cut-progress', { stage: 'done', type: 'multiple', percent: 100, outPath });
                                 resolve(outPath);
                             })
                             .on('error', (err) => {
-                                console.error('複数範囲カット処理エラー (reencode):', err.message);
-                                mainWindow.webContents.send('cut-error', err.message);
-                                reject(new Error(`カット処理失敗: ${err.message}`));
+                                const msg = err && err.message ? err.message : String(err);
+                                if (msg.includes('ffmpeg was killed') || msg.includes('was killed with signal')) {
+                                    console.log('複数範囲カットがユーザーにより中断されました (fallback reencode):', msg);
+                                    currentFFmpeg = null;
+                                    currentOutputPath = null;
+                                    try { mainWindow.webContents.send('cut-progress', { stage: 'cancelled', message: 'ユーザーにより中断されました' }); } catch (e) {}
+                                    return resolve(null);
+                                }
+                                console.error('複数範囲カット処理エラー (reencode):', msg);
+                                currentFFmpeg = null;
+                                currentOutputPath = null;
+                                mainWindow.webContents.send('cut-progress', { stage: 'error', message: msg });
+                                mainWindow.webContents.send('cut-error', msg);
+                                reject(new Error(`カット処理失敗: ${msg}`));
                             })
                             .save(outPath);
                     }
