@@ -42,11 +42,11 @@
                     <button id="urlCancelBtn" data-tooltip="キャンセル（Escape）">❌</button>
                 </div>
                 <div class="control-row" id="editControls" style="display:none;">
-                    <button id="setInMarkBtn" data-tooltip="インマークを設定">📍IN</button>
+                    <button id="setInMarkBtn" data-tooltip="インマークを設定">📍←</button>
                     <span id="inMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
                     <input type="range" id="editSeekBar" value="0" min="0" max="100" data-tooltip="カット編集位置">
                     <span id="outMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
-                    <button id="setOutMarkBtn" data-tooltip="アウトマークを設定">OUT📍</button>
+                    <button id="setOutMarkBtn" data-tooltip="アウトマークを設定">→📍</button>
                     <button id="addCutRangeBtn" data-tooltip="カット設定を追加">✅</button>
                     <button id="saveVideoBtn" data-tooltip="設定したカットを適用して保存">💾</button>
                     <button id="cancelEditBtn" data-tooltip="編集をキャンセル">❌</button>
@@ -206,18 +206,18 @@
                                 <td class="icon">✂️</td>
                                 <td class="key">Ctrl+e</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・編集モードを起動。📍INと OUT📍でカット範囲を指定して動画をカット。</td>
+                                <td class="note">・編集モードを起動。📍←と →📍でカット範囲を指定して動画をカット。</td>
                             </tr>
                             <tr>
                                 <td>　・INマーク設定</td>
-                                <td class="icon">📍IN</td>
+                                <td class="icon">📍←</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・カット編集の開始位置を設定。</td>
                             </tr>
                             <tr>
                                 <td>　・OUTマーク設定</td>
-                                <td class="icon">OUT📍</td>
+                                <td class="icon">→📍</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・カット編集の終了位置を設定。</td>
