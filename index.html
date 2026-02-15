@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.24'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.25'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -47,8 +47,13 @@
                     <input type="range" id="editSeekBar" value="0" min="0" max="100" data-tooltip="カット編集位置">
                     <span id="outMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
                     <button id="setOutMarkBtn" data-tooltip="アウトマークを設定">OUT📍</button>
-                    <button id="executeCutBtn" data-tooltip="カットを実行">✅</button>
+                    <button id="addCutRangeBtn" data-tooltip="カット設定を追加">✅</button>
+                    <button id="saveVideoBtn" data-tooltip="設定したカットを適用して保存">💾</button>
                     <button id="cancelEditBtn" data-tooltip="編集をキャンセル">❌</button>
+                    <div id="cutRangesContainer" style="display:block; margin-top:6px; width:100%;">
+                        <div style="font-size:12px; margin-bottom:4px;">設定済みカット範囲：</div>
+                        <div id="cutRangesList" style="max-height:120px; overflow:auto; background:#12121222; padding:6px; border-radius:4px;"></div>
+                    </div>
                 </div>
             </div>
             <div id="overlayDisplay"></div>
@@ -218,11 +223,18 @@
                                 <td class="note">・カット編集の終了位置を設定。</td>
                             </tr>
                             <tr>
-                                <td>　・カット実行・保存</td>
+                                <td>　・カット設定</td>
                                 <td class="icon">✅</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・カット編集を実行し、指定された場所に保存。</td>
+                                <td class="note">・カットの範囲を設定。</td>
+                            </tr>
+                            <tr>
+                                <td>　・カット実行・保存</td>
+                                <td class="icon">💾</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・動画カットを実行し、指定された場所に保存。</td>
                             </tr>
                             <tr>
                                 <td>　・カットキャンセル</td>
