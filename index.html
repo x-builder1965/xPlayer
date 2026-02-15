@@ -21,6 +21,7 @@
             <div class="filename">
                 <div class="filename-controls">
                     <button id="modeChangeBtn" data-tooltip="視聴モード（Ctrl+v）">🎬</button>
+                    <button id="editModeBtn" data-tooltip="編集モード（Ctrl+e）">✂️</button>
                     <select id="filenameDisplay" data-tooltip="再生動画リスト">
                         <option value=""></option>
                     </select>
@@ -39,6 +40,15 @@
                     <input id="urlInput" type="text" placeholder="動画のURLを入力" data-tooltip="動画のURLを入力">
                     <button id="urlConfirmBtn" data-tooltip="URL再生（Enter）">✅</button>
                     <button id="urlCancelBtn" data-tooltip="キャンセル（Escape）">❌</button>
+                </div>
+                <div class="control-row" id="editControls" style="display:none;">
+                    <button id="setInMarkBtn" data-tooltip="インマークを設定">📍IN</button>
+                    <span id="inMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
+                    <input type="range" id="editSeekBar" value="0" min="0" max="100" data-tooltip="カット編集位置">
+                    <span id="outMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
+                    <button id="setOutMarkBtn" data-tooltip="アウトマークを設定">OUT📍</button>
+                    <button id="executeCutBtn" data-tooltip="カットを実行">✅</button>
+                    <button id="cancelEditBtn" data-tooltip="編集をキャンセル">❌</button>
                 </div>
             </div>
             <div id="overlayDisplay"></div>
@@ -59,7 +69,6 @@
                         <span class="spacer"></span>
                         <button id="fitModeBtn" data-tooltip="横に合わせる（Ctrl+x）">↔️</button>
                         <button id="fullscreenBtn" data-tooltip="フルスクリーン表示（Ctrl+z／Double Click）">🖥️</button>
-                        <button id="editModeBtn" data-tooltip="編集モード（Ctrl+e）">✂️</button>
                         <button id="helpOpenBtn" data-tooltip="ヘルプ開く（Ctrl+h）">❔</button>
                     </div>
                     <label class="app-name-and-copyright" id="appNameAndCopyright"></label>
@@ -80,15 +89,6 @@
                         <option value="2.00">2.00x</option>
                     </select>
                     <input type="range" id="seekBar" value="0" min="0" max="100" data-tooltip="再生位置変更（←→／Swipe Left Right）">
-                </div>
-                <div class="control-row" id="editControls" style="display:none;">
-                    <button id="setInMarkBtn" data-tooltip="インマークを設定">📍IN</button>
-                    <span id="inMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
-                    <input type="range" id="editSeekBar" value="0" min="0" max="100" data-tooltip="カット編集位置">
-                    <span id="outMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
-                    <button id="setOutMarkBtn" data-tooltip="アウトマークを設定">OUT📍</button>
-                    <button id="executeCutBtn" data-tooltip="カットを実行">🎬</button>
-                    <button id="cancelEditBtn" data-tooltip="編集をキャンセル">🚫</button>
                 </div>
             </div>
         </div>
@@ -188,6 +188,48 @@
                                 <td class="key">Shift+s</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・プレイリストを名前をつけて保存。</td>
+                            </tr>
+                            <tr>
+                                <td class="sub-title">動画カット編集</td>
+                                <td class="icon sub-title"></td>
+                                <td class="key sub-title"></td>
+                                <td class="mouse sub-title"></td>
+                                <td class="note sub-title"></td>
+                            </tr>
+                            <tr>
+                                <td>　・編集モード切替</td>
+                                <td class="icon">✂️</td>
+                                <td class="key">Ctrl+e</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・編集モードを起動。📍INと OUT📍でカット範囲を指定して動画をカット。</td>
+                            </tr>
+                            <tr>
+                                <td>　・INマーク設定</td>
+                                <td class="icon">📍IN</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・カット編集の開始位置を設定。</td>
+                            </tr>
+                            <tr>
+                                <td>　・OUTマーク設定</td>
+                                <td class="icon">OUT📍</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・カット編集の終了位置を設定。</td>
+                            </tr>
+                            <tr>
+                                <td>　・カット実行</td>
+                                <td class="icon">✅</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・カット編集を実行。</td>
+                            </tr>
+                            <tr>
+                                <td>　・カットキャンセル</td>
+                                <td class="icon">❌</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・カット編集をキャンセル。</td>
                             </tr>
                             <tr>
                                 <td class="sub-title">ネット動画再生</td>
@@ -363,13 +405,6 @@
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・フォルダ、動画ファイル、プレイリストのドラッグ＆ドロップで再生。</td>
-                            </tr>
-                            <tr>
-                                <td>　・動画カット編集</td>
-                                <td class="icon">✂️</td>
-                                <td class="key">Ctrl+e</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・編集モードを起動。📍INと OUT📍でカット範囲を指定して動画をカット。</td>
                             </tr>
                         </tbody>
                     </table>
