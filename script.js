@@ -1194,6 +1194,11 @@ ipcRenderer.on('convert-progress', (event, { percent }) => {
     seekBar.value = percent;
 });
 
+// カット進捗受信
+ipcRenderer.on('cut-progress', (event, { percent }) => {
+    updateOverlayDisplay(`✂️ カット（削除）処理中… ${Math.round(percent)}%`);
+});
+
 // 変換エラー
 ipcRenderer.on('convert-error', (event, msg) => {
     console.error("変換失敗:", err);
@@ -2430,9 +2435,7 @@ cancelEditBtn.addEventListener('click', () => {
     editOutMark = -1;
     inMarkDisplay.textContent = '--:--:--';
     outMarkDisplay.textContent = '--:--:--';
-    // カット設定を全クリア
-    cutRanges = [];
-    renderCutRanges();
+    // 一時マークをクリア(カット鯉囲は保持)
     setTimeout(hideOverlayDisplay, 1500);
 });
 
@@ -2517,7 +2520,7 @@ saveVideoBtn.addEventListener('click', async () => {
             return;
         }
 
-        updateOverlayDisplay('✂️ カット（削除）処理中…', true);
+        updateOverlayDisplay('✂️ カット（削除）処理中… 0%', true);
 
         // main.js に複数範囲削除のハンドラを呼ぶ
         const outputPath = await ipcRenderer.invoke('cut-video-multiple', {
@@ -2528,12 +2531,8 @@ saveVideoBtn.addEventListener('click', async () => {
 
         updateOverlayDisplay(`✂️ 保存完了`);
         console.log('カット（複数）完了:', outputPath);
-        const outputDir = path.dirname(outputPath);
-        await ipcRenderer.invoke('open-folder', outputDir);
 
-        // 成功したら設定をクリア
-        cutRanges = [];
-        renderCutRanges();
+        // カット篆囲は保持し適用可能にして保持
         setTimeout(hideOverlayDisplay, 2000);
     } catch (err) {
         console.error('カット（複数）処理エラー:', err);
