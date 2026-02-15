@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.23';
+const appName = 'xPlayer -動画プレイヤー- Ver3.24';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -28,6 +28,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.23';
 // 2026-01-22 Ver3.21 サイズ変更コントロール廃止。
 // 2026-01-23 Ver3.22 YouTuneの埋め込み再生廃止。
 // 2026-01-28 Ver3.23 変換モードの実行時の進捗状況をシークバーに表示。
+// 2026-02-15 Ver3.24 カット編集機能追加。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -98,6 +99,15 @@ const removePlaylistBtn = document.getElementById('removePlaylistBtn');
 const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
 const savePlaylistBtn = document.getElementById('savePlaylistBtn');
 const modeChangeBtn = document.getElementById('modeChangeBtn');
+const editControls = document.getElementById('editControls');
+const editModeBtn = document.getElementById('editModeBtn');
+const setInMarkBtn = document.getElementById('setInMarkBtn');
+const setOutMarkBtn = document.getElementById('setOutMarkBtn');
+const executeCutBtn = document.getElementById('executeCutBtn');
+const cancelEditBtn = document.getElementById('cancelEditBtn');
+const inMarkDisplay = document.getElementById('inMarkDisplay');
+const outMarkDisplay = document.getElementById('outMarkDisplay');
+const editSeekBar = document.getElementById('editSeekBar');
 
 // localStorage から復元
 const savedVolume = localStorage.getItem('volume');
@@ -128,6 +138,9 @@ let isConverting = false;
 let modeChange = 'video';
 let baseConvertFile = null;
 let tempConvertFile = null;
+let isEditMode = false;
+let editInMark = -1;  // インマーク（秒）
+let editOutMark = -1; // アウトマーク（秒）
 
 // 初期状態設定
 videoPlayer.removeAttribute('src');
@@ -1283,6 +1296,13 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
+    // ✂️編集モード切替（Ctrl+e）
+    if (event.ctrlKey && event.key === 'e') {
+        event.preventDefault();
+        editModeBtn.click();
+        return;
+    }
+
     // ⏮️前の動画へ（PgUp）
     if (event.key === 'PageUp' && playlist.length > 0) {
         event.preventDefault();
@@ -1364,12 +1384,22 @@ document.addEventListener('keydown', async (event) => {
     
     // 5秒戻る／5秒進む（←／→）
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        // 抑制して確実に処理（ブラウザの既定動作を防ぐ）
+        try { event.preventDefault(); } catch (e) {}
+
         if (videoPlayer.duration) {
-            const delta = event.key === 'ArrowLeft' ? -5 : 5;
+            // 編集モード中（または編集コントロール表示中）は1秒刻み、それ以外は5秒刻み
+            const editVisible = (typeof editControls !== 'undefined' && editControls && editControls.style.display !== 'none');
+            const step = (isEditMode || editVisible) ? 1 : 5;
+            const delta = event.key === 'ArrowLeft' ? -step : step;
             let newTime = videoPlayer.currentTime + delta;
             newTime = Math.max(0, Math.min(videoPlayer.duration, newTime));
             videoPlayer.currentTime = newTime;
             seekBar.value = (100 / videoPlayer.duration) * newTime;
+            // 編集モード中は編集用シークバーも同期
+            if ((isEditMode || editVisible) && typeof editSeekBar !== 'undefined' && editSeekBar) {
+                editSeekBar.value = (newTime / videoPlayer.duration) * 100;
+            }
             updateTimeDisplay();
             updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
             localStorage.setItem('currentTime', newTime);
@@ -1377,7 +1407,7 @@ document.addEventListener('keydown', async (event) => {
             updateIconOverlay();
         }
         return;
-    } 
+    }
 
     // 🚥プレイリスト編集 表示／非表示（shift+m）
     if (event.shiftKey && event.key.toLowerCase() === 'm' ) {
@@ -2318,3 +2348,143 @@ dropzone.addEventListener('drop', async (e) => {
         await addFilesFromPaths(fullPaths);
     }
 });
+
+// ============================================================
+// 🎬 動画カット編集機能
+// ============================================================
+
+// 編集モード切替
+editModeBtn.addEventListener('click', () => {
+    if (!videoPlayer.src) {
+        updateOverlayDisplay('❌ 動画が読み込まれていません');
+        return;
+    }
+    
+    isEditMode = !isEditMode;
+    if (isEditMode) {
+        editControls.style.display = 'flex';
+        editModeBtn.classList.add('active');
+        // 初期化
+        editInMark = -1;
+        editOutMark = -1;
+        inMarkDisplay.textContent = '--:--:--';
+        outMarkDisplay.textContent = '--:--:--';
+        updateOverlayDisplay('編集モード: インマークを設定');
+    } else {
+        editControls.style.display = 'none';
+        editModeBtn.classList.remove('active');
+        hideOverlayDisplay();
+    }
+});
+
+// インマーク設定
+setInMarkBtn.addEventListener('click', () => {
+    if (videoPlayer.duration) {
+        editInMark = videoPlayer.currentTime;
+        inMarkDisplay.textContent = formatTime(editInMark);
+        updateOverlayDisplay(`📍IN: ${formatTime(editInMark)}`);
+        // 自動でアウトマーク設定に移行
+        setTimeout(() => {
+            updateOverlayDisplay('編集モード: アウトマークを設定');
+        }, 1000);
+    }
+});
+
+// アウトマーク設定
+setOutMarkBtn.addEventListener('click', () => {
+    if (videoPlayer.duration) {
+        editOutMark = videoPlayer.currentTime;
+        
+        // アウトマークがインマークより前ならスワップ
+        if (editOutMark < editInMark) {
+            [editInMark, editOutMark] = [editOutMark, editInMark];
+            inMarkDisplay.textContent = formatTime(editInMark);
+        }
+        
+        outMarkDisplay.textContent = formatTime(editOutMark);
+        updateOverlayDisplay(`OUT: ${formatTime(editOutMark)}`);
+    }
+});
+
+// 編集シークバー
+editSeekBar.addEventListener('input', () => {
+    if (videoPlayer.duration) {
+        const newTime = (parseFloat(editSeekBar.value) / 100) * videoPlayer.duration;
+        videoPlayer.currentTime = newTime;
+        updateTimeDisplay();
+    }
+});
+
+// キャンセル
+cancelEditBtn.addEventListener('click', () => {
+    isEditMode = false;
+    editControls.style.display = 'none';
+    editModeBtn.classList.remove('active');
+    editInMark = -1;
+    editOutMark = -1;
+    inMarkDisplay.textContent = '--:--:--';
+    outMarkDisplay.textContent = '--:--:--';
+    updateOverlayDisplay('編集モードをキャンセル');
+    setTimeout(hideOverlayDisplay, 1000);
+});
+
+// カット実行
+executeCutBtn.addEventListener('click', async () => {
+    // バリデーション
+    if (editInMark < 0 || editOutMark < 0) {
+        updateOverlayDisplay('❌ インマークとアウトマークを両方設定してください');
+        return;
+    }
+    if (editInMark >= editOutMark) {
+        updateOverlayDisplay('❌ インマーク < アウトマークになるように設定してください');
+        return;
+    }
+    if (!videoPlayer.src) {
+        updateOverlayDisplay('❌ 動画が読み込まれていません');
+        return;
+    }
+
+    try {
+        isEditMode = false;
+        editControls.style.display = 'none';
+        editModeBtn.classList.remove('active');
+        
+        // 元ファイルを取得
+        const currentFile = playlist[currentVideoIndex];
+        if (!currentFile) return;
+
+        updateOverlayDisplay('カット処理中…');
+        
+        // main.jsのcut-videoハンドラーを呼び出し
+        const outputPath = await ipcRenderer.invoke('cut-video', {
+            inputPath: currentFile.file.path,
+            inTime: editInMark,
+            outTime: editOutMark
+        });
+
+        updateOverlayDisplay(`✅ カット完了: ${path.basename(outputPath)}`);
+        
+        // 出力フォルダを開く（オプション）
+        const outputDir = path.dirname(outputPath);
+        await ipcRenderer.invoke('open-folder', outputDir);
+        
+        setTimeout(hideOverlayDisplay, 2000);
+    } catch (err) {
+        console.error('カット処理エラー:', err);
+        updateOverlayDisplay(`❌ カット失敗: ${err.message}`);
+        setTimeout(hideOverlayDisplay, 3000);
+    } finally {
+        editInMark = -1;
+        editOutMark = -1;
+        inMarkDisplay.textContent = '--:--:--';
+        outMarkDisplay.textContent = '--:--:--';
+    }
+});
+
+// 編集モード時にシークバーを同期
+videoPlayer.addEventListener('timeupdate', () => {
+    if (isEditMode && videoPlayer.duration) {
+        editSeekBar.value = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+    }
+});
+
