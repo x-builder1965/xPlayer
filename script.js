@@ -2165,6 +2165,10 @@ seekBar.addEventListener('input', (e) => {
     if (!videoPlayer.duration) return;
     const time = videoPlayer.duration * (seekBar.value / 100);
     videoPlayer.currentTime = time;
+    // 編集モード中は編集用シークバーも同期
+    if ((isEditMode || (typeof editControls !== 'undefined' && editControls && editControls.style.display !== 'none')) && typeof editSeekBar !== 'undefined' && editSeekBar) {
+        editSeekBar.value = (time / videoPlayer.duration) * 100;
+    }
     updateTimeDisplay();
     updateOverlayDisplay(`🕓 ${formatTime(time)}`);
 });
@@ -2509,6 +2513,8 @@ editSeekBar.addEventListener('input', () => {
     if (videoPlayer.duration) {
         const newTime = (parseFloat(editSeekBar.value) / 100) * videoPlayer.duration;
         videoPlayer.currentTime = newTime;
+        // seekBarも同期
+        seekBar.value = (newTime / videoPlayer.duration) * 100;
         updateTimeDisplay();
     }
 });
@@ -2564,7 +2570,7 @@ function renderCutRanges() {
         label.textContent = `カット${idx + 1}: ${formatTime(r.in)} (${Math.round(r.in * editFrameRate)}f) - ${formatTime(r.out)} (${Math.round(r.out * editFrameRate)}f)`;
         label.style.flex = '1';
         const del = document.createElement('button');
-        del.textContent = '削除';
+        del.textContent = '🗑️';
         del.style.marginLeft = '8px';
         del.addEventListener('click', () => {
             cutRanges.splice(idx, 1);
@@ -2650,8 +2656,10 @@ saveVideoBtn.addEventListener('click', async () => {
 
 // 編集モード時にシークバーを同期
 videoPlayer.addEventListener('timeupdate', () => {
-    if (isEditMode && videoPlayer.duration) {
+    if (isEditMode && videoPlayer.duration && !isMouseOverSeekBar) {
         editSeekBar.value = (videoPlayer.currentTime / videoPlayer.duration) * 100;
+        // 双方のシークバーを同期
+        seekBar.value = (videoPlayer.currentTime / videoPlayer.duration) * 100;
     }
 });
 
