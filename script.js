@@ -268,8 +268,8 @@ if (savedZoom && !isNaN(savedZoom)) {
 }
 // 画像移動値復元
 if (savedTranslateX && !isNaN(savedTranslateX) && savedTranslateY && !isNaN(savedTranslateY)) {
-    translateX = savedTranslateX;
-    translateY = savedTranslateY;
+    translateX = parseInt(savedTranslateX);
+    translateY = parseInt(savedTranslateY);
 } else {
     translateX = 0;
     translateY = 0;
@@ -575,8 +575,6 @@ function applyZoom(zoomPercent) {
     videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
     zoomValue = zoomPercent;
     localStorage.setItem('zoom', zoomValue.toString());
-    localStorage.setItem('translateX', translateX);
-    localStorage.setItem('translateY', translateY);
     zoomDisplay.textContent = `${zoomPercent >= 0 ? '+' : ''}${zoomPercent}%`;
 }
 
@@ -2205,8 +2203,8 @@ videoPlayer.addEventListener('mousemove', (event) => {
         translateY += deltaY;
         const scale = (100 + zoomValue) / 100;
         videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-        localStorage.setItem('translateX', translateX);
-        localStorage.setItem('translateY', translateY);
+        localStorage.setItem('translateX', translateX.toString());
+        localStorage.setItem('translateY', translateY.toString());
         updateIconOverlay();
         showControlsAndFilename();
         return;
