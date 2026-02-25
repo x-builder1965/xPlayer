@@ -567,6 +567,12 @@ function updateVolumeDisplay() {
 
 // ズーム適用
 function applyZoom(zoomPercent) {
+    if (zoomPercent === 0) {
+        translateX = 0;
+        translateY = 0;
+        localStorage.setItem('translateX', translateX.toString());
+        localStorage.setItem('translateY', translateY.toString());
+    }
     // ズーム値（-100～+100）をscale値（0～2）に変換
     // 公式: scale = (100 + zoomPercent) / 100
     const scale = (100 + zoomPercent) / 100;
