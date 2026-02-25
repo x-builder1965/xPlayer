@@ -575,6 +575,8 @@ function applyZoom(zoomPercent) {
     videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
     zoomValue = zoomPercent;
     localStorage.setItem('zoom', zoomValue.toString());
+    localStorage.setItem('translateX', translateX);
+    localStorage.setItem('translateY', translateY);
     zoomDisplay.textContent = `${zoomPercent >= 0 ? '+' : ''}${zoomPercent}%`;
 }
 
