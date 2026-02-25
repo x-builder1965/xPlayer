@@ -1960,7 +1960,7 @@ zoomBtn.addEventListener('click', () => {
     isZoomMode = !isZoomMode;
     if (isZoomMode) {
         zoomPanel.style.display = 'flex';
-        zoomBtn.textContent = '✖️';
+        zoomBtn.textContent = '❌';
         zoomBtn.setAttribute('data-tooltip', 'ズームモード終了（Ctrl+z）');
     } else {
         zoomPanel.style.display = 'none';
