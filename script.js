@@ -159,6 +159,8 @@ const savedCurrentVideoIndex = localStorage.getItem('currentVideoIndex');
 const savedCurrentTime = localStorage.getItem('currentTime');
 const savedFitMode = localStorage.getItem('fitMode');
 const savedZoom = localStorage.getItem('zoom');
+const savedTranslateX = localStorage.getItem('translateX');
+const savedTranslateY = localStorage.getItem('translateY');
 
 // 状態変数初期化
 let playlist = [];
@@ -260,12 +262,19 @@ if (savedFitMode && ['contain', 'cover'].includes(savedFitMode)) {
 if (savedZoom && !isNaN(savedZoom)) {
     zoomValue = parseInt(savedZoom);
     zoomBar.value = zoomValue.toString();
-    applyZoom(zoomValue);
 } else {
     zoomValue = 0;
     zoomBar.value = '0';
-    applyZoom(0);
 }
+// 画像移動値復元
+if (savedTranslateX && !isNaN(savedTranslateX) && savedTranslateY && !isNaN(savedTranslateY)) {
+    translateX = savedTranslateX;
+    translateY = savedTranslateY;
+} else {
+    translateX = 0;
+    translateY = 0;
+}
+applyZoom(zoomValue);
 
 // 起動時の引数有無判定
 (async () => {
@@ -2194,6 +2203,8 @@ videoPlayer.addEventListener('mousemove', (event) => {
         translateY += deltaY;
         const scale = (100 + zoomValue) / 100;
         videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        localStorage.setItem('translateX', translateX);
+        localStorage.setItem('translateY', translateY);
         updateIconOverlay();
         showControlsAndFilename();
         return;
