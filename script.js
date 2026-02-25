@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.25';
+const appName = 'xPlayer -動画プレイヤー- Ver3.28';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -30,6 +30,9 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.25';
 // 2026-01-28 Ver3.23 変換モードの実行時の進捗状況をシークバーに表示。
 // 2026-02-15 Ver3.24 カット編集機能追加。
 // 2026-02-15 Ver3.25 カット編集機能の改善。
+// 2026-02-25 Ver3.26 ズーム機能追加（-90%～+90%）。
+// 2026-02-25 Ver3.27 ズーム機能をドロップダウンから縦型スライダー(-100%～+100%)に変更。
+// 2026-02-25 Ver3.28 ズームモード中のショートカットキー追加（Ctrl+↑/↓/0）。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -76,6 +79,10 @@ const seekBar = document.getElementById('seekBar');
 const volumeMuteBtn = document.getElementById('volumeMuteBtn');
 const volumeBar = document.getElementById('volumeBar');
 const speedSelect = document.getElementById('speedSelect');
+const zoomBtn = document.getElementById('zoomBtn');
+const zoomPanel = document.getElementById('zoomPanel');
+const zoomBar = document.getElementById('zoomBar');
+const zoomDisplay = document.getElementById('zoomDisplay');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 const fitModeBtn = document.getElementById('fitModeBtn');
 const filename = document.querySelector('.filename');
@@ -143,13 +150,14 @@ processCancelBtn.addEventListener('click', async () => {
     }
 });
 
-// localStorage から復元
+// localStorage から復得
 const savedVolume = localStorage.getItem('volume');
 const savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
 const savedPlaylist = localStorage.getItem('playlist');
 const savedCurrentVideoIndex = localStorage.getItem('currentVideoIndex');
 const savedCurrentTime = localStorage.getItem('currentTime');
 const savedFitMode = localStorage.getItem('fitMode');
+const savedZoom = localStorage.getItem('zoom');
 
 // 状態変数初期化
 let playlist = [];
@@ -163,6 +171,8 @@ let lastVolume = 0.2;
 let isMouseOverControls = false;
 let saveInterval = null;
 let fitMode = 'contain';
+let zoomValue = 0;  // ズーム値（-100 ～ 100）
+let isZoomMode = false;  // ズームモード状態
 let isHelpOpen = false;
 let isSeekDragging = false;
 let isMouseOverSeekBar = false;
@@ -238,6 +248,17 @@ if (savedFitMode && ['contain', 'cover'].includes(savedFitMode)) {
     videoPlayer.style.objectFit = fitMode;
     fitModeBtn.textContent = '↔️';
     fitModeBtn.setAttribute('data-tooltip', '横に合わせる（Ctrl+x）');
+}
+
+// ズーム値復元
+if (savedZoom && !isNaN(savedZoom)) {
+    zoomValue = parseInt(savedZoom);
+    zoomBar.value = zoomValue.toString();
+    applyZoom(zoomValue);
+} else {
+    zoomValue = 0;
+    zoomBar.value = '0';
+    applyZoom(0);
 }
 
 // 起動時の引数有無判定
@@ -491,6 +512,7 @@ function disabledControls(disable) {
     playPauseBtn.disable = disable;
     fastForwardBtn.disable = disable;
     nextVideoBtn.disable = disable;
+    zoomBtn.disable = disable;
     fitModeBtn.disable = disable;
     fullscreenBtn.disable = disable;
     helpOpenBtn.disable = disable;
@@ -526,6 +548,17 @@ function updateVolumeDisplay() {
     const volumePercent = Math.round(videoPlayer.volume * 100);
     volumeDisplay.textContent = `${volumePercent}%`;
     updateIconOverlay();
+}
+
+// ズーム適用
+function applyZoom(zoomPercent) {
+    // ズーム値（-100～100）をscale値（0～2）に変換
+    // 公式: scale = (100 + zoomPercent) / 100
+    const scale = (100 + zoomPercent) / 100;
+    videoPlayer.style.transform = `scale(${scale})`;
+    zoomValue = zoomPercent;
+    localStorage.setItem('zoom', zoomValue.toString());
+    zoomDisplay.textContent = `${zoomPercent >= 0 ? '+' : ''}${zoomPercent}%`;
 }
 
 // オーバーレイ表示
@@ -1451,10 +1484,10 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
-    // 🖥️フルスクリーン表示／❌フルスクリーン解除（Ctrl+z／Double Click）
+    // ズームモード切替（Ctrl+z）
     if (event.ctrlKey && event.key === 'z') {
         event.preventDefault();
-        fullscreenBtn.click();
+        zoomBtn.click();
         return;
     }
 
@@ -1465,8 +1498,39 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
-    // 音量変更（↓／↑）
-    if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+    // ズームモード中のキー操作
+    if (isZoomMode) {
+        // ズームイン（Ctrl+↑）
+        if (event.ctrlKey && event.key === 'ArrowUp') {
+            event.preventDefault();
+            let newZoom = zoomValue + 5;
+            if (newZoom > 100) newZoom = 100;
+            zoomBar.value = newZoom.toString();
+            applyZoom(newZoom);
+            return;
+        }
+
+        // ズームアウト（Ctrl+↓）
+        if (event.ctrlKey && event.key === 'ArrowDown') {
+            event.preventDefault();
+            let newZoom = zoomValue - 5;
+            if (newZoom < -100) newZoom = -100;
+            zoomBar.value = newZoom.toString();
+            applyZoom(newZoom);
+            return;
+        }
+
+        // ズームリセット（Ctrl+0）
+        if (event.ctrlKey && event.key === '0') {
+            event.preventDefault();
+            zoomBar.value = '0';
+            applyZoom(0);
+            return;
+        }
+    }
+
+    // 音量変更（↓／↑）- ズームモード外のみ
+    if (!isZoomMode && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
         const delta = event.key === 'ArrowUp' ? 0.05 : -0.05;
         videoPlayer.volume = Math.max(0, Math.min(1, videoPlayer.volume + delta));
         volumeBar.value = videoPlayer.volume;
@@ -1839,13 +1903,13 @@ fullscreenBtn.addEventListener('click', () => {
         if (mainContainer.requestFullscreen) {
             mainContainer.requestFullscreen();
             fullscreenBtn.textContent = '❌';
-            fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除（Ctrl+z／Double Click）');
+            fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除（Double Click）');
         }
     } else {
         if (document.exitFullscreen) {
             document.exitFullscreen();
             fullscreenBtn.textContent = '🖥️';
-            fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示（Ctrl+z／Double Click）');
+            fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示（Double Click）');
         }
     }
     showControlsAndFilename();
@@ -1861,6 +1925,29 @@ fitModeBtn.addEventListener('click', () => {
     localStorage.setItem('fitMode', fitMode);
     showControlsAndFilename();
     updateIconOverlay();
+});
+
+// ズームモード切替
+zoomBtn.addEventListener('click', () => {
+    isZoomMode = !isZoomMode;
+    if (isZoomMode) {
+        zoomPanel.style.display = 'flex';
+        zoomBtn.textContent = '✖️';
+        zoomBtn.setAttribute('data-tooltip', 'ズームモード終了（Ctrl+z）');
+    } else {
+        zoomPanel.style.display = 'none';
+        zoomBtn.textContent = '🔍';
+        zoomBtn.setAttribute('data-tooltip', 'ズームモード（Ctrl+z）');
+        updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
+    }
+    showControlsAndFilename();
+    updateIconOverlay();
+});
+
+// ズームスライダー変更
+zoomBar.addEventListener('input', () => {
+    const zoomPercent = parseInt(zoomBar.value);
+    applyZoom(zoomPercent);
 });
 
 // プレイリスト選択

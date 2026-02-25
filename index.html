@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.25'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.28'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -72,6 +72,7 @@
                         <button id="nextVideoBtn" data-tooltip="次の動画へ（PgDw）">⏭️</button>
                         <span class="spacer"></span>
                         <button id="fitModeBtn" data-tooltip="横に合わせる（Ctrl+x）">↔️</button>
+                        <button id="zoomBtn" data-tooltip="ズームモード（Ctrl+z）">🔍</button>
                         <button id="fullscreenBtn" data-tooltip="フルスクリーン表示（Ctrl+z／Double Click）">🖥️</button>
                         <button id="helpOpenBtn" data-tooltip="ヘルプ開く（Ctrl+h）">❔</button>
                     </div>
@@ -81,7 +82,6 @@
                     <button id="volumeMuteBtn" data-tooltip="ミュート（Ctrl+m）">🔊</button>
                     <span id="volumeDisplay" data-tooltip="音量（↑↓／Swipe Up Down／Wheel）">20%</span>
                     <input type="range" id="volumeBar" value="0.2" min="0" max="1" step="0.01" data-tooltip="音量変更（↑↓／Swipe Up Down）">
-                    <span id="timeDisplay" data-tooltip="再生時間/動画時間（←→／Swipe Left Right）">0:00:00 / 0:00:00</span>
                     <select id="speedSelect" data-tooltip="再生速度（Ctrl+.／Ctrl+,）">
                         <option value="0.25">0.25x</option>
                         <option value="0.50">0.50x</option>
@@ -92,13 +92,18 @@
                         <option value="1.75">1.75x</option>
                         <option value="2.00">2.00x</option>
                     </select>
+                    <span id="timeDisplay" data-tooltip="再生時間/動画時間（←→／Swipe Left Right）">0:00:00 / 0:00:00</span>
                     <input type="range" id="seekBar" value="0" min="0" max="100" data-tooltip="再生位置変更（←→／Swipe Left Right）">
                 </div>
+            </div>
+            <div id="zoomPanel" style="display:none;">
+                <input type="range" id="zoomBar" value="0" min="-100" max="100" step="5" data-tooltip="ズーム調整">
+                <span id="zoomDisplay">0%</span>
             </div>
         </div>
         <div class="help-container">
             <div class="header-row">
-                <h1>xPlayer -動画プレイヤー- Ver3.24</h1>
+                <h1>xPlayer -動画プレイヤー- Ver3.28</h1>
                 <button id="helpCloseBtn" data-tooltip="ヘルプ閉じる（Escape）">❌</button>
             </div>
             <div class="table-container">
@@ -341,6 +346,13 @@
                                 <td class="note">・プレイリストの再生中動画の次動画を再生。End押下で最後へ移動。</td>
                             </tr>
                             <tr>
+                                <td>　・ズームモード開始／終了</td>
+                                <td class="icon">🔍／✖️</td>
+                                <td class="key">Ctrl+z</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・ズームモードを開始／終了。ズーム中は Ctrl+↑（拡大）、Ctrl+↓（縮小）、Ctrl+0（リセット）で調整。</td>
+                            </tr>
+                            <tr>
                                 <td>　・横に合わせる／縦に合わせる</td>
                                 <td class="icon">↔️／↕️</td>
                                 <td class="key">Ctrl+x</td>
@@ -350,7 +362,7 @@
                             <tr>
                                 <td>　・フルスクリーン表示／解除</td>
                                 <td class="icon">🖥️／❌</td>
-                                <td class="key">Ctrl+z</td>
+                                <td class="key no-data">なし</td>
                                 <td class="mouse">Double Click</td>
                                 <td class="note">・プレイヤーのフルスクリーン表示またはウィンドウ表示を切り替える。</td>
                             </tr>
