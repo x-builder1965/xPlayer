@@ -1971,9 +1971,9 @@ zoomBtn.addEventListener('click', () => {
     } else {
         zoomPanel.style.display = 'none';
         zoomBtn.textContent = '🔍';
-        zoomBtn.setAttribute('data-tooltip', 'ズームモード（Ctrl+z）');
-        updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
+        zoomBtn.setAttribute('data-tooltip', 'ズームモード開始（Ctrl+z）');
     }
+    updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
     showControlsAndFilename();
     updateIconOverlay();
 });
