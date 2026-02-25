@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.28';
+const appName = 'xPlayer -動画プレイヤー- Ver3.29';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -33,6 +33,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.28';
 // 2026-02-25 Ver3.26 ズーム機能追加（-90%～+90%）。
 // 2026-02-25 Ver3.27 ズーム機能をドロップダウンから縦型スライダー(-100%～+100%)に変更。
 // 2026-02-25 Ver3.28 ズームモード中のショートカットキー追加（Ctrl+↑/↓/0）。
+// 2026-02-25 Ver3.29 ズームモード中の画像移動機能追加。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -168,6 +169,11 @@ let dragStartX = 0;
 let dragStartY = 0;
 let isVolumeDragging = false;
 let lastVolume = 0.2;
+let isPanning = false; // ズーム時のパン（ドラッグ移動）フラグ
+let panStartX = 0;
+let panStartY = 0;
+let translateX = 0; // ピクセル単位の平行移動量
+let translateY = 0;
 let isMouseOverControls = false;
 let saveInterval = null;
 let fitMode = 'contain';
@@ -555,7 +561,9 @@ function applyZoom(zoomPercent) {
     // ズーム値（-100～+100）をscale値（0～2）に変換
     // 公式: scale = (100 + zoomPercent) / 100
     const scale = (100 + zoomPercent) / 100;
-    videoPlayer.style.transform = `scale(${scale})`;
+    // transform は translate(px,px) scale() の順に指定
+    videoPlayer.style.transformOrigin = 'center center';
+    videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
     zoomValue = zoomPercent;
     localStorage.setItem('zoom', zoomValue.toString());
     zoomDisplay.textContent = `${zoomPercent >= 0 ? '+' : ''}${zoomPercent}%`;
@@ -1523,7 +1531,10 @@ document.addEventListener('keydown', async (event) => {
         // ズームリセット（Ctrl+0）
         if (event.ctrlKey && event.key === '0') {
             event.preventDefault();
+            // ズーム値をリセットし、表示位置も中央へ戻す
             zoomBar.value = '0';
+            translateX = 0;
+            translateY = 0;
             applyZoom(0);
             return;
         }
@@ -1690,6 +1701,14 @@ document.addEventListener('mouseup', (e) => {
         if (isMouseOverSeekBar) {
             videoPreview.style.display = 'block';
         }
+    }
+
+    if (isPanning) {
+        // ドキュメントレベルでのマウスアップ時にもパン終了処理
+        isPanning = false;
+        videoPlayer.style.cursor = 'auto';
+        showControlsAndFilename();
+        updateIconOverlay();
     }
 });
 
@@ -2148,15 +2167,38 @@ videoPlayer.addEventListener('dblclick', (event) => {
 // マウス押下
 videoPlayer.addEventListener('mousedown', (event) => {
     if (event.button === 0) {
-        isDragging = true;
-        dragStartX = event.clientX;
-        dragStartY = event.clientY;
+        if (isZoomMode) {
+            // ズーム時はパン（画像移動）開始
+            isPanning = true;
+            panStartX = event.clientX;
+            panStartY = event.clientY;
+            videoPlayer.style.cursor = 'grabbing';
+        } else {
+            isDragging = true;
+            dragStartX = event.clientX;
+            dragStartY = event.clientY;
+        }
         event.preventDefault();
     }
 });
 
 // マウス移動
 videoPlayer.addEventListener('mousemove', (event) => {
+    // ズームモード時のパン（画像移動）
+    if (isPanning) {
+        const deltaX = event.clientX - panStartX;
+        const deltaY = event.clientY - panStartY;
+        panStartX = event.clientX;
+        panStartY = event.clientY;
+        translateX += deltaX;
+        translateY += deltaY;
+        const scale = (100 + zoomValue) / 100;
+        videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        updateIconOverlay();
+        showControlsAndFilename();
+        return;
+    }
+
     if (isDragging && videoPlayer.duration) {
         const deltaX = event.clientX - dragStartX;
         const deltaY = event.clientY - dragStartY;
@@ -2196,9 +2238,16 @@ videoPlayer.addEventListener('mousemove', (event) => {
 // マウス解放
 videoPlayer.addEventListener('mouseup', (e) => {
     if (e.button === 0) {
+        const wasDragging = isDragging;
+        const wasVolumeDragging = isVolumeDragging;
+        const wasPanning = isPanning;
+
         isDragging = false;
         isVolumeDragging = false;
-        if (isDragging || isVolumeDragging) {
+        isPanning = false;
+        videoPlayer.style.cursor = 'auto';
+
+        if (wasDragging || wasVolumeDragging || wasPanning) {
             showControlsAndFilename();
             updateIconOverlay();
         }
@@ -2216,7 +2265,10 @@ videoPlayer.addEventListener('mouseleave', () => {
 videoPlayer.addEventListener('click', (e) => {
     if (e.button === 0) {
         if (!isDragging && !isVolumeDragging) {
-            if (controls.style.opacity === '1' || filename.style.opacity === '1') {
+            const isVisible = 
+                window.getComputedStyle(controls).opacity  === '1' ||
+                window.getComputedStyle(filename).opacity  === '1';
+            if (isVisible) {
                 hideControlsAndFilename();
             } else {
                 showControlsAndFilename();
