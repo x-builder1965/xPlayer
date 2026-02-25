@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.29';
+const appName = 'xPlayer -動画プレイヤー- Ver3.30';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -34,6 +34,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.29';
 // 2026-02-25 Ver3.27 ズーム機能をドロップダウンから縦型スライダー(-100%～+100%)に変更。
 // 2026-02-25 Ver3.28 ズームモード中のショートカットキー追加（Ctrl+↑/↓/0）。
 // 2026-02-25 Ver3.29 ズームモード中の画像移動機能追加。
+// 2026-02-26 Ver3.30 ズームリセットボタン追加。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -84,6 +85,7 @@ const zoomBtn = document.getElementById('zoomBtn');
 const zoomPanel = document.getElementById('zoomPanel');
 const zoomBar = document.getElementById('zoomBar');
 const zoomDisplay = document.getElementById('zoomDisplay');
+const zoomResetBtn = document.getElementById('zoomResetBtn');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 const fitModeBtn = document.getElementById('fitModeBtn');
 const filename = document.querySelector('.filename');
@@ -1546,11 +1548,7 @@ document.addEventListener('keydown', async (event) => {
         // ズームリセット（Ctrl+0）
         if (event.ctrlKey && event.key === '0') {
             event.preventDefault();
-            // ズーム値をリセットし、表示位置も中央へ戻す
-            zoomBar.value = '0';
-            translateX = 0;
-            translateY = 0;
-            applyZoom(0);
+            zoomResetBtn.click();
             return;
         }
     }
@@ -1982,6 +1980,15 @@ zoomBtn.addEventListener('click', () => {
 zoomBar.addEventListener('input', () => {
     const zoomPercent = parseInt(zoomBar.value);
     applyZoom(zoomPercent);
+});
+
+// ズームリセット
+zoomResetBtn.addEventListener('click', () => {
+    // ズーム値をリセットし、表示位置も中央へ戻す
+    zoomBar.value = '0';
+    translateX = 0;
+    translateY = 0;
+    applyZoom(0);
 });
 
 // プレイリスト選択
