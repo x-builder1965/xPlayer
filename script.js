@@ -171,7 +171,7 @@ let lastVolume = 0.2;
 let isMouseOverControls = false;
 let saveInterval = null;
 let fitMode = 'contain';
-let zoomValue = 0;  // ズーム値（-100 ～ 100）
+let zoomValue = 0;  // ズーム値（-100 ～ +200）
 let isZoomMode = false;  // ズームモード状態
 let isHelpOpen = false;
 let isSeekDragging = false;
@@ -552,9 +552,9 @@ function updateVolumeDisplay() {
 
 // ズーム適用
 function applyZoom(zoomPercent) {
-    // ズーム値（-100～100）をscale値（0～2）に変換
+    // ズーム値（-100～+200）をscale値（0～2）に変換
     // 公式: scale = (100 + zoomPercent) / 100
-    const scale = (100 + zoomPercent) / 100;
+    const scale = (200 + zoomPercent) / 200;
     videoPlayer.style.transform = `scale(${scale})`;
     zoomValue = zoomPercent;
     localStorage.setItem('zoom', zoomValue.toString());
@@ -1504,7 +1504,7 @@ document.addEventListener('keydown', async (event) => {
         if (event.ctrlKey && event.key === 'ArrowUp') {
             event.preventDefault();
             let newZoom = zoomValue + 5;
-            if (newZoom > 100) newZoom = 100;
+            if (newZoom > 200) newZoom = 200;
             zoomBar.value = newZoom.toString();
             applyZoom(newZoom);
             return;
