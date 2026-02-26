@@ -219,9 +219,11 @@ let application = chromePaths.find(p => {
 }) || chromePaths[0]; // 見つからなくても1つ目は試す
 
 // コントロールサイズ適用
-let controlSize = calculateControlSize();
-localStorage.setItem('controlSize', controlSize);
-updateControlSize(controlSize);
+let controlSizeX = calculateControlSizeX();
+let controlSizeY = calculateControlSizeY();
+localStorage.setItem('controlSizeX', controlSizeX);
+localStorage.setItem('controlSizeY', controlSizeY);
+updateControlSize(controlSizeX, controlSizeY);
 
 // ボリューム復元
 if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
@@ -426,21 +428,28 @@ async function pasteFromClipboard() {
 }
 
 // 画面幅からコントロールサイズ計算
-function calculateControlSize() {
+function calculateControlSizeX() {
     const screenWidth = window.innerWidth;
     const sizePercent = (screenWidth / 2860) * 100;
     return sizePercent;
 }
 
+// 画面幅からコントロールサイズ計算
+function calculateControlSizeY() {
+    const screenHeight = window.innerHeight;
+    const sizePercent = (screenHeight / 1600) * 100;
+    return sizePercent;
+}
+
 // フォント・パディング動的更新
-function updateControlSize(value) {
-    const fontSize = 8 + (value / 100) * (24 - 8);
-    const padding = 2 + (value / 100) * (10 - 2);
-    const appNameAndCopyrightFontSize = 8 + (value / 100) * (17 - 8);
-    const appNameAndCopyrightPadding = 2 + (value / 100) * (8 - 2);
-    const speedSelectWidth = 40 + (value / 120) * (154 - 40);
-    const zoomPanelHeight = 40 + (value / 100) * (540 - 40);
-    const zoomPanelWidth = 40 + (value / 100) * (40 - 40);
+function updateControlSize(valueX, valueY) {
+    const fontSize = 8 + (valueX / 100) * (24 - 8);
+    const padding = 2 + (valueX / 100) * (10 - 2);
+    const appNameAndCopyrightFontSize = 8 + (valueX / 100) * (17 - 8);
+    const appNameAndCopyrightPadding = 2 + (valueX / 100) * (8 - 2);
+    const speedSelectWidth = 40 + (valueX / 120) * (154 - 40);
+    const zoomPanelHeight = 100 + (valueY / 100) * (500 - 100);
+    const zoomPanelWidth = 40 + (valueX / 100) * (40 - 40);
     const controls = document.querySelectorAll('button, select#filenameDisplay, select#speedSelect, #timeDisplay, #volumeDisplay, #appNameAndCopyright, input#urlInput, #zoomPanel');
     controls.forEach(control => {
         if (control.id === 'appNameAndCopyright') {
@@ -459,7 +468,7 @@ function updateControlSize(value) {
         }
     });
 
-    const overlayFontSize = 20 + (value / 100) * (160 - 20);
+    const overlayFontSize = 20 + (valueX / 100) * (160 - 20);
     overlayDisplay.style.fontSize = `${overlayFontSize}px`;
 }
 
@@ -1359,9 +1368,11 @@ ipcRenderer.on('convert-error', (event, msg) => {
 // 🔲グローバルイベント🔲
 // ウィンドウリサイズ
 window.addEventListener('resize', () => {
-    const controlSize = calculateControlSize();
-    localStorage.setItem('controlSize', controlSize);
-    updateControlSize(controlSize);
+    const controlSizeX = calculateControlSizeX();
+    const controlSizeY = calculateControlSizeY();
+    localStorage.setItem('controlSizeX', controlSizeX);
+    localStorage.setItem('controlSizeY', controlSizeY);
+    updateControlSize(controlSizeX, controlSizeY);
     showControlsAndFilename();
     updateIconOverlay();
 });
