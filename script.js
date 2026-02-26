@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.32';
+const appName = 'xPlayer -動画プレイヤー- Ver3.33';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -37,6 +37,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.32';
 // 2026-02-26 Ver3.30 ズームリセットボタン追加。
 // 2026-02-26 Ver3.31 ズームパネルをサイズ調整に対応。
 // 2026-02-26 Ver3.32 ズームパネルにズーム終了ボタン追加。
+// 2026-02-27 Ver3.33 ズズームモード中の←、→の移動量を詳細化。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -1590,36 +1591,44 @@ document.addEventListener('keydown', async (event) => {
     }
     
     // 5秒戻る／5秒進む（←／→）
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-        // 抑制して確実に処理（ブラウザの既定動作を防ぐ）
-        try { event.preventDefault(); } catch (e) {}
+	if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+	    try { event.preventDefault(); } catch (e) {}
+	
+	    if (videoPlayer.duration) {
+	        // ★ ここですべてのフラグを先に定義 ★
+	        const editControlsExist = typeof editControls !== 'undefined' && editControls;
+	        const editVisible = editControlsExist && editControls.style.display !== 'none';
+	        const zoomModeActive = typeof isZoomMode !== 'undefined' && isZoomMode === true;
+	
+	        // フレーム単位シークが必要か？
+	        const needsFrameStep = isEditMode || editVisible || zoomModeActive;
+	
+	        const frameRate = (typeof editFrameRate === 'number' && editFrameRate > 0) ? editFrameRate : 30;
+	        const stepSeconds = needsFrameStep ? (1 / frameRate) : 5;
+	
+	        const delta = event.key === 'ArrowLeft' ? -stepSeconds : stepSeconds;
+	        let newTime = videoPlayer.currentTime + delta;
+	        newTime = Math.max(0, Math.min(videoPlayer.duration, newTime));
 
-        if (videoPlayer.duration) {
-            // 編集モード中（または編集コントロール表示中）はフレーム刻み（秒→フレーム変換）、
-            // それ以外は5秒刻み
-            const editVisible = (typeof editControls !== 'undefined' && editControls && editControls.style.display !== 'none');
-            const stepSeconds = (isEditMode || editVisible) ? (1 / editFrameRate) : 5;
-            const delta = event.key === 'ArrowLeft' ? -stepSeconds : stepSeconds;
-            let newTime = videoPlayer.currentTime + delta;
-            newTime = Math.max(0, Math.min(videoPlayer.duration, newTime));
             videoPlayer.currentTime = newTime;
             seekBar.value = (100 / videoPlayer.duration) * newTime;
-            // 編集モード中は編集用シークバーも同期
-            if ((isEditMode || editVisible) && typeof editSeekBar !== 'undefined' && editSeekBar) {
+
+            // 編集用シークバー同期（編集モードまたはズームモード時も含む）
+            if (needsFrameStep && typeof editSeekBar !== 'undefined' && editSeekBar) {
                 editSeekBar.value = (newTime / videoPlayer.duration) * 100;
             }
+
             updateTimeDisplay();
-            if (isEditMode || editVisible) {
-                updateOverlayDisplay(`🕓 ${formatTime(newTime)} (${Math.round(newTime * editFrameRate)}f)`);
-            } else {
-                updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
-            }
-            localStorage.setItem('currentTime', newTime);
-            showControlsAndFilename();
-            updateIconOverlay();
-        }
-        return;
-    }
+        
+	        if (needsFrameStep) {
+	            const frameNum = Math.round(newTime * frameRate);
+	            updateOverlayDisplay(`🕓 ${formatTime(newTime)} (${frameNum}f)`);
+	        } else {
+	            updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+	        }
+	    }
+	    return;
+	}
 
     // 🚥プレイリスト編集 表示／非表示（shift+m）
     if (event.shiftKey && event.key.toLowerCase() === 'm' ) {
