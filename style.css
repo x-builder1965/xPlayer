@@ -96,8 +96,9 @@ video {
 }
 #zoomBar {
     width: 8px;
-    height: 250px;
+    height: 200px;
     writing-mode: bt-lr;
+    appearance: slider-vertical;
     -webkit-appearance: slider-vertical;
     accent-color: #007bff;
     background: #555;
