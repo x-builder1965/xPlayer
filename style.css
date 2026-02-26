@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.28'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.31'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -80,7 +80,7 @@ video {
 #zoomPanel {
     position: absolute;
     right: 20px;
-    top: 50%;
+    top: 46%;
     transform: translateY(-50%);
     height: 300px;
     background: rgba(0, 0, 0, 0.7);
