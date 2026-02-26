@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.31';
+const appName = 'xPlayer -動画プレイヤー- Ver3.32';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -36,6 +36,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.31';
 // 2026-02-25 Ver3.29 ズームモード中の画像移動機能追加。
 // 2026-02-26 Ver3.30 ズームリセットボタン追加。
 // 2026-02-26 Ver3.31 ズームパネルをサイズ調整に対応。
+// 2026-02-26 Ver3.32 ズームパネルにズーム終了ボタン追加。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -87,6 +88,7 @@ const zoomPanel = document.getElementById('zoomPanel');
 const zoomBar = document.getElementById('zoomBar');
 const zoomDisplay = document.getElementById('zoomDisplay');
 const zoomResetBtn = document.getElementById('zoomResetBtn');
+const zoomEndBtn = document.getElementById('zoomEndBtn');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 const fitModeBtn = document.getElementById('fitModeBtn');
 const filename = document.querySelector('.filename');
@@ -1984,14 +1986,12 @@ zoomBtn.addEventListener('click', () => {
         zoomPanel.style.display = 'flex';
         zoomBtn.textContent = '❌';
         zoomBtn.setAttribute('data-tooltip', 'ズームモード終了（Ctrl+z）');
+        updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
+        showControlsAndFilename();
+        updateIconOverlay();
     } else {
-        zoomPanel.style.display = 'none';
-        zoomBtn.textContent = '🔍';
-        zoomBtn.setAttribute('data-tooltip', 'ズームモード開始（Ctrl+z）');
+        zoomEndBtn.click(); // ズーム値リセットして終了
     }
-    updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
-    showControlsAndFilename();
-    updateIconOverlay();
 });
 
 // ズームスライダー変更
@@ -2007,6 +2007,17 @@ zoomResetBtn.addEventListener('click', () => {
     translateX = 0;
     translateY = 0;
     applyZoom(0);
+});
+
+// ズーム終了（Ctrl+z）
+zoomEndBtn.addEventListener('click', () => {
+    isZoomMode = false;
+    zoomPanel.style.display = 'none';
+    zoomBtn.textContent = '🔍';
+    zoomBtn.setAttribute('data-tooltip', 'ズームモード開始（Ctrl+z）');
+    updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
+    showControlsAndFilename();
+    updateIconOverlay();
 });
 
 // プレイリスト選択
