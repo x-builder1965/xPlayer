@@ -450,7 +450,7 @@ function updateControlSize(valueX, valueY) {
     const appNameAndCopyrightFontSize = 8 + (valueX / 100) * (17 - 8);
     const appNameAndCopyrightPadding = 2 + (valueX / 100) * (8 - 2);
     const speedSelectWidth = 40 + (valueX / 120) * (154 - 40);
-    const zoomPanelHeight = 200 + (valueY / 100) * (500 - 200);
+    const zoomPanelHeight = 100 + (valueY / 100) * (500 - 100);
     const zoomPanelWidth = 30 + (valueX / 100) * (40 - 30);
     const controls = document.querySelectorAll('button, select#filenameDisplay, select#speedSelect, #timeDisplay, #volumeDisplay, #appNameAndCopyright, input#urlInput, #zoomPanel');
     controls.forEach(control => {
