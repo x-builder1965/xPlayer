@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.30';
+const appName = 'xPlayer -動画プレイヤー- Ver3.31';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -35,6 +35,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.30';
 // 2026-02-25 Ver3.28 ズームモード中のショートカットキー追加（Ctrl+↑/↓/0）。
 // 2026-02-25 Ver3.29 ズームモード中の画像移動機能追加。
 // 2026-02-26 Ver3.30 ズームリセットボタン追加。
+// 2026-02-26 Ver3.31 ズームパネルをサイズ調整に対応。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -438,7 +439,9 @@ function updateControlSize(value) {
     const appNameAndCopyrightFontSize = 8 + (value / 100) * (17 - 8);
     const appNameAndCopyrightPadding = 2 + (value / 100) * (8 - 2);
     const speedSelectWidth = 40 + (value / 120) * (154 - 40);
-    const controls = document.querySelectorAll('button, select#filenameDisplay, select#speedSelect, #timeDisplay, #volumeDisplay, #appNameAndCopyright, input#urlInput');
+    const zoomPanelHeight = 40 + (value / 100) * (540 - 40);
+    const zoomPanelWidth = 40 + (value / 100) * (40 - 40);
+    const controls = document.querySelectorAll('button, select#filenameDisplay, select#speedSelect, #timeDisplay, #volumeDisplay, #appNameAndCopyright, input#urlInput, #zoomPanel');
     controls.forEach(control => {
         if (control.id === 'appNameAndCopyright') {
             control.style.fontSize = `${appNameAndCopyrightFontSize}px`;
@@ -449,6 +452,10 @@ function updateControlSize(value) {
         }
         if (control.id === 'speedSelect') {
             control.style.width = `${speedSelectWidth}px`;
+        }
+        if (control.id === 'zoomPanel') {
+            control.style.height = `${zoomPanelHeight}px`;
+            control.style.width = `${zoomPanelWidth}px`;
         }
     });
 
