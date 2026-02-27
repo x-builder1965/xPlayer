@@ -16,7 +16,7 @@
     "sign": "electron-builder --win --x64 --config.cscLink=authenticode.pfx --config.cscKeyPassword=%CSC_KEY_PASSWORD%"
   },
   "devDependencies": {
-    "electron": "^38.4.0",
+    "electron": "^38.8.4",
     "electron-builder": "^26.0.12"
   },
   "dependencies": {
@@ -53,7 +53,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "verifyUpdateCodeSignature": true,
@@ -107,7 +109,9 @@
     "protocols": [
       {
         "name": "xplayer",
-        "schemes": ["xplayer"]
+        "schemes": [
+          "xplayer"
+        ]
       }
     ]
   }
