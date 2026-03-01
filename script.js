@@ -524,7 +524,7 @@ function showControlsAndFilename() {
         overlayDisplay.classList.add('active');
     }
     clearTimeout(timeout);
-    if (!isMouseOverControls) {
+    if (!isMouseOverControls && !isUrlControlsVisible) {
         timeout = setTimeout(() => {
             if (!isMouseOverControls) {
                 hideControlsAndFilename(); // ここで無効化
