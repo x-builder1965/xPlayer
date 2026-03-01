@@ -2146,8 +2146,6 @@ zoomEndBtn.addEventListener('click', () => {
     zoomPanel.style.display = 'none';
     zoomBtn.textContent = '🔍';
     zoomBtn.setAttribute('data-tooltip', 'ズームモード開始（Ctrl+z）');
-    showControlsAndFilename();
-    updateIconOverlay();
 });
 
 // プレイリスト選択
