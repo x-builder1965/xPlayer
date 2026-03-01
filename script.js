@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.34';
+const appName = 'xPlayer -動画プレイヤー- Ver3.35';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -39,6 +39,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.34';
 // 2026-02-26 Ver3.32 ズームパネルにズーム終了ボタン追加。
 // 2026-02-27 Ver3.33 ズームモード中の←、→の移動量を詳細化。
 // 2026-02-27 Ver3.34 スナップショット機能追加準備と微調整
+// 2026-02-27 Ver3.35 再生速度の保存と復元の追加
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -202,6 +203,7 @@ let isEditMode = false;
 let editInMark = -1;  // インマーク（秒）
 let editOutMark = -1; // アウトマーク（秒）
 let cutRanges = []; // 配列 of { in: seconds, out: seconds }
+let currentPlaybackRate = 1.0;   // ← 新規追加
 // 編集時のフレームレート（フレーム単位で移動するための基準）。変更したければ
 // `localStorage.setItem('editFrameRate', '24')` のように保存してください。
 const editFrameRate = localStorage.getItem('editFrameRate') ? parseFloat(localStorage.getItem('editFrameRate')) : 30;
@@ -248,12 +250,14 @@ if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) 
 }
 // 再生速度復元
 if (savedPlaybackSpeed && !isNaN(savedPlaybackSpeed) && parseFloat(savedPlaybackSpeed) > 0) {
-    const sp = parseFloat(savedPlaybackSpeed).toFixed(2);
-    videoPlayer.playbackRate = parseFloat(sp);
-    if (speedSelect) speedSelect.value = sp;
+    currentPlaybackRate = parseFloat(savedPlaybackSpeed);
+    videoPlayer.playbackRate = currentPlaybackRate;
+    if (speedSelect) speedSelect.value = currentPlaybackRate.toFixed(2);
 } else {
+    currentPlaybackRate = 1.0;
     videoPlayer.playbackRate = 1.0;
-} 
+    if (speedSelect) speedSelect.value = "1.00";
+}
 
 // 描画モード復元
 if (savedFitMode && ['contain', 'cover'].includes(savedFitMode)) {
@@ -759,7 +763,11 @@ async function playVideo(file) {
     videoPreview.load();
     videoPreview.pause();
     updatePlaylistDisplay();
-
+    // 必ず現在の再生速度を適用する
+    videoPlayer.playbackRate = currentPlaybackRate;
+    if (speedSelect) {
+        speedSelect.value = currentPlaybackRate.toFixed(2);
+    }
     // ボリューム復元
     const savedVolume = localStorage.getItem('volume');
     if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
@@ -2511,6 +2519,7 @@ if (speedSelect) {
         if (controls.style.opacity !== '1') return;
         const rate = parseFloat(e.target.value);
         if (!isNaN(rate) && rate > 0) {
+            currentPlaybackRate = rate;               // ← ここを追加
             videoPlayer.playbackRate = rate;
             localStorage.setItem('playbackSpeed', rate);
             updateOverlayDisplay(`🏃‍♂️‍➡️再生速度: ${rate}x`);
@@ -2522,6 +2531,7 @@ if (speedSelect) {
 // 再生速度設定ヘルパー
 function setPlaybackRate(rate, showOverlay = true) {
     if (isNaN(rate) || rate <= 0) return;
+    currentPlaybackRate = rate;                    // ← 追加
     videoPlayer.playbackRate = rate;
     if (speedSelect) speedSelect.value = parseFloat(rate).toFixed(2);
     localStorage.setItem('playbackSpeed', rate);
