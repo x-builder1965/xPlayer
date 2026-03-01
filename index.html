@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.35'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.36'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -49,7 +49,7 @@
                     <button id="setOutMarkBtn" data-tooltip="アウトマークを設定">→📍</button>
                     <button id="addCutRangeBtn" data-tooltip="カット設定を追加">✅</button>
                     <button id="saveVideoBtn" data-tooltip="設定したカットを適用して保存">💾</button>
-                    <button id="cancelEditBtn" data-tooltip="編集をキャンセル">❌</button>
+                    <button id="clearEditBtn" data-tooltip="編集を全クリア">🆑</button>
                     <div id="cutRangesContainer" style="display:block; margin-top:6px; width:100%;">
                         <div id="cutRangesList" style="max-height:120px; overflow:auto; background:#12121222; padding:6px; border-radius:4px;"></div>
                     </div>
@@ -132,7 +132,7 @@
                         </colgroup>
                         <tbody>
                             <tr>
-                                <td class="sub-title">プレイリスト</td>
+                                <td class="sub-title">プレイリストパネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
                                 <td class="mouse sub-title"></td>
@@ -160,11 +160,18 @@
                                 <td class="note">・プレイリスト内の動画選択再生。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト編集 表示／非表示</td>
-                                <td class="icon">🚥</td>
+                                <td>　・プレイリスト編集切替</td>
+                                <td class="icon">🚥／❌</td>
                                 <td class="key">Shift+m</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリスト編集を表示／非表示でトグル。</td>
+                                <td class="note">・プレイリスト編集を開始／終了。</td>
+                            </tr>
+                            <tr>
+                                <td class="sub-title">プレイリスト編集（🚥）</td>
+                                <td class="icon sub-title"></td>
+                                <td class="key sub-title"></td>
+                                <td class="mouse sub-title"></td>
+                                <td class="note sub-title"></td>
                             </tr>
                             <tr>
                                 <td>　・プレイリスト編集 上へ移動</td>
@@ -244,11 +251,11 @@
                                 <td class="note">・動画カットを実行し、指定された場所に保存。</td>
                             </tr>
                             <tr>
-                                <td>　・カットキャンセル</td>
-                                <td class="icon">❌</td>
+                                <td>　・カット全クリア</td>
+                                <td class="icon">🆑</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・カット編集をキャンセル。</td>
+                                <td class="note">・カット編集を全クリア。</td>
                             </tr>
                             <tr>
                                 <td class="sub-title">コントロールパネル</td>
