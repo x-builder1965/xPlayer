@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.32'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.34'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -98,6 +98,7 @@
             </div>
             <div id="zoomPanel" style="display:none;">
                 <button id="zoomResetBtn" data-tooltip="ズームリセット（Ctrl+0）">🔄️</button>
+                <button id="snapshotBtn" data-tooltip="スナップショット（Ctrl+s）">📷</button>
                 <input type="range" id="zoomBar" value="0" min="-100" max="500" step="5" data-tooltip="ズーム調整">
                 <span id="zoomDisplay">0%</span>
                 <button id="zoomEndBtn" data-tooltip="ズーム終了（Ctrl+z）">❌</button>
@@ -278,6 +279,48 @@
                                 <td class="note">・ネット動画のURLをキャンセル。</td>
                             </tr>
                             <tr>
+                                <td class="sub-title">ズーム＆移動＆スナップ</td>
+                                <td class="icon sub-title"></td>
+                                <td class="key sub-title"></td>
+                                <td class="mouse sub-title"></td>
+                                <td class="note sub-title"></td>
+                            </tr>
+                            <tr>
+                                <td>　・サイズ位置リセット</td>
+                                <td class="icon">🔄️</td>
+                                <td class="key">Ctrl+0</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・画像のサイズと位置をリセット。</td>
+                            </tr>
+                            <tr>
+                                <td>　・スナップショット</td>
+                                <td class="icon">📷</td>
+                                <td class="key">Ctrl+s</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・画像のスナップショットを保存。</td>
+                            </tr>
+                            <tr>
+                                <td>　・ズーム変更</td>
+                                <td class="icon">Slider</td>
+                                <td class="key">Ctrl+↑／Ctrl+↓</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・ズームバーの操作で画像を拡大（Ctrl+↑）・縮小（Ctrl+↓）。</td>
+                            </tr>
+                            <tr>
+                                <td>　・画像移動</td>
+                                <td class="icon">Video</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse">Drag</td>
+                                <td class="note">・画像を上下左右に移動。</td>
+                            </tr>
+                            <tr>
+                                <td>　・ズーム＆移動＆スナップ終了</td>
+                                <td class="icon">❌</td>
+                                <td class="key">Ctrl+z</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・画像のズーム移動を終了。</td>
+                            </tr>
+                            <tr>
                                 <td class="sub-title">コントロールパネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
@@ -402,41 +445,6 @@
                                 <td class="key">←／→</td>
                                 <td class="mouse">Swipe Left／Swipe Right</td>
                                 <td class="note">・シークバーの操作でプレビュー表示、再生時間を変更。</td>
-                            </tr>
-                            <tr>
-                                <td class="sub-title">ズーム＆移動</td>
-                                <td class="icon sub-title"></td>
-                                <td class="key sub-title"></td>
-                                <td class="mouse sub-title"></td>
-                                <td class="note sub-title"></td>
-                            </tr>
-                            <tr>
-                                <td>　・サイズ位置リセット</td>
-                                <td class="icon">🔄️</td>
-                                <td class="key">Ctrl+0</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・画像のサイズと位置をリセット。</td>
-                            </tr>
-                            <tr>
-                                <td>　・ズーム変更</td>
-                                <td class="icon">Slider</td>
-                                <td class="key">Ctrl+↑／Ctrl+↓</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・ズームバーの操作で画像を拡大（Ctrl+↑）・縮小（Ctrl+↓）。</td>
-                            </tr>
-                            <tr>
-                                <td>　・画像移動</td>
-                                <td class="icon">Video</td>
-                                <td class="key no-data">なし</td>
-                                <td class="mouse">Drag</td>
-                                <td class="note">・画像を上下左右に移動。</td>
-                            </tr>
-                            <tr>
-                                <td>　・ズーム＆移動終了</td>
-                                <td class="icon">❌</td>
-                                <td class="key">Ctrl+z</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・画像のズーム移動を終了。</td>
                             </tr>
                             <tr>
                                 <td class="sub-title">その他操作</td>

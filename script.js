@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.33';
+const appName = 'xPlayer -動画プレイヤー- Ver3.34';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -38,13 +38,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.33';
 // 2026-02-26 Ver3.31 ズームパネルをサイズ調整に対応。
 // 2026-02-26 Ver3.32 ズームパネルにズーム終了ボタン追加。
 // 2026-02-27 Ver3.33 ズームモード中の←、→の移動量を詳細化。
-// 2026-02-27 Ver3.34 スナップショット機能追加。
-//	・📷（Ctrl＋p）でスナップショットモード開始。
-//	・マウスのドラックでスナップショット範囲を選択。
-//	・ファイル保存ダイアログを表示。
-//	・スナップショット画像（png形式）を保存しスナップショットモードを終了。
-//	・スナップショットモード中の📷（Ctrl＋p）でスナップショットモードを終了。
-//	・なお📷は追加済
+// 2026-02-27 Ver3.34 スナップショット機能追加準備と微調整
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -96,6 +90,7 @@ const zoomPanel = document.getElementById('zoomPanel');
 const zoomBar = document.getElementById('zoomBar');
 const zoomDisplay = document.getElementById('zoomDisplay');
 const zoomResetBtn = document.getElementById('zoomResetBtn');
+const snapshotBtn = document.getElementById('snapshotBtn');
 const zoomEndBtn = document.getElementById('zoomEndBtn');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 const fitModeBtn = document.getElementById('fitModeBtn');
@@ -595,21 +590,18 @@ function updateVolumeDisplay() {
 
 // ズーム適用
 function applyZoom(zoomPercent) {
-    if (zoomPercent === 0) {
-        translateX = 0;
-        translateY = 0;
-        localStorage.setItem('translateX', translateX.toString());
-        localStorage.setItem('translateY', translateY.toString());
-    }
-    // ズーム値（-100～+100）をscale値（0～2）に変換
+    // ズーム値（-100～+500）をscale値（0～6）に変換
     // 公式: scale = (100 + zoomPercent) / 100
     const scale = (100 + zoomPercent) / 100;
     // transform は translate(px,px) scale() の順に指定
     videoPlayer.style.transformOrigin = 'center center';
     videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    localStorage.setItem('translateX', translateX.toString());
+    localStorage.setItem('translateY', translateY.toString());
     zoomValue = zoomPercent;
     localStorage.setItem('zoom', zoomValue.toString());
-    zoomDisplay.textContent = `${zoomPercent >= 0 ? '+' : ''}${zoomPercent}%`;
+    zoomDisplay.textContent = `${zoomValue > 0 ? '+' : ''}${zoomValue}%`;
+    updateOverlayDisplay(`🔍 ${zoomValue > 0 ? '+' : ''}${zoomValue}%`);
 }
 
 // オーバーレイ表示
@@ -1556,7 +1548,7 @@ document.addEventListener('keydown', async (event) => {
         // ズームイン（Ctrl+↑）
         if (event.ctrlKey && event.key === 'ArrowUp') {
             event.preventDefault();
-            let newZoom = zoomValue + 5;
+            let newZoom = zoomValue + 1;
             if (newZoom > 500) newZoom = 500;
             zoomBar.value = newZoom.toString();
             applyZoom(newZoom);
@@ -1566,7 +1558,7 @@ document.addEventListener('keydown', async (event) => {
         // ズームアウト（Ctrl+↓）
         if (event.ctrlKey && event.key === 'ArrowDown') {
             event.preventDefault();
-            let newZoom = zoomValue - 5;
+            let newZoom = zoomValue - 1;
             if (newZoom < -100) newZoom = -100;
             zoomBar.value = newZoom.toString();
             applyZoom(newZoom);
@@ -1577,6 +1569,13 @@ document.addEventListener('keydown', async (event) => {
         if (event.ctrlKey && event.key === '0') {
             event.preventDefault();
             zoomResetBtn.click();
+            return;
+        }
+
+        // スナップショット（Ctrl+s）
+        if (event.ctrlKey && event.key === 's') {
+            event.preventDefault();
+            snapshotBtn.click();
             return;
         }
     }
@@ -2002,7 +2001,7 @@ zoomBtn.addEventListener('click', () => {
         zoomPanel.style.display = 'flex';
         zoomBtn.textContent = '❌';
         zoomBtn.setAttribute('data-tooltip', 'ズームモード終了（Ctrl+z）');
-        updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
+        // updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
         showControlsAndFilename();
         updateIconOverlay();
     } else {
@@ -2025,13 +2024,23 @@ zoomResetBtn.addEventListener('click', () => {
     applyZoom(0);
 });
 
+// スナップショット
+snapshotBtn.addEventListener('click', () => {
+//	・マウスのドラックでスナップショット範囲を選択。
+//	・ファイル保存ダイアログを表示。（デフォルト：xPlayerSnap-yyyymmddhhMMss,png）
+//	・[保存]スナップショット画像（png形式）を保存しスナップショットモードを終了。
+//	・[キャンセル]何もせずスナップショットモードを終了。
+//	・スナップショットモード中（スナップショット範囲を選択中）の📷（Ctrl＋p）でスナップショットモードを終了。
+//	・スナップショットモード中（スナップショット範囲を選択中）の❌（Ctrl＋z）でスナップショットモードを終了、ズームモード終了。
+});
+
 // ズーム終了（Ctrl+z）
 zoomEndBtn.addEventListener('click', () => {
     isZoomMode = false;
     zoomPanel.style.display = 'none';
     zoomBtn.textContent = '🔍';
     zoomBtn.setAttribute('data-tooltip', 'ズームモード開始（Ctrl+z）');
-    updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
+    // updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
     showControlsAndFilename();
     updateIconOverlay();
 });
