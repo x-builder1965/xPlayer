@@ -1122,6 +1122,19 @@ function downMovePlaylist() {
     savePlaylistAndPlaybackState();
 }
 
+// editModeBtn のテキストをトグルするヘルパー関数
+function updateEditModeButtonUI() {
+    if (isEditMode) {
+        editModeBtn.textContent = '❌';
+        editModeBtn.setAttribute('data-tooltip', '編集モード終了（Ctrl+e）');
+        editModeBtn.classList.add('active');
+    } else {
+        editModeBtn.textContent = '✂️';
+        editModeBtn.setAttribute('data-tooltip', '編集モード開始（Ctrl+e）');
+        editModeBtn.classList.remove('active');
+    }
+}
+
 // プレイリスト追加
 async function addToPlaylist() {
     try {
@@ -2009,7 +2022,6 @@ zoomBtn.addEventListener('click', () => {
         zoomPanel.style.display = 'flex';
         zoomBtn.textContent = '❌';
         zoomBtn.setAttribute('data-tooltip', 'ズームモード終了（Ctrl+z）');
-        // updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
         showControlsAndFilename();
         updateIconOverlay();
     } else {
@@ -2048,7 +2060,6 @@ zoomEndBtn.addEventListener('click', () => {
     zoomPanel.style.display = 'none';
     zoomBtn.textContent = '🔍';
     zoomBtn.setAttribute('data-tooltip', 'ズームモード開始（Ctrl+z）');
-    // updateOverlayDisplay(`🔍 ${zoomValue >= 0 ? '+' : ''}${zoomValue}%`);
     showControlsAndFilename();
     updateIconOverlay();
 });
@@ -2113,6 +2124,10 @@ videoPlayer.addEventListener('loadedmetadata', () => {
         
         isConverting = false;
     }
+    // 編集モードが開始していない状態にする
+    isEditMode = false;
+    editControls.style.display = 'none';
+    updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
 
     seekBar.max = 100;
     updateTimeDisplay();
@@ -2684,10 +2699,6 @@ dropzone.addEventListener('drop', async (e) => {
     }
 });
 
-// ============================================================
-// 🎬 動画カット編集機能
-// ============================================================
-
 // 編集モード切替
 editModeBtn.addEventListener('click', () => {
     if (!videoPlayer.src) {
@@ -2704,12 +2715,15 @@ editModeBtn.addEventListener('click', () => {
         editOutMark = -1;
         inMarkDisplay.textContent = '--:--:--';
         outMarkDisplay.textContent = '--:--:--';
+        cutRanges = [];           // ← 必要に応じてここでリセット（好みで外しても可）
         renderCutRanges();
     } else {
         editControls.style.display = 'none';
         editModeBtn.classList.remove('active');
         hideOverlayDisplay();
     }
+    // ボタン表示を更新（ここが今回のメイン変更点）
+    updateEditModeButtonUI();
 });
 
 // インマーク設定
@@ -2755,6 +2769,8 @@ cancelEditBtn.addEventListener('click', () => {
     editOutMark = -1;
     inMarkDisplay.textContent = '--:--:--';
     outMarkDisplay.textContent = '--:--:--';
+    // ボタン表示を更新（ここが今回のメイン変更点）
+    updateEditModeButtonUI();
     // 一時マークをクリア(カット鯉囲は保持)
     setTimeout(hideOverlayDisplay, 1500);
 });
