@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.35';
+const appName = 'xPlayer -動画プレイヤー- Ver3.36';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -40,6 +40,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.35';
 // 2026-02-27 Ver3.33 ズームモード中の←、→の移動量を詳細化。
 // 2026-02-27 Ver3.34 スナップショット機能追加準備と微調整
 // 2026-02-27 Ver3.35 再生速度の保存と復元の追加
+// 2026-03-01 Ver3.36 カット編集の全クリア機能追加。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -124,7 +125,7 @@ const setOutMarkBtn = document.getElementById('setOutMarkBtn');
 const addCutRangeBtn = document.getElementById('addCutRangeBtn');
 const saveVideoBtn = document.getElementById('saveVideoBtn');
 const cutRangesList = document.getElementById('cutRangesList');
-const cancelEditBtn = document.getElementById('cancelEditBtn');
+const clearEditBtn = document.getElementById('clearEditBtn');
 const inMarkDisplay = document.getElementById('inMarkDisplay');
 const outMarkDisplay = document.getElementById('outMarkDisplay');
 const editSeekBar = document.getElementById('editSeekBar');
@@ -232,6 +233,11 @@ localStorage.setItem('controlSizeX', controlSizeX);
 localStorage.setItem('controlSizeY', controlSizeY);
 updateControlSize(controlSizeX, controlSizeY);
 
+// 初期状態：メニューは閉じておく
+filenameMenus.style.display = 'none';
+filenameMenu.textContent = '🚥';
+filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを開く (Shift+m)');
+
 // ボリューム復元
 if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
     volumeBar.value = savedVolume;
@@ -280,6 +286,7 @@ if (savedZoom && !isNaN(savedZoom)) {
     zoomValue = 0;
     zoomBar.value = '0';
 }
+
 // 画像移動値復元
 if (savedTranslateX && !isNaN(savedTranslateX) && savedTranslateY && !isNaN(savedTranslateY)) {
     translateX = parseInt(savedTranslateX);
@@ -2665,8 +2672,12 @@ savePlaylistBtn.addEventListener('click', () => {
 filenameMenu.addEventListener('click', () => {
     if (filenameMenus.style.display === 'none') {
         filenameMenus.style.display = 'flex';
+        filenameMenu.textContent = '❌';           // 表示中 → 緑信号
+        filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを閉じる (Shift+m)');
     } else {
         filenameMenus.style.display = 'none';
+        filenameMenu.textContent = '🚥';           // 非表示 → 禁止マーク
+        filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを開く (Shift+m)');
     }
 });
 
@@ -2761,18 +2772,18 @@ editSeekBar.addEventListener('input', () => {
 });
 
 // キャンセル
-cancelEditBtn.addEventListener('click', () => {
-    isEditMode = false;
-    editControls.style.display = 'none';
-    editModeBtn.classList.remove('active');
+clearEditBtn.addEventListener('click', () => {
+    // カット範囲を全削除
+    cutRanges = [];
+
+    // マークもクリア（次のカットをすぐ設定できるように）
     editInMark = -1;
     editOutMark = -1;
     inMarkDisplay.textContent = '--:--:--';
     outMarkDisplay.textContent = '--:--:--';
-    // ボタン表示を更新（ここが今回のメイン変更点）
-    updateEditModeButtonUI();
-    // 一時マークをクリア(カット鯉囲は保持)
-    setTimeout(hideOverlayDisplay, 1500);
+
+    // リスト再描画
+    renderCutRanges();
 });
 
 // --- カット設定追加ボタン ---
