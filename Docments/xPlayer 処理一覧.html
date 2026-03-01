@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>xPlayer Ver3.08 - 処理一覧</title>
+  <style>
+    :root {
+      --bg: #0a0a0a; --surface: #1a1a1a; --text: #e5e5e5; --text-header: #88c0d0;
+      --text-secondary: #bbbbbb; --primary: #5e81ac; --border: #2a2a2a; --hover: #252525;
+      --code: #aae1f0; --init: #d08770; --volume: #b48ead; --control: #a3be8c;
+      --seek: #81a1c1; --video: #d8dee9; --global: #8fbcbb;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { font-family:'Segoe UI',sans-serif; background:var(--bg); color:var(--text); line-height:1.7; padding-bottom:90px; }
+    .container { max-width:1400px; margin:0 auto; padding:20px; }
+    header { text-align:center; padding:40px 20px; background:linear-gradient(135deg,#1a1a2e,#16213e); border-radius:18px; margin-bottom:35px; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+    header h1 { font-size:2.5rem; margin-bottom:10px; color:var(--text-header); font-weight:700; }
+    header p { color:var(--text-secondary); font-size:1.05rem; margin-bottom:15px; }
+    .stats { display:flex; justify-content:center; gap:30px; flex-wrap:wrap; margin-top:20px; }
+    .stat { background:var(--surface); padding:14px 28px; border-radius:14px; font-weight:bold; border:1.5px solid var(--border); min-width:140px; transition:all .2s; }
+    .stat:hover { background:var(--hover); transform:translateY(-2px); }
+    .stat a { color:inherit; text-decoration:none; display:block; }
+    .stat strong { color:var(--text-header); font-size:1.2rem; }
+    .section { margin-bottom:50px; }
+    .section-title { font-size:1.7rem; margin-bottom:20px; color:var(--primary); padding-bottom:10px; border-bottom:3px solid var(--primary); display:inline-block; font-weight:600; }
+    .table-wrapper { overflow-x:auto; border-radius:14px; box-shadow:0 6px 20px rgba(0,0,0,0.4); border:1px solid var(--border); margin-bottom:25px; }
+    table { width:100%; border-collapse:collapse; background:var(--surface); font-size:0.94rem; }
+    th,td { padding:16px 20px; text-align:left; border-bottom:1px solid var(--border); }
+    th { background:#252525; color:#fff; font-weight:600; position:sticky; top:0; z-index:10; font-size:0.85rem; letter-spacing:0.7px; text-transform:uppercase; }
+    tr:hover { background:var(--hover); }
+    .code { font-family:'JetBrains Mono',monospace; background:#2a2a2a; padding:4px 8px; border-radius:6px; color:var(--code); font-size:1.2rem; font-weight:500; }
+    .badge { display:inline-block; padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:bold; color:white; text-transform:uppercase; }
+    .badge-init { background:var(--init); }
+    .badge-util { background:#5e81ac; }
+    .badge-ui { background:#81a1c1; }
+    .badge-state { background:#b48ead; }
+    .badge-playlist { background:#a3be8c; }
+    .badge-play { background:#88c0d0; }
+    .badge-net { background:#d08770; }
+    .badge-mode { background:#7c4dff; }
+    .badge-help { background:#ff6d00; }
+    .badge-video { background:#e91e63; }
+    .badge-seek { background:var(--seek); }
+    .badge-volume { background:var(--volume); }
+    .badge-control { background:var(--control); }
+    footer { text-align:center; padding:18px 20px; color:var(--text-secondary); font-size:0.95rem; border-top:1px solid var(--border); background:var(--bg); position:fixed; bottom:0; left:0; width:100%; z-index:100; box-shadow:0 -2px 10px rgba(0,0,0,0.3); }
+    .back-to-top { display:inline-block; padding:8px 16px; background:var(--surface); color:var(--text); text-decoration:none; border-radius:12px; font-size:0.85rem; font-weight:600; border:1.5px solid var(--border); transition:all .2s; }
+    .back-to-top:hover { background:var(--hover); color:var(--text-header); transform:translateY(-2px); }
+    .new { color:#a3be8c; font-weight:bold; }
+    .change { font-size:0.8rem; margin-left:5px; color:#88c0d0; }
+    @media (max-width:768px) {
+      .stats { flex-direction:column; align-items:center; }
+      th,td { padding:12px; font-size:0.85rem; }
+      header h1 { font-size:2rem; }
+      .section-title { font-size:1.5rem; }
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <h1>xPlayer - 処理一覧</h1>
+    <p>Ver3.08 ｜ 2025-11-25 <strong>（最新更新：ドラッグ＆ドロップ再生対応）</strong></p>
+    <div class="stats">
+      <div class="stat"><a href="#init-section">初期処理: <strong>15</strong> </a></div>
+      <div class="stat"><a href="#func-section">関数: <strong>49</strong> </a></div>
+      <div class="stat"><a href="#renderer-section">レンダラーイベント: <strong>7</strong> </a></div>
+      <div class="stat"><a href="#global-section">グローバルイベント: <strong>4</strong> </a></div>
+      <div class="stat"><a href="#event-section">イベントリスナー: <strong>59</strong> </a></div>
+    </div>
+  </header>
+
+  <!-- 初期処理 -->
+  <div class="section" id="init-section">
+    <h2 class="section-title">初期処理（15）</h2>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>No.</th><th>処理内容</th><th>詳細</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>preload.js経由でElectronモジュール取得</td><td><span class="code">window.electronAPI</span> から <code>ipcRenderer, fs, os, path, exec</code></td></tr>
+          <tr><td>2</td><td>定数・設定値定義</td><td><span class="new">HTML5_SUPPORTED</span>, <span class="new">HTML5_SUPPORTED_CONVERT</span>, Chromeパス配列など</td></tr>
+          <tr><td>3</td><td>DOM要素取得</td><td><span class="new">modeChangeBtn</span>, <span class="new">dropzone</span> 追加取得</td></tr>
+          <tr><td>4</td><td>localStorage復元</td><td>ボリューム・描画モード・<span class="new">プレイリスト・再生位置</span>・<span class="new">動作モード</span></td></tr>
+          <tr><td>5</td><td>状態変数初期化</td><td><span class="code">playlist = []</span>, <span class="new">modeChange = 'video'</span>, <span class="new">isVideoPlaying</span> など</td></tr>
+          <tr><td>6</td><td>初期状態設定</td><td><code>src</code>属性削除、プレイリストメニュー非表示</td></tr>
+          <tr><td>7</td><td>Chromeパス自動検出</td><td>存在するchrome.exeを優先</td></tr>
+          <tr><td>8</td><td>コントロールサイズ適用</td><td>保存値 or 自動計算</td></tr>
+          <tr><td>9</td><td>YouTube埋め込みモード復元</td><td><span class="code">youtubeAdd</span> 状態</td></tr>
+          <tr><td>10</td><td>ボリューム復元</td><td>保存値適用</td></tr>
+          <tr><td>11</td><td>描画モード復元</td><td><code>object-fit</code> 適用</td></tr>
+          <tr><td>12</td><td>起動引数判定</td><td>引数なし → プレイリスト・再生位置復元＋<strong>強制一時停止</strong></td></tr>
+          <tr><td>13</td><td>動作モード初期化</td><td><span class="code">modeChange = 'video'</span>（視聴／変換）</td></tr>
+          <tr><td>14</td><td>再生状態フラグ初期化</td><td><span class="code">isPlaying = false</span></td></tr>
+          <tr><td>15</td><td>再開時強制一時停止</td><td><span class="code">videoPlayer.pause()</span>（Ver3.02以降の修正）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 関数 -->
+  <div class="section" id="func-section">
+    <h2 class="section-title">関数（49）</h2>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>No.</th><th>関数名</th><th>説明</th><th>分類</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><span class="code">formatTime</span></td><td>秒→H:MM:SS変換</td><td><span class="badge badge-util">Util</span></td></tr>
+          <tr><td>2</td><td><span class="code">pasteFromClipboard</span></td><td>クリップボードからURL取得（タイムアウト付き）</td><td><span class="badge badge-net">Net</span></td></tr>
+          <tr><td>3</td><td><span class="code">calculateControlSize</span></td><td>画面幅からコントロールサイズ計算</td><td><span class="badge badge-ui">UI</span></td></tr>
+          <tr><td>4</td><td><span class="code">updateControlSize</span></td><td>フォント・パディング動的更新</td><td><span class="badge badge-ui">UI</span></td></tr>
+          <tr><td>5</td><td><span class="code">showTooltip / hideTooltip</span></td><td>ツールチップ表示制御</td><td><span class="badge badge-ui">UI</span></td></tr>
+          <tr><td>6</td><td><span class="code">showControlsAndFilename</span></td><td>コントロール＋ファイル名表示（タイマー付き）</td><td><span class="badge badge-control">Control</span></td></tr>
+          <tr><td>7</td><td><span class="code">hideControlsAndFilename</span></td><td>コントロール＋ファイル名非表示</td><td><span class="badge badge-control">Control</span></td></tr>
+          <tr><td>8</td><td><span class="code">disabledControls / disabledfilename</span></td><td>コントロール・プレイリスト有効/無効化</td><td><span class="badge badge-control">Control</span></td></tr>
+          <tr><td>9</td><td><span class="code">updateTimeDisplay</span></td><td>再生時間表示更新</td><td><span class="badge badge-seek">Seek</span></td></tr>
+          <tr><td>10</td><td><span class="code">updateVolumeDisplay</span></td><td>音量表示更新</td><td><span class="badge badge-volume">Volume</span></td></tr>
+          <tr><td>11</td><td><span class="code">updateOverlayDisplay</span></td><td>オーバーレイメッセージ表示</td><td><span class="badge badge-ui">UI</span></td></tr>
+          <tr><td>12</td><td><span class="code">updatePreviewPosition</span></td><td>シークプレビュー位置調整</td><td><span class="badge badge-seek">Seek</span></td></tr>
+          <tr><td>13</td><td><span class="code">updateIconOverlay</span></td><td>再生中アイコン表示制御</td><td><span class="badge badge-ui">UI</span></td></tr>
+          <tr><td>14</td><td><span class="code">hideURLInputControls</span></td><td>URL入力欄非表示</td><td><span class="badge badge-net">Net</span></td></tr>
+          <tr><td>15</td><td><span class="code">start/stopPeriodicSave</span></td><td>再生位置定期保存</td><td><span class="badge badge-state">State</span></td></tr>
+          <tr><td>16</td><td><span class="code">savePlaylistAndPlaybackState</span></td><td>プレイリスト＋再生状態保存</td><td><span class="badge badge-state">State</span></td></tr>
+          <tr><td>17</td><td><span class="code">updatePlaylistDisplay</span></td><td>プレイリスト&lt;select&gt;更新</td><td><span class="badge badge-playlist">Playlist</span></td></tr>
+          <tr><td>18</td><td><span class="code">playVideo</span></td><td>動画再生（HTML5／FFmpeg自動切替）</td><td><span class="badge badge-play">Play</span></td></tr>
+          <tr><td>19</td><td><span class="code">setVideoDurationTime</span></td><td>変換モード：最後尾へ移動</td><td><span class="badge badge-video">Video</span></td></tr>
+          <tr><td>20</td><td><span class="code">togglePlayPause</span></td><td>再生/一時停止切替（停止中も対応）</td><td><span class="badge badge-play">Play</span></td></tr>
+          <tr><td>21</td><td><span class="code">setVideoSrc</span></td><td>動画ソース設定（HTML5 or FFmpeg変換）</td><td><span class="badge badge-video">Video</span></td></tr>
+          <tr><td>22</td><td><span class="code">isVideoStopped</span></td><td>完全停止中判定</td><td><span class="badge badge-state">State</span></td></tr>
+          <tr><td>23</td><td><span class="code">urlInputEnter / urlInputCancel</span></td><td>URL確定・キャンセル</td><td><span class="badge badge-net">Net</span></td></tr>
+          <tr><td>24</td><td><span class="code">isTwitchOrYouTube</span></td><td>プラットフォーム判定</td><td><span class="badge badge-net">Net</span></td></tr>
+          <tr><td>25</td><td><span class="code">extractTwitch/YouTubeVideoId</span></td><td>ID抽出</td><td><span class="badge badge-net">Net</span></td></tr>
+          <tr><td>26</td><td><span class="code">handlePaste</span></td><td>クリップボード貼り付け</td><td><span class="badge badge-net">Net</span></td></tr>
+          <tr><td>27</td><td><span class="code">openHelp / closeHelp</span></td><td>ヘルプ表示</td><td><span class="badge badge-help">Help</span></td></tr>
+          <tr><td>28</td><td><span class="code">playlistSet</span></td><td>プレイリスト設定（フォルダ／ファイル）</td><td><span class="badge badge-playlist">Playlist</span></td></tr>
+          <tr><td>29</td><td><span class="code">isHTML5_SUPPORTED</span></td><td>拡張子判定（モード別）</td><td><span class="badge badge-video">Video</span></td></tr>
+          <tr><td>30</td><td><span class="code">up/downMovePlaylist</span></td><td>プレイリスト並び替え</td><td><span class="badge badge-playlist">Playlist</span></td></tr>
+          <tr><td>31</td><td><span class="code">addToPlaylist</span></td><td>動画追加（選択位置の下に挿入）</td><td><span class="badge badge-playlist">Playlist</span></td></tr>
+          <tr><td>32</td><td><span class="code">removeFromPlaylist</span></td><td>動画削除（再生中対応）</td><td><span class="badge badge-playlist">Playlist</span></td></tr>
+          <tr><td>33</td><td><span class="code">clearPlaylist</span></td><td>プレイリスト全削除</td><td><span class="badge badge-playlist">Playlist</span></td></tr>
+          <tr><td>34</td><td><span class="code">savePlaylist</span></td><td>m3u形式で保存</td><td><span class="badge badge-playlist">Playlist</span></td></tr>
+          <tr><td>35</td><td><span class="code">addFilesFromPaths</span></td><td><strong>ドラッグ＆ドロップ対応</strong>（preload.js経由でパス取得）</td><td><span class="badge badge-play">Play</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- レンダラーイベント -->
+  <div class="section" id="renderer-section">
+    <h2 class="section-title">レンダラーイベント（7）</h2>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>No.</th><th>対象</th><th>イベント</th><th>処理内容</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><span class="code">ipcRenderer.on</span></td><td><span class="code">auto-play-files</span></td><td>起動引数からの自動再生</td></tr>
+          <tr><td>2</td><td><span class="code">ipcRenderer.on</span></td><td><span class="code">convert-progress</span></td><td>FFmpeg変換進捗表示</td></tr>
+          <tr><td>3</td><td><span class="code">ipcRenderer.on</span></td><td><span class="code">converted-video</span></td><td>変換完了→Blob URL設定</td></tr>
+          <tr><td>4</td><td><span class="code">ipcRenderer.on</span></td><td><span class="code">convert-error</span></td><td>変換エラー表示</td></tr>
+          <tr><td>5</td><td><span class="code">ipcRenderer.on</span></td><td><span class="code">cancel-conversion</span></td><td>変換キャンセル応答</td></tr>
+          <tr><td>6</td><td><span class="code">ipcRenderer.on</span></td><td><span class="code">delete-temp-file</span></td><td>一時ファイル削除応答</td></tr>
+          <tr><td>7</td><td><span class="code">ipcRenderer.on</span></td><td><span class="code">save-playlist-dialog</span></td><td>プレイリスト保存ダイアログ応答</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- グローバルイベント -->
+  <div class="section" id="global-section">
+    <h2 class="section-title">グローバルイベント（4）</h2>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr><th>No.</th><th>対象</th><th>イベント</th><th>処理内容</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><span class="code">window</span></td><td><span class="code">resize</span></td><td>コントロールサイズ自動調整</td></tr>
+          <tr><td>2</td><td><span class="code">document</span></td><td><span class="code">keydown</span></td><td>全ショートカットキー（40種類以上）</td></tr>
+          <tr><td>3</td><td><span class="code">document</span></td><td><span class="code">mouseup</span></td><td>シーク・ボリュームドラッグ終了検知</td></tr>
+          <tr><td>4</td><td><span class="code">document</span></td><td><span class="code">fullscreenchange</span></td><td>フルスクリーン状態更新</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- イベントリスナー -->
+  <div class="section" id="event-section">
+    <h2 class="section-title">イベントリスナー（59）</h2>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>対象</th>
+            <th>イベント</th>
+            <th>処理内容</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><span class="code">urlInputBtn</span></td><td><span class="code">click</span></td><td>URL入力開始 or 即再生（クリップボード貼り付け）</td></tr>
+          <tr><td>2</td><td><span class="code">folderInput</span></td><td><span class="code">click</span></td><td>フォルダ選択 → プレイリスト作成（ipcRenderer）</td></tr>
+          <tr><td>3</td><td><span class="code">videoInput</span></td><td><span class="code">click</span></td><td>ファイル選択 → プレイリスト作成（ipcRenderer）</td></tr>
+          <tr><td>4</td><td><span class="code">urlConfirmBtn</span></td><td><span class="code">click</span></td><td>URL確定</td></tr>
+          <tr><td>5</td><td><span class="code">urlCancelBtn</span></td><td><span class="code">click</span></td><td>URLキャンセル</td></tr>
+          <tr><td>6</td><td><span class="code">playPauseBtn</span></td><td><span class="code">click</span></td><td>再生/一時停止切替</td></tr>
+          <tr><td>7</td><td><span class="code">playStopBtn</span></td><td><span class="code">click</span></td><td>再生停止</td></tr>
+          <tr><td>8</td><td><span class="code">prevVideoBtn</span></td><td><span class="code">click</span></td><td>前の動画</td></tr>
+          <tr><td>9</td><td><span class="code">rewindBtn</span></td><td><span class="code">click</span></td><td>30秒戻る</td></tr>
+          <tr><td>10</td><td><span class="code">fastForwardBtn</span></td><td><span class="code">click</span></td><td>30秒進む</td></tr>
+          <tr><td>11</td><td><span class="code">nextVideoBtn</span></td><td><span class="code">click</span></td><td>次の動画</td></tr>
+          <tr><td>12</td><td><span class="code">volumeMuteBtn</span></td><td><span class="code">click</span></td><td>ミュート切替</td></tr>
+          <tr><td>13</td><td><span class="code">fullscreenBtn</span></td><td><span class="code">click</span></td><td>フルスクリーン切替</td></tr>
+          <tr><td>14</td><td><span class="code">fitModeBtn</span></td><td><span class="code">click</span></td><td>描画モード切替</td></tr>
+          <tr><td>15</td><td><span class="code">sizeSelect</span></td><td><span class="code">change</span></td><td>コントロールサイズ変更</td></tr>
+          <tr><td>16</td><td><span class="code">filenameDisplay</span></td><td><span class="code">change</span></td><td>プレイリストから動画選択</td></tr>
+          <tr><td>17</td><td><span class="code">helpOpenBtn</span></td><td><span class="code">click</span></td><td>ヘルプ表示</td></tr>
+          <tr><td>18</td><td><span class="code">helpCloseBtn</span></td><td><span class="code">click</span></td><td>ヘルプ閉じる</td></tr>
+          <tr><td>19</td><td><span class="code">videoPlayer</span></td><td><span class="code">loadedmetadata</span></td><td>シークバー・時間初期化</td></tr>
+          <tr><td>20</td><td><span class="code">videoPlayer</span></td><td><span class="code">error</span></td><td>エラー → アイコン表示</td></tr>
+          <tr><td>21</td><td><span class="code">videoPlayer</span></td><td><span class="code">timeupdate</span></td><td>シークバー・時間更新</td></tr>
+          <tr><td>22</td><td><span class="code">videoPlayer</span></td><td><span class="code">ended</span></td><td>次の動画 or 停止（Blob URL解放）</td></tr>
+          <tr><td>23</td><td><span class="code">videoPlayer</span></td><td><span class="code">contextmenu</span></td><td>右クリックで再生/停止（Ctrl で停止）</td></tr>
+          <tr><td>24</td><td><span class="code">videoPlayer</span></td><td><span class="code">dblclick</span></td><td>フルスクリーン切替</td></tr>
+          <tr><td>25</td><td><span class="code">videoPlayer</span></td><td><span class="code">mousedown</span></td><td>マウスドラッグ開始</td></tr>
+          <tr><td>26</td><td><span class="code">videoPlayer</span></td><td><span class="code">mousemove</span></td><td>マウスドラッグ操作</td></tr>
+          <tr><td>27</td><td><span class="code">videoPlayer</span></td><td><span class="code">mouseup</span></td><td>マウスドラッグ終了</td></tr>
+          <tr><td>28</td><td><span class="code">videoPlayer</span></td><td><span class="code">mouseleave</span></td><td>マウス離脱時ドラッグ解除</td></tr>
+          <tr><td>29</td><td><span class="code">videoPlayer</span></td><td><span class="code">click</span></td><td>左クリックで表示切替</td></tr>
+          <tr><td>30</td><td><span class="code">videoPlayer</span></td><td><span class="code">wheel</span></td><td>ホイールで音量調整</td></tr>
+          <tr><td>31</td><td><span class="code">seekBar</span></td><td><span class="code">input</span></td><td>リアルタイムシーク</td></tr>
+          <tr><td>32</td><td><span class="code">seekBar</span></td><td><span class="code">change</span></td><td>シーク終了時保存</td></tr>
+          <tr><td>33</td><td><span class="code">seekBar</span></td><td><span class="code">mousedown</span></td><td>ドラッグ開始 + 暗転</td></tr>
+          <tr><td>34</td><td><span class="code">seekBar</span></td><td><span class="code">mouseover</span></td><td>プレビュー表示</td></tr>
+          <tr><td>35</td><td><span class="code">seekBar</span></td><td><span class="code">mousemove</span></td><td>プレビュー位置・時間更新</td></tr>
+          <tr><td>36</td><td><span class="code">seekBar</span></td><td><span class="code">mouseout</span></td><td>プレビュー非表示</td></tr>
+          <tr><td>37</td><td><span class="code">seekBar</span></td><td><span class="code">mouseleave</span></td><td>ドラッグ中離脱時解除</td></tr>
+          <tr><td>38</td><td><span class="code">volumeBar</span></td><td><span class="code">input</span></td><td>音量リアルタイム調整 + 保存</td></tr>
+          <tr><td>39</td><td><span class="code">volumeBar</span></td><td><span class="code">mousemove</span></td><td>ドラッグ中音量%プレビュー</td></tr>
+          <tr><td>40</td><td><span class="code">volumeBar</span></td><td><span class="code">mouseleave</span></td><td>非アクティブ時オーバーレイ非表示</td></tr>
+          <tr><td>41</td><td><span class="code">controls</span></td><td><span class="code">mouseover</span></td><td>表示タイマー停止</td></tr>
+          <tr><td>42</td><td><span class="code">controls</span></td><td><span class="code">mouseleave</span></td><td>タイマー再開</td></tr>
+          <tr><td>43</td><td><span class="code">filename</span></td><td><span class="code">mouseover</span></td><td>ファイル名表示タイマー停止</td></tr>
+          <tr><td>44</td><td><span class="code">filename</span></td><td><span class="code">mouseleave</span></td><td>ファイル名表示タイマー再開</td></tr>
+          <tr><td>45</td><td><span class="code">videoContainer</span></td><td><span class="code">mousemove</span></td><td>ビデオコンテナマウス移動（カーソル表示）</td></tr>
+          <tr><td>46</td><td><span class="code">tooltipElements</span></td><td><span class="code">mouseenter</span></td><td>ツールチップ表示</td></tr>
+          <tr><td>47</td><td><span class="code">tooltipElements</span></td><td><span class="code">mouseleave</span></td><td>ツールチップ非表示</td></tr>
+          <tr><td>48</td><td><span class="code">upMovePlaylistBtn</span></td><td><span class="code">click</span></td><td>プレイリスト項目を上に移動</td></tr>
+          <tr><td>49</td><td><span class="code">downMovePlaylistBtn</span></td><td><span class="code">click</span></td><td>プレイリスト項目を下に移動</td></tr>
+          <tr><td>50</td><td><span class="code">addPlaylistBtn</span></td><td><span class="code">click</span></td><td>動画をプレイリストに追加</td></tr>
+          <tr><td>51</td><td><span class="code">removePlaylistBtn</span></td><td><span class="code">click</span></td><td>選択項目をプレイリストから削除</td></tr>
+          <tr><td>52</td><td><span class="code">clearPlaylistBtn</span></td><td><span class="code">click</span></td><td>プレイリストを全削除</td></tr>
+          <tr><td>53</td><td><span class="code">savePlaylistBtn</span></td><td><span class="code">click</span></td><td>プレイリストをファイル保存</td></tr>
+          <tr><td>54</td><td><span class="code">filenameMenu</span></td><td><span class="code">click</span></td><td>プレイリスト編集メニュー表示/非表示切替</td></tr>
+          <tr><td>55</td><td><span class="code">modeChangeBtn</span></td><td><span class="code">click</span></td><td>動作モード切替（視聴／変換）</td></tr>
+          <tr><td>56</td><td><span class="code">dropzone</span></td><td><span class="code">dragover</span></td><td>ドラッグ移動</td></tr>
+          <tr><td>57</td><td><span class="code">dropzone</span></td><td><span class="code">dragenter</span></td><td>ドラッグ開始</td></tr>
+          <tr><td>58</td><td><span class="code">dropzone</span></td><td><span class="code">dragleave</span></td><td>ドラッグ解放</td></tr>
+          <tr><td>59</td><td><span class="code">dropzone</span></td><td><span class="code">drop</span></td><td>ドロップ再生</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <p>© 2025 x-builder, Japan ｜ xPlayer Ver3.08（最終更新 2025-11-25）</p>
+  <a href="#" class="back-to-top">ページトップへ戻る</a>
+</footer>
+
+</body>
+</html>
