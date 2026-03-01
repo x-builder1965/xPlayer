@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.36';
+const appName = 'xPlayer -動画プレイヤー- Ver3.37';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -41,6 +41,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.36';
 // 2026-02-27 Ver3.34 スナップショット機能追加準備と微調整
 // 2026-02-27 Ver3.35 再生速度の保存と復元の追加
 // 2026-03-01 Ver3.36 カット編集の全クリア機能追加。
+// 2026-03-02 Ver3.37 ネット動画再生操作変更。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -75,7 +76,6 @@ const videoInput = document.getElementById('videoInput');
 const urlInputBtn = document.getElementById('urlInputBtn');
 const urlInput = document.getElementById('urlInput');
 const urlConfirmBtn = document.getElementById('urlConfirmBtn');
-const urlCancelBtn = document.getElementById('urlCancelBtn');
 const urlControls = document.querySelector('.url-controls');
 const prevVideoBtn = document.getElementById('prevVideoBtn');
 const rewindBtn = document.getElementById('rewindBtn');
@@ -205,6 +205,7 @@ let editInMark = -1;  // インマーク（秒）
 let editOutMark = -1; // アウトマーク（秒）
 let cutRanges = []; // 配列 of { in: seconds, out: seconds }
 let currentPlaybackRate = 1.0;   // ← 新規追加
+let isUrlControlsVisible = false;
 // 編集時のフレームレート（フレーム単位で移動するための基準）。変更したければ
 // `localStorage.setItem('editFrameRate', '24')` のように保存してください。
 const editFrameRate = localStorage.getItem('editFrameRate') ? parseFloat(localStorage.getItem('editFrameRate')) : 30;
@@ -232,6 +233,9 @@ let controlSizeY = calculateControlSizeY();
 localStorage.setItem('controlSizeX', controlSizeX);
 localStorage.setItem('controlSizeY', controlSizeY);
 updateControlSize(controlSizeX, controlSizeY);
+
+// 初期化時にアイコンを正しく設定
+updateUrlButtonIcon();
 
 // 初期状態：メニューは閉じておく
 filenameMenus.style.display = 'none';
@@ -686,8 +690,9 @@ function hideURLInputControls() {
     urlControls.style.display = 'none';
     urlInput.style.display = 'none';
     urlConfirmBtn.style.display = 'none';
-    urlCancelBtn.style.display = 'none';
     urlInput.value = '';
+    isUrlControlsVisible = false;
+    updateUrlButtonIcon();
 }
 
 // 定期保存開始
@@ -755,6 +760,76 @@ function updatePlaylistDisplay() {
     });
     filenameDisplay.value = currentVideoIndex;
     updateIconOverlay();
+}
+
+// urlInputBtn の表示状態を更新するヘルパー関数
+function updateUrlButtonIcon() {
+    if (isUrlControlsVisible) {
+        urlInputBtn.textContent = '❌';
+        urlInputBtn.setAttribute('data-tooltip', 'URL入力キャンセル');
+        urlInputBtn.classList.add('active');     // 必要ならCSSで赤くするなど
+    } else {
+        urlInputBtn.textContent = '🌐';
+        urlInputBtn.setAttribute('data-tooltip', 'ネット動画を開く (Ctrl+n)');
+        urlInputBtn.classList.remove('active');
+    }
+}
+
+// URLコントロールの表示／非表示を切り替える
+function toggleUrlControls(show = null) {
+    // show が明示的に渡されなかった場合は現在の状態を反転
+    const shouldShow = show !== null ? show : !isUrlControlsVisible;
+
+    if (shouldShow) {
+        // クリップボードに有効なURLがあるかチェック（既存機能）
+        pasteFromClipboard()
+            .then(clipText => {
+                if (clipText && isTwitchOrYouTube(clipText)) {
+                    // 有効なURL → 自動で入力して再生（従来挙動）
+                    urlInput.value = clipText;
+                    urlInputEnter();
+                    // コントロールは表示しない
+                    return;
+                }
+
+                // 有効なURLがない → 入力欄を表示
+                filenameControls.style.display = 'none';
+                urlControls.style.display = 'flex';
+                urlInput.style.display = 'inline-block';
+                urlConfirmBtn.style.display = 'inline-block';
+                // urlCancelBtn はもうないので削除
+                urlInput.focus();
+                isUrlControlsVisible = true;
+                updateUrlButtonIcon();
+                showControlsAndFilename();
+                updateIconOverlay();
+            })
+            .catch(() => {
+                // クリップボード読み込み失敗 → 普通に入力欄表示
+                filenameControls.style.display = 'none';
+                urlControls.style.display = 'flex';
+                urlInput.style.display = 'inline-block';
+                urlConfirmBtn.style.display = 'inline-block';
+                urlInput.focus();
+                isUrlControlsVisible = true;
+                updateUrlButtonIcon();
+                showControlsAndFilename();
+                updateIconOverlay();
+            });
+    } else {
+        // 非表示にする
+        hideURLInputControls();
+        filenameControls.style.display = 'flex';
+        isUrlControlsVisible = false;
+        updateUrlButtonIcon();
+        showControlsAndFilename();
+        updateIconOverlay();
+    }
+}
+
+// URL入力キャンセル（❌ クリック / Esc）
+function cancelUrlInput() {
+    toggleUrlControls(false);
 }
 
 // 動画再生
@@ -1428,6 +1503,20 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
+    if (urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            urlInputEnter();
+            return;
+        }
+        
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            cancelUrlInput();
+            return;
+        }
+    }
+
     // 🌐Url入力状態
     if (urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
         // ✅Url入力確定（Enter）
@@ -1804,17 +1893,12 @@ document.addEventListener('fullscreenchange', () => {
 // ネット動画選択
 urlInputBtn.addEventListener('click', async () => {
     await handlePaste();
-    if (!urlInput.value) {
-        filenameControls.style.display = 'none';
-        urlControls.style.display = 'flex';
-        urlInput.style.display = 'inline-block';
-        urlConfirmBtn.style.display = 'inline-block';
-        urlCancelBtn.style.display = 'inline-block';
-        urlInput.focus();
-        showControlsAndFilename();
-        updateIconOverlay();
+    if (isUrlControlsVisible) {
+        // 現在表示中 → キャンセル
+        cancelUrlInput();
     } else {
-        urlInputEnter();
+        // 非表示 → 表示を試みる（クリップボードチェックあり）
+        toggleUrlControls(true);
     }
 });
 
@@ -1865,11 +1949,6 @@ modeChangeBtn.addEventListener('click', () => {
 // URL再生
 urlConfirmBtn.addEventListener('click', () => {
     urlInputEnter();
-});
-
-// URL入力キャンセル
-urlCancelBtn.addEventListener('click', () => {
-    urlInputCancel();
 });
 
 // 再生/一時停止

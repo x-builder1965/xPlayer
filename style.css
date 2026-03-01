@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.31'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.37'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -216,7 +216,7 @@ input#urlInput {
     border-radius: 5px;
     padding: 6px 12px;
     font-size: 16px;
-    width: 90%;
+    width: 100%;
     display: none;
 }
 select#filenameDisplay,
@@ -322,7 +322,6 @@ button#modeChangeBtn.convert-active:hover {
 .url-controls {
     display: flex;
     gap: 10px;
-    margin-top: 10px;
     display: none;
 }
 .icon-overlay {
