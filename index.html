@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.36'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.37'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -39,7 +39,6 @@
                 <div class="url-controls">
                     <input id="urlInput" type="text" placeholder="動画のURLを入力" data-tooltip="動画のURLを入力">
                     <button id="urlConfirmBtn" data-tooltip="URL再生（Enter）">✅</button>
-                    <button id="urlCancelBtn" data-tooltip="キャンセル（Escape）">❌</button>
                 </div>
                 <div class="control-row" id="editControls" style="display:none;">
                     <button id="setInMarkBtn" data-tooltip="インマークを設定">📍←</button>
@@ -167,97 +166,6 @@
                                 <td class="note">・プレイリスト編集を開始／終了。</td>
                             </tr>
                             <tr>
-                                <td class="sub-title">プレイリスト編集（🚥）</td>
-                                <td class="icon sub-title"></td>
-                                <td class="key sub-title"></td>
-                                <td class="mouse sub-title"></td>
-                                <td class="note sub-title"></td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 上へ移動</td>
-                                <td class="icon">🔼</td>
-                                <td class="key">Shift+p</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択動画を上へ移動。</td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 下へ移動</td>
-                                <td class="icon">🔽</td>
-                                <td class="key">Shift+n</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択動画を下へ移動。</td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 動画追加</td>
-                                <td class="icon">➕</td>
-                                <td class="key">Shift+a</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの最後に選択した動画・プレイリスト内の動画を追加。</td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 動画削除</td>
-                                <td class="icon">➖</td>
-                                <td class="key">Shift+d</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択位置の動画を削除。</td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 クリア</td>
-                                <td class="icon">🆑</td>
-                                <td class="key">Shift+c</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの全動画をクリア。</td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 保存</td>
-                                <td class="icon">💾</td>
-                                <td class="key">Shift+s</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストを名前をつけて保存。</td>
-                            </tr>
-                            <tr>
-                                <td class="sub-title">動画カット編集（✂️）</td>
-                                <td class="icon sub-title"></td>
-                                <td class="key sub-title"></td>
-                                <td class="mouse sub-title"></td>
-                                <td class="note sub-title"></td>
-                            </tr>
-                            <tr>
-                                <td>　・INマーク設定</td>
-                                <td class="icon">📍←</td>
-                                <td class="key no-data">なし</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・カット編集の開始位置を設定。</td>
-                            </tr>
-                            <tr>
-                                <td>　・OUTマーク設定</td>
-                                <td class="icon">→📍</td>
-                                <td class="key no-data">なし</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・カット編集の終了位置を設定。</td>
-                            </tr>
-                            <tr>
-                                <td>　・カット設定</td>
-                                <td class="icon">✅</td>
-                                <td class="key no-data">なし</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・カットの範囲を設定。</td>
-                            </tr>
-                            <tr>
-                                <td>　・カット実行・保存</td>
-                                <td class="icon">💾</td>
-                                <td class="key no-data">なし</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・動画カットを実行し、指定された場所に保存。</td>
-                            </tr>
-                            <tr>
-                                <td>　・カット全クリア</td>
-                                <td class="icon">🆑</td>
-                                <td class="key no-data">なし</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・カット編集を全クリア。</td>
-                            </tr>
-                            <tr>
                                 <td class="sub-title">コントロールパネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
@@ -266,7 +174,7 @@
                             </tr>
                             <tr>
                                 <td>　・ネット動画入力表示</td>
-                                <td class="icon">🌐</td>
+                                <td class="icon">🌐／❌</td>
                                 <td class="key">Ctrl+n</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・ネット動画のURL入力表示または再生（URLコピー済）。</td>
@@ -384,6 +292,97 @@
                                 <td class="note">・シークバーの操作でプレビュー表示、再生時間を変更。</td>
                             </tr>
                             <tr>
+                                <td class="sub-title">プレイリスト編集（🚥）</td>
+                                <td class="icon sub-title"></td>
+                                <td class="key sub-title"></td>
+                                <td class="mouse sub-title"></td>
+                                <td class="note sub-title"></td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 上へ移動</td>
+                                <td class="icon">🔼</td>
+                                <td class="key">Shift+p</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択動画を上へ移動。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 下へ移動</td>
+                                <td class="icon">🔽</td>
+                                <td class="key">Shift+n</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択動画を下へ移動。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 動画追加</td>
+                                <td class="icon">➕</td>
+                                <td class="key">Shift+a</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの最後に選択した動画・プレイリスト内の動画を追加。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 動画削除</td>
+                                <td class="icon">➖</td>
+                                <td class="key">Shift+d</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択位置の動画を削除。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 クリア</td>
+                                <td class="icon">🆑</td>
+                                <td class="key">Shift+c</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの全動画をクリア。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 保存</td>
+                                <td class="icon">💾</td>
+                                <td class="key">Shift+s</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストを名前をつけて保存。</td>
+                            </tr>
+                            <tr>
+                                <td class="sub-title">動画カット編集（✂️）</td>
+                                <td class="icon sub-title"></td>
+                                <td class="key sub-title"></td>
+                                <td class="mouse sub-title"></td>
+                                <td class="note sub-title"></td>
+                            </tr>
+                            <tr>
+                                <td>　・INマーク設定</td>
+                                <td class="icon">📍←</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・カット編集の開始位置を設定。</td>
+                            </tr>
+                            <tr>
+                                <td>　・OUTマーク設定</td>
+                                <td class="icon">→📍</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・カット編集の終了位置を設定。</td>
+                            </tr>
+                            <tr>
+                                <td>　・カット設定</td>
+                                <td class="icon">✅</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・カットの範囲を設定。</td>
+                            </tr>
+                            <tr>
+                                <td>　・カット実行・保存</td>
+                                <td class="icon">💾</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・動画カットを実行し、指定された場所に保存。</td>
+                            </tr>
+                            <tr>
+                                <td>　・カット全クリア</td>
+                                <td class="icon">🆑</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・カット編集を全クリア。</td>
+                            </tr>
+                            <tr>
                                 <td class="sub-title">ネット動画再生（🌐）</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
@@ -403,13 +402,6 @@
                                 <td class="key">Enter</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・YouTube・Twichなどの動画をポップアウトで再生。</td>
-                            </tr>
-                            <tr>
-                                <td>　・ネット動画再生 キャンセル</td>
-                                <td class="icon">❌</td>
-                                <td class="key">Escape</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・ネット動画のURLをキャンセル。</td>
                             </tr>
                             <tr>
                                 <td class="sub-title">ズーム・移動・ショット（🔍）</td>
