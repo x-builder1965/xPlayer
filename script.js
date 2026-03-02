@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.37';
+const appName = 'xPlayer -動画プレイヤー- Ver3.38';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -42,6 +42,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.37';
 // 2026-02-27 Ver3.35 再生速度の保存と復元の追加
 // 2026-03-01 Ver3.36 カット編集の全クリア機能追加。
 // 2026-03-02 Ver3.37 ネット動画再生操作変更。
+// 2026-03-03 Ver3.38 スナップショット機能追加。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -2133,13 +2134,21 @@ zoomResetBtn.addEventListener('click', () => {
 });
 
 // スナップショット
-snapshotBtn.addEventListener('click', () => {
-//	・マウスのドラックでスナップショット範囲を選択。
-//	・ファイル保存ダイアログを表示。（デフォルト：xPlayerSnap-yyyymmddhhMMss,png）
-//	・[保存]スナップショット画像（png形式）を保存しスナップショットモードを終了。
-//	・[キャンセル]何もせずスナップショットモードを終了。
-//	・スナップショットモード中（スナップショット範囲を選択中）の📷（Ctrl＋p）でスナップショットモードを終了。
-//	・スナップショットモード中（スナップショット範囲を選択中）の❌（Ctrl＋z）でスナップショットモードを終了、ズームモード終了。
+snapshotBtn.addEventListener('click', async () => {
+    try {
+        const result = await window.electronAPI.captureScreenshot();
+        if (result.success) {
+        console.log('スクショ完了！保存先:', result.filePath);
+        // 必要ならトースト表示など
+        } else {
+        console.error('失敗:', result.error);
+        }
+    } catch (err) {
+        console.error(err);
+    }
+
+    // スナップショットモード終了
+    // zoomEndBtn.click();
 });
 
 // ズーム終了（Ctrl+z）

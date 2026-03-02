@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.20';
+const appName = 'xPlayer -動画プレイヤー- Ver3.38';
 // ---------------------------------------------------------------------
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const fs = require('fs').promises;
@@ -77,5 +77,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
         }
     },
     classifyPath: (fullPath) => ipcRenderer.invoke('classify-path', fullPath),
+    captureScreenshot: () => ipcRenderer.invoke('capture-screenshot'),
     appPath: __dirname
 });
