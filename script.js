@@ -616,7 +616,9 @@ function applyZoom(zoomPercent) {
     zoomValue = zoomPercent;
     localStorage.setItem('zoom', zoomValue.toString());
     zoomDisplay.textContent = `${zoomValue > 0 ? '+' : ''}${zoomValue}%`;
-    updateOverlayDisplay(`🔍 ${zoomValue > 0 ? '+' : ''}${zoomValue}%`);
+    if (isZoomMode) {
+        updateOverlayDisplay(`🔍 ${zoomValue > 0 ? '+' : ''}${zoomValue}%`);
+    }
 }
 
 // オーバーレイ表示
