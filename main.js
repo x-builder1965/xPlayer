@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.25';
+const appName = 'xPlayer -動画プレイヤー- Ver3.38';
 // ---------------------------------------------------------------------
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
@@ -538,6 +538,17 @@ ipcMain.handle('save-playlist-file', async (event, { filePath, paths }) => {
         return { success: true };
     } catch (err) {
         console.error('プレイリスト保存失敗:', err);
+        return { success: false, error: err.message };
+    }
+});
+
+ipcMain.handle('capture-screenshot', async (event) => {
+    try {
+        const { exec } = require('child_process');
+        exec('explorer.exe ms-screenclip:', () => {});
+        return { success: true, message: 'Snipping Tool 起動' };
+    } catch (err) {
+        console.error('exec 全体エラー:', err);
         return { success: false, error: err.message };
     }
 });
