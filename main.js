@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.38';
+const appName = 'xPlayer -動画プレイヤー- Ver3.40';
 // ---------------------------------------------------------------------
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
@@ -59,6 +59,9 @@ let currentOutputPath = null;
 let currentSegmentProcs = [];
 let currentTmpDir = null;
 
+// ================================================================
+// 共通関数
+// ================================================================
 // ウィンドウ作成
 function createWindow() {
     const win = new BrowserWindow({
@@ -84,6 +87,22 @@ function createWindow() {
     win.maximize();
     win.once('ready-to-show', () => win.show());  // ← これで完璧
     return win;
+}
+
+// ユーティリティ関数
+function formatFFmpegTime(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    const ms = Math.floor((seconds % 1) * 100);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+}
+
+function formatTimeForFilename(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hours.toString().padStart(2, '0')}${minutes.toString().padStart(2, '0')}${secs.toString().padStart(2, '0')}`;
 }
 
 // .amppl リストファイル処理（相対パス対応 + 存在チェック）
@@ -191,10 +210,14 @@ app.whenReady().then(() => {
     });
 });
 
+// ウインドウクローズでプロセス解放
+app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit();
+});
+
 // ================================================================
 // IPC ハンドラ登録
 // ================================================================
-
 // フォルダ選択
 ipcMain.handle('open-folder-dialog', async () => {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
@@ -542,20 +565,19 @@ ipcMain.handle('save-playlist-file', async (event, { filePath, paths }) => {
     }
 });
 
+// スナップショット（Windows の Snipping Tool を起動）
 ipcMain.handle('capture-screenshot', async (event) => {
     try {
         const { exec } = require('child_process');
         exec('explorer.exe ms-screenclip:', () => {});
-        return { success: true, message: 'Snipping Tool 起動' };
+        return { success: true, message: 'Snipping Tool 起動！'};
     } catch (err) {
-        console.error('exec 全体エラー:', err);
+        console.error('exec 実行エラー:', err);
         return { success: false, error: err.message };
     }
 });
 
-// ============================================================
 // ファイル展開
-// ============================================================
 ipcMain.handle('classify-path', async (event, fullPath) => {
     try {
         const stat = await fs.stat(fullPath);
@@ -587,9 +609,7 @@ ipcMain.handle('classify-path', async (event, fullPath) => {
     }
 });
 
-// ============================================================
 // 動画カット編集機能
-// ============================================================
 ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPath }) => {
     return new Promise((resolve, reject) => {
         const fileName = path.basename(inputPath);
@@ -682,31 +702,6 @@ ipcMain.handle('open-folder', async (event, folderPath) => {
         console.error('フォルダを開く失敗:', err);
         return false;
     }
-});
-
-// ============================================================
-// ユーティリティ関数
-// ============================================================
-function formatFFmpegTime(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    const ms = Math.floor((seconds % 1) * 100);
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
-}
-
-function formatTimeForFilename(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${hours.toString().padStart(2, '0')}${minutes.toString().padStart(2, '0')}${secs.toString().padStart(2, '0')}`;
-}
-
-// ============================================================
-// ウインドウクローズでプロセス解放
-// ============================================================
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') app.quit();
 });
 
 // 複数範囲を削除して結合して保存する（ranges: [{in, out}, ...]）
