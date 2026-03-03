@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.39';
+const appName = 'xPlayer -動画プレイヤー- Ver3.40';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -44,6 +44,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.39';
 // 2026-03-02 Ver3.37 ネット動画再生操作変更。
 // 2026-03-03 Ver3.38 スナップショット機能追加。
 // 2026-03-03 Ver3.39 ズームパネルの透過率調整。
+// 2026-03-03 Ver3.40 スナップショット起動時パネル非表示。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -2137,19 +2138,19 @@ zoomResetBtn.addEventListener('click', () => {
 // スナップショット
 snapshotBtn.addEventListener('click', async () => {
     try {
+        // スナップショットに映り込まないように
+        zoomEndBtn.click(); // ズームリセットして終了
+        hideControlsAndFilename(); // コントロールとファイル名を隠す
+
         const result = await window.electronAPI.captureScreenshot();
         if (result.success) {
-        console.log('スクショ完了！保存先:', result.filePath);
-        // 必要ならトースト表示など
+            console.log('スナップショット完了！');
         } else {
-        console.error('失敗:', result.error);
+            console.error('スナップショット失敗:', result.error);
         }
     } catch (err) {
         console.error(err);
     }
-
-    // スナップショットモード終了
-    // zoomEndBtn.click();
 });
 
 // ズーム終了（Ctrl+z）
