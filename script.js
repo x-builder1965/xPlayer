@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.41';
+const appName = 'xPlayer -動画プレイヤー- Ver3.42';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -46,6 +46,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.41';
 // 2026-03-03 Ver3.39 ズームパネルの透過率調整。
 // 2026-03-03 Ver3.40 スナップショット起動時パネル非表示。
 // 2026-03-03 Ver3.41 Url入力にクリアボタン（🆑）追加。
+// 2026-03-04 Ver3.42 クリップボード読み込み関連処理の見直し修正。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -419,9 +420,9 @@ function formatTimeForFilename(seconds) {
     return `${hours.toString().padStart(2, '0')}${minutes.toString().padStart(2, '0')}${secs.toString().padStart(2, '0')}`;
 }
 
+// クリップボード読み込み
 async function pasteFromClipboard() {
     const TIMEOUT_MS = 3000;
-
     try {
         // タイムアウト付きクリップボード読み込み
         const text = await Promise.race([
@@ -430,44 +431,14 @@ async function pasteFromClipboard() {
                 setTimeout(() => reject(new Error('クリップボードの読み込みがタイムアウトしました')), TIMEOUT_MS)
             )
         ]);
-
-        // ★ 常に貼り付ける（成功・失敗問わず）
         const trimmedText = text.trim();
-        urlInput.value = trimmedText;
-
-        // 内部的には videoId を計算して返す（呼び出し側で必要なら使う）
-        const platform = isTwitchOrYouTube(trimmedText);
-        let videoId = null;
-
-        if (platform === 'Twitch') {
-            videoId = extractTwitchVideoId(trimmedText);
-        } else if (platform === 'YouTube') {
-            videoId = extractYouTubeVideoId(trimmedText);
-        } else if (platform === 'Other') {
-            // Other の場合も videoId として扱うか否かはアプリ次第
-            // ここでは生テキストをそのまま返す例
-            videoId = trimmedText || null;
-        }
-
-        // 呼び出し側が必要な値を返す
         return {
-            rawText: trimmedText,
-            videoId: videoId,
-            platform: platform
+            rawText: trimmedText
         };
     } catch (err) {
-        // エラー時も強制的に貼り付け（空文字でも可）
-        urlInput.value = '';
-
         console.warn('クリップボード貼り付け失敗:', err.message);
-
-        // 必要に応じてユーザー向けエラーメッセージ表示
-        // alert('クリップボードの読み取りに失敗しました');
-
         return {
             rawText: '',
-            videoId: null,
-            platform: 'Error',
             error: err.message
         };
     }
@@ -804,47 +775,35 @@ function updateUrlButtonIcon() {
 }
 
 // URLコントロールの表示／非表示を切り替える
-function toggleUrlControls(show = null) {
+async function toggleUrlControls(show = null) {
     // show が明示的に渡されなかった場合は現在の状態を反転
     const shouldShow = show !== null ? show : !isUrlControlsVisible;
-
     if (shouldShow) {
         // クリップボードに有効なURLがあるかチェック（既存機能）
-        pasteFromClipboard()
-            .then(clipText => {
-                if (clipText && isTwitchOrYouTube(clipText)) {
-                    urlInput.value = clipText;
-                    // 有効なURL → 自動で入力して再生（従来挙動）
-                    urlInputEnter();
-                    // コントロールは表示しない
-                    return;
-                }
+        const pastedText = await pasteFromClipboard();
+        const clipText = pastedText.rawText.trim() || ''; // クリップボードのテキスト（空文字も考慮）
+        urlInput.value = clipText;
+        if (clipText && isTwitchOrYouTube(clipText)) {
+            urlInput.value = clipText;
+            // 有効なURL → 自動で入力して再生（従来挙動）
+            urlInputEnter();
+            // コントロールは表示しない
+            return;
+        }
 
-                // 有効なURLがない → 入力欄を表示
-                filenameControls.style.display = 'none';
-                urlControls.style.display = 'flex';
-                urlInput.style.display = 'inline-block';
-                urlConfirmBtn.style.display = 'inline-block';
-                // urlCancelBtn はもうないので削除
-                urlInput.focus();
-                isUrlControlsVisible = true;
-                updateUrlButtonIcon();
-                showControlsAndFilename();
-                updateIconOverlay();
-            })
-            .catch(() => {
-                // クリップボード読み込み失敗 → 普通に入力欄表示
-                filenameControls.style.display = 'none';
-                urlControls.style.display = 'flex';
-                urlInput.style.display = 'inline-block';
-                urlConfirmBtn.style.display = 'inline-block';
-                urlInput.focus();
-                isUrlControlsVisible = true;
-                updateUrlButtonIcon();
-                showControlsAndFilename();
-                updateIconOverlay();
-            });
+        // 有効なURLがない → 入力欄を表示
+        filenameControls.style.display = 'none';
+        urlControls.style.display = 'flex';
+        urlInput.style.display = 'inline-block';
+        urlConfirmBtn.style.display = 'inline-block';
+        // urlCancelBtn はもうないので削除
+        urlInput.focus();
+        isUrlControlsVisible = true;
+        updateUrlButtonIcon();
+        showControlsAndFilename();
+        updateIconOverlay();
     } else {
+        urlInput.value = '';
         // 非表示にする
         hideURLInputControls();
         filenameControls.style.display = 'flex';
@@ -853,11 +812,6 @@ function toggleUrlControls(show = null) {
         showControlsAndFilename();
         updateIconOverlay();
     }
-}
-
-// URL入力キャンセル（❌ クリック / Esc）
-function cancelUrlInput() {
-    toggleUrlControls(false);
 }
 
 // 動画再生
@@ -1138,15 +1092,6 @@ function extractYouTubeVideoId(url) {
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const match = url.match(regex);
     return match ? match[1] : null;
-}
-
-// クリップボード貼り付け処理
-async function handlePaste() {
-    try {
-        const pastedText = await pasteFromClipboard();
-    } catch (err) {
-        console.error(err.message);
-    }
 }
 
 // ヘルプを開く
@@ -1537,13 +1482,7 @@ document.addEventListener('keydown', async (event) => {
             urlInputEnter();
             return;
         }
-        
-        if (event.key === 'Escape') {
-            event.preventDefault();
-            cancelUrlInput();
-            return;
-        }
-    }
+     }
 
     // 🌐Url入力状態
     if (urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
@@ -1920,13 +1859,12 @@ document.addEventListener('fullscreenchange', () => {
 // 🔲イベントリスナー🔲
 // ネット動画選択
 urlInputBtn.addEventListener('click', async () => {
-    await handlePaste();
     if (isUrlControlsVisible) {
         // 現在表示中 → キャンセル
-        cancelUrlInput();
+        await toggleUrlControls(false);
     } else {
         // 非表示 → 表示を試みる（クリップボードチェックあり）
-        toggleUrlControls(true);
+        await toggleUrlControls(true);
     }
 });
 
@@ -2167,6 +2105,10 @@ zoomResetBtn.addEventListener('click', () => {
 // スナップショット
 snapshotBtn.addEventListener('click', async () => {
     try {
+        // 再生中なら一時停止してからスナップショットを撮る
+        if (!videoPlayer.paused) {
+            await togglePlayPause();
+        }
         // スナップショットに映り込まないように
         zoomEndBtn.click(); // ズームリセットして終了
         hideControlsAndFilename(); // コントロールとファイル名を隠す
