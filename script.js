@@ -1914,12 +1914,14 @@ modeChangeBtn.addEventListener('click', () => {
 
 // URLクリア
 urlClearBtn.addEventListener('click', () => {
+    hideOverlayDisplay();
     urlInput.value = '';
     urlInput.focus();
 });
 
 // URL再生
 urlConfirmBtn.addEventListener('click', () => {
+    hideOverlayDisplay();
     urlInputEnter();
 });
 
