@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.40';
+const appName = 'xPlayer -動画プレイヤー- Ver3.41';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -45,6 +45,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.40';
 // 2026-03-03 Ver3.38 スナップショット機能追加。
 // 2026-03-03 Ver3.39 ズームパネルの透過率調整。
 // 2026-03-03 Ver3.40 スナップショット起動時パネル非表示。
+// 2026-03-03 Ver3.41 Url入力にクリアボタン（🆑）追加。
 // ---------------------------------------------------------------------
 
 // 🔲初期処理🔲
@@ -78,6 +79,7 @@ const folderInput = document.getElementById('folderInput');
 const videoInput = document.getElementById('videoInput');
 const urlInputBtn = document.getElementById('urlInputBtn');
 const urlInput = document.getElementById('urlInput');
+const urlClearBtn = document.getElementById('urlClearBtn');
 const urlConfirmBtn = document.getElementById('urlConfirmBtn');
 const urlControls = document.querySelector('.url-controls');
 const prevVideoBtn = document.getElementById('prevVideoBtn');
@@ -417,37 +419,58 @@ function formatTimeForFilename(seconds) {
     return `${hours.toString().padStart(2, '0')}${minutes.toString().padStart(2, '0')}${secs.toString().padStart(2, '0')}`;
 }
 
-// クリップボード貼り付け
 async function pasteFromClipboard() {
-    return new Promise(async (resolve, reject) => {
-        const timeout = setTimeout(() => {
-            reject(new Error('タイムアウト: クリップボードの読み込みに1000ms以上かかりました'));
-        }, 3000);
+    const TIMEOUT_MS = 3000;
 
-        try {
-            const text = await navigator.clipboard.readText();
-            const platform = isTwitchOrYouTube(text);
+    try {
+        // タイムアウト付きクリップボード読み込み
+        const text = await Promise.race([
+            navigator.clipboard.readText(),
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('クリップボードの読み込みがタイムアウトしました')), TIMEOUT_MS)
+            )
+        ]);
 
-            let videoId = null;
-            if (platform === 'Twitch') {
-                videoId = extractTwitchVideoId(text);
-            } else if (platform === 'YouTube') {
-                videoId = extractYouTubeVideoId(text);
-            } else if (platform === 'Other') {
-                videoId = text;
-            }
-            if (!videoId) {
-                resolve(null);
-            } else {
-                urlInput.value = text;
-                clearTimeout(timeout);
-                resolve(text);
-            }
-        } catch (err) {
-            clearTimeout(timeout);
-            reject(new Error(`クリップボードの読み込みに失敗: ${err.message}`));
+        // ★ 常に貼り付ける（成功・失敗問わず）
+        const trimmedText = text.trim();
+        urlInput.value = trimmedText;
+
+        // 内部的には videoId を計算して返す（呼び出し側で必要なら使う）
+        const platform = isTwitchOrYouTube(trimmedText);
+        let videoId = null;
+
+        if (platform === 'Twitch') {
+            videoId = extractTwitchVideoId(trimmedText);
+        } else if (platform === 'YouTube') {
+            videoId = extractYouTubeVideoId(trimmedText);
+        } else if (platform === 'Other') {
+            // Other の場合も videoId として扱うか否かはアプリ次第
+            // ここでは生テキストをそのまま返す例
+            videoId = trimmedText || null;
         }
-    });
+
+        // 呼び出し側が必要な値を返す
+        return {
+            rawText: trimmedText,
+            videoId: videoId,
+            platform: platform
+        };
+    } catch (err) {
+        // エラー時も強制的に貼り付け（空文字でも可）
+        urlInput.value = '';
+
+        console.warn('クリップボード貼り付け失敗:', err.message);
+
+        // 必要に応じてユーザー向けエラーメッセージ表示
+        // alert('クリップボードの読み取りに失敗しました');
+
+        return {
+            rawText: '',
+            videoId: null,
+            platform: 'Error',
+            error: err.message
+        };
+    }
 }
 
 // 画面幅からコントロールサイズ計算
@@ -790,8 +813,8 @@ function toggleUrlControls(show = null) {
         pasteFromClipboard()
             .then(clipText => {
                 if (clipText && isTwitchOrYouTube(clipText)) {
-                    // 有効なURL → 自動で入力して再生（従来挙動）
                     urlInput.value = clipText;
+                    // 有効なURL → 自動で入力して再生（従来挙動）
                     urlInputEnter();
                     // コントロールは表示しない
                     return;
@@ -1949,6 +1972,12 @@ modeChangeBtn.addEventListener('click', () => {
         modeChangeBtn.setAttribute('data-tooltip', modeChange === 'video' ? '視聴モード（Ctrl+v）' : '変換モード（Ctrl+v）');
         localStorage.setItem('modeChange', modeChange);
     }
+});
+
+// URLクリア
+urlClearBtn.addEventListener('click', () => {
+    urlInput.value = '';
+    urlInput.focus();
 });
 
 // URL再生
