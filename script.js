@@ -1921,7 +1921,6 @@ urlClearBtn.addEventListener('click', () => {
 
 // URL再生
 urlConfirmBtn.addEventListener('click', () => {
-    hideOverlayDisplay();
     urlInputEnter();
 });
 
