@@ -188,6 +188,7 @@ let editOutMark = -1; // アウトマーク（秒）
 let cutRanges = []; // 配列 of { in: seconds, out: seconds }
 let currentPlaybackRate = 1.0;   // ← 新規追加
 let isUrlControlsVisible = false;
+let isCutEditing = false;  // カット編集中フラグ
 // 編集時のフレームレート（フレーム単位で移動するための基準）。変更したければ
 // `localStorage.setItem('editFrameRate', '24')` のように保存してください。
 const editFrameRate = localStorage.getItem('editFrameRate') ? parseFloat(localStorage.getItem('editFrameRate')) : 30;
@@ -1367,11 +1368,11 @@ ipcRenderer.on('cut-progress', (event, payload) => {
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'extract-start':
-                updateOverlayDisplay(`✂️ 切出開始 ${payload.index + 1}/${payload.total} ${formatTime(payload.segStart)} - ${formatTime(payload.segEnd)}` , true);
+                updateOverlayDisplay(`✂️ カット開始 ${payload.index + 1}/${payload.total} ${formatTime(payload.segStart)} - ${formatTime(payload.segEnd)}` , true);
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'extract-done':
-                updateOverlayDisplay(`✂️ 切出済 ${payload.index + 1}/${payload.total} (${Math.round(payload.percent)}%)` , true);
+                updateOverlayDisplay(`✂️ カット済 ${payload.index + 1}/${payload.total} (${Math.round(payload.percent)}%)` , true);
                 break;
             case 'concat-start':
                 updateOverlayDisplay(`✂️ 結合中…` , true);
@@ -1390,11 +1391,13 @@ ipcRenderer.on('cut-progress', (event, payload) => {
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'done':
+                isCutEditing = false;
                 updateOverlayDisplay(`✂️ 保存完了` , false);
                 cutCancelBtn.style.display = 'none';
                 setTimeout(hideOverlayDisplay, 1500);
                 break;
             case 'error':
+                isCutEditing = false;
                 updateOverlayDisplay(`❌ カット失敗: ${payload.message || 'エラー'}` , false);
                 cutCancelBtn.style.display = 'none';
                 setTimeout(hideOverlayDisplay, 3000);
@@ -1451,6 +1454,14 @@ document.addEventListener('keydown', async (event) => {
             event.preventDefault();
         }
         return;
+    }
+
+    if (isCutEditing) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            cutCancelBtn.click();
+            return;
+        }
     }
 
     if (urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
@@ -2780,11 +2791,12 @@ editModeBtn.addEventListener('click', () => {
 cutCancelBtn.addEventListener('click', async () => {
     try {
         await ipcRenderer.invoke('cancel-cut');
-        updateOverlayDisplay('中断しました');
+        updateOverlayDisplay('✂️ 中断しました');
     } catch (e) {
         console.error('cancel-cut failed:', e);
-        updateOverlayDisplay('中断に失敗しました');
+        updateOverlayDisplay('✂️ 中断に失敗しました');
     } finally {
+        isCutEditing = false;
         editModeBtn.textContent = '✂️';
         editModeBtn.setAttribute('data-tooltip', '編集モード開始（Ctrl+e）');
         editModeBtn.classList.remove('active');
@@ -2923,6 +2935,7 @@ saveVideoBtn.addEventListener('click', async () => {
             return;
         }
 
+        isCutEditing = true;
         updateOverlayDisplay('✂️ カット（削除）処理中… 0%', true);
 
         // フレーム単位へ丸めたレンジを作成して main.js に送る
@@ -2949,6 +2962,7 @@ saveVideoBtn.addEventListener('click', async () => {
             updateOverlayDisplay(`✂️ 保存完了`);
             console.log('カット（複数）完了:', outputPath);
         }
+        isCutEditing = false;
 
         // カット篆囲は保持し適用可能にして保持
         setTimeout(hideOverlayDisplay, 2000);
