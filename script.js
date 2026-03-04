@@ -2785,6 +2785,9 @@ cutCancelBtn.addEventListener('click', async () => {
         console.error('cancel-cut failed:', e);
         updateOverlayDisplay('中断に失敗しました');
     } finally {
+        editModeBtn.textContent = '✂️';
+        editModeBtn.setAttribute('data-tooltip', '編集モード開始（Ctrl+e）');
+        editModeBtn.classList.remove('active');
         cutCancelBtn.style.display = 'none';
         setTimeout(hideOverlayDisplay, 1200);
     }
