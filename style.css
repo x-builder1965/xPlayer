@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.39'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.43'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -342,6 +342,31 @@ button#modeChangeBtn.convert-active:hover {
 }
 .icon-overlay.active {
     display: block;
+}
+#cutCancelBtn {
+    position: fixed;
+    left: 30px;
+    top: 50px;
+    transform: translateY(-50%);
+    padding: 8px 12px;
+    font-size: 1.3em;
+    background: #ff6b6b;
+    color: #000000;
+    border: 1px solid #555;
+    border-radius: 50%;
+    display: none;
+    width: 2.2em;
+    height: 2.2em;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0.6em rgba(0, 0, 0, 0.5);
+    transition: all 0.2s ease;
+    z-index: 9999;
+}
+#cutCancelBtn:hover {
+    background: rgba(255, 107, 107, 0.3);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 0 1em rgba(255, 107, 107, 0.6);
 }
 
 /* ヘルプ用設定 */

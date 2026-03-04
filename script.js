@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.42';
+const appName = 'xPlayer -動画プレイヤー- Ver3.43';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -47,9 +47,15 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.42';
 // 2026-03-03 Ver3.40 スナップショット起動時パネル非表示。
 // 2026-03-03 Ver3.41 Url入力にクリアボタン（🆑）追加。
 // 2026-03-04 Ver3.42 クリップボード読み込み関連処理の見直し修正。
+// 2026-03-05 Ver3.43 カット編集の実装見直し修正。
+// 2026-03-05 Ver3.44 パンモードで画像移動機能追加。（未実装）
+//　・パン開始（🔳）／パン終了（❌）
+//　・fitModeがcover時、パン中にする。cover以外は何もしない
+//　・パン中は、ワイプに画面と元動画の位置関係を画面左上に表示。
+//　・パン中は、マウスドラックで元動画の見切れ部分が表示できるように位置を移動。
 // ---------------------------------------------------------------------
 
-// 🔲初期処理🔲
+// 🔲共通変数設定🔲
 // Electronモジュールインポート
 const { ipcRenderer, fs, os, path, exec, getFilePath, classifyPath } = window.electronAPI;
 
@@ -135,37 +141,7 @@ const clearEditBtn = document.getElementById('clearEditBtn');
 const inMarkDisplay = document.getElementById('inMarkDisplay');
 const outMarkDisplay = document.getElementById('outMarkDisplay');
 const editSeekBar = document.getElementById('editSeekBar');
-
-// 処理中キャンセルボタン（動的に表示）
-const processCancelBtn = document.createElement('button');
-processCancelBtn.id = 'processCancelBtn';
-processCancelBtn.textContent = '中止';
-processCancelBtn.style.position = 'fixed';
-processCancelBtn.style.right = '20px';
-processCancelBtn.style.bottom = '20px';
-processCancelBtn.style.zIndex = '9999';
-processCancelBtn.style.padding = '8px 12px';
-processCancelBtn.style.fontSize = '14px';
-processCancelBtn.style.display = 'none';
-processCancelBtn.style.background = '#ff5555';
-processCancelBtn.style.color = '#fff';
-processCancelBtn.style.border = 'none';
-processCancelBtn.style.borderRadius = '6px';
-processCancelBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.3)';
-document.body.appendChild(processCancelBtn);
-
-processCancelBtn.addEventListener('click', async () => {
-    try {
-        await ipcRenderer.invoke('cancel-cut');
-        updateOverlayDisplay('中断しました');
-    } catch (e) {
-        console.error('cancel-cut failed:', e);
-        updateOverlayDisplay('中断に失敗しました');
-    } finally {
-        processCancelBtn.style.display = 'none';
-        setTimeout(hideOverlayDisplay, 1200);
-    }
-});
+const cutCancelBtn = document.getElementById('cutCancelBtn');
 
 // localStorage から復得
 const savedVolume = localStorage.getItem('volume');
@@ -216,7 +192,8 @@ let isUrlControlsVisible = false;
 // `localStorage.setItem('editFrameRate', '24')` のように保存してください。
 const editFrameRate = localStorage.getItem('editFrameRate') ? parseFloat(localStorage.getItem('editFrameRate')) : 30;
 
-// 初期状態設定
+// 🔲初期処理🔲
+// 初期表示設定
 videoPlayer.removeAttribute('src');
 videoPreview.removeAttribute('src');
 appNameAndCopyright.textContent = appNameAndCopyrightValue;
@@ -1387,22 +1364,22 @@ ipcRenderer.on('cut-progress', (event, payload) => {
         switch (stage) {
             case 'start':
                 updateOverlayDisplay(`✂️ カット準備中…` , true);
-                processCancelBtn.style.display = 'inline-block';
+                cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'extract-start':
                 updateOverlayDisplay(`✂️ 切出開始 ${payload.index + 1}/${payload.total} ${formatTime(payload.segStart)} - ${formatTime(payload.segEnd)}` , true);
-                processCancelBtn.style.display = 'inline-block';
+                cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'extract-done':
                 updateOverlayDisplay(`✂️ 切出済 ${payload.index + 1}/${payload.total} (${Math.round(payload.percent)}%)` , true);
                 break;
             case 'concat-start':
                 updateOverlayDisplay(`✂️ 結合中…` , true);
-                processCancelBtn.style.display = 'inline-block';
+                cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'concat-done':
                 updateOverlayDisplay(`✂️ 結合完了` , false);
-                processCancelBtn.style.display = 'none';
+                cutCancelBtn.style.display = 'none';
                 setTimeout(hideOverlayDisplay, 1200);
                 break;
             case 'reencode':
@@ -1410,16 +1387,16 @@ ipcRenderer.on('cut-progress', (event, payload) => {
                 const fm = payload.frames !== undefined ? `${payload.frames}f` : '';
                 const tm = payload.timemark ? ` [${payload.timemark}]` : '';
                 updateOverlayDisplay(`✂️ カット実行中… ${p}% ${fm}${tm}` , true);
-                processCancelBtn.style.display = 'inline-block';
+                cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'done':
                 updateOverlayDisplay(`✂️ 保存完了` , false);
-                processCancelBtn.style.display = 'none';
+                cutCancelBtn.style.display = 'none';
                 setTimeout(hideOverlayDisplay, 1500);
                 break;
             case 'error':
                 updateOverlayDisplay(`❌ カット失敗: ${payload.message || 'エラー'}` , false);
-                processCancelBtn.style.display = 'none';
+                cutCancelBtn.style.display = 'none';
                 setTimeout(hideOverlayDisplay, 3000);
                 break;
             default:
@@ -2797,6 +2774,20 @@ editModeBtn.addEventListener('click', () => {
     }
     // ボタン表示を更新（ここが今回のメイン変更点）
     updateEditModeButtonUI();
+});
+
+// カット中断
+cutCancelBtn.addEventListener('click', async () => {
+    try {
+        await ipcRenderer.invoke('cancel-cut');
+        updateOverlayDisplay('中断しました');
+    } catch (e) {
+        console.error('cancel-cut failed:', e);
+        updateOverlayDisplay('中断に失敗しました');
+    } finally {
+        cutCancelBtn.style.display = 'none';
+        setTimeout(hideOverlayDisplay, 1200);
+    }
 });
 
 // インマーク設定
