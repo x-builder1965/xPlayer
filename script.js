@@ -48,11 +48,20 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.43';
 // 2026-03-03 Ver3.41 Url入力にクリアボタン（🆑）追加。
 // 2026-03-04 Ver3.42 クリップボード読み込み関連処理の見直し修正。
 // 2026-03-05 Ver3.43 カット編集の実装見直し修正。
-// 2026-03-05 Ver3.44 パンモードで画像移動機能追加。（未実装）
+// ---------------------------------------------------------------------
+// 2026-03-05 Ver3.xx パンモードで画像移動機能追加。（未実装）
 //　・パン開始（🔳）／パン終了（❌）
 //　・fitModeがcover時、パン中にする。cover以外は何もしない
 //　・パン中は、ワイプに画面と元動画の位置関係を画面左上に表示。
 //　・パン中は、マウスドラックで元動画の見切れ部分が表示できるように位置を移動。
+// 2026-03-05 Ver3.xx プレイリスト並ぶ替え機能追加（未実装）
+//　・プレイリスト編集パネル内に並び替え（📩）を配置。
+//　・並び替え（📩）クリックで📩アイコンの下にポップアップメニューを表示。
+//　・ポップアップメニューには「（なし）／動画パス昇順／動画パス降順／作成日時昇順／作成日時降順」を配置。
+//　・プレイリスト作成時の並び順は（なし）をデフォルトとする。
+//　・選択された並び順でプレイリストを並び替える。
+//　・選択された並び順の前にチェック（✅）を表示。
+//　・選択された並び順はlocalStrageに保存して起動時に復元する。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -153,6 +162,7 @@ const savedFitMode = localStorage.getItem('fitMode');
 const savedZoom = localStorage.getItem('zoom');
 const savedTranslateX = localStorage.getItem('translateX');
 const savedTranslateY = localStorage.getItem('translateY');
+const editFrameRate = localStorage.getItem('editFrameRate') ? parseFloat(localStorage.getItem('editFrameRate')) : 30;
 
 // 状態変数初期化
 let playlist = [];
@@ -189,9 +199,6 @@ let cutRanges = []; // 配列 of { in: seconds, out: seconds }
 let currentPlaybackRate = 1.0;   // ← 新規追加
 let isUrlControlsVisible = false;
 let isCutEditing = false;  // カット編集中フラグ
-// 編集時のフレームレート（フレーム単位で移動するための基準）。変更したければ
-// `localStorage.setItem('editFrameRate', '24')` のように保存してください。
-const editFrameRate = localStorage.getItem('editFrameRate') ? parseFloat(localStorage.getItem('editFrameRate')) : 30;
 
 // 🔲初期処理🔲
 // 初期表示設定
@@ -380,7 +387,7 @@ videoPlayer.addEventListener('ended', () => {
 playPauseBtn.addEventListener('click', updatePlaybackState);
 playStopBtn.addEventListener('click', updatePlaybackState);
 
-// 🔲関数🔲
+// 🔲ヘルパー関数🔲
 // 時間フォーマット変換
 function formatTime(seconds) {
     if (isNaN(seconds)) return '0:00:00';
@@ -2986,4 +2993,3 @@ videoPlayer.addEventListener('timeupdate', () => {
         seekBar.value = (videoPlayer.currentTime / videoPlayer.duration) * 100;
     }
 });
-
