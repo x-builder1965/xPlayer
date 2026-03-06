@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.40';
+const appName = 'xPlayer -動画プレイヤー- Ver3.44';
 // ---------------------------------------------------------------------
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
@@ -637,11 +637,23 @@ ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPa
         const ff = ffmpeg(inputPath)
             .setStartTime(inTimeStr)
             .setDuration(durationStr)
-            .outputOptions('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23')
-            .outputOptions('-c:a', 'aac', '-b:a', '192k')
-            .outputOptions('-c:s', 'mov_text')  // 字幕があれば含める
-            .outputOptions('-movflags', '+faststart')
+            .outputOptions([
+                '-c:v', 'libx264',
+                '-preset', 'ultrafast',      // メモリ・CPUを最も削減（必須）
+                '-crf', '30',                // 28→30に上げて処理量減（画質はHDでほぼ気にならない）
+                '-ref', '1',                 // 参照フレーム1枚だけ（メモリ激減のキモ）
+                '-bframes', '0',             // Bフレーム完全無効
+                '-bf', '0',                  // 同上（念のため両方）
+                '-g', '300',                 // GOPを長くしてバッファ減
+                '-keyint_min', '30',
+                '-c:a', 'aac',
+                '-b:a', '128k',              // 音声ビットレート下げ（メモリ微減）
+                '-c:s', 'mov_text',
+                '-movflags', '+faststart',
+                '-threads', '1'              // スレッド1固定（メモリ断片化防止）
+            ])
             .on('progress', (progress) => {
+                const cpuLoad = os.loadavg()[0];  // 1分平均負荷
                 mainWindow.webContents.send('cut-progress', {
                     stage: 'reencode',
                     type: 'single',
@@ -649,7 +661,8 @@ ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPa
                     frames: progress.frames,
                     currentFps: progress.currentFps,
                     currentKbps: progress.currentKbps,
-                    timemark: progress.timemark
+                    timemark: progress.timemark,
+                    cpuLoad
                 });
             })
             .on('start', () => {
@@ -780,10 +793,23 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                 if (frameRate) {
                     const cmd = ffmpeg(inputPath)
                         .complexFilter(filters)
-                        .outputOptions('-map', '[v]', '-map', '[a]')
-                        .outputOptions('-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '28')
-                        .outputOptions('-c:a', 'aac', '-b:a', '128k')
-                        .outputOptions('-movflags', '+faststart')
+                        .outputOptions([
+                            '-map', '[v]', '-map', '[a]',
+                            // ビデオエンコード（メモリ最優先軽量化）
+                            '-c:v', 'libx264',
+                            '-preset', 'ultrafast',
+                            '-crf', '32',
+                            // ← ここを修正！ libx264固有オプションは -x264-params にまとめる
+                            '-x264-params', 'ref=1:bframes=0:bf=0:g=600:keyint_min=60:tune=fastdecode',
+                            // 音声（軽量化）
+                            '-c:a', 'aac',
+                            '-b:a', '128k',
+                            // muxer・出力最適化
+                            '-movflags', '+faststart',
+                            '-max_muxing_queue_size', '512',
+                            // スレッド
+                            '-threads', '1'
+                        ])
                         .on('start', () => {
                             currentFFmpeg = cmd;
                             currentOutputPath = outPath;
