@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.44';
+const appName = 'xPlayer -動画プレイヤー- Ver3.45';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -28,9 +28,9 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.44';
 // 2026-01-22 Ver3.21 サイズ変更コントロール廃止。
 // 2026-01-23 Ver3.22 YouTuneの埋め込み再生廃止。
 // 2026-01-28 Ver3.23 変換モードの実行時の進捗状況をシークバーに表示。
-// 2026-02-15 Ver3.24 カット編集機能追加。
+// 2026-02-15 Ver3.24 カット編集機能（✂️）追加。
 // 2026-02-15 Ver3.25 カット編集機能の改善。
-// 2026-02-25 Ver3.26 ズーム機能追加（-90%～+90%）。
+// 2026-02-25 Ver3.26 ズーム機能（🔍）追加（-90%～+90%）。
 // 2026-02-25 Ver3.27 ズーム機能をドロップダウンから縦型スライダー(-100%～+100%)に変更。
 // 2026-02-25 Ver3.28 ズームモード中のショートカットキー追加（Ctrl+↑/↓/0）。
 // 2026-02-25 Ver3.29 ズームモード中の画像移動機能追加。
@@ -38,23 +38,19 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.44';
 // 2026-02-26 Ver3.31 ズームパネルをサイズ調整に対応。
 // 2026-02-26 Ver3.32 ズームパネルにズーム終了ボタン追加。
 // 2026-02-27 Ver3.33 ズームモード中の←、→の移動量を詳細化。
-// 2026-02-27 Ver3.34 スナップショット機能追加準備と微調整
+// 2026-02-27 Ver3.34 スナップショット機能（📷）追加準備と微調整
 // 2026-02-27 Ver3.35 再生速度の保存と復元の追加
 // 2026-03-01 Ver3.36 カット編集の全クリア機能追加。
 // 2026-03-02 Ver3.37 ネット動画再生操作変更。
 // 2026-03-03 Ver3.38 スナップショット機能追加。
 // 2026-03-03 Ver3.39 ズームパネルの透過率調整。
 // 2026-03-03 Ver3.40 スナップショット起動時パネル非表示。
-// 2026-03-03 Ver3.41 Url入力にクリアボタン（🆑）追加。
+// 2026-03-03 Ver3.41 Url入力（🌐）にクリアボタン（🆑）追加。
 // 2026-03-04 Ver3.42 クリップボード読み込み関連処理の見直し修正。
 // 2026-03-05 Ver3.43 カット編集の実装見直し修正。
 // 2026-03-06 Ver3.44 カット編集時のクラッシュ（FFmpegメモリリーク）対応（対応限界）。
+// 2026-03-07 Ver3.45 ランダム再生（🔀）（Ctrl+r）／繰り返し再生（🔁）（Ctrl+Shift+r）機能追加。
 // ---------------------------------------------------------------------
-// 2026-03-05 Ver3.xx パンモードで画像移動機能追加。（未実装）
-//　・パン開始（🔳）／パン終了（❌）
-//　・fitModeがcover時、パン中にする。cover以外は何もしない
-//　・パン中は、ワイプに画面と元動画の位置関係を画面左上に表示。
-//　・パン中は、マウスドラックで元動画の見切れ部分が表示できるように位置を移動。
 // 2026-03-05 Ver3.xx プレイリスト並ぶ替え（Shift+m）機能追加（未実装）
 //　・プレイリスト編集パネル内に並び替え（📩）を配置。
 //　・並び替え（📩）クリックで📩アイコンの下にポップアップメニューを表示。
@@ -63,10 +59,6 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.44';
 //　・選択された並び順でプレイリストを並び替える。
 //　・選択された並び順の前にチェック（✅）を表示。
 //　・選択された並び順はlocalStrageに保存して起動時に復元する。
-// 2026-03-06 Ver3.xx ランダム再生（Ctrl+r）／繰り返し再生（Ctrl+Shift+r）機能追加（未実装）
-//　・プレイリスト編集パネル左横にランダム再生（🔀）と繰り返し再生（🔁）を配置。
-//　・ランダム再生（🔀）クリックでランダム再生のオン（背景赤）／オフ（背景青）を切り替える。
-//　・繰り返し再生（🔁）クリックで繰り返し再生のオン（背景赤）／オフ（背景青）を切り替える。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -156,6 +148,8 @@ const inMarkDisplay = document.getElementById('inMarkDisplay');
 const outMarkDisplay = document.getElementById('outMarkDisplay');
 const editSeekBar = document.getElementById('editSeekBar');
 const cutCancelBtn = document.getElementById('cutCancelBtn');
+const randomPlayBtn = document.getElementById('randomPlayBtn');
+const repeatPlayBtn  = document.getElementById('repeatPlayBtn');
 
 // localStorage から復得
 const savedVolume = localStorage.getItem('volume');
@@ -168,6 +162,10 @@ const savedZoom = localStorage.getItem('zoom');
 const savedTranslateX = localStorage.getItem('translateX');
 const savedTranslateY = localStorage.getItem('translateY');
 const editFrameRate = localStorage.getItem('editFrameRate') ? parseFloat(localStorage.getItem('editFrameRate')) : 30;
+const savedRandomPlay = localStorage.getItem('randomPlayMode');
+const savedRepeatPlay = localStorage.getItem('repeatPlayMode');
+const savedShuffleOrder = localStorage.getItem('shuffleOrder');
+const savedShufflePosition = localStorage.getItem('shufflePosition');
 
 // 状態変数初期化
 let playlist = [];
@@ -204,6 +202,10 @@ let cutRanges = []; // 配列 of { in: seconds, out: seconds }
 let currentPlaybackRate = 1.0;   // ← 新規追加
 let isUrlControlsVisible = false;
 let isCutEditing = false;  // カット編集中フラグ
+let isRandomPlayMode = false;     // ランダム再生（シャッフル）
+let isRepeatPlayMode  = false;     // リスト全体繰り返し
+let shuffleOrder = [];           // ランダムモード用の再生順リスト（インデックス配列）
+let shufflePosition = -1;        // 現在何番目を再生中か（-1=未開始）
 
 // 🔲初期処理🔲
 // 初期表示設定
@@ -237,6 +239,14 @@ updateUrlButtonIcon();
 filenameMenus.style.display = 'none';
 filenameMenu.textContent = '🚥';
 filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを開く (Shift+m)');
+
+// 再生モード復元
+if (savedRandomPlay === 'true') {
+    isRandomPlayMode = true;
+}
+if (savedRepeatPlay === 'true') {
+    isRepeatPlayMode = true;
+}
 
 // ボリューム復元
 if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
@@ -296,6 +306,34 @@ if (savedTranslateX && !isNaN(savedTranslateX) && savedTranslateY && !isNaN(save
     translateY = 0;
 }
 applyZoom(zoomValue);
+
+
+// ランダム再生リスト復元
+if (savedShuffleOrder) {
+    try {
+        const parsedPlaylist = JSON.parse(savedPlaylist);
+        shuffleOrder = JSON.parse(savedShuffleOrder);
+        // プレイリストの長さが変わっていたら無効化
+        if (!Array.isArray(shuffleOrder) || shuffleOrder.length !== parsedPlaylist.length) {
+            shuffleOrder = [];
+        }
+    } catch (e) {
+        console.warn('shuffleOrder の復元に失敗:', e);
+        shuffleOrder = [];
+    }
+}
+
+// ランダム再生ポジション復元
+if (savedShufflePosition !== null) {
+    shufflePosition = parseInt(savedShufflePosition, 10);
+    if (isNaN(shufflePosition) || shufflePosition < -1) {
+        shufflePosition = -1;
+    }
+}
+
+// ランダム再生・繰り返し再生ボタンの状態反映
+updateRandomPlayButton();
+updateRepeatPlayButton();
 
 // 起動時の引数有無判定
 (async () => {
@@ -384,13 +422,6 @@ videoPlayer.addEventListener('play', () => {
 videoPlayer.addEventListener('pause', () => {
     navigator.mediaSession.playbackState = 'paused';
 });
-videoPlayer.addEventListener('ended', () => {
-    navigator.mediaSession.playbackState = 'paused';
-});
-
-// 再生／停止時に即座に反映
-playPauseBtn.addEventListener('click', updatePlaybackState);
-playStopBtn.addEventListener('click', updatePlaybackState);
 
 // 🔲ヘルパー関数🔲
 // 時間フォーマット変換
@@ -451,9 +482,9 @@ function calculateControlSizeY() {
 // フォント・パディング動的更新
 function updateControlSize(valueX, valueY) {
     const fontSize = 8 + (valueX / 100) * (24 - 8);
-    const padding = 2 + (valueX / 100) * (10 - 2);
+    const padding = 1 + (valueX / 100) * (8 - 1);
     const appNameAndCopyrightFontSize = 8 + (valueX / 100) * (17 - 8);
-    const appNameAndCopyrightPadding = 2 + (valueX / 100) * (8 - 2);
+    const appNameAndCopyrightPadding = 1 + (valueX / 100) * (8 - 1);
     const speedSelectWidth = 40 + (valueX / 120) * (154 - 40);
     const zoomPanelHeight = 100 + (valueY / 100) * (500 - 100);
     const zoomPanelWidth = 30 + (valueX / 100) * (40 - 30);
@@ -761,6 +792,127 @@ function updateUrlButtonIcon() {
         urlInputBtn.textContent = '🌐';
         urlInputBtn.setAttribute('data-tooltip', 'ネット動画を開く (Ctrl+n)');
         urlInputBtn.classList.remove('active');
+    }
+}
+
+// ランダム再生更新
+function updateRandomPlayButton() {
+    randomPlayBtn.classList.toggle('active', isRandomPlayMode);
+}
+
+// 繰り返し再生更新
+function updateRepeatPlayButton() {
+    repeatPlayBtn.classList.toggle('active', isRepeatPlayMode);
+}
+
+// ランダム再生トグル
+function toggleRandomPlay() {
+    isRandomPlayMode = !isRandomPlayMode;
+    localStorage.setItem('randomPlayMode', isRandomPlayMode);
+    updateRandomPlayButton();
+    resetShuffle();
+    saveShuffleState(); // 現在のシャッフル位置を保存
+}
+
+// シンプルなFisher-Yatesシャッフル
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+// 再シャッフル
+function resetShuffle() {
+    if (isRandomPlayMode) {
+        // ランダムモードONになった → シャッフル順を今生成
+        shuffleOrder = [...Array(playlist.length).keys()]; // 0〜length-1 の配列
+        shuffle(shuffleOrder);                             // シャッフル
+        shufflePosition = -1;                              // リセット
+    } else {
+        // OFFになったらクリア
+        shuffleOrder = [];
+        shufflePosition = -1;
+    }
+}
+
+// 繰り返し再生トグル
+function toggleRepeatPlay() {
+    isRepeatPlayMode = !isRepeatPlayMode;
+    localStorage.setItem('repeatPlayMode', isRepeatPlayMode);
+    updateRepeatPlayButton();
+}
+
+// 前再生動画取得
+function getPrevVideoIndex() {
+    if (playlist.length === 0) return -1;
+    if (isRandomPlayMode) {
+        // ランダムモード
+        shufflePosition--;
+        if (shufflePosition < 0) {
+            if (isRepeatPlayMode) {
+                shufflePosition = shuffleOrder.length - 1;
+            } else {
+                shufflePosition = 0;
+                saveShuffleState(); // 現在のシャッフル位置を保存
+                return -1;
+            }
+        }
+        saveShuffleState(); // 現在のシャッフル位置を保存
+        return shuffleOrder[shufflePosition];
+    } else {
+        // 通常順
+        let normalPosition = currentVideoIndex - 1;
+        if (normalPosition < 0) {
+            if (isRepeatPlayMode) {
+                normalPosition = playlist.length - 1;
+            } else {
+                return -1;
+            }
+        }
+        return normalPosition;
+    }
+}
+
+// 次再生動画取得
+function getNextVideoIndex() {
+    if (playlist.length === 0) return -1;
+    if (isRandomPlayMode) {
+        // ランダムモード
+        shufflePosition++;
+        if (shufflePosition >= shuffleOrder.length) {
+            if (isRepeatPlayMode) {
+                shufflePosition = 0;
+            } else {
+                shufflePosition = shuffleOrder.length - 1;
+                saveShuffleState(); // 現在のシャッフル位置を保存
+                return -1;
+            }
+        }
+        saveShuffleState(); // 現在のシャッフル位置を保存
+        return shuffleOrder[shufflePosition];
+    } else {
+        // 通常順
+        let normalPosition = currentVideoIndex + 1;
+        if (normalPosition >= playlist.length) {
+            if (isRepeatPlayMode) {
+                normalPosition = 0;
+            } else {
+                return -1;
+            }
+        }
+        return normalPosition;
+    }
+}
+
+function saveShuffleState() {
+    if (isRandomPlayMode) {
+        localStorage.setItem('shuffleOrder', JSON.stringify(shuffleOrder));
+        localStorage.setItem('shufflePosition', shufflePosition.toString());
+    } else {
+        // ランダムOFFならクリア
+        localStorage.removeItem('shuffleOrder');
+        localStorage.removeItem('shufflePosition');
     }
 }
 
@@ -1116,6 +1268,9 @@ async function playlistSet(videoFiles) {
         updatePlaylistDisplay();
         await playVideo(playlist[currentVideoIndex].file);
         savePlaylistAndPlaybackState();
+        resetShuffle();
+        saveShuffleState(); // 現在のシャッフル位置を保存
+
         updateIconOverlay();
     } else {
         updateIconOverlay();
@@ -1202,6 +1357,8 @@ async function addToPlaylist() {
 
             updatePlaylistDisplay();
             savePlaylistAndPlaybackState();
+            resetShuffle();
+            saveShuffleState(); // 現在のシャッフル位置を保存
             showControlsAndFilename();
         }
     } catch (e) {
@@ -1268,6 +1425,8 @@ async function removeFromPlaylist() {
         playStopBtn.click();
     }
     savePlaylistAndPlaybackState();
+    resetShuffle();
+    saveShuffleState(); // 現在のシャッフル位置を保存
     showControlsAndFilename();
 }
 
@@ -1289,6 +1448,8 @@ async function clearPlaylist() {
     // UIと状態を更新
     // updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
+    resetShuffle();
+    saveShuffleState(); // 現在のシャッフル位置を保存
     showControlsAndFilename();
 }
 
@@ -1720,6 +1881,20 @@ document.addEventListener('keydown', async (event) => {
 	    return;
 	}
 
+    // 🔀ランダム再生（Ctrl＋r）
+    if (event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'r') {
+        event.preventDefault();
+        toggleRandomPlay();
+        return;
+    }
+
+    // 🔁繰り返し再生（Ctrl＋Shift＋r）
+    if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'r') {
+        event.preventDefault();
+        toggleRepeatPlay();
+        return;
+    }
+
     // 🚥プレイリスト編集 表示／非表示（shift+m）
     if (event.shiftKey && event.key.toLowerCase() === 'm' ) {
         event.preventDefault();
@@ -1929,7 +2104,7 @@ playPauseBtn.addEventListener('click', async () => {
     await togglePlayPause()
 });
 
-// 再生停止ボタン（おすすめ修正版）
+// 再生停止ボタン
 playStopBtn.addEventListener('click', async () => {
     const options = filenameDisplay.options;
 
@@ -1965,17 +2140,18 @@ playStopBtn.addEventListener('click', async () => {
 
 // 前の動画
 prevVideoBtn.addEventListener('click', async () => {
-    if (currentVideoIndex > 0) {
-        await cleanupTempFiles();
+    const prevIndex = getPrevVideoIndex();
 
-        currentVideoIndex--;
+    if (prevIndex >= 0) {
+        await cleanupTempFiles();
+        currentVideoIndex = prevIndex;
         localStorage.setItem('currentTime', 0);
         updatePlaylistDisplay();
         await playVideo(playlist[currentVideoIndex].file);
         savePlaylistAndPlaybackState();
-        updateIconOverlay();
     }
     showControlsAndFilename();
+    updateIconOverlay();
 });
 
 // 30秒戻る
@@ -2010,18 +2186,18 @@ fastForwardBtn.addEventListener('click', () => {
 
 // 次の動画
 nextVideoBtn.addEventListener('click', async () => {
-    if (currentVideoIndex < playlist.length - 1) {
-        await cleanupTempFiles();
+    const nextIndex = getNextVideoIndex();
 
-        currentVideoIndex++;
+    if (nextIndex >= 0) {
+        await cleanupTempFiles();
+        currentVideoIndex = nextIndex;
         localStorage.setItem('currentTime', 0);
         updatePlaylistDisplay();
         await playVideo(playlist[currentVideoIndex].file);
         savePlaylistAndPlaybackState();
-        showControlsAndFilename();
-        updateIconOverlay();
     }
     showControlsAndFilename();
+    updateIconOverlay();
 });
 
 // ミュート/解除
@@ -2086,6 +2262,16 @@ zoomBtn.addEventListener('click', () => {
     } else {
         zoomEndBtn.click(); // ズーム値リセットして終了
     }
+});
+
+// ランダム再生ボタンクリック
+randomPlayBtn.addEventListener('click', () => {
+    toggleRandomPlay();
+});
+
+// 繰り返し再生ボタンクリック
+repeatPlayBtn.addEventListener('click', () => {
+    toggleRepeatPlay();
 });
 
 // ズームスライダー変更
@@ -2174,6 +2360,8 @@ videoPlayer.addEventListener('loadedmetadata', () => {
                     file: { path: tempConvertFile },
                     name: tempConvertFile
                 };
+                resetShuffle();
+                saveShuffleState(); // 現在のシャッフル位置を保存
                 updatePlaylistDisplay();
             }
 
@@ -2293,11 +2481,19 @@ videoPlayer.addEventListener('timeupdate', () => {
 videoPlayer.addEventListener('ended', async () => {
     videoPlayer.currentTime = 0;
     localStorage.setItem('currentTime', 0);
-    if (currentVideoIndex < playlist.length - 1) {
-        nextVideoBtn.click();
+
+    const nextIndex = getNextVideoIndex();
+
+    if (nextIndex >= 0) {
+        currentVideoIndex = nextIndex;
+        await playVideo(playlist[currentVideoIndex].file);
+        savePlaylistAndPlaybackState();
     } else {
+        // 最後＋リピートオフ → 停止
         playStopBtn.click();
     }
+    showControlsAndFilename();
+    updateIconOverlay();
 });
 
 // 動画クリック
@@ -2713,17 +2909,23 @@ downMovePlaylistBtn.addEventListener('click', () => {
 // 追加ボタン
 addPlaylistBtn.addEventListener('click', () => {
     addToPlaylist();
+    resetShuffle();
+    saveShuffleState(); // 現在のシャッフル位置を保存
 });
 
 // 削除ボタン
 removePlaylistBtn.addEventListener('click', () => {
     removeFromPlaylist();
+    resetShuffle();
+    saveShuffleState(); // 現在のシャッフル位置を保存
 });
 
 // クリアボタン
 clearPlaylistBtn.addEventListener('click', () => {
     clearPlaylist();
-});        
+    resetShuffle();
+    saveShuffleState(); // 現在のシャッフル位置を保存
+});
 
 // 保存ボタン
 savePlaylistBtn.addEventListener('click', () => {
