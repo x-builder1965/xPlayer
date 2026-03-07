@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.46';
+const appName = 'xPlayer -動画プレイヤー- Ver3.49';
 // ---------------------------------------------------------------------
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
@@ -721,12 +721,10 @@ ipcMain.handle('open-folder', async (event, folderPath) => {
 ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPath, frameRate }) => {
     return new Promise((resolve, reject) => {
         try {
-            // 閾値（秒） ── 関数冒頭に移動
-            const MAX_DURATION_FOR_REENCODE = 600; // 10分
-            const MIN_KEEP_DURATION = 0.2;         // 0.2秒未満のセグメントは無視（調整可）
-            const DURATION_EPSILON = 0.05;         // durationとの微小差を吸収する閾値
+            const MAX_DURATION_FOR_REENCODE = 600; // もう使わないが残しておく
+            const MIN_KEEP_DURATION = 0.2;
+            const DURATION_EPSILON = 0.05;
 
-            // ffprobeで再生時間取得
             ffmpeg.ffprobe(inputPath, (err, metadata) => {
                 if (err) {
                     console.error('ffprobe エラー:', err);
@@ -734,18 +732,13 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                 }
                 const duration = metadata.format.duration || 0;
 
-                // ★★★ ここに追加：実際の動画長をログ
-                console.log(`入力動画のduration: ${duration.toFixed(2)}秒 (${(duration/60).toFixed(2)}分)`);
+                console.log(`入力動画のduration: ${duration.toFixed(2)}秒`);
 
-                // 正規化・ソート・マージ
+                // ranges の正規化・ソート・マージ
                 const normalized = (ranges || []).map(r => ({ 
                     in: Math.max(0, Math.min(duration, r.in)), 
                     out: Math.max(0, Math.min(duration, r.out)) 
                 }));
-
-                // ★★★ ここに追加：入力rangesと正規化後の確認
-                console.log('入力された削除範囲 (ranges):', ranges);
-                console.log('正規化後の範囲 (normalized):', normalized);
 
                 normalized.sort((a, b) => a.in - b.in || a.out - b.out);
 
@@ -764,11 +757,7 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                     }
                 }
 
-                // ★★★ ここに追加：マージ結果（実際に削除される範囲）
-                console.log('マージ済み削除範囲 (merged):', merged);
-                console.log(`削除範囲数: ${merged.length} （合計削除時間: ${merged.reduce((sum, r) => sum + (r.out - r.in), 0).toFixed(2)}秒）`);
-
-                // 残す（keep）セグメント生成
+                // 保持セグメント生成
                 let keeps = [];
                 let cursor = 0;
                 for (const m of merged) {
@@ -776,8 +765,6 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                         keeps.push({ start: cursor, end: m.in });
                     }
                     cursor = Math.min(duration, m.out);
-
-                    // 微小な残差を吸収
                     if (duration - cursor < DURATION_EPSILON) {
                         cursor = duration;
                     }
@@ -790,53 +777,14 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                     return reject(new Error('指定された範囲で動画が空になります'));
                 }
 
-                // ★★★ ここに追加：保持セグメントの詳細表示
-                console.log('保持セグメント（フィルタ前）:');
-                keeps.forEach((k, i) => {
-                    const segDur = (k.end - k.start).toFixed(3);
-                    console.log(`  [${i+1}] ${k.start.toFixed(3)} → ${k.end.toFixed(3)} (${segDur}秒)`);
-                });
-
-                // 短すぎるセグメントを除外
-                const filteredKeeps = keeps.filter(k => {
-                    const dur = k.end - k.start;
-                    return dur >= MIN_KEEP_DURATION;
-                });
-
-                // 保持合計時間を計算
+                // 短いセグメント除外
+                const filteredKeeps = keeps.filter(k => (k.end - k.start) >= MIN_KEEP_DURATION);
                 if (filteredKeeps.length === 0) {
-                    return reject(new Error('有効な保持範囲がありません（すべて短すぎる / 削除範囲が広すぎる）'));
+                    return reject(new Error('有効な保持範囲がありません'));
                 }
-
-                // 除外ログ
-                if (filteredKeeps.length < keeps.length) {
-                    console.warn(`短すぎるセグメントを除外しました: ${keeps.length - filteredKeeps.length}個`);
-                    const removed = keeps.filter(k => (k.end - k.start) < MIN_KEEP_DURATION);
-                    removed.forEach((k, i) => {
-                        console.log(`  除外 [${i+1}] ${k.start.toFixed(3)} → ${k.end.toFixed(3)} (${(k.end - k.start).toFixed(3)}秒)`);
-                    });
-                }
-
-                // filteredKeeps を以降で使用
                 keeps = filteredKeeps;
 
-                // 保持合計時間を再計算
-                let totalKeepDuration = 0;
-                keeps.forEach(k => {
-                    totalKeepDuration += (k.end - k.start);
-                });
-
-                // ★★★ ここに追加：frameRateと判定条件の確認
-                console.log('保持セグメント（フィルタ後）:');
-                keeps.forEach((k, i) => {
-                    const segDur = (k.end - k.start).toFixed(2);
-                    console.log(`  [${i+1}] start=${k.start.toFixed(2)}s → end=${k.end.toFixed(2)}s (${segDur}秒)`);
-                });
-
-                console.log(`frameRate値: ${frameRate !== undefined ? frameRate : '未指定 (undefined)'} fps`);
-                console.log(`保持合計時間: ${totalKeepDuration.toFixed(2)}秒 (${(totalKeepDuration/60).toFixed(2)}分)`);
-                console.log(`再エンコード閾値: ${MAX_DURATION_FOR_REENCODE}秒`);
-                console.log(`shouldReencode = ${frameRate && totalKeepDuration <= MAX_DURATION_FOR_REENCODE ? 'true (再エンコード)' : 'false (コピー+concat)'}`);
+                const totalKeepDuration = keeps.reduce((sum, k) => sum + (k.end - k.start), 0);
 
                 // 出力パス決定
                 let outPath;
@@ -857,149 +805,62 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                     duration: totalKeepDuration 
                 });
 
-                // 再エンコードする条件：frameRateあり かつ 合計10分未満
-                const shouldReencode = frameRate && totalKeepDuration <= MAX_DURATION_FOR_REENCODE;
+                // 念のため0.1秒未満はスキップ（任意で調整）
+                const validKeeps = keeps.filter(k => (k.end - k.start) >= 0.1);
 
-                if (shouldReencode) {
-                    console.log('→ 再エンコード経路を選択（フレーム精度優先）');
-
-                    // 念のため再エンコード時も短いセグメントをスキップ（保険）
-                    const validKeeps = keeps.filter(k => (k.end - k.start) >= 0.1);
-
-                    if (validKeeps.length === 0) {
-                        return reject(new Error('再エンコード可能な有効なセグメントがありません'));
-                    }
-
-                    const filters = [];
-                    const concatInputs = [];
-                    validKeeps.forEach((k, i) => {
-                        filters.push(`[0:v]trim=start=${k.start}:end=${k.end},setpts=PTS-STARTPTS[v${i}]`);
-                        filters.push(`[0:a]atrim=start=${k.start}:end=${k.end},asetpts=PTS-STARTPTS[a${i}]`);
-                        concatInputs.push(`[v${i}][a${i}]`);
-                    });
-                    filters.push(`${concatInputs.join('')}concat=n=${validKeeps.length}:v=1:a=1[v][a]`);
-
-                    const cmd = ffmpeg(inputPath)
-                        .complexFilter(filters)
-                        .outputOptions([
-                            '-map', '[v]', '-map', '[a]',
-                            '-c:v', 'libx264',
-                            '-preset', 'veryfast',
-                            '-crf', '23',
-                            '-tune', 'fastdecode,zerolatency',
-                            '-x264-params', 'ref=1:bframes=0:vbv-bufsize=3000:vbv-maxrate=5000:keyint=120:min-keyint=60',
-                            '-c:a', 'aac',
-                            '-b:a', '128k',
-                            '-movflags', '+faststart',
-                            '-max_muxing_queue_size', '1024'
-                        ])
-                        .on('start', () => {
-                            currentFFmpeg = cmd;
-                            currentOutputPath = outPath;
-                        })
-                        .on('progress', (progress) => {
-                            mainWindow.webContents.send('cut-progress', {
-                                stage: 'reencode',
-                                percent: progress.percent || 0,
-                                frames: progress.frames,
-                                currentFps: progress.currentFps,
-                                timemark: progress.timemark
-                            });
-                        })
-                        .on('end', () => {
-                            currentFFmpeg = null;
-                            currentOutputPath = null;
-                            mainWindow.webContents.send('cut-progress', { stage: 'done', percent: 100, outPath });
-                            resolve(outPath);
-                        })
-                        .on('error', (err) => {
-                            console.error('再エンコードエラー:', err);
-                            reject(err);
-                        })
-                        .save(outPath);
-
-                    return;
+                if (validKeeps.length === 0) {
+                    return reject(new Error('有効なセグメントがありません'));
                 }
 
-                // ── 再エンコード不要 → copy + concat demuxer ──
-                console.log('→ コピー+concat経路を選択（高速・品質維持優先）');
+                const filters = [];
+                const concatInputs = [];
 
-                (async () => {
-                    console.log('セグメント切り出し（再エンコード不要）');
-                    const tmpDir = path.join(os.tmpdir(), `xplayer_cut_${Date.now()}`);
-                    try {
-                        await fs.mkdir(tmpDir, { recursive: true });
-                        const ext = path.extname(inputPath) || '.mp4';
-                        const segmentFiles = [];
+                validKeeps.forEach((k, i) => {
+                    filters.push(`[0:v]trim=start=${k.start}:end=${k.end},setpts=PTS-STARTPTS[v${i}]`);
+                    filters.push(`[0:a]atrim=start=${k.start}:end=${k.end},asetpts=PTS-STARTPTS[a${i}]`);
+                    concatInputs.push(`[v${i}][a${i}]`);
+                });
 
-                        // セグメント切り出し
-                        for (let i = 0; i < keeps.length; i++) {
-                            const k = keeps[i];
-                            const segPath = path.join(tmpDir, `seg_${String(i).padStart(3, '0')}${ext}`);
-                            segmentFiles.push(segPath);
-                            const segDuration = (k.end - k.start).toFixed(3);
+                filters.push(`${concatInputs.join('')}concat=n=${validKeeps.length}:v=1:a=1[v][a]`);
 
-                            await new Promise((res, rej) => {
-                                const args = [
-                                    '-y',
-                                    '-ss', k.start.toFixed(3),
-                                    '-i', inputPath,
-                                    '-t', segDuration,
-                                    '-c', 'copy',
-                                    '-avoid_negative_ts', 'make_zero',
-                                    '-fflags', '+genpts',
-                                    segPath
-                                ];
-                                const proc = spawn(ffmpegStatic, args);
-                                currentSegmentProcs.push(proc);
-                                proc.on('error', rej);
-                                proc.on('close', (code) => {
-                                    // ... エラー処理・進捗報告 ...
-                                    if (code === 0) res();
-                                    else rej(new Error(`segment failed code=${code}`));
-                                });
-                            });
-                        }
-
-                        // concat list
-                        const listFile = path.join(tmpDir, 'list.txt');
-                        const listContent = segmentFiles.map(f => `file '${f.replace(/'/g, "'\\''")}'`).join('\n');
-                        await fs.writeFile(listFile, listContent, 'utf8');
-
-                        // concat 実行
-                        console.log('セグメント結合');
-                        await new Promise((res, rej) => {
-                            const args = [
-                                '-y',
-                                '-f', 'concat',
-                                '-safe', '0',
-                                '-i', listFile,
-                                '-c', 'copy',
-                                '-movflags', '+faststart',
-                                outPath
-                            ];
-                            const proc = spawn(ffmpegStatic, args);
-                            currentSegmentProcs.push(proc);
-                            proc.on('error', rej);
-                            proc.on('close', (code) => {
-                                if (code === 0) res();
-                                else rej(new Error(`concat failed code=${code}`));
-                            });
+                const cmd = ffmpeg(inputPath)
+                    .complexFilter(filters)
+                    .outputOptions([
+                        '-map', '[v]', '-map', '[a]',
+                        '-c:v', 'libx264',
+                        '-preset', 'veryfast',           // ← 必要に応じて medium/slow に変更可
+                        '-crf', '23',
+                        '-tune', 'fastdecode,zerolatency',
+                        '-x264-params', 'ref=1:bframes=0:vbv-bufsize=3000:vbv-maxrate=5000:keyint=120:min-keyint=60',
+                        '-c:a', 'aac',
+                        '-b:a', '128k',
+                        '-movflags', '+faststart',
+                        '-max_muxing_queue_size', '1024'
+                    ])
+                    .on('start', () => {
+                        currentFFmpeg = cmd;
+                        currentOutputPath = outPath;
+                    })
+                    .on('progress', (progress) => {
+                        mainWindow.webContents.send('cut-progress', {
+                            stage: 'reencode',
+                            percent: progress.percent || 0,
+                            frames: progress.frames,
+                            currentFps: progress.currentFps,
+                            timemark: progress.timemark
                         });
-
-                        // クリーンアップ
-                        await fs.rm(tmpDir, { recursive: true, force: true });
+                    })
+                    .on('end', () => {
+                        currentFFmpeg = null;
+                        currentOutputPath = null;
+                        mainWindow.webContents.send('cut-progress', { stage: 'done', percent: 100, outPath });
                         resolve(outPath);
-                    } catch (err) {
-                        console.warn('copy/concat failed:', err);
-                        // 必要ならここで再エンコードにフォールバック（ただし今回は長い動画なので諦める選択も可）
-                        // または reject(err)
+                    })
+                    .on('error', (err) => {
+                        console.error('FFmpeg再エンコードエラー:', err);
                         reject(err);
-                    } finally {
-                        currentTmpDir = null;
-                        currentSegmentProcs = [];
-                    }
-                })();
+                    })
+                    .save(outPath);
             });
         } catch (e) {
             reject(e);
