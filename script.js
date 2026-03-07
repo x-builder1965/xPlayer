@@ -533,6 +533,12 @@ function hideTooltip(element) {
     }
 }
 
+// カット編集モードがアクティブ判定
+function isCutEditModeActive() {
+    return isEditMode || 
+           (editControls && editControls.style.display !== 'none');
+}
+
 // コントロール＋ファイル名表示（タイマー付き）
 function showControlsAndFilename() {
     disabledControls(false);
@@ -545,7 +551,7 @@ function showControlsAndFilename() {
     clearTimeout(timeout);
     if (!isMouseOverControls && !isUrlControlsVisible) {
         timeout = setTimeout(() => {
-            if (!isMouseOverControls) {
+            if (!isMouseOverControls && !isCutEditModeActive()) {
                 hideControlsAndFilename(); // ここで無効化
             }
         }, overlayTimeout);
@@ -3119,7 +3125,7 @@ function renderCutRanges() {
     });
 }
 
-// --- 動画保存（設定した複数範囲を削除して保存） ---
+// 動画保存（設定した複数範囲を削除して保存）
 saveVideoBtn.addEventListener('click', async () => {
     if (!videoPlayer.src) {
         updateOverlayDisplay('❌ 動画が読み込まれていません');
@@ -3132,9 +3138,9 @@ saveVideoBtn.addEventListener('click', async () => {
 
     try {
         // 非編集モードに
-        isEditMode = false;
-        editControls.style.display = 'none';
-        editModeBtn.classList.remove('active');
+        // isEditMode = false;
+        // editControls.style.display = 'none';
+        // editModeBtn.classList.remove('active');
 
         const currentFile = playlist[currentVideoIndex];
         if (!currentFile) return;
@@ -3177,7 +3183,6 @@ saveVideoBtn.addEventListener('click', async () => {
             updateOverlayDisplay(`✂️ 保存完了`);
             console.log('カット（複数）完了:', outputPath);
         }
-        isCutEditing = false;
 
         // カット篆囲は保持し適用可能にして保持
         setTimeout(hideOverlayDisplay, 2000);
@@ -3186,6 +3191,8 @@ saveVideoBtn.addEventListener('click', async () => {
         updateOverlayDisplay(`❌ カット失敗: ${err.message}`);
         setTimeout(hideOverlayDisplay, 3000);
     } finally {
+        isCutEditing = false;
+        cutCancelBtn.style.display = 'none';
         editInMark = -1;
         editOutMark = -1;
         inMarkDisplay.textContent = '--:--:--';
