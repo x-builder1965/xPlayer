@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.46';
+const appName = 'xPlayer -動画プレイヤー- Ver3.47';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -51,11 +51,12 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.46';
 // 2026-03-06 Ver3.44 カット編集時のクラッシュ（FFmpegメモリリーク）対応（対応限界）。
 // 2026-03-07 Ver3.45 ランダム再生（🔀）（Ctrl+r）／繰り返し再生（🔁）（Ctrl+Shift+r）機能追加。
 // 2026-03-07 Ver3.46 カット編集機能（✂️）のクラッシュ対応。
+// 2026-03-07 Ver3.47 カット編集中（✂️）の疑似再生機能、カット範囲表示機能追加。
 // ---------------------------------------------------------------------
 // 2026-03-05 Ver3.xx プレイリスト並ぶ替え（Shift+m）機能追加（未実装）
 //　・プレイリスト編集パネル内に並び替え（📩）を配置。
 //　・並び替え（📩）クリックで📩アイコンの下にポップアップメニューを表示。
-//　・ポップアップメニューには「（なし）／動画パス昇順／動画パス降順／作成日時昇順／作成日時降順」を配置。
+//　・ポップアップメニューには「（なし）／動画パス昇順／動画パス降順／作成日時昇順／作成日時降順／（ランダム）」を配置。
 //　・プレイリスト作成時の並び順は（なし）をデフォルトとする。
 //　・選択された並び順でプレイリストを並び替える。
 //　・選択された並び順の前にチェック（✅）を表示。
@@ -167,6 +168,8 @@ const savedRandomPlay = localStorage.getItem('randomPlayMode');
 const savedRepeatPlay = localStorage.getItem('repeatPlayMode');
 const savedShuffleOrder = localStorage.getItem('shuffleOrder');
 const savedShufflePosition = localStorage.getItem('shufflePosition');
+const cutTimelineContainer = document.getElementById('cutTimelineContainer');
+const cutTimelineBar = document.getElementById('cutTimelineBar');
 
 // 状態変数初期化
 let playlist = [];
@@ -1022,6 +1025,43 @@ async function playVideo(file) {
     updateIconOverlay();
 }
 
+// カット範囲を時間順にソート＆マージ
+function getSortedAndMergedCutRanges() {
+    if (!cutRanges || cutRanges.length === 0) return [];
+
+    const sorted = [...cutRanges].sort((a, b) => a.in - b.in);
+    const merged = [];
+    let current = { ...sorted[0] };
+
+    for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i].in <= current.out) {
+            current.out = Math.max(current.out, sorted[i].out);
+        } else {
+            merged.push(current);
+            current = { ...sorted[i] };
+        }
+    }
+    merged.push(current);
+
+    return merged;
+}
+
+// 現在時刻から見て「次に進むべき有効な位置」を返す
+function findNextValidPosition(currentTime) {
+    const ranges = getSortedAndMergedCutRanges();
+    if (ranges.length === 0) return -1;
+
+    for (const r of ranges) {
+        if (currentTime < r.in) {
+            return currentTime; // 今いる場所が有効
+        }
+        if (currentTime >= r.in && currentTime < r.out) {
+            return r.out; // カット範囲の終了後にジャンプ
+        }
+    }
+    return -1; // 全てのカット後 → そのまま最後まで
+}
+
 // 動画のメタデータがロードされてから currentTime を操作するヘルパー
 function setVideoDurationTime() {
     if (videoPlayer.readyState >= 1) { // HAVE_METADATA 以上
@@ -1055,6 +1095,16 @@ async function togglePlayPause() {
         if (modeChange === 'convert') {
             // 再生即終了 → 最後尾へ
             setVideoDurationTime(); // duration が NaN でも安全に処理
+        }
+
+        // カット編集モードで、かつカット範囲がある場合 → 次の有効な位置へジャンプ
+        const isInEditMode = isEditMode || (editControls && editControls.style.display !== 'none');
+        if (isInEditMode && cutRanges.length > 0) {
+            const nextPos = findNextValidPosition(videoPlayer.currentTime);
+
+            if (nextPos >= 0 && nextPos < videoPlayer.duration) {
+                videoPlayer.currentTime = nextPos;
+            }
         }
         
         playPauseBtn.textContent = '⏸️';
@@ -2482,6 +2532,23 @@ videoPlayer.addEventListener('timeupdate', () => {
         updateTimeDisplay();
         updateIconOverlay();
     }
+
+    // 編集モードでカット範囲内に入ったら自動で飛ばす
+    if (isEditMode && cutRanges.length > 0) {
+        const ranges = getSortedAndMergedCutRanges();
+        for (const r of ranges) {
+            if (videoPlayer.currentTime >= r.in && videoPlayer.currentTime < r.out) {
+                let jumpTo = r.out;
+                // 連続したカット範囲がある場合、次の有効位置を探す
+                const nextValid = findNextValidPosition(jumpTo);
+                if (nextValid >= 0) {
+                    jumpTo = nextValid;
+                }
+                videoPlayer.currentTime = jumpTo;
+                break; // 一度に1回だけジャンプ
+            }
+        }
+    }
 });
 
 // 動画終了：Blob URL 解放 + 次の動画へ
@@ -2489,15 +2556,17 @@ videoPlayer.addEventListener('ended', async () => {
     videoPlayer.currentTime = 0;
     localStorage.setItem('currentTime', 0);
 
-    const nextIndex = getNextVideoIndex();
+    if (!isEditMode) {
+        const nextIndex = getNextVideoIndex();
 
-    if (nextIndex >= 0) {
-        currentVideoIndex = nextIndex;
-        await playVideo(playlist[currentVideoIndex].file);
-        savePlaylistAndPlaybackState();
-    } else {
-        // 最後＋リピートオフ → 停止
-        playStopBtn.click();
+        if (nextIndex >= 0) {
+            currentVideoIndex = nextIndex;
+            await playVideo(playlist[currentVideoIndex].file);
+            savePlaylistAndPlaybackState();
+        } else {
+            // 最後＋リピートオフ → 停止
+            playStopBtn.click();
+        }
     }
     showControlsAndFilename();
     updateIconOverlay();
@@ -3075,7 +3144,7 @@ clearEditBtn.addEventListener('click', () => {
     renderCutRanges();
 });
 
-// --- カット設定追加ボタン ---
+// カット範囲追加
 addCutRangeBtn.addEventListener('click', () => {
     if (editInMark < 0 || editOutMark < 0) {
         updateOverlayDisplay('❌ INマークとOUTマークを両方設定してください');
@@ -3099,10 +3168,13 @@ addCutRangeBtn.addEventListener('click', () => {
 // レンジ一覧描画
 function renderCutRanges() {
     cutRangesList.innerHTML = '';
+    cutTimelineBar.innerHTML = '';  // 赤いバーを全部削除
     if (!cutRanges || cutRanges.length === 0) {
-        cutRangesList.textContent = '（なし）';
-        return;
+       cutRangesList.textContent = '（なし）';
+       return;
     }
+
+    // リスト部分
     cutRanges.forEach((r, idx) => {
         const div = document.createElement('div');
         div.style.display = 'flex';
@@ -3123,6 +3195,36 @@ function renderCutRanges() {
         div.appendChild(del);
         cutRangesList.appendChild(div);
     });
+
+    // タイムラインバー部分
+    console.log('カット範囲描画:', cutRanges);
+    if (!cutTimelineContainer || !cutTimelineBar) return;
+
+    console.log('cutTimelineContainer:', cutTimelineContainer);
+    console.log('cutTimelineBar:', cutTimelineBar);
+    cutTimelineBar.innerHTML = ''; // クリア
+    if (!videoPlayer.duration || cutRanges.length === 0) {
+        return;
+    }
+
+    console.log('動画の長さ:', videoPlayer.duration);
+    const duration = videoPlayer.duration;
+    cutRanges.forEach((range) => {
+        const leftPercent  = (range.in  / duration) * 100;
+        const widthPercent = ((range.out - range.in) / duration) * 100;
+
+        console.log(`カット範囲: ${formatTime(range.in)} - ${formatTime(range.out)} (${leftPercent.toFixed(2)}% - ${(leftPercent + widthPercent).toFixed(2)}%)`);
+        const bar = document.createElement('div');
+        bar.className = 'cut-range-bar';
+        bar.style.left   = `${leftPercent}%`;
+        bar.style.width  = `${widthPercent}%`;
+
+        cutTimelineBar.appendChild(bar);
+    });
+
+    // renderCutRanges() の一番最後に追加
+    console.log('追加後の子要素数:', cutTimelineBar.children.length);
+    console.log('追加されたバー例:', cutTimelineBar.querySelector('.cut-range-bar'));
 }
 
 // 動画保存（設定した複数範囲を削除して保存）

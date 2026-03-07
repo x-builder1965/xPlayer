@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.45'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.47'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -45,16 +45,23 @@
                     <button id="urlClearBtn" data-tooltip="URLクリア">🆑</button>
                     <button id="urlConfirmBtn" data-tooltip="URL再生（Enter）">✅</button>
                 </div>
-                <div class="control-row" id="editControls" style="display:none;">
-                    <button id="setInMarkBtn" data-tooltip="インマークを設定">📍←</button>
-                    <span id="inMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
-                    <input type="range" id="editSeekBar" value="0" min="0" max="100" data-tooltip="カット編集位置">
-                    <span id="outMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
-                    <button id="setOutMarkBtn" data-tooltip="アウトマークを設定">→📍</button>
-                    <button id="addCutRangeBtn" data-tooltip="カット設定を追加">✅</button>
-                    <button id="saveVideoBtn" data-tooltip="設定したカットを適用して保存">💾</button>
-                    <button id="clearEditBtn" data-tooltip="編集を全クリア">🆑</button>
-                    <div id="cutRangesContainer" style="display:block; margin-top:6px; width:100%;">
+                <div class="control-row" id="editControls" style="display:none; flex-direction: column; align-items: stretch;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+                        <button id="setInMarkBtn" data-tooltip="インマークを設定">📍←</button>
+                        <span id="inMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
+                        <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 200px;">
+                            <input type="range" id="editSeekBar" value="0" min="0" max="100" data-tooltip="カット編集位置" style="width: 100%; margin-bottom: 0;">
+                            <div id="cutTimelineContainer" style="position: relative; height: 12px; background: #333; border-radius: 4px; overflow: hidden; width: 100%; margin-top: 0;">
+                                <div id="cutTimelineBar" style="position: absolute; top: 0; left: 0; height: 100%; width: 100%;"></div>
+                            </div>
+                        </div>
+                        <span id="outMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
+                        <button id="setOutMarkBtn" data-tooltip="アウトマークを設定">→📍</button>
+                        <button id="addCutRangeBtn" data-tooltip="カット設定を追加">✅</button>
+                        <button id="saveVideoBtn" data-tooltip="設定したカットを適用して保存">💾</button>
+                        <button id="clearEditBtn" data-tooltip="編集を全クリア">🆑</button>
+                    </div>
+                    <div id="cutRangesContainer" style="display:block; width:100%;">
                         <div id="cutRangesList" style="max-height:120px; overflow:auto; background:#12121222; padding:6px; border-radius:4px;"></div>
                     </div>
                 </div>
