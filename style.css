@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.45'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.47'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -567,6 +567,22 @@ caption {
 #editSeekBar {
     flex: 1;
     min-width: 200px;
+}
+
+#cutTimelineContainer {
+    background: #2a2a2a;
+    border: 1px solid #555;
+}
+.cut-range-bar {
+    position: absolute;
+    height: 100%;
+    background: rgba(220, 50, 50, 0.75);
+    border-left: 1px solid #ff4444;
+    border-right: 1px solid #ff4444;
+    pointer-events: none;  /* クリック無効化 */
+}
+.cut-range-bar:hover {
+    background: rgba(255, 80, 80, 0.9);
 }
 
 #inMarkDisplay, #outMarkDisplay {
