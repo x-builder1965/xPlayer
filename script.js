@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.47';
+const appName = 'xPlayer -動画プレイヤー- Ver3.48';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -52,6 +52,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.47';
 // 2026-03-07 Ver3.45 ランダム再生（🔀）（Ctrl+r）／繰り返し再生（🔁）（Ctrl+Shift+r）機能追加。
 // 2026-03-07 Ver3.46 カット編集機能（✂️）のクラッシュ対応。
 // 2026-03-07 Ver3.47 カット編集中（✂️）の疑似再生機能、カット範囲表示機能追加。
+// 2026-03-07 Ver3.48 ズームモード中（🔍）マウスホイールで拡大縮小。
 // ---------------------------------------------------------------------
 // 2026-03-05 Ver3.xx プレイリスト並ぶ替え（Shift+m）機能追加（未実装）
 //　・プレイリスト編集パネル内に並び替え（📩）を配置。
@@ -2731,12 +2732,42 @@ videoPlayer.addEventListener('click', (e) => {
 // マウスホイール
 videoPlayer.addEventListener('wheel', (event) => {
     event.preventDefault();
+
+    // ズームモードが有効 → ホイールでズーム調整
+    if (isZoomMode) {
+        const zoomStep = 5;           // 1回で5%ずつ（好みで3〜10の範囲で調整可）
+        let newZoom = zoomValue;
+
+        if (event.deltaY < 0) {
+            // ホイール上（拡大）
+            newZoom += zoomStep;
+        } else if (event.deltaY > 0) {
+            // ホイール下（縮小）
+            newZoom -= zoomStep;
+        }
+
+        // 範囲制限（現在のズームスライダーと同じ範囲に合わせる）
+        newZoom = Math.max(-100, Math.min(500, newZoom));  // 必要なら上限を200などに変更
+
+        // スライダーと同期
+        zoomBar.value = newZoom.toString();
+        applyZoom(newZoom);
+
+        // フィードバック表示（任意だがおすすめ）
+        updateOverlayDisplay(`🔍 ${newZoom > 0 ? '+' : ''}${newZoom}%`);
+        showControlsAndFilename();
+
+        return;  // ここで終了 → 音量調整には行かない
+    }
+
+    // 通常モード → 既存の音量調整
     const volumeStep = 0.01;
     if (event.deltaY < 0) {
         videoPlayer.volume = Math.min(1, videoPlayer.volume + volumeStep);
     } else if (event.deltaY > 0) {
         videoPlayer.volume = Math.max(0, videoPlayer.volume - volumeStep);
     }
+
     volumeBar.value = videoPlayer.volume;
     lastVolume = videoPlayer.volume;
     volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
