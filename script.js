@@ -1385,6 +1385,14 @@ function updateEditModeButtonUI() {
         editModeBtn.textContent = '❌';
         editModeBtn.setAttribute('data-tooltip', '編集モード終了（Ctrl+e）');
         editModeBtn.classList.add('active');
+
+        if (videoPlayer.play) {
+            videoPlayer.pause();
+            playPauseBtn.textContent = '▶️';
+            playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            localStorage.setItem('currentTime', videoPlayer.currentTime);
+            stopPeriodicSave();
+        }
     } else {
         editModeBtn.textContent = '✂️';
         editModeBtn.setAttribute('data-tooltip', '編集モード開始（Ctrl+e）');
