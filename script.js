@@ -3218,6 +3218,55 @@ function renderCutRanges() {
        cutRangesList.textContent = '（なし）';
        return;
     }
+    cutRanges.sort((a, b) => a.in - b.in);
+
+    // モード判定
+    let modeText = "高速モード";
+    let longestCutDuration = 0;
+    let longestCutIndex = -1;           // ← 追加：最長のカット番号（0ベース）
+
+    // 最後のカット範囲をチェック
+    const lastRange = cutRanges[cutRanges.length - 1];
+    const isLastToEnd = lastRange && Math.abs(lastRange.out - videoPlayer.duration) < 1.0; // 1秒未満の誤差を許容
+
+    // 対象となるカット範囲（最後の範囲を除くかどうか）
+    const rangesToCheck = isLastToEnd ? cutRanges.slice(0, -1) : cutRanges;
+
+    if (rangesToCheck.length > 0) {
+        // 最長の長さと、そのインデックスを取得
+        let maxDuration = -Infinity;
+        let maxIndex = -1;
+    
+        rangesToCheck.forEach((r, arrayIndex) => {
+            const dur = r.out - r.in;
+            if (dur > maxDuration) {
+                maxDuration = dur;
+                maxIndex = arrayIndex;
+            }
+        });
+    
+        longestCutDuration = maxDuration;
+        longestCutIndex = maxIndex;
+    
+    } else if (!isLastToEnd && cutRanges.length === 1) {
+        longestCutDuration = lastRange.out - lastRange.in;
+        longestCutIndex = 0;
+    }
+
+    // 10分 = 600秒
+    if (longestCutDuration <= 600) {
+        modeText = "高精細モード";
+    }
+
+    // モード表示（リストの一番上に）
+    const modeDiv = document.createElement('div');
+    modeDiv.style.padding = '8px 12px';
+    // modeDiv.style.backgroundColor = '#000000';
+    modeDiv.style.borderBottom = '1px solid #000000';
+    modeDiv.style.fontWeight = 'bold';
+    modeDiv.style.color = longestCutDuration <= 600 ? '#a4d2ff' : '#ffcccc';
+    modeDiv.textContent = modeText;
+    cutRangesList.appendChild(modeDiv);
 
     // リスト部分
     cutRanges.forEach((r, idx) => {
@@ -3226,9 +3275,40 @@ function renderCutRanges() {
         div.style.justifyContent = 'space-between';
         div.style.alignItems = 'center';
         div.style.padding = '2px 4px';
+    
         const label = document.createElement('div');
-        label.textContent = `カット${idx + 1}: ${formatTime(r.in)} (${Math.round(r.in * editFrameRate)}f) - ${formatTime(r.out)} (${Math.round(r.out * editFrameRate)}f)`;
         label.style.flex = '1';
+    
+        const durationSec = r.out - r.in;
+        const durationStr = formatTime(durationSec);
+    
+        // ★を表示するかどうか判定
+        let showStar = false;
+    
+        // 1. 10分超えているか
+        if (durationSec > 600) {
+            // 2. 最後のカット範囲（idx === cutRanges.length - 1）かどうか
+            if (idx === cutRanges.length - 1) {
+                // 最後の範囲が動画の最後までカバーしているか
+                const lastRange = cutRanges[cutRanges.length - 1];
+                const isLastToEnd = lastRange && Math.abs(lastRange.out - videoPlayer.duration) < 1.0;
+    
+                // 最後までカット範囲 → ★非表示
+                showStar = !isLastToEnd;
+            } else {
+                // 最後のカット範囲ではない → ★表示
+                showStar = true;
+            }
+        }
+    
+        label.innerHTML = `
+            カット${idx + 1}: ${formatTime(r.in)} (${Math.round(r.in * editFrameRate)}f) 
+            - ${formatTime(r.out)} (${Math.round(r.out * editFrameRate)}f)
+            <span style="margin-left:12px; font-size:0.9em;">
+                [${durationStr}]${showStar ? ' ★' : ''}
+            </span>
+        `;
+    
         const del = document.createElement('button');
         del.textContent = '🗑️';
         del.style.marginLeft = '8px';
@@ -3236,11 +3316,11 @@ function renderCutRanges() {
             cutRanges.splice(idx, 1);
             renderCutRanges();
         });
+    
         div.appendChild(label);
         div.appendChild(del);
         cutRangesList.appendChild(div);
     });
-
     // タイムラインバー部分
     console.log('カット範囲描画:', cutRanges);
     if (!cutTimelineContainer || !cutTimelineBar) return;
