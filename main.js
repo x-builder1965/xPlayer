@@ -646,8 +646,6 @@ ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPa
                 '-bf', '0',                  // 同上（念のため両方）
                 '-g', '300',                 // GOPを長くしてバッファ減
                 '-keyint_min', '30',
-                '-c:a', 'aac',
-                '-b:a', '128k',              // 音声ビットレート下げ（メモリ微減）
                 '-c:s', 'mov_text',
                 '-movflags', '+faststart',
                 '-threads', '1'              // スレッド1固定（メモリ断片化防止）
@@ -724,8 +722,9 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
             const MAX_DURATION_FOR_REENCODE = 600; // もう使わないが残しておく
             const MIN_KEEP_DURATION = 0.2;
             const DURATION_EPSILON = 0.05;
+            const MAX_INTERNAL_CUT_DURATION = 600; // 内部または先頭のカット範囲がこれ以上ならコピーモードへ
 
-            ffmpeg.ffprobe(inputPath, (err, metadata) => {
+            ffmpeg.ffprobe(inputPath, async (err, metadata) => {
                 if (err) {
                     console.error('ffprobe エラー:', err);
                     return reject(new Error('メタデータ取得失敗'));
@@ -805,62 +804,186 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                     duration: totalKeepDuration 
                 });
 
-                // 念のため0.1秒未満はスキップ（任意で調整）
+                // 念のため0.1秒未満はスキップ
                 const validKeeps = keeps.filter(k => (k.end - k.start) >= 0.1);
 
                 if (validKeeps.length === 0) {
                     return reject(new Error('有効なセグメントがありません'));
                 }
 
-                const filters = [];
-                const concatInputs = [];
-
-                validKeeps.forEach((k, i) => {
-                    filters.push(`[0:v]trim=start=${k.start}:end=${k.end},setpts=PTS-STARTPTS[v${i}]`);
-                    filters.push(`[0:a]atrim=start=${k.start}:end=${k.end},asetpts=PTS-STARTPTS[a${i}]`);
-                    concatInputs.push(`[v${i}][a${i}]`);
-                });
-
-                filters.push(`${concatInputs.join('')}concat=n=${validKeeps.length}:v=1:a=1[v][a]`);
-
-                const cmd = ffmpeg(inputPath)
-                    .complexFilter(filters)
-                    .outputOptions([
-                        '-map', '[v]', '-map', '[a]',
-                        '-c:v', 'libx264',
-                        '-preset', 'veryfast',           // ← 必要に応じて medium/slow に変更可
-                        '-crf', '23',
-                        '-tune', 'fastdecode,zerolatency',
-                        '-x264-params', 'ref=1:bframes=0:vbv-bufsize=3000:vbv-maxrate=5000:keyint=120:min-keyint=60',
-                        '-c:a', 'aac',
-                        '-b:a', '128k',
-                        '-movflags', '+faststart',
-                        '-max_muxing_queue_size', '1024'
-                    ])
-                    .on('start', () => {
-                        currentFFmpeg = cmd;
-                        currentOutputPath = outPath;
-                    })
-                    .on('progress', (progress) => {
-                        mainWindow.webContents.send('cut-progress', {
-                            stage: 'reencode',
-                            percent: progress.percent || 0,
-                            frames: progress.frames,
-                            currentFps: progress.currentFps,
-                            timemark: progress.timemark
+                // ── 削除範囲の計算（先頭＋内部のみ） ──
+                const cutSegments = [];
+                if (validKeeps.length > 0) {
+                    // 先頭のカット
+                    if (validKeeps[0].start > 0) {
+                        cutSegments.push({
+                            start: 0,
+                            end: validKeeps[0].start,
+                            duration: validKeeps[0].start - 0
                         });
-                    })
-                    .on('end', () => {
-                        currentFFmpeg = null;
-                        currentOutputPath = null;
-                        mainWindow.webContents.send('cut-progress', { stage: 'done', percent: 100, outPath });
-                        resolve(outPath);
-                    })
-                    .on('error', (err) => {
-                        console.error('FFmpeg再エンコードエラー:', err);
-                        reject(err);
-                    })
-                    .save(outPath);
+                    }
+                    // 内部のカット
+                    for (let i = 1; i < validKeeps.length; i++) {
+                        const prevEnd = validKeeps[i - 1].end;
+                        const currStart = validKeeps[i].start;
+                        if (currStart > prevEnd + DURATION_EPSILON) {
+                            cutSegments.push({
+                                start: prevEnd,
+                                end: currStart,
+                                duration: currStart - prevEnd
+                            });
+                        }
+                    }
+                    // 末尾のカットは判定対象外
+                }
+
+                const maxCutDuration = cutSegments.length > 0
+                    ? Math.max(...cutSegments.map(c => c.duration))
+                    : 0;
+
+                const useCopyMode = maxCutDuration >= MAX_INTERNAL_CUT_DURATION;
+
+                console.log(
+                    `最大対象カット範囲: ${maxCutDuration.toFixed(1)}秒 ` +
+                    `(先頭+内部のみ) → ${useCopyMode ? 'コピーモード（低メモリ）' : '再エンコードモード（高精度）'}`
+                );
+
+                if (!useCopyMode) {
+                    // ── 再エンコードモード（精度優先） ──
+                    const filters = [];
+                    const concatInputs = [];
+
+                    validKeeps.forEach((k, i) => {
+                        filters.push(`[0:v]trim=start=${k.start}:end=${k.end},setpts=PTS-STARTPTS[v${i}]`);
+                        filters.push(`[0:a]atrim=start=${k.start}:end=${k.end},asetpts=PTS-STARTPTS[a${i}]`);
+                        concatInputs.push(`[v${i}][a${i}]`);
+                    });
+
+                    filters.push(`${concatInputs.join('')}concat=n=${validKeeps.length}:v=1:a=1[v][a]`);
+
+                    const cmd = ffmpeg(inputPath)
+                        .complexFilter(filters)
+                        .outputOptions([
+                            '-map', '[v]', '-map', '[a]',
+                            '-c:v', 'libx264',
+                            '-preset', 'veryfast',
+                            '-crf', '23',
+                            '-tune', 'fastdecode,zerolatency',
+                            '-x264-params', 'ref=1:bframes=0:vbv-bufsize=3000:vbv-maxrate=5000:keyint=120:min-keyint=60',
+                            '-movflags', '+faststart',
+                            '-max_muxing_queue_size', '1024'
+                        ])
+                        .on('start', () => {
+                            currentFFmpeg = cmd;
+                            currentOutputPath = outPath;
+                        })
+                        .on('progress', (progress) => {
+                            mainWindow.webContents.send('cut-progress', {
+                                stage: 'reencode',
+                                percent: progress.percent || 0,
+                                frames: progress.frames,
+                                currentFps: progress.currentFps,
+                                timemark: progress.timemark
+                            });
+                        })
+                        .on('end', () => {
+                            currentFFmpeg = null;
+                            currentOutputPath = null;
+                            mainWindow.webContents.send('cut-progress', { stage: 'done', percent: 100, outPath });
+                            resolve({ outputPath: outPath, mode: 'reencode' });
+                        })
+                        .on('error', (err) => {
+                            console.error('FFmpeg再エンコードエラー:', err);
+                            reject(err);
+                        })
+                        .save(outPath);
+
+                } else {
+                    // ── コピーモード（高速・低メモリ） ──
+                    mainWindow.webContents.send('cut-progress', {
+                        stage: 'copy_start',
+                        percent: 0
+                    });
+
+                    const tmpFiles = [];
+                    const concatList = [];
+
+                    try {
+                        for (let i = 0; i < validKeeps.length; i++) {
+                            const k = validKeeps[i];
+                            const tmpPath = path.join(os.tmpdir(), `cut_tmp_${Date.now()}_${i}.mp4`);
+
+                            await new Promise((res, rej) => {
+                                ffmpeg(inputPath)
+                                    .seekInput(k.start)
+                                    .duration(k.end - k.start)
+                                    .outputOptions([
+                                        '-c', 'copy',
+                                        '-avoid_negative_ts', 'make_zero',
+                                        '-max_muxing_queue_size', '1024'
+                                    ])
+                                    .output(tmpPath)
+                                    .on('end', res)
+                                    .on('error', (err) => rej(err))
+                                    .run();
+                            });
+
+                            tmpFiles.push(tmpPath);
+                            concatList.push(`file '${tmpPath.replace(/'/g, "\\'")}'`);
+
+                            // 進捗（大まか）
+                            const percent = Math.round(((i + 1) / validKeeps.length) * 100);
+                            mainWindow.webContents.send('cut-progress', {
+                                stage: 'copy',
+                                percent
+                            });
+                        }
+
+                        // concatリスト作成
+                        const concatTxtPath = path.join(os.tmpdir(), `concat_${Date.now()}.txt`);
+                        await fs.writeFile(concatTxtPath, concatList.join('\n'), 'utf8');
+
+                        // 最終結合
+                        await new Promise((res, rej) => {
+                            ffmpeg()
+                                .input(concatTxtPath)
+                                .inputOptions('-f', 'concat')
+                                .inputOptions('-safe', '0')
+                                .outputOptions([
+                                    '-c', 'copy',
+                                    '-movflags', '+faststart'
+                                ])
+                                .output(outPath)
+                                .on('end', res)
+                                .on('error', rej)
+                                .run();
+                        });
+
+                        // 掃除
+                        await Promise.all(
+                            tmpFiles.map(file => fs.unlink(file).catch(() => {}))
+                        );
+                        await fs.unlink(concatTxtPath).catch(() => {});
+                        
+                        mainWindow.webContents.send('cut-progress', {
+                            stage: 'done',
+                            percent: 100,
+                            outPath
+                        });
+                        
+                        resolve({ outputPath: outPath, mode: 'copy' });
+
+                    } catch (copyErr) {
+                        // 掃除してからエラー
+                        await Promise.all(
+                            tmpFiles.map(file => fs.unlink(file).catch(() => {}))
+                        );
+                        await fs.unlink(concatTxtPath).catch(() => {});
+                    
+                        console.error('コピーモードエラー:', copyErr);
+                        reject(new Error('高速モードでの処理に失敗しました: ' + copyErr.message));
+                    }
+                }
             });
         } catch (e) {
             reject(e);

@@ -3316,19 +3316,30 @@ saveVideoBtn.addEventListener('click', async () => {
         });
 
         // main.js に複数範囲削除のハンドラを呼ぶ
-        const outputPath = await ipcRenderer.invoke('cut-video-multiple', {
+        const result = await ipcRenderer.invoke('cut-video-multiple', {
             inputPath: currentFile.file.path,
             ranges: alignedRanges,
             outputPath: saveResult.filePath,
             frameRate: editFrameRate
         });
 
-        if (!outputPath) {
-            updateOverlayDisplay('✂️ 中断されました');
-            console.log('カット（複数）中断');
+        if (!result || !result.outputPath) {
+            updateOverlayDisplay('✂️ 中断または失敗しました');
+            console.log('カット編集中断またはエラー');
         } else {
-            updateOverlayDisplay(`✂️ 保存完了`);
-            console.log('カット（複数）完了:', outputPath);
+            const { outputPath, mode } = result;
+
+            if (mode === 'reencode') {
+                updateOverlayDisplay('✂️ 保存完了（高精度モード）');
+                console.log('カット編集完了（再エンコード）:', outputPath);
+            } else if (mode === 'copy') {
+                updateOverlayDisplay('✂️ 保存完了（高速モード）');
+                console.log('カット編集完了（ストリームコピー）:', outputPath);
+            } else {
+                // 予期せぬ mode の場合
+                updateOverlayDisplay('✂️ 保存完了');
+                console.log('カット編集完了（不明モード）:', outputPath);
+            }
         }
 
         // カット篆囲は保持し適用可能にして保持
