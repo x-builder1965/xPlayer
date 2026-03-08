@@ -3318,6 +3318,13 @@ function renderCutRanges() {
         del.addEventListener('click', () => {
             cutRanges.splice(idx, 1);
             renderCutRanges();
+            // 削除対象のカット範囲のin、ourをinMarkDisplay、outMarkDisplayに設定。
+            editInMark = r.in;
+            editOutMark = r.out;
+            inMarkDisplay.textContent = `${formatTime(editInMark)} (${Math.round(editInMark * editFrameRate)}f)`;
+            outMarkDisplay.textContent = `${formatTime(editOutMark)} (${Math.round(editOutMark * editFrameRate)}f)`;
+            editSeekBar.value = (r.out / videoPlayer.duration) * 100;
+            seekBar.value = editSeekBar.value;
         });
     
         div.appendChild(label);

@@ -94,13 +94,9 @@ video {
     transition: display 0.3s ease;
 }
 #zoomBar {
-    width: 8px;
     writing-mode: bt-lr;
     appearance: slider-vertical;
     -webkit-appearance: slider-vertical;
-    accent-color: #007bff;
-    background: #555;
-    border-radius: 5px;
 }
 #zoomDisplay {
     font-size: 14px;
@@ -154,13 +150,20 @@ input[type="range"] {
     flex: 1;
     accent-color: #007bff;
     height: 8px;
-    background: #555;
     border-radius: 5px;
     outline: none;
     position: relative;
 }
 input[type="range"]:hover {
-    accent-color: #ffd900;
+    accent-color: #fffb00;
+}
+input[type="range"]#editSeekBar {
+    -webkit-appearance: none;     /* Chrome/Safari/Edgeのデフォルトをリセット */
+    appearance: none;             /* 最新ブラウザ対応 */
+    background-color: #f0f0f0;
+}
+input[type="range"]#editSeekBar:hover {
+    accent-color: #fd0303;
 }
 input[type="range"]#volumeBar {
     flex: none;
