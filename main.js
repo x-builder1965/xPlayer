@@ -716,13 +716,15 @@ ipcMain.handle('open-folder', async (event, folderPath) => {
 });
 
 // 複数範囲を削除して結合して保存する（ranges: [{in, out}, ...]）
-ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPath, frameRate }) => {
+ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPath, frameRate, mode: requestedMode }) => {
     return new Promise((resolve, reject) => {
         try {
-            const MAX_DURATION_FOR_REENCODE = 600; // もう使わないが残しておく
             const MIN_KEEP_DURATION = 0.2;
             const DURATION_EPSILON = 0.05;
-            const MAX_INTERNAL_CUT_DURATION = 600; // 内部または先頭のカット範囲がこれ以上ならコピーモードへ
+
+            // 受け取った mode が有効かチェック（簡易）
+            const validModes = ['copy', 'reencode'];
+            const useCopyMode = validModes.includes(requestedMode) ? requestedMode === 'copy' : true;
 
             ffmpeg.ffprobe(inputPath, async (err, metadata) => {
                 if (err) {
@@ -732,6 +734,7 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                 const duration = metadata.format.duration || 0;
 
                 console.log(`入力動画のduration: ${duration.toFixed(2)}秒`);
+                console.log(`クライアント指定モード: ${requestedMode} → 使用モード: ${useCopyMode ? 'copy' : 'reencode'}`);
 
                 // ranges の正規化・ソート・マージ
                 const normalized = (ranges || []).map(r => ({ 
@@ -811,41 +814,10 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                     return reject(new Error('有効なセグメントがありません'));
                 }
 
-                // ── 削除範囲の計算（先頭＋内部のみ） ──
-                const cutSegments = [];
-                if (validKeeps.length > 0) {
-                    // 先頭のカット
-                    if (validKeeps[0].start > 0) {
-                        cutSegments.push({
-                            start: 0,
-                            end: validKeeps[0].start,
-                            duration: validKeeps[0].start - 0
-                        });
-                    }
-                    // 内部のカット
-                    for (let i = 1; i < validKeeps.length; i++) {
-                        const prevEnd = validKeeps[i - 1].end;
-                        const currStart = validKeeps[i].start;
-                        if (currStart > prevEnd + DURATION_EPSILON) {
-                            cutSegments.push({
-                                start: prevEnd,
-                                end: currStart,
-                                duration: currStart - prevEnd
-                            });
-                        }
-                    }
-                    // 末尾のカットは判定対象外
-                }
-
-                const maxCutDuration = cutSegments.length > 0
-                    ? Math.max(...cutSegments.map(c => c.duration))
-                    : 0;
-
-                const useCopyMode = maxCutDuration >= MAX_INTERNAL_CUT_DURATION;
-
+                // ★ ここから判定ロジックを削除し、クライアント指定に従う
                 console.log(
-                    `最大対象カット範囲: ${maxCutDuration.toFixed(1)}秒 ` +
-                    `(先頭+内部のみ) → ${useCopyMode ? 'コピーモード（低メモリ）' : '再エンコードモード（高精度）'}`
+                    `モード: ${useCopyMode ? 'コピーモード（高速・ストリームコピー）' : '再エンコードモード（高精度）'} ` +
+                    `(クライアント指示による)`
                 );
 
                 if (!useCopyMode) {
