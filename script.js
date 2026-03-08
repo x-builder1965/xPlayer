@@ -1574,6 +1574,7 @@ async function addFilesFromPaths(fullPaths) {
         playlistSet(newFiles);           // プレイリストUI更新
         if (playlist.length === newFiles.length) {
             // 初回追加なら先頭から再生開始
+            videoPlayer.currentTime = 0;
             playVideo(0);
         }
     }
@@ -3254,7 +3255,8 @@ function renderCutRanges() {
     }
 
     // 10分 = 600秒
-    if (longestCutDuration <= 600) {
+    const isHighPrecisionMode = longestCutDuration <= 600;
+    if (isHighPrecisionMode) {
         modeText = "高精細モード";
     }
 
@@ -3264,9 +3266,10 @@ function renderCutRanges() {
     // modeDiv.style.backgroundColor = '#000000';
     modeDiv.style.borderBottom = '1px solid #000000';
     modeDiv.style.fontWeight = 'bold';
-    modeDiv.style.color = longestCutDuration <= 600 ? '#a4d2ff' : '#ffcccc';
+    modeDiv.style.color = isHighPrecisionMode ? '#a4d2ff' : '#ffcccc';
     modeDiv.textContent = modeText;
     cutRangesList.appendChild(modeDiv);
+    window.currentEditMode = isHighPrecisionMode ? 'reencode' : 'copy';
 
     // リスト部分
     cutRanges.forEach((r, idx) => {
@@ -3364,11 +3367,6 @@ saveVideoBtn.addEventListener('click', async () => {
     }
 
     try {
-        // 非編集モードに
-        // isEditMode = false;
-        // editControls.style.display = 'none';
-        // editModeBtn.classList.remove('active');
-
         const currentFile = playlist[currentVideoIndex];
         if (!currentFile) return;
 
@@ -3395,12 +3393,16 @@ saveVideoBtn.addEventListener('click', async () => {
             return { in: start, out: end };
         });
 
+        // ★ ここで判定結果を渡す
+        const requestedMode = window.currentEditMode || 'copy';  // fallback
+
         // main.js に複数範囲削除のハンドラを呼ぶ
         const result = await ipcRenderer.invoke('cut-video-multiple', {
             inputPath: currentFile.file.path,
             ranges: alignedRanges,
             outputPath: saveResult.filePath,
-            frameRate: editFrameRate
+            frameRate: editFrameRate,
+            mode: requestedMode          // ← 追加！
         });
 
         if (!result || !result.outputPath) {
