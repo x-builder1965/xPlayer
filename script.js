@@ -1400,6 +1400,7 @@ function updateEditModeButtonUI() {
             localStorage.setItem('currentTime', videoPlayer.currentTime);
             stopPeriodicSave();
         }
+        editSeekBar.value = seekBar.value;
     } else {
         editModeBtn.textContent = '✂️';
         editModeBtn.setAttribute('data-tooltip', '編集モード開始（Ctrl+e）');
@@ -3305,10 +3306,10 @@ function renderCutRanges() {
         }
     
         label.innerHTML = `
-            カット${idx + 1}: ${formatTime(r.in)} (${Math.round(r.in * editFrameRate)}f) 
+            カット範囲${idx + 1}： ${formatTime(r.in)} (${Math.round(r.in * editFrameRate)}f) 
             - ${formatTime(r.out)} (${Math.round(r.out * editFrameRate)}f)
-            <span style="margin-left:12px; font-size:0.9em;">
-                [${durationStr}]${showStar ? ' ★' : ''}
+            <span style="margin-left:12px; font-size:1.1em;">
+                [${durationStr}]${showStar ? ' ⚠️' : ''}
             </span>
         `;
     
