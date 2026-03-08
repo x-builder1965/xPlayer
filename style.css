@@ -160,10 +160,12 @@ input[type="range"]:hover {
 input[type="range"]#editSeekBar {
     -webkit-appearance: none;     /* Chrome/Safari/Edgeのデフォルトをリセット */
     appearance: none;             /* 最新ブラウザ対応 */
-    background-color: #f0f0f0;
+    accent-color: #afd6ff;
+    background-color: #6d6d6d;
+    border: 1px solid #ffffff;
 }
 input[type="range"]#editSeekBar:hover {
-    accent-color: #fd0303;
+    accent-color: #fdc8ff;
 }
 input[type="range"]#volumeBar {
     flex: none;
