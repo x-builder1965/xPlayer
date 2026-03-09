@@ -217,6 +217,8 @@ let isRandomPlayMode = false;     // ランダム再生（シャッフル）
 let isRepeatPlayMode  = false;     // リスト全体繰り返し
 let shuffleOrder = [];           // ランダムモード用の再生順リスト（インデックス配列）
 let shufflePosition = -1;        // 現在何番目を再生中か（-1=未開始）
+let isEditSeekDragging = false;
+let isMouseOverEditSeekBar = false;
 
 // 🔲初期処理🔲
 // 初期表示設定
@@ -2810,6 +2812,61 @@ seekBar.addEventListener('change', () => {
     localStorage.setItem('currentTime', videoPlayer.currentTime);
 });
 
+// カット編集シークバー マウスクリック
+editSeekBar.addEventListener('mousedown', (e) => {
+    if (filename.style.opacity !== '1') return;
+    if (e.button === 0 && videoPlayer.duration) {
+        seekBar.value = editSeekBar.value; // メインシークバーも同期
+        const time = videoPlayer.duration * (editSeekBar.value / 100);
+        videoPlayer.currentTime = time;
+        isEditSeekDragging = true;
+        darkOverlay.style.display = 'block';
+    }
+});
+
+// カット編集シークバー マウスオーバー
+editSeekBar.addEventListener('mouseover', (e) => {
+    if (filename.style.opacity !== '1') return;
+    if (!videoPlayer.duration || playlist.length === 0) return;
+    isMouseOverEditSeekBar = true;
+});
+
+// カット編集シークバー マウス移動
+editSeekBar.addEventListener('mousemove', (e) => {
+    if (filename.style.opacity !== '1') return;
+    if (!videoPlayer.duration || !isMouseOverEditSeekBar) return;
+    const rect = editSeekBar.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    // カット編集シークバー表示更新（ドラッグ中は無視）
+    if (!isEditSeekDragging) {
+        editSeekBar.value = percent * 100;
+    }
+});
+
+// カット編集シークバー マウスアウト
+editSeekBar.addEventListener('mouseout', () => {
+    if (filename.style.opacity !== '1') return;
+    isMouseOverEditSeekBar = false;
+    // 通常の時間表示に戻す
+    if (!isEditSeekDragging && videoPlayer.duration) {
+        const value = (100 / videoPlayer.duration) * videoPlayer.currentTime;
+        editSeekBar.value = value;
+    }
+    if (isEditSeekDragging) {
+        isEditSeekDragging = false;
+        darkOverlay.style.display = 'none';
+    }
+});
+
+// カット編集シークバー マウスリーブ
+editSeekBar.addEventListener('mouseleave', () => {
+    if (filename.style.opacity !== '1') return;
+    if (isEditSeekDragging) {
+        isEditSeekDragging = false;
+        darkOverlay.style.display = 'none';
+    }
+});
+
 // シークバー マウスクリック
 seekBar.addEventListener('mousedown', (e) => {
     if (controls.style.opacity !== '1') return;
@@ -3138,7 +3195,6 @@ cutCancelBtn.addEventListener('click', async () => {
         editModeBtn.setAttribute('data-tooltip', '編集モード開始（Ctrl+e）');
         editModeBtn.classList.remove('active');
         cutCancelBtn.style.display = 'none';
-        setTimeout(hideOverlayDisplay, 1200);
     }
 });
 
@@ -3148,6 +3204,7 @@ setInMarkBtn.addEventListener('click', () => {
         editInMark = videoPlayer.currentTime;
         inMarkDisplay.textContent = `${formatTime(editInMark)} (${Math.round(editInMark * editFrameRate)}f)`;
     }
+    renderCutRanges();
 });
 
 // アウトマーク設定
@@ -3163,6 +3220,7 @@ setOutMarkBtn.addEventListener('click', () => {
         
         outMarkDisplay.textContent = `${formatTime(editOutMark)} (${Math.round(editOutMark * editFrameRate)}f)`;
     }
+    renderCutRanges();
 });
 
 // 編集シークバー
@@ -3204,12 +3262,13 @@ addCutRangeBtn.addEventListener('click', () => {
         [a, b] = [b, a];
     }
     cutRanges.push({ in: a, out: b });
-    renderCutRanges();
     // 追加後はマークをクリア
     editInMark = -1;
     editOutMark = -1;
     inMarkDisplay.textContent = '--:--:--';
     outMarkDisplay.textContent = '--:--:--';
+
+    renderCutRanges();
 });
 
 // レンジ一覧描画
@@ -3218,149 +3277,176 @@ function renderCutRanges() {
     cutTimelineBar.innerHTML = '';  // 赤いバーを全部削除
     if (!cutRanges || cutRanges.length === 0) {
        cutRangesList.textContent = '（なし）';
-       return;
-    }
-    cutRanges.sort((a, b) => a.in - b.in);
+    } else {
+        cutRanges.sort((a, b) => a.in - b.in);
 
-    // モード判定
-    let modeText = "高速モード";
-    let longestCutDuration = 0;
-    let longestCutIndex = -1;           // ← 追加：最長のカット番号（0ベース）
+        // モード判定
+        let modeText = "高速モード";
+        let longestCutDuration = 0;
+        let longestCutIndex = -1;           // ← 追加：最長のカット番号（0ベース）
 
-    // 最後のカット範囲をチェック
-    const lastRange = cutRanges[cutRanges.length - 1];
-    const isLastToEnd = lastRange && Math.abs(lastRange.out - videoPlayer.duration) < 1.0; // 1秒未満の誤差を許容
+        // 最後のカット範囲をチェック
+        const lastRange = cutRanges[cutRanges.length - 1];
+        const isLastToEnd = lastRange && Math.abs(lastRange.out - videoPlayer.duration) < 1.0; // 1秒未満の誤差を許容
 
-    // 対象となるカット範囲（最後の範囲を除くかどうか）
-    const rangesToCheck = isLastToEnd ? cutRanges.slice(0, -1) : cutRanges;
+        // 対象となるカット範囲（最後の範囲を除くかどうか）
+        const rangesToCheck = isLastToEnd ? cutRanges.slice(0, -1) : cutRanges;
 
-    if (rangesToCheck.length > 0) {
-        // 最長の長さと、そのインデックスを取得
-        let maxDuration = -Infinity;
-        let maxIndex = -1;
-    
-        rangesToCheck.forEach((r, arrayIndex) => {
-            const dur = r.out - r.in;
-            if (dur > maxDuration) {
-                maxDuration = dur;
-                maxIndex = arrayIndex;
-            }
-        });
-    
-        longestCutDuration = maxDuration;
-        longestCutIndex = maxIndex;
-    
-    } else if (!isLastToEnd && cutRanges.length === 1) {
-        longestCutDuration = lastRange.out - lastRange.in;
-        longestCutIndex = 0;
-    }
-
-    // 10分 = 600秒
-    const isHighPrecisionMode = longestCutDuration <= 600;
-    if (isHighPrecisionMode) {
-        modeText = "高精細モード";
-    }
-
-    // モード表示（リストの一番上に）
-    const modeDiv = document.createElement('div');
-    modeDiv.style.padding = '8px 12px';
-    // modeDiv.style.backgroundColor = '#000000';
-    modeDiv.style.borderBottom = '1px solid #000000';
-    modeDiv.style.fontWeight = 'bold';
-    modeDiv.style.color = isHighPrecisionMode ? '#a4d2ff' : '#ffcccc';
-    modeDiv.textContent = modeText;
-    cutRangesList.appendChild(modeDiv);
-    window.currentEditMode = isHighPrecisionMode ? 'reencode' : 'copy';
-
-    // リスト部分
-    cutRanges.forEach((r, idx) => {
-        const div = document.createElement('div');
-        div.style.display = 'flex';
-        div.style.justifyContent = 'space-between';
-        div.style.alignItems = 'center';
-        div.style.padding = '2px 4px';
-    
-        const label = document.createElement('div');
-        label.style.flex = '1';
-    
-        const durationSec = r.out - r.in;
-        const durationStr = formatTime(durationSec);
-    
-        // ★を表示するかどうか判定
-        let showStar = false;
-    
-        // 1. 10分超えているか
-        if (durationSec > 600) {
-            // 2. 最後のカット範囲（idx === cutRanges.length - 1）かどうか
-            if (idx === cutRanges.length - 1) {
-                // 最後の範囲が動画の最後までカバーしているか
-                const lastRange = cutRanges[cutRanges.length - 1];
-                const isLastToEnd = lastRange && Math.abs(lastRange.out - videoPlayer.duration) < 1.0;
-    
-                // 最後までカット範囲 → ★非表示
-                showStar = !isLastToEnd;
-            } else {
-                // 最後のカット範囲ではない → ★表示
-                showStar = true;
-            }
+        if (rangesToCheck.length > 0) {
+            // 最長の長さと、そのインデックスを取得
+            let maxDuration = -Infinity;
+            let maxIndex = -1;
+        
+            rangesToCheck.forEach((r, arrayIndex) => {
+                const dur = r.out - r.in;
+                if (dur > maxDuration) {
+                    maxDuration = dur;
+                    maxIndex = arrayIndex;
+                }
+            });
+        
+            longestCutDuration = maxDuration;
+            longestCutIndex = maxIndex;
+        
+        } else if (!isLastToEnd && cutRanges.length === 1) {
+            longestCutDuration = lastRange.out - lastRange.in;
+            longestCutIndex = 0;
         }
-    
-        label.innerHTML = `
-            カット範囲${idx + 1}： ${formatTime(r.in)} (${Math.round(r.in * editFrameRate)}f) 
-            - ${formatTime(r.out)} (${Math.round(r.out * editFrameRate)}f)
-            <span style="margin-left:12px; font-size:1.1em;">
-                [${durationStr}]${showStar ? ' ⚠️' : ''}
-            </span>
-        `;
-    
-        const del = document.createElement('button');
-        del.textContent = '🗑️';
-        del.style.marginLeft = '8px';
-        del.addEventListener('click', () => {
-            cutRanges.splice(idx, 1);
-            renderCutRanges();
-            // 削除対象のカット範囲のin、ourをinMarkDisplay、outMarkDisplayに設定。
-            editInMark = r.in;
-            editOutMark = r.out;
-            inMarkDisplay.textContent = `${formatTime(editInMark)} (${Math.round(editInMark * editFrameRate)}f)`;
-            outMarkDisplay.textContent = `${formatTime(editOutMark)} (${Math.round(editOutMark * editFrameRate)}f)`;
-            editSeekBar.value = (r.out / videoPlayer.duration) * 100;
-            seekBar.value = editSeekBar.value;
-        });
-    
-        div.appendChild(label);
-        div.appendChild(del);
-        cutRangesList.appendChild(div);
-    });
-    // タイムラインバー部分
-    console.log('カット範囲描画:', cutRanges);
-    if (!cutTimelineContainer || !cutTimelineBar) return;
 
-    console.log('cutTimelineContainer:', cutTimelineContainer);
-    console.log('cutTimelineBar:', cutTimelineBar);
-    cutTimelineBar.innerHTML = ''; // クリア
-    if (!videoPlayer.duration || cutRanges.length === 0) {
-        return;
+        // 10分 = 600秒
+        const isHighPrecisionMode = longestCutDuration <= 600;
+        if (isHighPrecisionMode) {
+            modeText = "精細モード";
+        }
+
+        // モード表示（リストの一番上に）
+        const modeDiv = document.createElement('div');
+        modeDiv.style.padding = '8px 12px';
+        // modeDiv.style.backgroundColor = '#000000';
+        modeDiv.style.borderBottom = '1px solid #000000';
+        modeDiv.style.fontWeight = 'bold';
+        modeDiv.style.color = isHighPrecisionMode ? '#a4d2ff' : '#ffcccc';
+        modeDiv.textContent = modeText;
+        cutRangesList.appendChild(modeDiv);
+        window.currentEditMode = isHighPrecisionMode ? 'reencode' : 'copy';
+
+        // リスト部分
+        cutRanges.forEach((r, idx) => {
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+            div.style.padding = '2px 4px';
+        
+            const label = document.createElement('div');
+            label.style.flex = '1';
+        
+            const durationSec = r.out - r.in;
+            const durationStr = formatTime(durationSec);
+        
+            // ★を表示するかどうか判定
+            let showStar = false;
+        
+            // 1. 10分超えているか
+            if (durationSec > 600) {
+                // 2. 最後のカット範囲（idx === cutRanges.length - 1）かどうか
+                if (idx === cutRanges.length - 1) {
+                    // 最後の範囲が動画の最後までカバーしているか
+                    const lastRange = cutRanges[cutRanges.length - 1];
+                    const isLastToEnd = lastRange && Math.abs(lastRange.out - videoPlayer.duration) < 1.0;
+        
+                    // 最後までカット範囲 → ★非表示
+                    showStar = !isLastToEnd;
+                } else {
+                    // 最後のカット範囲ではない → ★表示
+                    showStar = true;
+                }
+            }
+        
+            label.innerHTML = `
+                カット範囲${idx + 1}： ${formatTime(r.in)} (${Math.round(r.in * editFrameRate)}f) 
+                - ${formatTime(r.out)} (${Math.round(r.out * editFrameRate)}f)
+                <span style="margin-left:12px; font-size:1.1em;">
+                    [${durationStr}]${showStar ? ' ⚠️' : ''}
+                </span>
+            `;
+        
+            const del = document.createElement('button');
+            del.textContent = '🗑️';
+            del.style.marginLeft = '8px';
+            del.addEventListener('click', () => {
+                cutRanges.splice(idx, 1);
+                // 削除対象のカット範囲のin、ourをinMarkDisplay、outMarkDisplayに設定。
+                editInMark = r.in;
+                editOutMark = r.out;
+                inMarkDisplay.textContent = `${formatTime(editInMark)} (${Math.round(editInMark * editFrameRate)}f)`;
+                outMarkDisplay.textContent = `${formatTime(editOutMark)} (${Math.round(editOutMark * editFrameRate)}f)`;
+                editSeekBar.value = (r.out / videoPlayer.duration) * 100;
+                seekBar.value = editSeekBar.value;
+                renderCutRanges();
+            });
+        
+            div.appendChild(label);
+            div.appendChild(del);
+            cutRangesList.appendChild(div);
+        });
+
+        // タイムラインバー部分
+        console.log('カット範囲描画:', cutRanges);
+        if (!cutTimelineContainer || !cutTimelineBar) return;
+
+        cutTimelineBar.innerHTML = ''; // クリア
+        if (!videoPlayer.duration || cutRanges.length === 0) {
+            return;
+        }
+
+        const duration = videoPlayer.duration;
+        cutRanges.forEach((range) => {
+            const leftPercent  = (range.in  / duration) * 100;
+            const widthPercent = ((range.out - range.in) / duration) * 100;
+
+            const bar = document.createElement('div');
+            bar.className = 'cut-range-bar';
+            bar.style.left   = `${leftPercent}%`;
+            bar.style.width  = `${widthPercent}%`;
+
+            cutTimelineBar.appendChild(bar);
+        });
     }
 
-    console.log('動画の長さ:', videoPlayer.duration);
-    const duration = videoPlayer.duration;
-    cutRanges.forEach((range) => {
-        const leftPercent  = (range.in  / duration) * 100;
-        const widthPercent = ((range.out - range.in) / duration) * 100;
-
-        console.log(`カット範囲: ${formatTime(range.in)} - ${formatTime(range.out)} (${leftPercent.toFixed(2)}% - ${(leftPercent + widthPercent).toFixed(2)}%)`);
-        const bar = document.createElement('div');
-        bar.className = 'cut-range-bar';
-        bar.style.left   = `${leftPercent}%`;
-        bar.style.width  = `${widthPercent}%`;
-
-        cutTimelineBar.appendChild(bar);
-    });
-
-    // renderCutRanges() の一番最後に追加
-    console.log('追加後の子要素数:', cutTimelineBar.children.length);
-    console.log('追加されたバー例:', cutTimelineBar.querySelector('.cut-range-bar'));
+    // 2. Inマーク（白い縦線）
+    if (typeof editInMark === 'number' && editInMark >= 0 && editInMark <= videoPlayer.duration) {
+        const inLeft = (editInMark / videoPlayer.duration) * 100;
+        
+        const inMarker = document.createElement('div');
+        inMarker.className = 'edit-in-marker';
+        inMarker.style.left = `${inLeft}%`;
+        
+        const inLine = document.createElement('div');
+        inLine.className = 'marker-line';
+        inMarker.appendChild(inLine);
+        
+        cutTimelineBar.appendChild(inMarker);
+        
+        console.log(`Inマーク表示: ${formatTime(editInMark)} @ ${inLeft.toFixed(2)}%`);
+    }
+    
+    // 3. Outマーク（白い縦線）
+    if (typeof editOutMark === 'number' && editOutMark >= 0 && editOutMark <= videoPlayer.duration) {
+        const outLeft = (editOutMark / videoPlayer.duration) * 100;
+        
+        const outMarker = document.createElement('div');
+        outMarker.className = 'edit-out-marker';
+        outMarker.style.left = `${outLeft}%`;
+        
+        const outLine = document.createElement('div');
+        outLine.className = 'marker-line';
+        outMarker.appendChild(outLine);
+        
+        cutTimelineBar.appendChild(outMarker);
+        
+        console.log(`Outマーク表示: ${formatTime(editOutMark)} @ ${outLeft.toFixed(2)}%`);
+    }
 }
 
 // 動画保存（設定した複数範囲を削除して保存）
@@ -3420,7 +3506,7 @@ saveVideoBtn.addEventListener('click', async () => {
             const { outputPath, mode } = result;
 
             if (mode === 'reencode') {
-                updateOverlayDisplay('✂️ 保存完了（高精度モード）');
+                updateOverlayDisplay('✂️ 保存完了（精細モード）');
                 console.log('カット編集完了（再エンコード）:', outputPath);
             } else if (mode === 'copy') {
                 updateOverlayDisplay('✂️ 保存完了（高速モード）');
@@ -3428,7 +3514,7 @@ saveVideoBtn.addEventListener('click', async () => {
             } else {
                 // 予期せぬ mode の場合
                 updateOverlayDisplay('✂️ 保存完了');
-                console.log('カット編集完了（不明モード）:', outputPath);
+                console.log('カット編集完了（モード不明）:', outputPath);
             }
         }
 
