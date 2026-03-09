@@ -2080,8 +2080,8 @@ document.addEventListener('mouseup', (e) => {
         hideOverlayDisplay();
         
         if (videoPlayer.duration) {
-            const time = videoPlayer.duration * (seekBar.value / 100);
-            videoPlayer.currentTime = time;
+            seekBar.value = (videoPreview.currentTime / videoPreview.duration) * 100;
+            videoPlayer.currentTime = videoPreview.currentTime;
             updateTimeDisplay();
             localStorage.setItem('currentTime', time);
         }
@@ -2854,9 +2854,10 @@ editSeekBar.addEventListener('mouseup', () => {
     if (filename.style.opacity !== '1') return;
     if (isEditSeekDragging) {
         seekBar.value = editSeekBar.value; // メインシークバーも同期
-        const time = videoPlayer.duration * (editSeekBar.value / 100);
+        const time = videoPlayer.duration * (seekBar.value / 100);
         videoPlayer.currentTime = time;
         isEditSeekDragging = false;
+        hideOverlayDisplay();
         darkOverlay.style.display = 'none';
     }
 });
@@ -2878,7 +2879,8 @@ seekBar.addEventListener('input', (e) => {
     if (!videoPlayer.duration) return;
     const time = videoPlayer.duration * (seekBar.value / 100);
     lastUserSetTime = time;           // ← これを覚える
-    videoPlayer.currentTime = time;
+    videoPreview.currentTime = time;
+    videoPlayer.currentTime = videoPreview.currentTime;
     // 編集モード中は編集用シークバーも同期
     if ((isEditMode || (typeof editControls !== 'undefined' && editControls && editControls.style.display !== 'none')) && typeof editSeekBar !== 'undefined' && editSeekBar) {
         editSeekBar.value = (time / videoPlayer.duration) * 100;
@@ -2938,6 +2940,10 @@ seekBar.addEventListener('mousemove', (e) => {
     if (!isSeekDragging) {
         seekBar.value = percent * 100;
         updateTimeDisplay();
+    } else {
+        seekBar.value = (videoPreview.currentTime / videoPreview.duration) * 100;
+        editSeekBar.value = seekBar.value; // カット編集シークバーも同期
+        videoPlayer.currentTime = videoPreview.currentTime;
     }
 });
 
@@ -2948,8 +2954,8 @@ seekBar.addEventListener('mouseout', () => {
     videoPreview.style.display = 'none';
     // 通常の時間表示に戻す
     if (!isSeekDragging && videoPlayer.duration) {
-        const value = (100 / videoPlayer.duration) * videoPlayer.currentTime;
-        seekBar.value = value;
+        // const value = (100 / videoPlayer.duration) * videoPlayer.currentTime;
+        // seekBar.value = value;
         editSeekBar.value = seekBar.value; // カット編集シークバーも同期
         updateTimeDisplay();
     }
