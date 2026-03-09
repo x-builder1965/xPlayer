@@ -155,17 +155,17 @@ input[type="range"] {
     position: relative;
 }
 input[type="range"]:hover {
-    accent-color: #fffb00;
+    accent-color: #ffae00;
 }
 input[type="range"]#editSeekBar {
     -webkit-appearance: none;     /* Chrome/Safari/Edgeのデフォルトをリセット */
     appearance: none;             /* 最新ブラウザ対応 */
-    accent-color: #afd6ff;
-    background-color: #6d6d6d;
+    accent-color: #ffffff;
+    background-color: #333333;
     border: 1px solid #ffffff;
 }
 input[type="range"]#editSeekBar:hover {
-    accent-color: #fdc8ff;
+    accent-color: #ff0000;
 }
 input[type="range"]#volumeBar {
     flex: none;
@@ -189,7 +189,6 @@ input[type="range"]#volumeBar {
 #seekBar:hover::-webkit-slider-thumb,
 #volumeBar:hover::-webkit-slider-thumb {
     background: #ff0000;
-    transform: scale(1.5);
 }
 #seekBar::-moz-range-thumb,
 #volumeBar::-moz-range-thumb {
@@ -605,3 +604,36 @@ caption {
     background: rgba(255, 0, 0, 0.2);
 }
 
+/* タイムラインバー全体 */
+#cutTimelineBar {
+    position: relative;
+    height: 24px;          /* 好みで調整 */
+    background: #222;
+    overflow: hidden;
+}
+/* カット範囲バー（既存） */
+.cut-range-bar {
+    position: absolute;
+    top: 4px;
+    height: 16px;
+    background: #e74c3c;   /* 赤系 */
+    opacity: 0.85;
+    border: 1px solid #c0392b;
+}
+/* In / Out マーカー共通 */
+.edit-in-marker,
+.edit-out-marker {
+    position: absolute;
+    width: 3px;            /* 縦線の幅（太めにすると視認性↑） */
+    height: 100%;
+    top: 0;
+}
+.marker-line {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: #ffffff;   /* 白 */
+    opacity: 0.9;
+    /* box-shadowで目立たせるのもアリ（オプション） */
+    /* box-shadow: 0 0 4px rgba(255,255,255,0.7); */
+}
