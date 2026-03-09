@@ -2636,6 +2636,7 @@ videoPlayer.addEventListener('mousedown', (event) => {
             isDragging = true;
             dragStartX = event.clientX;
             dragStartY = event.clientY;
+            darkOverlay.style.display = 'block';
         }
         event.preventDefault();
     }
@@ -2707,6 +2708,7 @@ videoPlayer.addEventListener('mouseup', (e) => {
         isVolumeDragging = false;
         isPanning = false;
         videoPlayer.style.cursor = 'auto';
+        darkOverlay.style.display = 'none';
 
         if (wasDragging || wasVolumeDragging || wasPanning) {
             showControlsAndFilename();
