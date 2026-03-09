@@ -2843,6 +2843,15 @@ editSeekBar.addEventListener('mousemove', (e) => {
     }
 });
 
+// カット編集シークバー マウスアップ
+editSeekBar.addEventListener('mouseup', () => {
+    if (filename.style.opacity !== '1') return;
+    if (isEditSeekDragging) {
+        isEditSeekDragging = false;
+        darkOverlay.style.display = 'none';
+    }
+});
+
 // カット編集シークバー マウスアウト
 editSeekBar.addEventListener('mouseout', () => {
     if (filename.style.opacity !== '1') return;
@@ -2851,19 +2860,6 @@ editSeekBar.addEventListener('mouseout', () => {
     if (!isEditSeekDragging && videoPlayer.duration) {
         const value = (100 / videoPlayer.duration) * videoPlayer.currentTime;
         editSeekBar.value = value;
-    }
-    if (isEditSeekDragging) {
-        isEditSeekDragging = false;
-        darkOverlay.style.display = 'none';
-    }
-});
-
-// カット編集シークバー マウスリーブ
-editSeekBar.addEventListener('mouseleave', () => {
-    if (filename.style.opacity !== '1') return;
-    if (isEditSeekDragging) {
-        isEditSeekDragging = false;
-        darkOverlay.style.display = 'none';
     }
 });
 
