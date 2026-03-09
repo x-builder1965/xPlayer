@@ -1193,14 +1193,13 @@ async function setVideoSrc(file) {
         } catch (err) {
             console.error("変換失敗:", err);
             isConverting = false;
-            updateOverlayDisplay(`変換失敗`);
+            updateOverlayDisplay(`変換失敗`, false, 5000);
             filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
             updateIconOverlay();
             // 変換失敗時もシークバーをリセット
             seekBar.value = 0;
             // 変換失敗時もシークバーの色を元に戻す
             seekBar.classList.remove('converting');
-            setTimeout(hideOverlayDisplay, 3000);
             return;
         }
     }
@@ -1452,8 +1451,7 @@ async function addToPlaylist() {
         }
     } catch (e) {
         console.error('追加エラー:', e);
-        updateOverlayDisplay('動画追加に失敗');
-        setTimeout(hideOverlayDisplay, 2000);
+        updateOverlayDisplay('動画追加に失敗', false, 5000);
     }
 }
 
@@ -1461,8 +1459,7 @@ async function addToPlaylist() {
 async function removeFromPlaylist() {
     const selectedIndex = parseInt(filenameDisplay.value);
     if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= playlist.length) {
-        updateOverlayDisplay('削除する動画を選択してください');
-        setTimeout(hideOverlayDisplay, 2000);
+        updateOverlayDisplay('削除する動画を選択してください', false, 2000);
         return;
     }
 
@@ -1545,8 +1542,7 @@ async function clearPlaylist() {
 // プレイリスト保存
 async function savePlaylist() {
     if (playlist.length === 0) {
-        updateOverlayDisplay('保存する動画がありません');
-        setTimeout(hideOverlayDisplay, 2000);
+        updateOverlayDisplay('保存する動画がありません', false, 2000);
         return;
     }
 
@@ -1563,10 +1559,9 @@ async function savePlaylist() {
     if (saveResult.success) {
         updateOverlayDisplay(`💾: ${path.basename(result.filePath)}`);
     } else {
-        updateOverlayDisplay('保存に失敗しました');
+        updateOverlayDisplay('保存に失敗しました', false, 5000);
         console.error(saveResult.error);
     }
-    setTimeout(hideOverlayDisplay, 2000);
 }
 
 // ドラッグ＆ドロップファイルのプレイリスト設定
@@ -1627,52 +1622,49 @@ ipcRenderer.on('cut-progress', (event, payload) => {
         const stage = payload && payload.stage ? payload.stage : 'progress';
         switch (stage) {
             case 'start':
-                updateOverlayDisplay(`✂️ カット準備中…` , true);
+                updateOverlayDisplay(`✂️ カット準備中…` , true, 0);
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'extract-start':
-                updateOverlayDisplay(`✂️ カット開始 ${payload.index + 1}/${payload.total} ${formatTime(payload.segStart)} - ${formatTime(payload.segEnd)}` , true);
+                updateOverlayDisplay(`✂️ カット開始 ${payload.index + 1}/${payload.total} ${formatTime(payload.segStart)} - ${formatTime(payload.segEnd)}` , true, 0);
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'extract-done':
-                updateOverlayDisplay(`✂️ カット済 ${payload.index + 1}/${payload.total} (${Math.round(payload.percent)}%)` , true);
+                updateOverlayDisplay(`✂️ カット済 ${payload.index + 1}/${payload.total} (${Math.round(payload.percent)}%)` , true, 0);
                 break;
             case 'concat-start':
-                updateOverlayDisplay(`✂️ 結合中…` , true);
+                updateOverlayDisplay(`✂️ 結合中…` , true, 0);
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'concat-done':
-                updateOverlayDisplay(`✂️ 結合完了` , false);
+                updateOverlayDisplay(`✂️ 結合完了` , false, 1500);
                 cutCancelBtn.style.display = 'none';
-                setTimeout(hideOverlayDisplay, 1200);
                 break;
             case 'reencode':
                 const p = payload.percent !== undefined ? Math.round(payload.percent) : 0;
                 const fm = payload.frames !== undefined ? `${payload.frames}f` : '';
                 const tm = payload.timemark ? ` [${payload.timemark}]` : '';
-                updateOverlayDisplay(`✂️ カット実行中… ${p}% ${fm}${tm}` , true);
+                updateOverlayDisplay(`✂️ カット実行中… ${p}% ${fm}${tm}` , true, 0);
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'done':
                 isCutEditing = false;
-                updateOverlayDisplay(`✂️ 保存完了` , false);
+                updateOverlayDisplay(`✂️ 保存完了` , false, 1500);
                 cutCancelBtn.style.display = 'none';
-                setTimeout(hideOverlayDisplay, 1500);
                 break;
             case 'error':
                 isCutEditing = false;
-                updateOverlayDisplay(`❌ カット失敗: ${payload.message || 'エラー'}` , false);
+                updateOverlayDisplay(`❌ カット失敗: ${payload.message || 'エラー'}` , false, 3000);
                 cutCancelBtn.style.display = 'none';
-                setTimeout(hideOverlayDisplay, 3000);
                 break;
             default:
                 // 旧スタイル or unknown
                 const percent = payload && payload.percent ? Math.round(payload.percent) : 0;
-                updateOverlayDisplay(`✂️ カット（削除）処理中… ${percent}%`, true);
+                updateOverlayDisplay(`✂️ カット（削除）処理中… ${percent}%`, true, 0);
                 break;
         }
     } catch (e) {
-        updateOverlayDisplay('✂️ カット処理中…', true);
+        updateOverlayDisplay('✂️ カット処理中…', true, 0);
     }
 });
 
@@ -1680,10 +1672,9 @@ ipcRenderer.on('cut-progress', (event, payload) => {
 ipcRenderer.on('convert-error', (event, msg) => {
     console.error("変換失敗:", err);
     isConverting = false;
-    updateOverlayDisplay(`変換失敗`);
+    updateOverlayDisplay(`変換失敗`, false, 3000);
     filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
     updateIconOverlay();
-    setTimeout(hideOverlayDisplay, 3000);
 });
 
 // 🔲グローバルイベント🔲
@@ -2546,14 +2537,11 @@ videoPlayer.addEventListener('error', (e) => {
                 case 4: errorMsg = 'このファイル形式は再生できません'; break;
             }
         }
-
-        updateOverlayDisplay(errorMsg);
-        setTimeout(hideOverlayDisplay, 4000);
+        updateOverlayDisplay(errorMsg, true, 3000);
     } else {
         // HTML5 でサポートされていない拡張子の場合も明確に伝える
         console.warn(`拡張子 ${ext} は HTML5 でサポートされていません`);
-        updateOverlayDisplay(`再生エラー: ${ext} 形式は対応していません`);
-        setTimeout(hideOverlayDisplay, 4000);
+        updateOverlayDisplay(`再生エラー: ${ext} 形式は対応していません`, false, 3000);
     }
 });
 
@@ -2942,10 +2930,8 @@ seekBar.addEventListener('mousemove', (e) => {
     const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const time = videoPlayer.duration * percent;
 
-    // プレビュー時間更新
+    // プレビュー時間更新・位置更新
     videoPreview.currentTime = time;
-    videoPlayer.currentTime = videoPreview.currentTime;
-    // プレビュー位置更新
     updatePreviewPosition(e);
 
     // シークバー表示更新（ドラッグ中は無視）
@@ -3029,8 +3015,7 @@ if (speedSelect) {
             currentPlaybackRate = rate;               // ← ここを追加
             videoPlayer.playbackRate = rate;
             localStorage.setItem('playbackSpeed', rate);
-            updateOverlayDisplay(`🏃‍♂️‍➡️再生速度: ${rate}x`);
-            setTimeout(hideOverlayDisplay, 1000);
+            updateOverlayDisplay(`🏃‍♂️‍➡️再生速度: ${rate}x`, false, 1000);
         }
     });
 }
@@ -3043,8 +3028,7 @@ function setPlaybackRate(rate, showOverlay = true) {
     if (speedSelect) speedSelect.value = parseFloat(rate).toFixed(2);
     localStorage.setItem('playbackSpeed', rate);
     if (showOverlay) {
-        updateOverlayDisplay(`🏃‍♂️‍➡️再生速度: ${rate}x`);
-        setTimeout(hideOverlayDisplay, 1000);
+        updateOverlayDisplay(`🏃‍♂️‍➡️再生速度: ${rate}x`, false, 1000);
     }
 }
 
@@ -3060,8 +3044,7 @@ function changePlaybackRate(direction) { // direction: 1 増速, -1 減速
     if (newRate !== playbackRates[idx]) {
         setPlaybackRate(newRate);
     } else {
-        updateOverlayDisplay(`🏃‍♂️‍➡️再生速度: ${playbackRates[newIdx]}x`);
-        setTimeout(hideOverlayDisplay, 700);
+        updateOverlayDisplay(`🏃‍♂️‍➡️再生速度: ${playbackRates[newIdx]}x`, false, 1000);
     }
 }
 
@@ -3523,7 +3506,7 @@ saveVideoBtn.addEventListener('click', async () => {
         }
 
         isCutEditing = true;
-        updateOverlayDisplay('✂️ カット（削除）処理中… 0%', true);
+        updateOverlayDisplay('✂️ カット（削除）処理中… 0%', true, 0);
 
         // フレーム単位へ丸めたレンジを作成して main.js に送る
         const alignedRanges = (cutRanges || []).map(r => {
@@ -3547,30 +3530,26 @@ saveVideoBtn.addEventListener('click', async () => {
         });
 
         if (!result || !result.outputPath) {
-            updateOverlayDisplay('✂️ 中断または失敗しました');
+            updateOverlayDisplay('✂️ 中断または失敗しました', false, 3000);
             console.log('カット編集中断またはエラー');
         } else {
             const { outputPath, mode } = result;
 
             if (mode === 'reencode') {
-                updateOverlayDisplay('✂️ 保存完了（精細モード）');
+                updateOverlayDisplay('✂️ 保存完了（精細モード）', false, 1500);
                 console.log('カット編集完了（再エンコード）:', outputPath);
             } else if (mode === 'copy') {
-                updateOverlayDisplay('✂️ 保存完了（高速モード）');
+                updateOverlayDisplay('✂️ 保存完了（高速モード）', false, 1500);
                 console.log('カット編集完了（ストリームコピー）:', outputPath);
             } else {
                 // 予期せぬ mode の場合
-                updateOverlayDisplay('✂️ 保存完了');
+                updateOverlayDisplay('✂️ 保存完了', false, 1500);
                 console.log('カット編集完了（モード不明）:', outputPath);
             }
         }
-
-        // カット篆囲は保持し適用可能にして保持
-        setTimeout(hideOverlayDisplay, 2000);
     } catch (err) {
         console.error('カット（複数）処理エラー:', err);
-        updateOverlayDisplay(`❌ カット失敗: ${err.message}`);
-        setTimeout(hideOverlayDisplay, 3000);
+        updateOverlayDisplay(`❌ カット失敗: ${err.message}`, false, 3000);
     } finally {
         isCutEditing = false;
         cutCancelBtn.style.display = 'none';
