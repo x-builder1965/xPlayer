@@ -1618,7 +1618,8 @@ async function joinPlaylistVideos() {
     // デフォルトファイル名（最初の動画名 + _join.mp4）
     const firstFile = playlist[0].file.path;
     const baseName = path.parse(path.basename(firstFile)).name;
-    const defaultName = `${baseName}_join.mp4`;
+    const fileCount = playlist.length;
+    const defaultName = `${baseName}_join×${fileCount}.mp4`;
 
     // 保存ダイアログ
     const saveResult = await ipcRenderer.invoke('show-save-join-dialog', { fileName: defaultName });
