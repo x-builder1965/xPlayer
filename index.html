@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.50'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.51'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -15,7 +15,7 @@
 <body>
     <div class="main-container">
         <div class="video-container">
-            <button id="cutCancelBtn" data-tooltip="カット編集中止（Escape）">❌</button>
+            <button id="cutCancelBtn" data-tooltip="編集中止（Escape）">❌</button>
             <video id="videoPlayer" src=""></video>
             <video id="videoPreview" src="" muted></video>
             <div id="darkOverlay"></div>
@@ -23,6 +23,7 @@
                 <div class="filename-controls">
                     <button id="modeChangeBtn" data-tooltip="視聴モード（Ctrl+v）">🎬</button>
                     <button id="editModeBtn" data-tooltip="編集モード（Ctrl+e）">✂️</button>
+                    <button id="joinPlaylistBtn" data-tooltip="結合編集（Shift+j）">🎞️</button>
                     <select id="filenameDisplay" data-tooltip="再生動画リスト">
                         <option value=""></option>
                     </select>

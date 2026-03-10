@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.50';
+const appName = 'xPlayer -動画プレイヤー- Ver3.51';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -55,6 +55,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.50';
 // 2026-03-07 Ver3.48 ズームモード中（🔍）マウスホイールで拡大縮小。
 // 2026-03-08 Ver3.49 カット編集機能（✂️）のクラッシュ対応の最適化。
 // 2026-03-09 Ver3.50 シークバーの挙動改善。
+// 2026-03-10 Ver3.51 結合編集（🎞️）機能追加。
 // ---------------------------------------------------------------------
 // 2026-03-05 Ver3.xx プレイリスト並び替え（📩）（Shift+m）機能追加（未実装）
 // 　・プレイリスト編集パネル内に並び替え（📩）を配置。
@@ -69,11 +70,6 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.50';
 // 　・プレイリスト作成時の並び順は（なし）をデフォルトとする。
 // 　・ポップアップメニューの選択された並び順でプレイリストを並び替える（選択後メニューは非表示）。
 // 　・選択された並び順はlocalStrageに保存して起動時に復元する。
-// 2026-03-10 Ver3.xx 結合編集（🎞️）機能追加（未実装）
-// 　・🎞️クリックで保存ダイアログを表示。
-// 　・デフォルトのファイル名はプレイリストの[ファイル名＋"_join".mp4]を表示。
-// 　・「保存」クリックでプレイリスト内の全動画を結合。
-// 　・「キャンセル」クリックは何もしない。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -165,6 +161,7 @@ const editSeekBar = document.getElementById('editSeekBar');
 const cutCancelBtn = document.getElementById('cutCancelBtn');
 const randomPlayBtn = document.getElementById('randomPlayBtn');
 const repeatPlayBtn  = document.getElementById('repeatPlayBtn');
+const joinPlaylistBtn = document.getElementById('joinPlaylistBtn');
 
 // localStorage から復得
 const savedVolume = localStorage.getItem('volume');
@@ -219,6 +216,7 @@ let cutRanges = []; // 配列 of { in: seconds, out: seconds }
 let currentPlaybackRate = 1.0;   // ← 新規追加
 let isUrlControlsVisible = false;
 let isCutEditing = false;  // カット編集中フラグ
+let isJoinEditing = false;  // カット編集中フラグ
 let isRandomPlayMode = false;     // ランダム再生（シャッフル）
 let isRepeatPlayMode  = false;     // リスト全体繰り返し
 let shuffleOrder = [];           // ランダムモード用の再生順リスト（インデックス配列）
@@ -1606,6 +1604,60 @@ async function cleanupTempFiles() {
     }
 }
 
+// 全動画結合処理
+async function joinPlaylistVideos() {
+    if (playlist.length < 2) {
+        updateOverlayDisplay(
+            playlist.length === 0 ? '❌ プレイリストが空です' : '動画が1つだけなので結合不要です',
+            false,
+            3000
+        );
+        return;
+    }
+
+    // デフォルトファイル名（最初の動画名 + _join.mp4）
+    const firstFile = playlist[0].file.path;
+    const baseName = path.parse(path.basename(firstFile)).name;
+    const defaultName = `${baseName}_join.mp4`;
+
+    // 保存ダイアログ
+    const saveResult = await ipcRenderer.invoke('show-save-join-dialog', { fileName: defaultName });
+
+    if (saveResult.canceled) {
+        updateOverlayDisplay('キャンセルしました', false, 1500);
+        return;
+    }
+
+    const outputPath = saveResult.filePath;
+
+    // 結合開始
+    isJoinEditing = true;           // 中断ボタン制御用に流用
+    cutCancelBtn.style.display = 'inline-block';
+    updateOverlayDisplay('🎞️ 結合準備中…', true, 0);
+
+    try {
+        const videoPaths = playlist.map(item => item.file.path);
+
+        const result = await ipcRenderer.invoke('join-videos', {
+            inputPaths: videoPaths,
+            outputPath: outputPath,
+            frameRate: editFrameRate || 30
+        });
+
+        if (result && result.outputPath) {
+            updateOverlayDisplay(`🎞️ 結合完了！`, false, 3000);
+        } else {
+            updateOverlayDisplay('🎞️ 結合が中断されました', false, 2000);
+        }
+    } catch (err) {
+        console.error('結合エラー:', err);
+        updateOverlayDisplay(`❌ 結合失敗: ${err.message || '不明なエラー'}`, false, 5000);
+    } finally {
+        isJoinEditing = false;
+        cutCancelBtn.style.display = 'none';
+    }
+}
+
 // 🔲レンダラーイベント🔲
 // main.js からの自動再生指示を受信
 ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
@@ -1672,6 +1724,33 @@ ipcRenderer.on('cut-progress', (event, payload) => {
     }
 });
 
+// 結合進捗受信（詳細ペイロード対応）
+ipcRenderer.on('join-progress', (event, payload) => {
+    try {
+        const stage = payload && payload.stage ? payload.stage : 'progress';
+        switch (stage) {
+            case 'join-prepare':
+                updateOverlayDisplay(`🎞️ 統一変換中… (${payload.currentFile}/${payload.totalFiles})`, true, 0);
+                break;
+            case 'convert-pre':
+                const convPercent = Math.round(payload.percent);
+                updateOverlayDisplay(`🎞️ 変換中 ${payload.currentFile}/${payload.totalFiles}… ${convPercent}%`, true, 1000);
+                break;
+            case 'join-start':
+                updateOverlayDisplay('🎞️ 結合開始…', true, 0);
+                break;
+            case 'join':
+                updateOverlayDisplay(`🎞️ 結合中… ${Math.round(payload.percent)}%`, true, 1000);
+                break;
+            case 'join-done':
+                updateOverlayDisplay('🎞️ 結合完了！', false, 3000);
+                break;
+        }
+    } catch (e) {
+        updateOverlayDisplay('🎞️ 結合処理中…', true, 0);
+    }
+});
+
 // 変換エラー
 ipcRenderer.on('convert-error', (event, msg) => {
     console.error("変換失敗:", err);
@@ -1714,7 +1793,7 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
-    if (isCutEditing) {
+    if (isCutEditing || isJoinEditing) {
         if (event.key === 'Escape') {
             event.preventDefault();
             cutCancelBtn.click();
@@ -1807,6 +1886,13 @@ document.addEventListener('keydown', async (event) => {
     if (event.ctrlKey && event.key === 'e') {
         event.preventDefault();
         editModeBtn.click();
+        return;
+    }
+
+    // 🎞️結合編集（Shift+j）
+    if (event.shiftKey && event.key === 'j') {
+        event.preventDefault();
+        joinPlaylistBtn.click();
         return;
     }
 
@@ -2475,6 +2561,11 @@ videoPlayer.addEventListener('loadedmetadata', () => {
     updateTimeDisplay();
     updateVolumeDisplay();
     updateIconOverlay();
+});
+
+// 結合編集ボタンクリック
+joinPlaylistBtn.addEventListener('click', () => {
+    joinPlaylistVideos();
 });
 
 // 動画エラー（共通化・安全・モード対応）
@@ -3214,17 +3305,31 @@ editModeBtn.addEventListener('click', () => {
 // カット中断
 cutCancelBtn.addEventListener('click', async () => {
     try {
-        await ipcRenderer.invoke('cancel-cut');
-        updateOverlayDisplay('✂️ 中断しました');
+        if (isCutEditing) {
+            await ipcRenderer.invoke('cancel-cut');
+            updateOverlayDisplay('✂️ カット中断しました');
+        } else if (isJoinEditing) {
+            await ipcRenderer.invoke('cancel-join');
+            updateOverlayDisplay('🎞️ 結合中断しました');
+        }
     } catch (e) {
-        console.error('cancel-cut failed:', e);
-        updateOverlayDisplay('✂️ 中断に失敗しました');
+        if (isCutEditing) {
+            console.error('cancel-cut failed:', e);
+            updateOverlayDisplay('✂️ カット中断に失敗しました');
+        } else if (isJoinEditing) {
+            console.error('cancel-join failed:', e);
+            updateOverlayDisplay('🎞️ 結合中断に失敗しました');
+        }
     } finally {
-        isCutEditing = false;
-        editModeBtn.textContent = '✂️';
-        editModeBtn.setAttribute('data-tooltip', '編集モード開始（Ctrl+e）');
-        editModeBtn.classList.remove('active');
-        cutCancelBtn.style.display = 'none';
+        if (isCutEditing) {
+            isCutEditing = false;
+            editModeBtn.textContent = '✂️';
+            editModeBtn.setAttribute('data-tooltip', '編集モード開始（Ctrl+e）');
+            editModeBtn.classList.remove('active');
+            cutCancelBtn.style.display = 'none';
+        } else if (isJoinEditing) {
+            isJoinEditing = false;
+        }
     }
 });
 

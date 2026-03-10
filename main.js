@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.49';
+const appName = 'xPlayer -動画プレイヤー- Ver3.51';
 // ---------------------------------------------------------------------
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
@@ -469,9 +469,9 @@ ipcMain.handle('cancel-cut', async () => {
     if (currentTmpDir) {
         try {
             await fs.rm(currentTmpDir, { recursive: true, force: true });
-            console.log('cut: 一時ディレクトリ削除成功:', currentTmpDir);
+            console.log('cut中断: 一時ディレクトリ削除成功:', currentTmpDir);
         } catch (e) {
-            console.warn('cut: 一時ディレクトリ削除失敗:', e);
+            console.warn('cut中断: 一時ディレクトリ削除失敗:', e);
         }
         currentTmpDir = null;
     }
@@ -491,12 +491,12 @@ ipcMain.handle('cancel-cut', async () => {
                     if (!targetPath) break;
                     await fs.access(targetPath, fs.constants.F_OK | fs.constants.W_OK);
                     await fs.unlink(targetPath);
-                    console.log('cut: 中断 一時ファイル削除成功:', targetPath);
+                    console.log('cut中断: 一時ファイル削除成功:', targetPath);
                     break;
                 } catch (err) {
                     // If the error is due to bad argument (null/undefined), stop trying
                     if (err && err.code === 'ERR_INVALID_ARG_TYPE') {
-                        console.warn('cut: 削除スキップ (無効なパス):', err);
+                        console.warn('cut中断: 削除スキップ (無効なパス):', err);
                         break;
                     }
                     if (err && (err.code === 'EBUSY' || err.code === 'EPERM')) {
@@ -504,16 +504,16 @@ ipcMain.handle('cancel-cut', async () => {
                         elapsed += interval;
                         continue;
                     } else if (err && err.code === 'ENOENT') {
-                        console.log('cut: 中断 ファイルは既に存在しません:', targetPath);
+                        console.log('cut中断: ファイルは既に存在しません:', targetPath);
                         break;
                     } else {
-                        console.error('cut: 削除エラー:', err);
+                        console.error('cut中断: 削除エラー:', err);
                         break;
                     }
                 }
             }
             if (elapsed >= maxWait) {
-                console.warn('cut: 中断 ファイル削除タイムアウト:', targetPath);
+                console.warn('cut中断: ファイル削除タイムアウト:', targetPath);
             }
         }
         currentOutputPath = null;
@@ -864,8 +864,32 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                             mainWindow.webContents.send('cut-progress', { stage: 'done', percent: 100, outPath });
                             resolve({ outputPath: outPath, mode: 'reencode' });
                         })
-                        .on('error', (err) => {
+                        .on('error', (err, stdout, stderr) => {
+                            currentFFmpeg = null;
+                            currentOutputPath = null;
+
+                            // ★★★ ここが修正ポイント ★★★
+                            const isKilled = err.message?.includes('killed') || 
+                                            err.message?.includes('SIGKILL') || 
+                                            err.message?.includes('ffmpeg was killed');
+
+                            if (isKilled) {
+                                console.log('cut-video-multiple (reencode): ユーザーにより中断されました');
+                                // reject せず、キャンセルとして扱う
+                                mainWindow.webContents.send('cut-progress', { 
+                                    stage: 'cancelled', 
+                                    message: 'ユーザーにより中断されました' 
+                                });
+                                resolve({ cancelled: true });  // または null でも可
+                                return;
+                            }
+
+                            // 本物のエラーだけ reject
                             console.error('FFmpeg再エンコードエラー:', err);
+                            mainWindow.webContents.send('cut-progress', { 
+                                stage: 'error', 
+                                message: err.message || '再エンコード処理に失敗しました' 
+                            });
                             reject(err);
                         })
                         .save(outPath);
@@ -926,8 +950,26 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                                     '-movflags', '+faststart'
                                 ])
                                 .output(outPath)
-                                .on('end', res)
-                                .on('error', rej)
+                                .on('end', () => {
+                                    res();
+                                })
+                                .on('error', (err) => {
+                                    // ★★★ ここを追加・修正 ★★★
+                                    if (err.message && (
+                                        err.message.includes('killed') ||
+                                        err.message.includes('SIGKILL') ||
+                                        err.message.includes('ffmpeg was killed')
+                                    )) {
+                                        console.log('cut-video-multiple (copy concat): ユーザーによりキャンセルされました');
+                                        // reject せず正常終了扱い
+                                        res();  // ← これで Promise がフルフィルされる
+                                        return;
+                                    }
+
+                                    // 本物のエラーだけ reject
+                                    console.error('最終結合エラー:', err);
+                                    rej(err);
+                                })
                                 .run();
                         });
 
@@ -961,4 +1003,273 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
             reject(e);
         }
     });
+});
+
+// 保存ダイアログ（結合用）
+ipcMain.handle('show-save-join-dialog', async (event, { fileName }) => {
+    const result = await dialog.showSaveDialog(mainWindow, {
+        title: '結合した動画を保存',
+        defaultPath: fileName || 'joined_video.mp4',
+        filters: [
+            { name: 'MP4 動画ファイル', extensions: ['mp4'] },
+            { name: 'すべてのファイル', extensions: ['*'] }
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation']
+    });
+
+    return result;  // { canceled: boolean, filePath?: string }
+});
+
+let currentJoinTempFiles = [];      // 結合用の一時変換ファイルリスト
+let currentJoinConcatTxt = null;    // concatリストのtxtパス
+let isJoinCancelled = false;        // ファイル先頭付近（他のグローバル変数の近く）に追加
+
+// 結合処理（全動画を厳密に統一フォーマットに変換 → 結合）
+ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate }) => {
+    if (!inputPaths || !Array.isArray(inputPaths) || inputPaths.length < 2) {
+        throw new Error('結合する動画が2つ以上必要です');
+    }
+    if (!outputPath) {
+        throw new Error('出力パスが指定されていません');
+    }
+
+    currentJoinTempFiles = [];      // リセット
+    currentJoinConcatTxt = null;
+    isJoinCancelled = false;          // キャンセル状態をリセット
+
+    return new Promise(async (resolve, reject) => {
+        let currentProc = null;
+
+        try {
+            mainWindow.webContents.send('join-progress', { 
+                stage: 'join-prepare', 
+                percent: 0,
+                totalVideos: inputPaths.length,
+                message: '全動画を同一フォーマットに変換中…'
+            });
+
+            const commonOptions = [
+                '-c:v', 'libx264',
+                '-preset', 'veryfast',
+                '-crf', '23',
+                '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=30,format=yuv420p',
+                '-colorspace', 'bt709',
+                '-color_primaries', 'bt709',
+                '-color_trc', 'bt709',
+                '-r', '30',
+                '-c:a', 'aac',
+                '-b:a', '192k',
+                '-ar', '48000',
+                '-movflags', '+faststart',
+                '-fflags', '+genpts',
+                '-async', '1',
+                '-max_muxing_queue_size', '9999'
+            ];
+
+            // 変換フェーズ
+            for (let i = 0; i < inputPaths.length; i++) {
+                if (isJoinCancelled) {
+                    console.log(`キャンセル検知：残りの変換（${i+1}以降）をスキップ`);
+                    break;  // 以降の変換を完全に止める
+                }
+
+                const input = inputPaths[i];
+                const tempOut = path.join(os.tmpdir(), `join_temp_${Date.now()}_${i}.mp4`);
+                currentJoinTempFiles.push(tempOut);
+
+                await new Promise((res, rej) => {
+                    const ff = ffmpeg(input)
+                        .outputOptions(commonOptions)
+                        .on('start', () => {
+                            if (isJoinCancelled) {
+                                ff.kill('SIGKILL');  // 念のため即殺
+                                res();
+                                return;
+                            }
+                            currentFFmpeg = ff;
+                            currentOutputPath = outputPath;
+                        })
+                        .on('progress', (progress) => {
+                            if (isJoinCancelled) return;  // 進捗送信をスキップ
+                            const filePercent = progress.percent || 0;
+                            const overall = ((i + filePercent / 100) / inputPaths.length) * 100;
+                            mainWindow.webContents.send('join-progress', {
+                                stage: 'convert-pre',
+                                percent: overall,
+                                currentFile: i + 1,
+                                totalFiles: inputPaths.length
+                            });
+                        })
+                        .on('end', res)
+                        .on('error', (err) => {
+                            if (err.message.includes('killed with signal SIGKILL') || isJoinCancelled) {
+                                console.log('変換キャンセル検知');
+                                res();  // ここは await new Promise なので resolve で抜ける
+                                return;
+                            }
+                            rej(err);
+                        })
+                        .save(tempOut);
+                });
+                if (isJoinCancelled) break;
+            }
+
+            mainWindow.webContents.send('join-progress', { 
+                stage: 'join-start', 
+                percent: 0,
+                message: '変換完了 → 結合中…'
+            });
+
+            // ★★★ ここにフラグチェックを追加 ★★★
+            if (isJoinCancelled) {
+                console.log('キャンセル済み：結合フェーズをスキップします');
+                cleanupJoinTempFiles();               // 一時ファイルを確実に掃除
+                currentFFmpeg = null;
+                currentOutputPath = null;
+                
+                // UIにキャンセル完了を通知（念のため再送してもOK）
+                mainWindow.webContents.send('join-progress', { 
+                    stage: 'cancelled', 
+                    message: 'ユーザーにより結合が中断されました' 
+                });
+                
+                // 処理を正常終了扱いにして抜ける
+                resolve({ cancelled: true, message: 'ユーザーによりキャンセルされました' });
+                return;   // ← これで以降の結合処理は一切実行されない
+            }
+
+            // 結合フェーズ
+            const concatList = currentJoinTempFiles.map(p => `file '${p.replace(/'/g, "\\'")}'`);
+            currentJoinConcatTxt = path.join(os.tmpdir(), `join_concat_${Date.now()}.txt`);
+
+            await fs.writeFile(currentJoinConcatTxt, concatList.join('\n'), 'utf8');
+
+            const ff = ffmpeg()
+                .input(currentJoinConcatTxt)
+                .inputOptions('-f', 'concat', '-safe', '0')
+                .outputOptions([
+                    '-c', 'copy',
+                    '-movflags', '+faststart'
+                ])
+                .on('start', () => {
+                    currentFFmpeg = ff;
+                    currentOutputPath = outputPath;
+                })
+                .on('progress', (progress) => {
+                    if (progress.percent !== undefined) {
+                        mainWindow.webContents.send('join-progress', {
+                            stage: 'join',
+                            percent: progress.percent
+                        });
+                    }
+                })
+                .on('end', () => {
+                    cleanupJoinTempFiles();
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    mainWindow.webContents.send('join-progress', { 
+                        stage: 'join-done', 
+                        percent: 100, 
+                        outputPath 
+                    });
+                    resolve({ outputPath });
+                })
+                .on('error', (err) => {
+                    cleanupJoinTempFiles();
+                    if (err.message.includes('ffmpeg was killed') || 
+                        err.message.includes('killed with signal SIGKILL')) {
+                        // ユーザーキャンセルによる kill → reject せず静かに処理
+                        currentFFmpeg = null;
+                        currentOutputPath = null;
+                        console.log('結合処理がユーザーによりキャンセルされました');
+                        // resolve するか、特別な値を返す（例: null や { cancelled: true }）
+                        resolve({ cancelled: true, message: 'ユーザーによりキャンセル' });
+                        return;
+                    }
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    reject(err);
+                })
+                .save(outputPath);
+        } catch (err) {
+            cleanupJoinTempFiles();
+            currentFFmpeg = null;
+            currentOutputPath = null;
+            reject(err);
+        }
+        // Promise の最後（resolve/reject の後ろあたり）
+        finally {
+            isJoinCancelled = false;
+        }
+    });
+});
+
+// 結合用一時ファイル掃除関数
+function cleanupJoinTempFiles() {
+    currentJoinTempFiles.forEach(p => fs.unlink(p).catch(() => {}));
+    if (currentJoinConcatTxt) {
+        fs.unlink(currentJoinConcatTxt).catch(() => {});
+        currentJoinConcatTxt = null;
+    }
+    currentJoinTempFiles = [];
+}
+
+// 結合処理専用キャンセル
+ipcMain.handle('cancel-join', async () => {
+    // 変換中・結合中のFFmpegプロセスを殺す
+    isJoinCancelled = true;  // ← これを最初に立てる
+    if (currentFFmpeg) {
+        try {
+            currentFFmpeg.kill('SIGKILL');
+        } catch (e) {
+            console.warn('join: FFmpeg kill failed:', e);
+        }
+        currentFFmpeg = null;
+    }
+
+    // 一時ファイル全削除
+    cleanupJoinTempFiles();
+
+    // 出力パスがあれば削除試行（ロック待ち）
+    if (currentOutputPath) {
+        const maxWait = 5000;
+        const interval = 100;
+        let elapsed = 0;
+
+        while (elapsed < maxWait) {
+            try {
+                if (!currentOutputPath) break;
+                await fs.access(currentOutputPath, fs.constants.F_OK | fs.constants.W_OK);
+                await fs.unlink(currentOutputPath);
+                console.log('join中断: 出力ファイル削除成功:', currentOutputPath);
+                break;
+            } catch (err) {
+                if (err.code === 'EBUSY' || err.code === 'EPERM') {
+                    await new Promise(r => setTimeout(r, interval));
+                    elapsed += interval;
+                    continue;
+                } else if (err.code === 'ENOENT') {
+                    console.log('join中断: ファイルは既に存在しません:', currentOutputPath);
+                    break;
+                } else {
+                    console.error('join中断削除エラー:', err);
+                    break;
+                }
+            }
+        }
+        if (elapsed >= maxWait) {
+            console.warn('join中断: ファイル削除タイムアウト:', currentOutputPath);
+        }
+    }
+    currentOutputPath = null;
+
+    // 通知（結合専用のチャネルで）
+    try {
+        mainWindow.webContents.send('join-progress', { 
+            stage: 'cancelled', 
+            message: 'ユーザーにより結合が中断されました' 
+        });
+    } catch (e) {}
+
+    return true;
 });
