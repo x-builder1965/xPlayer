@@ -248,7 +248,7 @@ updateUrlButtonIcon();
 // 初期状態：メニューは閉じておく
 filenameMenus.style.display = 'none';
 filenameMenu.textContent = '📚';
-filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを開く (Ctrl+l)');
+filenameMenu.setAttribute('data-tooltip', '編集メニューを開く (Ctrl+l)');
 
 // 再生モード復元
 if (savedRandomPlay === 'true') {
@@ -2711,10 +2711,10 @@ document.addEventListener('mouseup', (e) => {
 document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement) {
         fullscreenBtn.textContent = '🖥️';
-        fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示（Ctrl+z／Double Click）');
+        fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示（Ctrl+a／Double Click）');
     } else {
         fullscreenBtn.textContent = '❌';
-        fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除（Ctrl+z／Double Click）');
+        fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除（Ctrl+a／Double Click）');
     }
     updateIconOverlay();
 });
@@ -3756,11 +3756,11 @@ filenameMenu.addEventListener('click', () => {
     if (filenameMenus.style.display === 'none') {
         filenameMenus.style.display = 'flex';
         filenameMenu.textContent = '❌';           // 表示中 → 緑信号
-        filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを閉じる (Ctrl+l)');
+        filenameMenu.setAttribute('data-tooltip', '編集メニューを閉じる (Ctrl+l)');
     } else {
         filenameMenus.style.display = 'none';
         filenameMenu.textContent = '📚';           // 非表示 → 禁止マーク
-        filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを開く (Ctrl+l)');
+        filenameMenu.setAttribute('data-tooltip', '編集メニューを開く (Ctrl+l)');
     }
 });
 
