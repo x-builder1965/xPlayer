@@ -3551,8 +3551,8 @@ seekBar.addEventListener('mouseout', () => {
     videoPreview.style.display = 'none';
     // 通常の時間表示に戻す
     if (!isSeekDragging && videoPlayer.duration) {
-        // const value = (100 / videoPlayer.duration) * videoPlayer.currentTime;
-        // seekBar.value = value;
+        const value = (100 / videoPlayer.duration) * videoPlayer.currentTime;
+        seekBar.value = value;
         editSeekBar.value = seekBar.value; // カット編集シークバーも同期
         updateTimeDisplay();
     }
