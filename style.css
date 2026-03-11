@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.47'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.52'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -128,6 +128,10 @@ video {
     display: flex; 
     gap: 6px; 
     width: 100%;
+}
+.filename-controls button {
+    min-width: 36px;   /* または 40px など好みで */
+    flex: 0 0 auto;    /* 縮まないようにしてもOK */
 }
 .filename-menus {
     display: none; 
@@ -636,4 +640,13 @@ caption {
     opacity: 0.9;
     /* box-shadowで目立たせるのもアリ（オプション） */
     /* box-shadow: 0 0 4px rgba(255,255,255,0.7); */
+}
+.sort-menu div {
+    transition: background-color 0.15s;
+}
+.sort-menu div:hover {
+    background: rgba(0, 123, 255, 0.35);
+}
+.sort-menu div:active {
+    background: rgba(0, 80, 180, 0.6);
 }
