@@ -2283,6 +2283,44 @@ document.addEventListener('keydown', async (event) => {
         }
     }
 
+
+    // 🔎ズームモード中のキー操作
+    if (isZoomMode) {
+        // ズームイン（Ctrl+↑）
+        if (event.ctrlKey && event.key === 'ArrowUp') {
+            event.preventDefault();
+            let newZoom = zoomValue + 1;
+            if (newZoom > 500) newZoom = 500;
+            zoomBar.value = newZoom.toString();
+            applyZoom(newZoom);
+            return;
+        }
+
+        // ズームアウト（Ctrl+↓）
+        if (event.ctrlKey && event.key === 'ArrowDown') {
+            event.preventDefault();
+            let newZoom = zoomValue - 1;
+            if (newZoom < -100) newZoom = -100;
+            zoomBar.value = newZoom.toString();
+            applyZoom(newZoom);
+            return;
+        }
+
+        // ズームリセット（Ctrl+0）
+        if (event.ctrlKey && event.key === '0') {
+            event.preventDefault();
+            zoomResetBtn.click();
+            return;
+        }
+
+        // スナップショット（Ctrl+s）
+        if (event.ctrlKey && event.key === 's') {
+            event.preventDefault();
+            snapshotBtn.click();
+            return;
+        }
+    }
+
     if (urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
         if (event.key === 'Enter') {
             event.preventDefault();
@@ -2371,8 +2409,8 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
-    // 🎞️結合編集（Shift+j）
-    if (event.shiftKey && event.key === 'j') {
+    // 🎞️結合編集（Ctrl+j）
+    if (event.ctrlKey && event.key === 'j') {
         event.preventDefault();
         joinPlaylistBtn.click();
         return;
@@ -2427,7 +2465,7 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
-    // ズームモード切替（Ctrl+z）
+    // 🔎ズームモード切替（Ctrl+z）
     if (event.ctrlKey && event.key === 'z') {
         event.preventDefault();
         zoomBtn.click();
@@ -2439,43 +2477,6 @@ document.addEventListener('keydown', async (event) => {
         event.preventDefault();
         volumeMuteBtn.click();
         return;
-    }
-
-    // ズームモード中のキー操作
-    if (isZoomMode) {
-        // ズームイン（Ctrl+↑）
-        if (event.ctrlKey && event.key === 'ArrowUp') {
-            event.preventDefault();
-            let newZoom = zoomValue + 1;
-            if (newZoom > 500) newZoom = 500;
-            zoomBar.value = newZoom.toString();
-            applyZoom(newZoom);
-            return;
-        }
-
-        // ズームアウト（Ctrl+↓）
-        if (event.ctrlKey && event.key === 'ArrowDown') {
-            event.preventDefault();
-            let newZoom = zoomValue - 1;
-            if (newZoom < -100) newZoom = -100;
-            zoomBar.value = newZoom.toString();
-            applyZoom(newZoom);
-            return;
-        }
-
-        // ズームリセット（Ctrl+0）
-        if (event.ctrlKey && event.key === '0') {
-            event.preventDefault();
-            zoomResetBtn.click();
-            return;
-        }
-
-        // スナップショット（Ctrl+s）
-        if (event.ctrlKey && event.key === 's') {
-            event.preventDefault();
-            snapshotBtn.click();
-            return;
-        }
     }
 
     // 音量変更（↓／↑）- ズームモード外のみ
@@ -2534,17 +2535,24 @@ document.addEventListener('keydown', async (event) => {
 	    return;
 	}
 
+    // 🖥️フルスクリーン表示（Ctrl+a）
+    if (event.ctrlKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        fullscreenBtn.click();
+        return;
+    }
+
     // 🔀ランダム再生（Ctrl＋r）
     if (event.ctrlKey && !event.shiftKey && event.key.toLowerCase() === 'r') {
         event.preventDefault();
-        toggleRandomPlay();
+        randomPlayBtn.click();
         return;
     }
 
     // 🔁繰り返し再生（Ctrl＋Shift＋r）
     if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'r') {
         event.preventDefault();
-        toggleRepeatPlay();
+        repeatPlayBtn.click();
         return;
     }
 
@@ -3208,21 +3216,7 @@ videoPlayer.addEventListener('contextmenu', async (event) => {
 // 動画ダブルクリック
 videoPlayer.addEventListener('dblclick', (event) => {
     event.preventDefault();
-    if (!document.fullscreenElement) {
-        if (mainContainer.requestFullscreen) {
-            mainContainer.requestFullscreen();
-            fullscreenBtn.textContent = '❌';
-            fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除（Ctrl+z／Double Click）');
-        }
-    } else {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-            fullscreenBtn.textContent = '🖥️';
-            fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示（Ctrl+z／Double Click）');
-        }
-    }
-    showControlsAndFilename();
-    updateIconOverlay();
+    fullscreenBtn.click();
 });
 
 // マウス押下
