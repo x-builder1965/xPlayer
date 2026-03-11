@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.52';
+const appName = 'xPlayer -動画プレイヤー- Ver3.53';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -57,6 +57,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.52';
 // 2026-03-09 Ver3.50 シークバーの挙動改善。
 // 2026-03-10 Ver3.51 結合編集（🎞️）機能追加。
 // 2026-03-11 Ver3.52 プレイリスト並び替え（📩）（Shift+m）機能追加。
+// 2026-03-11 Ver3.53 １動画繰り返し再生（🔂）（Ctrl+Shift+r）機能追加。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -78,33 +79,16 @@ const chromePaths = [
     `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`,
     `C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe`
 ];
-// SORT_MODES の random を修正（並び替えメニュー「（ランダム）」クリック時）
+// 並び替えメニューの定義
 const SORT_MODES = {
-    none: {
-        label: '（なし）',
-        fn: () => getPlaylistInOriginalOrder()
-    },
-    path_asc: {
-        label: '動画パス▲',
-        fn: () => [...playlist].sort((a, b) => a.file.path.localeCompare(b.file.path))
-    },
-    path_desc: {
-        label: '動画パス▼',
-        fn: () => [...playlist].sort((a, b) => b.file.path.localeCompare(a.file.path))
-    },
-    ctime_asc: {
-        label: '作成日時▲',
-        fn: async () => await sortByCreationTime(true)
-    },
-    ctime_desc: {
-        label: '作成日時▼',
-        fn: async () => await sortByCreationTime(false)
-    },
-    random: {
-        label: '（ランダム）',
-        fn: sortRandomPlaylist
-    }
+    none:       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
+    path_asc:   { label: '動画パス▲',   fn: () => [...playlist].sort((a, b) => a.file.path.localeCompare(b.file.path)) },
+    path_desc:  { label: '動画パス▼',   fn: () => [...playlist].sort((a, b) => b.file.path.localeCompare(a.file.path)) },
+    ctime_asc:  { label: '作成日時▲',   fn: async () => await sortByCreationTime(true) },
+    ctime_desc: { label: '作成日時▼',   fn: async () => await sortByCreationTime(false)},
+    random:     { label: '（ランダム）',fn: sortRandomPlaylist }
 };
+
 // DOM要素取得
 const videoPlayer = document.getElementById('videoPlayer');
 const videoPreview = document.getElementById('videoPreview');
@@ -238,6 +222,7 @@ let isEditSeekDragging = false;
 let isMouseOverEditSeekBar = false;
 let currentSortMode = localStorage.getItem('playlistSortMode') || 'none';   // localStorage に保存された値があればそれを使う、なければ 'none'（読み込み順）
 let originalLoadOrder = [];  // プレイリストの「最初に読み込まれた順」を保持
+let repeatMode = 'none';  // 'none' | 'all' | 'single'
 
 // 🔲初期処理🔲
 // 初期表示設定
@@ -332,6 +317,15 @@ if (savedTranslateX && !isNaN(savedTranslateX) && savedTranslateY && !isNaN(save
 }
 applyZoom(zoomValue);
 
+// 繰り返し再生モード復元
+const savedRepeatMode = localStorage.getItem('repeatMode');
+if (savedRepeatMode && ['none', 'all', 'single'].includes(savedRepeatMode)) {
+    repeatMode = savedRepeatMode;
+} else {
+    repeatMode = 'none';
+}
+updateRepeatButtonUI();
+
 // ランダム再生リスト復元
 if (savedShuffleOrder) {
     try {
@@ -354,8 +348,6 @@ if (savedShufflePosition !== null) {
         shufflePosition = -1;
     }
 }
-
-// ランダム再生・繰り返し再生ボタンの状態反映
 updateRandomPlayButton();
 updateRepeatPlayButton();
 
@@ -961,6 +953,9 @@ function toggleRepeatPlay() {
 // 前再生動画取得
 function getPrevVideoIndex() {
     if (playlist.length === 0) return -1;
+    if (repeatMode === 'single') {
+        return currentVideoIndex;
+    }
     if (isRandomPlayMode) {
         // ランダムモード
         shufflePosition--;
@@ -992,6 +987,10 @@ function getPrevVideoIndex() {
 // 次再生動画取得
 function getNextVideoIndex() {
     if (playlist.length === 0) return -1;
+    if (repeatMode === 'single') {
+        // 1動画ループ中は次へ行かせない
+        return currentVideoIndex;
+    }
     if (isRandomPlayMode) {
         // ランダムモード
         shufflePosition++;
@@ -2108,6 +2107,39 @@ function createSortMenu() {
     return menu;
 }
 
+// 並び替えボタンのUI更新関数
+function updateRepeatButtonUI() {
+    const btn = repeatPlayBtn;
+
+    btn.classList.remove('repeat-all', 'repeat-single');
+    btn.textContent = '🔁';  // デフォルト
+
+    if (repeatMode === 'all') {
+        btn.classList.add('repeat-all');     // CSSで赤に
+        btn.setAttribute('data-tooltip', '全動画ループ中（Ctrl+Shift+R）');
+    } else if (repeatMode === 'single') {
+        btn.classList.add('repeat-single');  // CSSで黄色に
+        btn.textContent = '🔂';
+        btn.setAttribute('data-tooltip', '1動画ループ中（Ctrl+Shift+R）');
+    } else {
+        btn.setAttribute('data-tooltip', 'ループ無効（Ctrl+Shift+R）');
+    }
+}
+
+// ループモード切替関数
+function toggleRepeatMode() {
+    if (repeatMode === 'none') {
+        repeatMode = 'all';
+    } else if (repeatMode === 'all') {
+        repeatMode = 'single';
+    } else {
+        repeatMode = 'none';
+    }
+
+    localStorage.setItem('repeatMode', repeatMode);
+    updateRepeatButtonUI();
+}
+
 // 🔲レンダラーイベント🔲
 // main.js からの自動再生指示を受信
 ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
@@ -2769,6 +2801,7 @@ playStopBtn.addEventListener('click', async () => {
 
 // 前の動画
 prevVideoBtn.addEventListener('click', async () => {
+    if (repeatMode === 'single') return; // 無効化
     const prevIndex = getPrevVideoIndex();
 
     if (prevIndex >= 0) {
@@ -2815,6 +2848,7 @@ fastForwardBtn.addEventListener('click', () => {
 
 // 次の動画
 nextVideoBtn.addEventListener('click', async () => {
+    if (repeatMode === 'single') return; // 無効化
     const nextIndex = getNextVideoIndex();
 
     if (nextIndex >= 0) {
@@ -2900,6 +2934,7 @@ randomPlayBtn.addEventListener('click', () => {
 
 // 繰り返し再生ボタンクリック
 repeatPlayBtn.addEventListener('click', () => {
+    toggleRepeatMode();
     toggleRepeatPlay();
 });
 
@@ -3130,7 +3165,15 @@ videoPlayer.addEventListener('ended', async () => {
     videoPlayer.currentTime = 0;
     localStorage.setItem('currentTime', 0);
 
-    if (!isEditMode) {
+    if (repeatMode === 'single') {
+        // 1動画ループ → 即座に同じ動画を再生
+        videoPlayer.play().catch(() => {});
+        playPauseBtn.textContent = '⏸️';
+        return;
+    }
+
+    if (repeatMode === 'all' || isRandomPlayMode) {
+        // 全ループ または ランダムモード → 従来通り次の曲へ
         const nextIndex = getNextVideoIndex();
 
         if (nextIndex >= 0) {
@@ -3138,10 +3181,14 @@ videoPlayer.addEventListener('ended', async () => {
             await playVideo(playlist[currentVideoIndex].file);
             savePlaylistAndPlaybackState();
         } else {
-            // 最後＋リピートオフ → 停止
+            // ループの終端 → 停止
             playStopBtn.click();
         }
+    } else {
+        // none → 普通に停止
+        playStopBtn.click();
     }
+
     showControlsAndFilename();
     updateIconOverlay();
 });
