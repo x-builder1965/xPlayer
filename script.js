@@ -956,7 +956,7 @@ function getPrevVideoIndex() {
     if (repeatMode === 'single') {
         return currentVideoIndex;
     }
-    if (isRandomPlayMode) {
+    if (isRandomPlayMode && currentSortMode !== 'random') {
         // ランダムモード
         shufflePosition--;
         if (shufflePosition < 0) {
@@ -991,7 +991,7 @@ function getNextVideoIndex() {
         // 1動画ループ中は次へ行かせない
         return currentVideoIndex;
     }
-    if (isRandomPlayMode) {
+    if (isRandomPlayMode && currentSortMode !== 'random') {
         // ランダムモード
         shufflePosition++;
         if (shufflePosition >= shuffleOrder.length) {
@@ -2034,8 +2034,7 @@ function sortRandomPlaylist() {
         currentVideoIndex = 0;
     }
 
-    shufflePosition = shuffleOrder.indexOf(currentVideoIndex);
-    if (shufflePosition < 0) shufflePosition = 0;
+    shufflePosition = currentVideoIndex;  // 表示順の位置をshufflePositionとする
 
     // playlist 本体を上書き（ケース6で定義されている挙動）
     playlist = newPlaylist;
