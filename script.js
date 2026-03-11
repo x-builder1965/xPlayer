@@ -960,7 +960,7 @@ function getPrevVideoIndex() {
         // ランダムモード
         shufflePosition--;
         if (shufflePosition < 0) {
-            if (isRepeatPlayMode) {
+            if (repeatMode === 'all') {  // 修正: isRepeatPlayMode → repeatMode === 'all'
                 shufflePosition = shuffleOrder.length - 1;
             } else {
                 shufflePosition = 0;
@@ -974,7 +974,7 @@ function getPrevVideoIndex() {
         // 通常順
         let normalPosition = currentVideoIndex - 1;
         if (normalPosition < 0) {
-            if (isRepeatPlayMode) {
+            if (repeatMode === 'all') {  // 修正: isRepeatPlayMode → repeatMode === 'all'
                 normalPosition = playlist.length - 1;
             } else {
                 return -1;
@@ -995,7 +995,7 @@ function getNextVideoIndex() {
         // ランダムモード
         shufflePosition++;
         if (shufflePosition >= shuffleOrder.length) {
-            if (isRepeatPlayMode) {
+            if (repeatMode === 'all') {  // 修正: isRepeatPlayMode → repeatMode === 'all'
                 shufflePosition = 0;
             } else {
                 shufflePosition = shuffleOrder.length - 1;
@@ -1009,7 +1009,7 @@ function getNextVideoIndex() {
         // 通常順
         let normalPosition = currentVideoIndex + 1;
         if (normalPosition >= playlist.length) {
-            if (isRepeatPlayMode) {
+            if (repeatMode === 'all') {  // 修正: isRepeatPlayMode → repeatMode === 'all'
                 normalPosition = 0;
             } else {
                 return -1;
@@ -2115,10 +2115,27 @@ function updateRepeatButtonUI() {
     btn.textContent = '🔁';  // デフォルト
 
     if (repeatMode === 'all') {
-        btn.classList.add('repeat-all');     // CSSで赤に
+        btn.classList.add('repeat-all');
         btn.setAttribute('data-tooltip', '全動画ループ中（Ctrl+Shift+R）');
     } else if (repeatMode === 'single') {
-        btn.classList.add('repeat-single');  // CSSで黄色に
+        btn.classList.add('repeat-single');
+        btn.textContent = '🔂';
+        btn.setAttribute('data-tooltip', '1動画ループ中（Ctrl+Shift+R）');
+    } else {
+        btn.setAttribute('data-tooltip', 'ループ無効（Ctrl+Shift+R）');
+    }
+}
+function updateRepeatButtonUI() {
+    const btn = repeatPlayBtn;
+
+    btn.classList.remove('repeat-all', 'repeat-single');
+    btn.textContent = '🔁';  // デフォルト
+
+    if (repeatMode === 'all') {
+        btn.classList.add('repeat-all');
+        btn.setAttribute('data-tooltip', '全動画ループ中（Ctrl+Shift+R）');
+    } else if (repeatMode === 'single') {
+        btn.classList.add('repeat-single');
         btn.textContent = '🔂';
         btn.setAttribute('data-tooltip', '1動画ループ中（Ctrl+Shift+R）');
     } else {
@@ -2945,8 +2962,7 @@ randomPlayBtn.addEventListener('click', () => {
 
 // 繰り返し再生ボタンクリック
 repeatPlayBtn.addEventListener('click', () => {
-    toggleRepeatMode();
-    toggleRepeatPlay();
+    toggleRepeatMode();  // 修正: toggleRepeatPlay() を削除、モード切替のみ
 });
 
 // ズームスライダー変更
@@ -3183,20 +3199,15 @@ videoPlayer.addEventListener('ended', async () => {
         return;
     }
 
-    if (repeatMode === 'all' || isRandomPlayMode) {
-        // 全ループ または ランダムモード → 従来通り次の曲へ
-        const nextIndex = getNextVideoIndex();
+    // 修正: 常にgetNextVideoIndex()を呼び、次があれば再生（ランダムOFF・repeat 'none' でも次動画に進む）
+    const nextIndex = getNextVideoIndex();
 
-        if (nextIndex >= 0) {
-            currentVideoIndex = nextIndex;
-            await playVideo(playlist[currentVideoIndex].file);
-            savePlaylistAndPlaybackState();
-        } else {
-            // ループの終端 → 停止
-            playStopBtn.click();
-        }
+    if (nextIndex >= 0) {
+        currentVideoIndex = nextIndex;
+        await playVideo(playlist[currentVideoIndex].file);
+        savePlaylistAndPlaybackState();
     } else {
-        // none → 普通に停止
+        // 次なし → 停止
         playStopBtn.click();
     }
 
