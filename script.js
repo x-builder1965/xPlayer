@@ -248,7 +248,7 @@ updateUrlButtonIcon();
 // 初期状態：メニューは閉じておく
 filenameMenus.style.display = 'none';
 filenameMenu.textContent = '📚';
-filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを開く (Shift+m)');
+filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを開く (Ctrl+l)');
 
 // 再生モード復元
 if (savedRandomPlay === 'true') {
@@ -2535,6 +2535,69 @@ document.addEventListener('keydown', async (event) => {
 	    return;
 	}
 
+    if (filename.style.opacity === '1' && filenameMenus.style.display === 'flex') {
+        // 📩プレイリスト並び替え 表示（shift+m）
+        if (event.shiftKey && event.key.toLowerCase() === 'm') {
+            // filenameMenu が開いている場合はそちらを優先しても良いが、
+            // 要件では「並び替え（📩）」なので独立して開く
+            event.preventDefault();
+            sortPlaylistBtn.click();
+            return;
+        }
+
+        // 🔼前動画再生（shift+p）
+        if (event.shiftKey && event.key.toLowerCase() === 'p') {
+            if (playlist.length > 1) {
+                event.preventDefault();
+                upMovePlaylistBtn.click();
+                return;
+            }
+        }
+        
+        // 🔽次動画再生（shift+n）
+        if (event.shiftKey && event.key.toLowerCase() === 'n') {
+            if (playlist.length > 1) {
+                event.preventDefault();
+                downMovePlaylistBtn.click();
+                return;
+            }
+        }
+    
+        // ➕動画追加（shift+a）
+        if (event.shiftKey && event.key.toLowerCase() === 'a') {
+            event.preventDefault();
+            addPlaylistBtn.click();
+            return;
+        }
+        
+        // ➖動画削除（shift+d）
+        if (event.shiftKey && event.key.toLowerCase() === 'd') {
+            if (playlist.length > 0) {
+                event.preventDefault();
+                removePlaylistBtn.click();
+                return;
+            }
+        }
+        
+        // 🆑動画クリア（shift+c）
+        if (event.shiftKey && event.key.toLowerCase() === 'c') {
+            if (playlist.length > 0) {
+                event.preventDefault();
+                clearPlaylistBtn.click();
+                return;
+            }
+        }
+        
+        // 💾動画保存（shift+s）
+        if (event.shiftKey && event.key.toLowerCase() === 's') {
+            if (playlist.length > 0) {
+                event.preventDefault();
+                savePlaylistBtn.click();
+                return;
+            }
+        }
+    }
+
     // 🖥️フルスクリーン表示（Ctrl+a）
     if (event.ctrlKey && event.key.toLowerCase() === 'a') {
         event.preventDefault();
@@ -2556,37 +2619,11 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
-    // 📚プレイリスト編集 表示／非表示（shift+m）
-    if (event.shiftKey && event.key.toLowerCase() === 'm' ) {
+    // 📚プレイリスト編集 表示／非表示（Ctrl+l）
+    if (event.ctrlKey && event.key.toLowerCase() === 'l' ) {
         event.preventDefault();
         filenameMenu.click();
         return;
-    }
-    
-    // 📩プレイリスト並び替え 表示（shift+m）
-    if (event.shiftKey && event.key.toLowerCase() === 'm') {
-        // filenameMenu が開いている場合はそちらを優先しても良いが、
-        // 要件では「並び替え（📩）」なので独立して開く
-        e.preventDefault();
-        sortPlaylistBtn.click();
-    }
-
-    // 🔼前動画再生（shift+p）
-    if (event.shiftKey && event.key.toLowerCase() === 'p') {
-        if (playlist.length > 1) {
-            event.preventDefault();
-            upMovePlaylistBtn.click();
-            return;
-        }
-    }
-    
-    // 🔽次動画再生（shift+p）
-    if (event.shiftKey && event.key.toLowerCase() === 'n') {
-        if (playlist.length > 1) {
-            event.preventDefault();
-            downMovePlaylistBtn.click();
-            return;
-        }
     }
 
     // 先頭動画再生（Home）
@@ -2613,40 +2650,6 @@ document.addEventListener('keydown', async (event) => {
             savePlaylistAndPlaybackState();
             showControlsAndFilename();
             updateIconOverlay();
-            return;
-        }
-    }
-    
-    // ➕動画追加（shift+a）
-    if (event.shiftKey && event.key.toLowerCase() === 'a') {
-        event.preventDefault();
-        addPlaylistBtn.click();
-        return;
-    }
-    
-    // ➖動画削除（shift+d）
-    if (event.shiftKey && event.key.toLowerCase() === 'd') {
-        if (playlist.length > 0) {
-            event.preventDefault();
-            removePlaylistBtn.click();
-            return;
-        }
-    }
-    
-    // 🆑動画クリア（shift+c）
-    if (event.shiftKey && event.key.toLowerCase() === 'c') {
-        if (playlist.length > 0) {
-            event.preventDefault();
-            clearPlaylistBtn.click();
-            return;
-        }
-    }
-    
-    // 💾動画保存（shift+s）
-    if (event.shiftKey && event.key.toLowerCase() === 's') {
-        if (playlist.length > 0) {
-            event.preventDefault();
-            savePlaylistBtn.click();
             return;
         }
     }
@@ -3743,11 +3746,11 @@ filenameMenu.addEventListener('click', () => {
     if (filenameMenus.style.display === 'none') {
         filenameMenus.style.display = 'flex';
         filenameMenu.textContent = '❌';           // 表示中 → 緑信号
-        filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを閉じる (Shift+m)');
+        filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを閉じる (Ctrl+l)');
     } else {
         filenameMenus.style.display = 'none';
         filenameMenu.textContent = '📚';           // 非表示 → 禁止マーク
-        filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを開く (Shift+m)');
+        filenameMenu.setAttribute('data-tooltip', 'プレイリスト編集メニューを開く (Ctrl+l)');
     }
 });
 
@@ -3994,34 +3997,36 @@ saveVideoBtn.addEventListener('click', async () => {
 
 // 並び替えボタンクリックイベント（トグル実装）
 sortPlaylistBtn.addEventListener('click', (e) => {
-    e.stopPropagation();  // 親要素への伝播防止
+    e.stopPropagation();
 
-    // 現在表示されている .sort-menu を探す
-    const existingMenus = document.querySelectorAll('.sort-menu');
-
-    if (existingMenus.length > 0) {
-        // すでに表示されている → 全部閉じる（非表示にする）
-        existingMenus.forEach(m => m.remove());
-        return;  // ここで終了 → トグルOFF完了
+    const existingMenu = document.querySelector('.sort-menu');
+    if (existingMenu) {
+        existingMenu.remove();
+        document.removeEventListener('click', closeMenu); // ← ここも後で修正必要
+        return;
     }
 
-    // 表示されていない → 新しくメニューを作成して表示
+    document.querySelectorAll('.sort-menu').forEach(m => m.remove());
+
+    const targetContainer = document.fullscreenElement || mainContainer;
     const menu = createSortMenu();
-    const rect = sortPlaylistBtn.getBoundingClientRect();
 
-    // ボタンの下に配置
-    menu.style.left = `${rect.left}px`;
-    menu.style.top  = `${rect.bottom + 4}px`;
+    const containerRect = targetContainer.getBoundingClientRect();
+    const btnRect = sortPlaylistBtn.getBoundingClientRect();
 
-    document.body.appendChild(menu);
+    menu.style.position = 'absolute';
+    menu.style.left = `${btnRect.left - containerRect.left}px`;
+    menu.style.top  = `${btnRect.bottom - containerRect.top + 4}px`;
 
-    // メニュー外クリックで閉じる（1回だけ）
-    const closeMenu = () => {
-        menu.remove();
-        document.removeEventListener('click', closeMenu);
-    };
+    targetContainer.appendChild(menu);
 
-    // setTimeoutで即時リスナーを追加（クリックイベントの伝播後）
+    function closeMenu(ev) {    // ← function宣言ならhoistingされるのでOK
+        if (!menu.contains(ev.target) && ev.target !== sortPlaylistBtn) {
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+        }
+    }
+
     setTimeout(() => {
         document.addEventListener('click', closeMenu, { once: true });
     }, 0);
