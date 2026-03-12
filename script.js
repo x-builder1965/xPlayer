@@ -580,7 +580,6 @@ function isCutEditModeActive() {
 function showControlsAndFilename() {
     disabledControls(false);
     disabledfilename(false);
-    videoContainer.style.cursor = 'auto';
     if (overlayDisplay.classList.contains('active')) {
         overlayDisplay.style.display = 'block';
         overlayDisplay.classList.add('active');
@@ -593,6 +592,7 @@ function showControlsAndFilename() {
             }
         }, overlayTimeout);
     }
+    resetCursorTimer();
     updateIconOverlay();
 }
 
@@ -601,13 +601,13 @@ function hideControlsAndFilename() {
     disabledControls(true);
     disabledfilename(true);
     overlayDisplay.classList.remove('active');
-    videoContainer.style.cursor = 'none';
     hideMenus(); // 追加：コントロール非表示時にメニューも強制非表示
     clearTimeout(timeout);
     setTimeout(() => {
         overlayDisplay.style.display = 'none';
     }, 300);
     videoPlayer.style.cursor = 'none';
+    videoContainer.style.cursor = 'none';
     updateIconOverlay();
 }
 
@@ -2168,12 +2168,20 @@ if (repeatMode === 'none') {
 
 // マウス表示／非表示
 function resetCursorTimer() {
-    videoPlayer.style.cursor = 'auto';  // または 'default'
+    if (isPanning) {    
+        videoPlayer.style.cursor = 'grabbing'; 
+    } else {
+        videoPlayer.style.cursor = 'auto';  // または 'default'
+    }
+    videoContainer.style.cursor = 'auto';  // または 'default'
+
     if (hideMouseTimeout) {
         clearTimeout(hideMouseTimeout);
     }
+    
     hideMouseTimeout = setTimeout(() => {
        videoPlayer.style.cursor = 'none';
+       videoContainer.style.cursor = 'none';
     }, overlayTimeout);
 }
 
