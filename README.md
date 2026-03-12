@@ -8,7 +8,7 @@ xPlayer は **ローカル動画の再生・編集** を中心に設計された
 ## 主な機能
 - **ローカル動画再生**  
   mp4, mkv, webm, avi, flv, mov, wmv, mpg, mpeg, ts, mts, m2ts, vob, ogv, 3gp, m4v, asf など広範囲の形式に対応  
-  HTML5でネイティブ再生可能な形式はそのまま再生  
+  HTML5でネイティブ再生可能な形式（.mp4, .webm, .ogg, .mov, .m4v, .mkvの一部）はそのまま再生  
   非対応形式は **FFmpeg** を使って自動で mp4 に変換（日本語音声・字幕を優先）
 
 - **プレイリスト管理**  
