@@ -2166,7 +2166,7 @@ if (repeatMode === 'none') {
     updateRepeatButtonUI();
 }
 
-// マウス表示／非表示
+// マウス表示・自動非表示の設定
 function resetCursorTimer() {
     if (isPanning) {    
         videoPlayer.style.cursor = 'grabbing'; 
@@ -3024,6 +3024,14 @@ fitModeBtn.addEventListener('click', () => {
     updateIconOverlay();
 });
 
+// ズームマウスオーバー
+zoomPanel.addEventListener('mouseover', () => {
+    if (isZoomMode) {
+        zoomPanel.style.cursor = 'auto';
+        updateIconOverlay();
+    }
+});
+
 // ズームモード切替
 zoomBtn.addEventListener('click', () => {
     isZoomMode = !isZoomMode;
@@ -3324,7 +3332,7 @@ videoPlayer.addEventListener('mousedown', (event) => {
             isPanning = true;
             panStartX = event.clientX;
             panStartY = event.clientY;
-            videoPlayer.style.cursor = 'grabbing';
+            resetCursorTimer();
         } else {
             isDragging = true;
             dragStartX = event.clientX;
@@ -3715,7 +3723,8 @@ controls.addEventListener('mouseover', () => {
         clearTimeout(timeout);
         controls.style.opacity = '1';
         filename.style.opacity = '1';
-        videoContainer.style.cursor = 'auto';
+        controls.style.cursor = 'auto';
+        filename.style.cursor = 'auto';
         if (overlayDisplay.classList.contains('active')) {
             overlayDisplay.style.display = 'block';
             overlayDisplay.classList.add('active');
@@ -3737,7 +3746,15 @@ controls.addEventListener('mouseleave', () => {
 filename.addEventListener('mouseover', () => {
     if (controls.style.opacity === '1' || filename.style.opacity === '1') {
         isMouseOverControls = true;
-        showControlsAndFilename();
+        clearTimeout(timeout);
+        controls.style.opacity = '1';
+        filename.style.opacity = '1';
+        controls.style.cursor = 'auto';
+        filename.style.cursor = 'auto';
+        if (overlayDisplay.classList.contains('active')) {
+            overlayDisplay.style.display = 'block';
+            overlayDisplay.classList.add('active');
+        }
         updateIconOverlay();
     }
 });
