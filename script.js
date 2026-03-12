@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.53';
+const appName = 'xPlayer -動画プレイヤー- Ver3.55';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -58,6 +58,12 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.53';
 // 2026-03-10 Ver3.51 結合編集（🎞️）機能追加。
 // 2026-03-11 Ver3.52 プレイリスト並び替え（📩）（Shift+m）機能追加。
 // 2026-03-11 Ver3.53 １動画繰り返し再生（🔂）（Ctrl+Shift+r）機能追加。
+// 2026-03-12 Ver3.54 ショートカット・オーバーレイメッセージの見直し。
+// 2026-03-12 Ver3.55 結合編集のfps設定を改善。
+// ---------------------------------------------------------------------
+// 2026-03-12 Ver3.xx ・マウスの表示／非表示機能追加。（未実装）
+// 　　・コントロールパネルが非表示状態で一定時間（３秒）マウスが移動しなければ非表示。
+// 　　・マウスが移動したら表示。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -881,6 +887,7 @@ function toggleRandomPlay() {
     updateRandomPlayButton();
 
     if (isRandomPlayMode && !wasRandom) {
+        updateOverlayDisplay('🔀 ランダム再生を設定しました', false, 1500);
         // 通常 → ランダム に変更（ケース1・3）
         if (!shuffleOrder || shuffleOrder.length !== playlist.length) {
             shuffleOrder = [...Array(playlist.length).keys()];
@@ -911,6 +918,7 @@ function toggleRandomPlay() {
         saveShuffleState();
     } 
     else if (!isRandomPlayMode && wasRandom) {
+        updateOverlayDisplay('🔀 ランダム再生を解除しました', false, 1500);
         // ランダム → 通常 に変更（ケース2・4）
         // playlist と filenameDisplay は一切変更しない（定義通り）
         shuffleOrder = [];
@@ -1243,7 +1251,7 @@ async function setVideoSrc(file) {
     } else {
         // 非対応 → FFmpeg変換
         if (isConverting) {
-            updateOverlayDisplay('変換中… しばらくお待ちください');
+            updateOverlayDisplay('🔄️ 変換中… しばらくお待ちください');
             return;
         }
         playStopBtn.click();
@@ -1251,7 +1259,7 @@ async function setVideoSrc(file) {
         try {
             isConverting = true;
             updatePlaylistDisplay();
-            updateOverlayDisplay('変換中…（FFmpeg）');
+            updateOverlayDisplay('🔄️ 変換中…（FFmpeg）');
             // シークバーを赤色に変更
             seekBar.classList.add('converting');
             currentConvertPromise = ipcRenderer.invoke('convert-video', file.path);
@@ -1274,7 +1282,7 @@ async function setVideoSrc(file) {
         } catch (err) {
             console.error("変換失敗:", err);
             isConverting = false;
-            updateOverlayDisplay(`変換失敗`, false, 5000);
+            updateOverlayDisplay('🔄️ 変換失敗', false, 5000);
             filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
             updateIconOverlay();
             // 変換失敗時もシークバーをリセット
@@ -1297,7 +1305,7 @@ function isVideoStopped() {
 function urlInputEnter() {
     const url = urlInput.value.trim();
     if (!url) {
-        updateOverlayDisplay('動画のURLを入力してください');
+        updateOverlayDisplay('🌐 動画のURLを入力してください');
         updateIconOverlay();
         return;
     }
@@ -1310,7 +1318,7 @@ function urlInputEnter() {
     if (platform === 'Twitch') {
         videoId = extractTwitchVideoId(url);
         if (!videoId) {
-            updateOverlayDisplay('無効なTwitch URLです。');
+            updateOverlayDisplay('🌐 無効なTwitch URLです。');
             updateIconOverlay();
             return;
         }
@@ -1319,7 +1327,7 @@ function urlInputEnter() {
         playlistId = extractYouTubePlaylistId(url);
         videoId = extractYouTubeVideoId(url);
         if (!videoId) {
-            updateOverlayDisplay('無効なYouTube URLです。');
+            updateOverlayDisplay('🌐 無効なYouTube URLです。');
             updateIconOverlay();
             return;
         }
@@ -1331,7 +1339,7 @@ function urlInputEnter() {
     } else if (platform === 'Other') {
         videoUrl = url;
     } else {
-        updateOverlayDisplay('無効なURLです。');
+        updateOverlayDisplay('🌐 無効なURLです。');
         updateIconOverlay();
         return;
     }
@@ -1348,7 +1356,7 @@ function urlInputEnter() {
         updateIconOverlay();
     } catch (error) {
         console.error('YouTube Or Twitch Player Setup Error:', error.message, error.stack);
-        updateOverlayDisplay(`動画プレーヤーの設定に失敗しました（${error.message}）。別の動画を試してください。`);
+        updateOverlayDisplay(`🌐 動画プレーヤーの設定に失敗しました（${error.message}）。別の動画を試してください。`);
         updateIconOverlay();
     }
 }
@@ -1537,7 +1545,7 @@ async function addToPlaylist() {
         showControlsAndFilename();
     } catch (e) {
         console.error('追加エラー:', e);
-        updateOverlayDisplay('動画追加に失敗', false, 5000);
+        updateOverlayDisplay('📚 動画追加に失敗', false, 5000);
     }
 }
 
@@ -1545,7 +1553,7 @@ async function addToPlaylist() {
 async function removeFromPlaylist() {
     const selectedIndex = parseInt(filenameDisplay.value);
     if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= playlist.length) {
-        updateOverlayDisplay('削除する動画を選択してください', false, 2000);
+        updateOverlayDisplay('📚 削除する動画を選択してください', false, 2000);
         return;
     }
 
@@ -1628,7 +1636,7 @@ async function clearPlaylist() {
 // プレイリスト保存
 async function savePlaylist() {
     if (playlist.length === 0) {
-        updateOverlayDisplay('保存する動画がありません', false, 2000);
+        updateOverlayDisplay('📚 保存する動画がありません', false, 2000);
         return;
     }
 
@@ -1643,9 +1651,9 @@ async function savePlaylist() {
     });
 
     if (saveResult.success) {
-        updateOverlayDisplay(`💾: ${path.basename(result.filePath)}`);
+        updateOverlayDisplay(`📚 保存完了: ${path.basename(result.filePath)}`);
     } else {
-        updateOverlayDisplay('保存に失敗しました', false, 5000);
+        updateOverlayDisplay('📚 保存に失敗しました', false, 5000);
         console.error(saveResult.error);
     }
 }
@@ -1692,7 +1700,7 @@ async function cleanupTempFiles() {
 async function joinPlaylistVideos() {
     if (playlist.length < 2) {
         updateOverlayDisplay(
-            playlist.length === 0 ? '❌ プレイリストが空です' : '動画が1つだけなので結合不要です',
+            playlist.length === 0 ? '🎞️ プレイリストが空です' : '動画が1つだけなので結合不要です',
             false,
             3000
         );
@@ -1735,7 +1743,7 @@ async function joinPlaylistVideos() {
         }
     } catch (err) {
         console.error('結合エラー:', err);
-        updateOverlayDisplay(`❌ 結合失敗: ${err.message || '不明なエラー'}`, false, 5000);
+        updateOverlayDisplay(`🎞️ 結合失敗: ${err.message || '不明なエラー'}`, false, 5000);
     } finally {
         isJoinEditing = false;
         cutCancelBtn.style.display = 'none';
@@ -1751,7 +1759,7 @@ function setPlaybackRate(rate, showOverlay = true) {
     if (speedSelect) speedSelect.value = parseFloat(rate).toFixed(2);
     localStorage.setItem('playbackSpeed', rate);
     if (showOverlay) {
-        updateOverlayDisplay(`🏃‍♂️‍➡️再生速度: ${rate}x`, false, 1000);
+        updateOverlayDisplay(`🏃‍♂️‍➡️ 再生速度: ${rate}x`, false, 1000);
     }
 }
 
@@ -1767,7 +1775,7 @@ function changePlaybackRate(direction) { // direction: 1 増速, -1 減速
     if (newRate !== playbackRates[idx]) {
         setPlaybackRate(newRate);
     } else {
-        updateOverlayDisplay(`🏃‍♂️‍➡️再生速度: ${playbackRates[newIdx]}x`, false, 1000);
+        updateOverlayDisplay(`🏃‍♂️‍➡️ 再生速度: ${playbackRates[newIdx]}x`, false, 1000);
     }
 }
 
@@ -2144,11 +2152,14 @@ function updateRepeatButtonUI() {
 
 // ループモード切替関数
 function toggleRepeatMode() {
-    if (repeatMode === 'none') {
+if (repeatMode === 'none') {
+        updateOverlayDisplay('🔁 全動画の繰り返し再生を設定しました', false, 1500);
         repeatMode = 'all';
     } else if (repeatMode === 'all') {
+        updateOverlayDisplay('🔂 1動画の繰り返し再生を設定しました', false, 1500);
         repeatMode = 'single';
     } else {
+        updateOverlayDisplay('🔁 繰り返し再生を解除しました', false, 1500);
         repeatMode = 'none';
     }
 
@@ -2165,7 +2176,7 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
 
 // 変換進捗受信
 ipcRenderer.on('convert-progress', (event, { percent }) => {
-    updateOverlayDisplay(`変換中… ${Math.round(percent)}%`);
+    updateOverlayDisplay(`🔄️ 変換中… ${Math.round(percent)}%`);
     // シークバーに進捗を表示
     seekBar.value = percent;
 });
@@ -2198,7 +2209,7 @@ ipcRenderer.on('cut-progress', (event, payload) => {
                 const p = payload.percent !== undefined ? Math.round(payload.percent) : 0;
                 const fm = payload.frames !== undefined ? `${payload.frames}f` : '';
                 const tm = payload.timemark ? ` [${payload.timemark}]` : '';
-                updateOverlayDisplay(`✂️ カット実行中… ${p}% ${fm}${tm}` , true, 0);
+                updateOverlayDisplay(`✂️ カット中… ${p}% ${fm}${tm}` , true, 0);
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'done':
@@ -2208,13 +2219,13 @@ ipcRenderer.on('cut-progress', (event, payload) => {
                 break;
             case 'error':
                 isCutEditing = false;
-                updateOverlayDisplay(`❌ カット失敗: ${payload.message || 'エラー'}` , false, 3000);
+                updateOverlayDisplay(`✂️ カット失敗: ${payload.message || 'エラー'}` , false, 3000);
                 cutCancelBtn.style.display = 'none';
                 break;
             default:
                 // 旧スタイル or unknown
                 const percent = payload && payload.percent ? Math.round(payload.percent) : 0;
-                updateOverlayDisplay(`✂️ カット（削除）処理中… ${percent}%`, true, 0);
+                updateOverlayDisplay(`✂️ カット中… ${percent}%`, true, 0);
                 break;
         }
     } catch (e) {
@@ -2228,20 +2239,20 @@ ipcRenderer.on('join-progress', (event, payload) => {
         const stage = payload && payload.stage ? payload.stage : 'progress';
         switch (stage) {
             case 'join-prepare':
-                updateOverlayDisplay(`🎞️ 統一変換中… (${payload.currentFile}/${payload.totalFiles})`, true, 0);
+                updateOverlayDisplay(`🎞️ 変換中…`, true, 0);
                 break;
             case 'convert-pre':
                 const convPercent = Math.round(payload.percent);
-                updateOverlayDisplay(`🎞️ 変換中 ${payload.currentFile}/${payload.totalFiles}… ${convPercent}%`, true, 1000);
+                updateOverlayDisplay(`🎞️ 変換中 ${payload.currentFile}/${payload.totalFiles}… ${convPercent}%`, true, 0);
                 break;
             case 'join-start':
                 updateOverlayDisplay('🎞️ 結合開始…', true, 0);
                 break;
             case 'join':
-                updateOverlayDisplay(`🎞️ 結合中… ${Math.round(payload.percent)}%`, true, 1000);
+                updateOverlayDisplay(`🎞️ 結合中… ${Math.round(payload.percent)}%`, true, 0);
                 break;
             case 'join-done':
-                updateOverlayDisplay('🎞️ 結合完了！', false, 3000);
+                updateOverlayDisplay('🎞️ 結合完了！', false, 1500);
                 break;
         }
     } catch (e) {
@@ -2253,7 +2264,7 @@ ipcRenderer.on('join-progress', (event, payload) => {
 ipcRenderer.on('convert-error', (event, msg) => {
     console.error("変換失敗:", err);
     isConverting = false;
-    updateOverlayDisplay(`変換失敗`, false, 3000);
+    updateOverlayDisplay(`🔄️ 変換失敗`, false, 3000);
     filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
     updateIconOverlay();
 });
@@ -2279,19 +2290,75 @@ window.addEventListener('unload', async () => {
 	await cleanupTempFiles();
 });
 
-// キー入力（イベントリスナー）
+// ショートカットキー（イベントリスナー）
 document.addEventListener('keydown', async (event) => {
+    // ■ヘルプ■
     if (isHelpOpen) {
+        // ヘルプキャンセル（Escape）
         if (event.key === 'Escape') {
             event.preventDefault();
-            closeHelp();
-        } else {
-            event.preventDefault();
+            helpCloseBtn.click();
+            return;
         }
-        return;
     }
 
-    if (isCutEditing || isJoinEditing) {
+    // ■🌐ネット動画再生■
+    if (urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
+        // 🆑ネット動画Url入力クリア（Shift+C）
+        if (event.shiftKey && event.key.toLowerCase() === 'c') {
+            event.preventDefault();
+            urlClearBtn.click();
+            return;
+        }
+
+        // ✅ネット動画Url入力確定（Enter）
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            urlConfirmBtn.click();
+            return;
+        }
+    }
+
+    // ■カット編集■
+    if (editControls.style.display === 'flex') {
+        // 📍←INマーク設定（Shift+i）
+        if (event.shiftKey && event.key.toLowerCase() === 'i') {
+            event.preventDefault();
+            setInMarkBtn.click();
+            return;
+        }
+
+        // →📍OUTマーク設定（Shift+o）
+        if (event.shiftKey && event.key.toLowerCase() === 'o') {
+            event.preventDefault();
+            setOutMarkBtn.click();
+            return;
+        }
+
+        // ✅カット設定（Shift+m）
+        if (event.shiftKey && event.key.toLowerCase() === 'm') {
+            event.preventDefault();
+            addCutRangeBtn.click();
+            return;
+        }
+
+        // 💾カット編集保存（Shift+s）
+        if (event.shiftKey && event.key.toLowerCase() === 's') {
+            event.preventDefault();
+            saveVideoBtn.click();
+            return;
+        }
+
+        // 🆑カット編集クリア（Shift+c）
+        if (event.shiftKey && event.key.toLowerCase() === 'c') {
+            event.preventDefault();
+            clearEditBtn.click();
+            return;
+        }
+    }
+    // カット編集保存中はキャンセルのみ有効
+    if (isCutEditing ) {
+        // カット編集キャンセル（Escape）
         if (event.key === 'Escape') {
             event.preventDefault();
             cutCancelBtn.click();
@@ -2299,258 +2366,18 @@ document.addEventListener('keydown', async (event) => {
         }
     }
 
-
-    // 🔎ズームモード中のキー操作
-    if (isZoomMode) {
-        // ズームイン（Ctrl+↑）
-        if (event.ctrlKey && event.key === 'ArrowUp') {
-            event.preventDefault();
-            let newZoom = zoomValue + 1;
-            if (newZoom > 500) newZoom = 500;
-            zoomBar.value = newZoom.toString();
-            applyZoom(newZoom);
-            return;
-        }
-
-        // ズームアウト（Ctrl+↓）
-        if (event.ctrlKey && event.key === 'ArrowDown') {
-            event.preventDefault();
-            let newZoom = zoomValue - 1;
-            if (newZoom < -100) newZoom = -100;
-            zoomBar.value = newZoom.toString();
-            applyZoom(newZoom);
-            return;
-        }
-
-        // ズームリセット（Ctrl+0）
-        if (event.ctrlKey && event.key === '0') {
-            event.preventDefault();
-            zoomResetBtn.click();
-            return;
-        }
-
-        // スナップショット（Ctrl+s）
-        if (event.ctrlKey && event.key === 's') {
-            event.preventDefault();
-            snapshotBtn.click();
-            return;
-        }
-    }
-
-    if (urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            urlInputEnter();
-            return;
-        }
-     }
-
-    // 🌐Url入力状態
-    if (urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
-        // ✅Url入力確定（Enter）
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            urlInputEnter();
-            return;
-        }
-        
-        // ❌Url入力キャンセル（Escape）
+    // ■結合編集■
+    // 結合編集保存中はキャンセルのみ有効
+    if (isJoinEditing) {
+        // 結合編集キャンセル（Escape）
         if (event.key === 'Escape') {
             event.preventDefault();
-            urlInputCancel();
+            cutCancelBtn.click();
             return;
         }
-    }
-
-    // ❓ヘルプ開く（Ctrl+h）
-    if (event.ctrlKey && event.key === 'h') {
-        event.preventDefault();
-        openHelp();
-        return;
-    }
-
-    // 再生速度ショートカット（Ctrl+. 増速 / Ctrl+, 減速）
-    if (event.ctrlKey && !event.altKey && !event.metaKey) {
-        const active = document.activeElement;
-        if (!(active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable))) {
-            if (event.key === '.' || event.key === '>') {
-                event.preventDefault();
-                increasePlaybackRate();
-                return;
-            }
-            if (event.key === ',' || event.key === '<') {
-                event.preventDefault();
-                decreasePlaybackRate();
-                return;
-            }
-        }
-    }
-
-    // 🎬／🔄️ファイル選択（Ctrl+r）  ※ただしURL入力欄がフォーカスされている場合は貼り付けを許可
-    if (event.ctrlKey && event.key === 'v') {
-        // url入力中はCtrl+Vでモード切替しない（通常の貼り付け処理を許可）
-        if (urlInput && urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
-            return;
-        }
-        event.preventDefault();
-        modeChangeBtn.click();
-        return;
-    }
-
-    // 🌐ネット動画選択（Ctrl+n）
-    if (event.ctrlKey && event.key === 'n') {
-        event.preventDefault();
-        urlInputBtn.click();
-        return;
-    }
-
-    // 📁フォルダ選択（Ctrl+d）
-    if (event.ctrlKey && event.key === 'd') {
-        event.preventDefault();
-        folderInput.click();
-        return;
-    }
-
-    // 🗒️ファイル選択（Ctrl+f）
-    if (event.ctrlKey && event.key === 'f') {
-        event.preventDefault();
-        videoInput.click();
-        return;
-    }
-
-    // ✂️編集モード切替（Ctrl+e）
-    if (event.ctrlKey && event.key === 'e') {
-        event.preventDefault();
-        editModeBtn.click();
-        return;
-    }
-
-    // 🎞️結合編集（Ctrl+j）
-    if (event.ctrlKey && event.key === 'j') {
-        event.preventDefault();
-        joinPlaylistBtn.click();
-        return;
-    }
-
-    // ⏮️前の動画へ（PgUp）
-    if (event.key === 'PageUp' && playlist.length > 0) {
-        event.preventDefault();
-        prevVideoBtn.click();
-        return;
-    } 
-
-    // ⏪30秒戻る（Ctrl+←／Swipe Left）
-    if (event.ctrlKey && event.key === 'ArrowLeft') {
-        event.preventDefault();
-        rewindBtn.click();
-        return;
-    } 
-
-    // ▶️再生／⏸️一時停止（Space／Right Click）
-    if (!event.ctrlKey && event.key === ' ') {
-        event.preventDefault();
-        playPauseBtn.click();
-        return;
-    }
-
-    // ⏹️停止（Ctrl+Space／Ctrl+Right Clickk）
-    if (event.ctrlKey && event.key === ' ') {
-        event.preventDefault();
-        playStopBtn.click();
-        return;
-    } 
-
-    // ⏩30秒進む（Ctrl+→／Swipe Right）
-    if (event.ctrlKey && event.key === 'ArrowRight') {
-        event.preventDefault();
-        fastForwardBtn.click();
-        return;
-    } 
-
-    // ⏭️次の動画へ（PgDw）
-    if (event.key === 'PageDown' && playlist.length > 0) {
-        event.preventDefault();
-        nextVideoBtn.click();
-        return;
-    }
-
-    // ↔️横に合わせる／↕️縦に合わせる（Ctrl+x）
-    if (event.ctrlKey && event.key === 'x') {
-        event.preventDefault();
-        fitModeBtn.click();
-        return;
-    }
-
-    // 🔎ズームモード切替（Ctrl+z）
-    if (event.ctrlKey && event.key === 'z') {
-        event.preventDefault();
-        zoomBtn.click();
-        return;
-    }
-
-    // 🔊ミュート／🔇ミュート解除（Ctrl+m）
-    if (event.ctrlKey && event.key === 'm') {
-        event.preventDefault();
-        volumeMuteBtn.click();
-        return;
-    }
-
-    // 音量変更（↓／↑）- ズームモード外のみ
-    if (!isZoomMode && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
-        const delta = event.key === 'ArrowUp' ? 0.05 : -0.05;
-        videoPlayer.volume = Math.max(0, Math.min(1, videoPlayer.volume + delta));
-        volumeBar.value = videoPlayer.volume;
-        lastVolume = videoPlayer.volume;
-        volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
-        volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
-        updateVolumeDisplay();
-        updateOverlayDisplay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
-        localStorage.setItem('volume', videoPlayer.volume);
-        showControlsAndFilename();
-        updateIconOverlay();
-        return;
     }
     
-    // 5秒戻る／5秒進む（←／→）
-	if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-	    try { event.preventDefault(); } catch (e) {}
-	
-	    if (videoPlayer.duration) {
-	        // ★ ここですべてのフラグを先に定義 ★
-	        const editControlsExist = typeof editControls !== 'undefined' && editControls;
-	        const editVisible = editControlsExist && editControls.style.display !== 'none';
-	        const zoomModeActive = typeof isZoomMode !== 'undefined' && isZoomMode === true;
-	
-	        // フレーム単位シークが必要か？
-	        const needsFrameStep = isEditMode || editVisible || zoomModeActive;
-	
-	        const frameRate = (typeof editFrameRate === 'number' && editFrameRate > 0) ? editFrameRate : 30;
-	        const stepSeconds = needsFrameStep ? (1 / frameRate) : 5;
-	
-	        const delta = event.key === 'ArrowLeft' ? -stepSeconds : stepSeconds;
-	        let newTime = videoPlayer.currentTime + delta;
-	        newTime = Math.max(0, Math.min(videoPlayer.duration, newTime));
-
-            videoPlayer.currentTime = newTime;
-            seekBar.value = (100 / videoPlayer.duration) * newTime;
-
-            // 編集用シークバー同期（編集モードまたはズームモード時も含む）
-            if (needsFrameStep && typeof editSeekBar !== 'undefined' && editSeekBar) {
-                editSeekBar.value = (newTime / videoPlayer.duration) * 100;
-            }
-
-            updateTimeDisplay();
-        
-	        if (needsFrameStep) {
-	            const frameNum = Math.round(newTime * frameRate);
-	            updateOverlayDisplay(`🕓 ${formatTime(newTime)} (${frameNum}f)`);
-	        } else {
-	            updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
-	        }
-	    }
-	    return;
-	}
-
+    // ■プレイリスト編集
     if (filename.style.opacity === '1' && filenameMenus.style.display === 'flex') {
         // 📩プレイリスト並び替え 表示（shift+m）
         if (event.shiftKey && event.key.toLowerCase() === 'm') {
@@ -2614,10 +2441,73 @@ document.addEventListener('keydown', async (event) => {
         }
     }
 
-    // 🖥️フルスクリーン表示（Ctrl+a）
-    if (event.ctrlKey && event.key.toLowerCase() === 'a') {
+    // ■🔎ズーム・移動・ショット■
+    if (isZoomMode) {
+        // 🔄️ズームリセット（Ctrl+0）
+        if (event.ctrlKey && event.key === '0') {
+            event.preventDefault();
+            zoomResetBtn.click();
+            return;
+        }
+
+        // 📷スナップショット（Ctrl+s）
+        if (event.ctrlKey && event.key === 's') {
+            event.preventDefault();
+            snapshotBtn.click();
+            return;
+        }
+
+        // ズームイン（Ctrl+↑）
+        if (event.ctrlKey && event.key === 'ArrowUp') {
+            event.preventDefault();
+            let newZoom = zoomValue + 1;
+            if (newZoom > 500) newZoom = 500;
+            zoomBar.value = newZoom.toString();
+            applyZoom(newZoom);
+            return;
+        }
+
+        // ズームアウト（Ctrl+↓）
+        if (event.ctrlKey && event.key === 'ArrowDown') {
+            event.preventDefault();
+            let newZoom = zoomValue - 1;
+            if (newZoom < -100) newZoom = -100;
+            zoomBar.value = newZoom.toString();
+            applyZoom(newZoom);
+            return;
+        }
+
+        // ❌ズーム終了（Ctrl+z）
+        if (event.ctrlKey && event.key === 'z') {
+            event.preventDefault();
+            zoomEndBtn.click();
+            return;
+        }
+    }
+
+    // ■プレイリストパネル■
+    // 🎬／🔄️ファイル選択（Ctrl+r）  ※ただしURL入力欄がフォーカスされている場合は貼り付けを許可
+    if (event.ctrlKey && event.key === 'v') {
+        // url入力中はCtrl+Vでモード切替しない（通常の貼り付け処理を許可）
+        if (urlInput && urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
+            return;
+        }
         event.preventDefault();
-        fullscreenBtn.click();
+        modeChangeBtn.click();
+        return;
+    }
+
+    // ✂️編集モード切替（Ctrl+e）
+    if (event.ctrlKey && event.key === 'e') {
+        event.preventDefault();
+        editModeBtn.click();
+        return;
+    }
+
+    // 🎞️結合編集（Ctrl+j）
+    if (event.ctrlKey && event.key === 'j') {
+        event.preventDefault();
+        joinPlaylistBtn.click();
         return;
     }
 
@@ -2628,7 +2518,7 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
-    // 🔁繰り返し再生（Ctrl＋Shift＋r）
+    // 🔁・🔂繰り返し再生（Ctrl＋Shift＋r）
     if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'r') {
         event.preventDefault();
         repeatPlayBtn.click();
@@ -2642,6 +2532,29 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
+    // ■コントロールパネル■
+    // 🌐ネット動画選択（Ctrl+n）
+    if (event.ctrlKey && event.key === 'n') {
+        event.preventDefault();
+        urlInputBtn.click();
+        return;
+    }
+
+    // 📁フォルダ選択（Ctrl+d）
+    if (event.ctrlKey && event.key === 'd') {
+        event.preventDefault();
+        folderInput.click();
+        return;
+    }
+
+    // 🗒️ファイル選択（Ctrl+f）
+    if (event.ctrlKey && event.key === 'f') {
+        event.preventDefault();
+        videoInput.click();
+        return;
+    }
+
+
     // 先頭動画再生（Home）
     if (event.key === 'Home') {
         if (playlist.length > 1) {
@@ -2654,6 +2567,48 @@ document.addEventListener('keydown', async (event) => {
             updateIconOverlay();
             return;
         }
+    }
+
+    // ⏮️前の動画へ（PgUp）
+    if (event.key === 'PageUp' && playlist.length > 0) {
+        event.preventDefault();
+        prevVideoBtn.click();
+        return;
+    } 
+
+    // ⏪30秒戻る（Ctrl+←／Swipe Left）
+    if (event.ctrlKey && event.key === 'ArrowLeft') {
+        event.preventDefault();
+        rewindBtn.click();
+        return;
+    } 
+
+    // ⏹️停止（Ctrl+Space／Ctrl+Right Clickk）
+    if (event.ctrlKey && event.key === ' ') {
+        event.preventDefault();
+        playStopBtn.click();
+        return;
+    } 
+
+    // ▶️再生／⏸️一時停止（Space／Right Click）
+    if (!event.ctrlKey && event.key === ' ') {
+        event.preventDefault();
+        playPauseBtn.click();
+        return;
+    }
+
+    // ⏩30秒進む（Ctrl+→／Swipe Right）
+    if (event.ctrlKey && event.key === 'ArrowRight') {
+        event.preventDefault();
+        fastForwardBtn.click();
+        return;
+    } 
+
+    // ⏭️次の動画へ（PgDw）
+    if (event.key === 'PageDown' && playlist.length > 0) {
+        event.preventDefault();
+        nextVideoBtn.click();
+        return;
     }
     
     // 最終動画再生（End）
@@ -2670,6 +2625,115 @@ document.addEventListener('keydown', async (event) => {
         }
     }
 
+    // ↔️横に合わせる／↕️縦に合わせる（Ctrl+x）
+    if (event.ctrlKey && event.key === 'x') {
+        event.preventDefault();
+        fitModeBtn.click();
+        return;
+    }
+
+    // 🔎ズームモード切替（Ctrl+z）
+    if (event.ctrlKey && event.key === 'z') {
+        event.preventDefault();
+        zoomBtn.click();
+        return;
+    }
+
+    // 🖥️フルスクリーン表示（Ctrl+a）
+    if (event.ctrlKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        fullscreenBtn.click();
+        return;
+    }
+
+    // ❓ヘルプ開く（Ctrl+h）
+    if (event.ctrlKey && event.key === 'h') {
+        event.preventDefault();
+        openHelp();
+        return;
+    }
+
+    // 🔊ミュート／🔇ミュート解除（Ctrl+m）
+    if (event.ctrlKey && event.key === 'm') {
+        event.preventDefault();
+        volumeMuteBtn.click();
+        return;
+    }
+
+    // 音量変更（↓／↑）- ズームモード外のみ
+    if (!isZoomMode && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+        const delta = event.key === 'ArrowUp' ? 0.05 : -0.05;
+        videoPlayer.volume = Math.max(0, Math.min(1, videoPlayer.volume + delta));
+        volumeBar.value = videoPlayer.volume;
+        lastVolume = videoPlayer.volume;
+        volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
+        volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
+        updateVolumeDisplay();
+        updateOverlayDisplay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+        localStorage.setItem('volume', videoPlayer.volume);
+        showControlsAndFilename();
+        updateIconOverlay();
+        return;
+    }
+    
+    // 再生速度ショートカット（Ctrl+. 増速 / Ctrl+, 減速）
+    if (event.ctrlKey && !event.altKey && !event.metaKey) {
+        const active = document.activeElement;
+        if (!(active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable))) {
+            if (event.key === '.' || event.key === '>') {
+                event.preventDefault();
+                increasePlaybackRate();
+                return;
+            }
+            if (event.key === ',' || event.key === '<') {
+                event.preventDefault();
+                decreasePlaybackRate();
+                return;
+            }
+        }
+    }
+
+    // 5秒戻る／5秒進む（←／→）
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        try { event.preventDefault(); } catch (e) {}
+    
+        if (videoPlayer.duration) {
+            // ★ ここですべてのフラグを先に定義 ★
+            const editControlsExist = typeof editControls !== 'undefined' && editControls;
+            const editVisible = editControlsExist && editControls.style.display !== 'none';
+            const zoomModeActive = typeof isZoomMode !== 'undefined' && isZoomMode === true;
+    
+            // フレーム単位シークが必要か？
+            const needsFrameStep = isEditMode || editVisible || zoomModeActive;
+    
+            const frameRate = (typeof editFrameRate === 'number' && editFrameRate > 0) ? editFrameRate : 30;
+            const stepSeconds = needsFrameStep ? (1 / frameRate) : 5;
+    
+            const delta = event.key === 'ArrowLeft' ? -stepSeconds : stepSeconds;
+            let newTime = videoPlayer.currentTime + delta;
+            newTime = Math.max(0, Math.min(videoPlayer.duration, newTime));
+
+            videoPlayer.currentTime = newTime;
+            seekBar.value = (100 / videoPlayer.duration) * newTime;
+
+            // 編集用シークバー同期（編集モードまたはズームモード時も含む）
+            if (needsFrameStep && typeof editSeekBar !== 'undefined' && editSeekBar) {
+                editSeekBar.value = (newTime / videoPlayer.duration) * 100;
+            }
+
+            updateTimeDisplay();
+        
+            if (needsFrameStep) {
+                const frameNum = Math.round(newTime * frameRate);
+                updateOverlayDisplay(`🕓 ${formatTime(newTime)} (${frameNum}f)`);
+            } else {
+                updateOverlayDisplay(`🕓 ${formatTime(newTime)}`);
+            }
+        }
+        return;
+    }
+
+    // ■その他■
     // プレイリスト・コントロール表示／非表示（Ctrl+c／Click）
     if (event.ctrlKey && event.key === 'c') {
         event.preventDefault();
@@ -2738,7 +2802,7 @@ folderInput.addEventListener('click', async () => {
         const videoFiles = await ipcRenderer.invoke('open-folder-dialog');
         playlistSet(videoFiles);
     } catch (e) {
-        updateOverlayDisplay('フォルダ選択エラー');
+        updateOverlayDisplay('📁 フォルダ選択エラー');
         console.error('フォルダ選択エラー:', e);
         updateIconOverlay();
     }
@@ -2751,7 +2815,7 @@ videoInput.addEventListener('click', async () => {
         const videoFiles = await ipcRenderer.invoke('open-video-dialog');
         playlistSet(videoFiles);
     } catch (e) {
-        updateOverlayDisplay('ファイル選択エラー');
+        updateOverlayDisplay('🗒️ ファイル選択エラー');
         console.error('ファイル選択エラー:', e);
         updateIconOverlay();
     }
@@ -2765,9 +2829,11 @@ modeChangeBtn.addEventListener('click', () => {
             modeChangeBtn.classList.remove('convert-active');
             // 視聴モードに戻す時、シークバーの色をリセット
             seekBar.classList.remove('converting');
+            updateOverlayDisplay('🎬 再生モードを設定しました', false, 1500);
         } else {
             modeChange = 'convert';
             modeChangeBtn.classList.add('convert-active');
+            updateOverlayDisplay('🔄️ 変換モードを設定しました', false, 1500);
         }
         modeChangeBtn.textContent = modeChange === 'video' ? '🎬' : '🔄️';
         modeChangeBtn.setAttribute('data-tooltip', modeChange === 'video' ? '視聴モード（Ctrl+v）' : '変換モード（Ctrl+v）');
@@ -3142,20 +3208,20 @@ videoPlayer.addEventListener('error', (e) => {
         updateIconOverlay();
 
         // エラー内容に応じてメッセージを細かく分ける（任意）
-        let errorMsg = '再生エラー: ファイルが破損している可能性があります';
+        let errorMsg = '▶️ 再生エラー: ファイルが破損している可能性があります';
         if (videoPlayer.error) {
             switch (videoPlayer.error.code) {
-                case 1: errorMsg = '再生がユーザーにより中止されました'; break;
-                case 2: errorMsg = 'ネットワークエラーで読み込めません'; break;
-                case 3: errorMsg = '動画のデコードに失敗しました（破損／コーデック非対応）'; break;
-                case 4: errorMsg = 'このファイル形式は再生できません'; break;
+                case 1: errorMsg = '▶️ 再生がユーザーにより中止されました'; break;
+                case 2: errorMsg = '▶️ ネットワークエラーで読み込めません'; break;
+                case 3: errorMsg = '▶️ 動画のデコードに失敗しました（破損／コーデック非対応）'; break;
+                case 4: errorMsg = '▶️ このファイル形式は再生できません'; break;
             }
         }
         updateOverlayDisplay(errorMsg, true, 3000);
     } else {
         // HTML5 でサポートされていない拡張子の場合も明確に伝える
         console.warn(`拡張子 ${ext} は HTML5 でサポートされていません`);
-        updateOverlayDisplay(`再生エラー: ${ext} 形式は対応していません`, false, 3000);
+        updateOverlayDisplay(`▶️ 再生エラー: ${ext} 形式は対応していません`, false, 3000);
     }
 });
 
@@ -3617,7 +3683,7 @@ speedSelect.addEventListener('change', (e) => {
         currentPlaybackRate = rate;               // ← ここを追加
         videoPlayer.playbackRate = rate;
         localStorage.setItem('playbackSpeed', rate);
-        updateOverlayDisplay(`🏃‍♂️‍➡️再生速度: ${rate}x`, false, 1000);
+        updateOverlayDisplay(`🏃‍♂️‍➡️ 再生速度: ${rate}x`, false, 1000);
     }
 });
 
@@ -3796,7 +3862,7 @@ dropzone.addEventListener('drop', async (e) => {
 // 編集モード切替
 editModeBtn.addEventListener('click', () => {
     if (!videoPlayer.src) {
-        updateOverlayDisplay('❌ 動画が読み込まれていません');
+        updateOverlayDisplay('✂️ プレイリストが空です');
         return;
     }
     
@@ -3905,7 +3971,7 @@ clearEditBtn.addEventListener('click', () => {
 // カット範囲追加
 addCutRangeBtn.addEventListener('click', () => {
     if (editInMark < 0 || editOutMark < 0) {
-        updateOverlayDisplay('❌ INマークとOUTマークを両方設定してください');
+        updateOverlayDisplay('✂️ INマークとOUTマークを両方設定してください');
         return;
     }
     let a = editInMark;
@@ -3927,11 +3993,11 @@ addCutRangeBtn.addEventListener('click', () => {
 // 動画保存（設定した複数範囲を削除して保存）
 saveVideoBtn.addEventListener('click', async () => {
     if (!videoPlayer.src) {
-        updateOverlayDisplay('❌ 動画が読み込まれていません');
+        updateOverlayDisplay('✂️ 動画が読み込まれていません');
         return;
     }
     if (!cutRanges || cutRanges.length === 0) {
-        updateOverlayDisplay('❌ 保存するためのカット範囲が設定されていません');
+        updateOverlayDisplay('✂️ 保存するためのカット範囲が設定されていません');
         return;
     }
 
@@ -3951,7 +4017,7 @@ saveVideoBtn.addEventListener('click', async () => {
         }
 
         isCutEditing = true;
-        updateOverlayDisplay('✂️ カット（削除）処理中… 0%', true, 0);
+        updateOverlayDisplay('✂️ カット中… 0%', true, 0);
 
         // フレーム単位へ丸めたレンジを作成して main.js に送る
         const alignedRanges = (cutRanges || []).map(r => {
@@ -3994,7 +4060,7 @@ saveVideoBtn.addEventListener('click', async () => {
         }
     } catch (err) {
         console.error('カット（複数）処理エラー:', err);
-        updateOverlayDisplay(`❌ カット失敗: ${err.message}`, false, 3000);
+        updateOverlayDisplay(`✂️ カット失敗: ${err.message}`, false, 3000);
     } finally {
         isCutEditing = false;
         cutCancelBtn.style.display = 'none';
