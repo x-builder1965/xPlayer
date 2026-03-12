@@ -607,6 +607,7 @@ function hideControlsAndFilename() {
     setTimeout(() => {
         overlayDisplay.style.display = 'none';
     }, 300);
+    videoPlayer.style.cursor = 'none';
     updateIconOverlay();
 }
 
@@ -2172,7 +2173,7 @@ function resetCursorTimer() {
         clearTimeout(hideMouseTimeout);
     }
     hideMouseTimeout = setTimeout(() => {
-        videoPlayer.style.cursor = 'none';
+       videoPlayer.style.cursor = 'none';
     }, overlayTimeout);
 }
 
@@ -2190,7 +2191,7 @@ ipcRenderer.on('convert-progress', (event, { percent }) => {
     seekBar.value = percent;
 });
 
-// カット進捗受信（詳細ペイロード対応）
+// カット進捗受信（ 詳細ペイロード対応）
 ipcRenderer.on('cut-progress', (event, payload) => {
     try {
         const stage = payload && payload.stage ? payload.stage : 'progress';
