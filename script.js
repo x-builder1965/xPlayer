@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.56';
+const appName = 'xPlayer -動画プレイヤー- Ver3.57';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -61,6 +61,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.56';
 // 2026-03-12 Ver3.54 ショートカット・オーバーレイメッセージの見直し。
 // 2026-03-12 Ver3.55 結合編集のfps設定を改善。
 // 2026-03-12 Ver3.56 マウス自動非表示機能追加。
+// 2026-03-13 Ver3.57 ✂️・📚・🌐・🔍・🖥️ボタンのトグル表現を変更。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -858,13 +859,13 @@ function updatePlaylistDisplay() {
 // urlInputBtn の表示状態を更新するヘルパー関数
 function updateUrlButtonIcon() {
     if (isUrlControlsVisible) {
-        urlInputBtn.textContent = '❌';
+        urlInputBtn.textContent = '🌐';
+        urlInputBtn.classList.add('mode-active');
         urlInputBtn.setAttribute('data-tooltip', 'URL入力キャンセル');
-        urlInputBtn.classList.add('active');     // 必要ならCSSで赤くするなど
     } else {
         urlInputBtn.textContent = '🌐';
+        urlInputBtn.classList.remove('mode-active');
         urlInputBtn.setAttribute('data-tooltip', 'ネット動画を開く (Ctrl+n)');
-        urlInputBtn.classList.remove('active');
     }
 }
 
@@ -1075,6 +1076,7 @@ async function toggleUrlControls(show = null) {
         showControlsAndFilename();
         updateIconOverlay();
     }
+    updateUrlButtonIcon();   // ← ここで色も更新
 }
 
 // 動画再生
@@ -1500,9 +1502,9 @@ function downMovePlaylist() {
 // editModeBtn のテキストをトグルするヘルパー関数
 function updateEditModeButtonUI() {
     if (isEditMode) {
-        editModeBtn.textContent = '❌';
-        editModeBtn.setAttribute('data-tooltip', '編集モード終了（Ctrl+e）');
-        editModeBtn.classList.add('active');
+        editModeBtn.textContent = '✂️';
+        editModeBtn.classList.add('mode-active');
+        editModeBtn.setAttribute('data-tooltip', 'カット編集終了（Ctrl+e）');
 
         if (videoPlayer.play) {
             videoPlayer.pause();
@@ -1514,8 +1516,8 @@ function updateEditModeButtonUI() {
         editSeekBar.value = seekBar.value;
     } else {
         editModeBtn.textContent = '✂️';
-        editModeBtn.setAttribute('data-tooltip', '編集モード開始（Ctrl+e）');
-        editModeBtn.classList.remove('active');
+        editModeBtn.classList.remove('mode-active');
+        editModeBtn.setAttribute('data-tooltip', 'カット編集開始（Ctrl+e）');
     }
 }
 
@@ -2793,9 +2795,11 @@ document.addEventListener('mouseup', (e) => {
 document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement) {
         fullscreenBtn.textContent = '🖥️';
+        fullscreenBtn.classList.remove('mode-active');
         fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン表示（Ctrl+a／Double Click）');
     } else {
-        fullscreenBtn.textContent = '❌';
+        fullscreenBtn.textContent = '🖥️';
+        fullscreenBtn.classList.add('mode-active');
         fullscreenBtn.setAttribute('data-tooltip', 'フルスクリーン解除（Ctrl+a／Double Click）');
     }
     updateIconOverlay();
@@ -3037,13 +3041,14 @@ zoomBtn.addEventListener('click', () => {
     isZoomMode = !isZoomMode;
     if (isZoomMode) {
         zoomPanel.style.display = 'flex';
-        zoomBtn.textContent = '❌';
+        zoomBtn.textContent = '🔍';
+        zoomBtn.classList.add('mode-active');
         zoomBtn.setAttribute('data-tooltip', 'ズームモード終了（Ctrl+z）');
-        showControlsAndFilename();
-        updateIconOverlay();
     } else {
-        zoomEndBtn.click(); // ズーム値リセットして終了
+        zoomEndBtn.click(); // リセット＆終了
     }
+    showControlsAndFilename();
+    updateIconOverlay();
 });
 
 // ランダム再生ボタンクリック
@@ -3098,6 +3103,7 @@ zoomEndBtn.addEventListener('click', () => {
     isZoomMode = false;
     zoomPanel.style.display = 'none';
     zoomBtn.textContent = '🔍';
+    zoomBtn.classList.remove('mode-active');
     zoomBtn.setAttribute('data-tooltip', 'ズームモード開始（Ctrl+z）');
 });
 
@@ -3853,11 +3859,13 @@ savePlaylistBtn.addEventListener('click', () => {
 filenameMenu.addEventListener('click', () => {
     if (filenameMenus.style.display === 'none') {
         filenameMenus.style.display = 'flex';
-        filenameMenu.textContent = '❌';           // 表示中 → 緑信号
+        filenameMenu.textContent = '📚';
+        filenameMenu.classList.add('mode-active');
         filenameMenu.setAttribute('data-tooltip', '編集メニューを閉じる (Ctrl+l)');
     } else {
         filenameMenus.style.display = 'none';
-        filenameMenu.textContent = '📚';           // 非表示 → 禁止マーク
+        filenameMenu.textContent = '📚';
+        filenameMenu.classList.remove('mode-active');
         filenameMenu.setAttribute('data-tooltip', '編集メニューを開く (Ctrl+l)');
     }
 });
