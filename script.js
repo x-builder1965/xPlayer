@@ -60,6 +60,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.55';
 // 2026-03-11 Ver3.53 １動画繰り返し再生（🔂）（Ctrl+Shift+r）機能追加。
 // 2026-03-12 Ver3.54 ショートカット・オーバーレイメッセージの見直し。
 // 2026-03-12 Ver3.55 結合編集のfps設定を改善。
+// 2026-03-12 Ver3.56 マウス自動非表示機能追加。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -225,6 +226,7 @@ let isMouseOverEditSeekBar = false;
 let currentSortMode = localStorage.getItem('playlistSortMode') || 'none';   // localStorage に保存された値があればそれを使う、なければ 'none'（読み込み順）
 let originalLoadOrder = [];  // プレイリストの「最初に読み込まれた順」を保持
 let repeatMode = 'none';  // 'none' | 'all' | 'single'
+let hideMouseTimeout = null;
 
 // 🔲初期処理🔲
 // 初期表示設定
@@ -2163,6 +2165,17 @@ if (repeatMode === 'none') {
     updateRepeatButtonUI();
 }
 
+// マウス表示／非表示
+function resetCursorTimer() {
+    videoPlayer.style.cursor = 'auto';  // または 'default'
+    if (hideMouseTimeout) {
+        clearTimeout(hideMouseTimeout);
+    }
+    hideMouseTimeout = setTimeout(() => {
+        videoPlayer.style.cursor = 'none';
+    }, overlayTimeout);
+}
+
 // 🔲レンダラーイベント🔲
 // main.js からの自動再生指示を受信
 ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
@@ -2761,7 +2774,7 @@ document.addEventListener('mouseup', (e) => {
     if (isPanning) {
         // ドキュメントレベルでのマウスアップ時にもパン終了処理
         isPanning = false;
-        videoPlayer.style.cursor = 'auto';
+        resetCursorTimer();
         showControlsAndFilename();
         updateIconOverlay();
     }
@@ -3326,6 +3339,7 @@ videoPlayer.addEventListener('mousemove', (event) => {
         videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
         localStorage.setItem('translateX', translateX.toString());
         localStorage.setItem('translateY', translateY.toString());
+
         updateIconOverlay();
         showControlsAndFilename();
         return;
@@ -3365,6 +3379,8 @@ videoPlayer.addEventListener('mousemove', (event) => {
         dragStartX = event.clientX;
         dragStartY = event.clientY;
         updateIconOverlay();
+    } else {
+        resetCursorTimer();
     }
 });
 
@@ -3378,8 +3394,8 @@ videoPlayer.addEventListener('mouseup', (e) => {
         isDragging = false;
         isVolumeDragging = false;
         isPanning = false;
-        videoPlayer.style.cursor = 'auto';
         darkOverlay.style.display = 'none';
+        resetCursorTimer();
 
         if (wasDragging || wasVolumeDragging || wasPanning) {
             showControlsAndFilename();
@@ -3724,12 +3740,6 @@ filename.addEventListener('mouseleave', () => {
         showControlsAndFilename();
         updateIconOverlay();
     }
-});
-
-// 動画マウス移動
-videoContainer.addEventListener('mousemove', () => {
-    videoContainer.style.cursor = 'auto';
-    updateIconOverlay();
 });
 
 // ツールチップイベント設定
