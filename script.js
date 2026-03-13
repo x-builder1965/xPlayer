@@ -3378,8 +3378,7 @@ videoPlayer.addEventListener('mouseup', (e) => {
         darkOverlay.style.display = 'none';
         resetCursorTimer();
 
-        if ((wasDragging || wasVolumeDragging) && !isZoomMode) {
-            showControlsAndFilename();
+        if (wasDragging || wasVolumeDragging) {
             updateIconOverlay();
         }
     }
@@ -3402,9 +3401,7 @@ videoPlayer.addEventListener('click', (e) => {
             if (isVisible) {
                 hideControlsAndFilename();
             } else {
-                if (!isZoomMode) {
-                    showControlsAndFilename();
-                }
+                showControlsAndFilename();
             }
         }
         e.stopPropagation();
