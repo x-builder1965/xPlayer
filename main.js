@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.55';
+const appName = 'xPlayer -動画プレイヤー- Ver3.62';
 // ---------------------------------------------------------------------
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
@@ -10,6 +10,12 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
 const os = require('os');
 const { spawn } = require('child_process');
+
+// 必要に応じて（開発時のみ推奨）
+if (process.env.NODE_ENV === 'development') {
+    app.commandLine.appendSwitch('disable-web-security');
+    // または BrowserWindow で webSecurity: false を使用
+}
 
 // 🔧 キャッシュ対策（起動前に設定）
 // - 書き込み可能なキャッシュディレクトリを事前に作成
@@ -72,7 +78,7 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            webSecurity: true,
+            webSecurity: false,           // ← 追加（または削除して app.commandLine に任せる）
             additionalArguments: [
                 '--disable-web-security=false',  // 開発中だけ false
                 '--content-security-policy="default-src \'self\'; script-src \'self\'; object-src \'none\';"'  // eval 禁止
