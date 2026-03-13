@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.61';
+const appName = 'xPlayer -動画プレイヤー- Ver3.62';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -66,6 +66,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.61';
 // 2026-03-13 Ver3.59 ソースコードの誤り、不要、矛盾の調査・修正。
 // 2026-03-13 Ver3.60 FullscrrenのON／OFFで背景色を統一。
 // 2026-03-13 Ver3.61 ホイール（ズーム量）時のコントロールパネル・プレイリストパネル表示抑止。
+// 2026-03-14 Ver3.62 処理の問題点・脆弱性対応。
 // ---------------------------------------------------------------------
 // 2026-03-13 Ver3.xx 🔠字幕トラックの選択機能追加。（未実装）
 // 　・再生対象動画の字幕トラックを取得。
@@ -238,6 +239,7 @@ let currentSortMode = localStorage.getItem('playlistSortMode') || 'none';   // l
 let originalLoadOrder = [];  // プレイリストの「最初に読み込まれた順」を保持
 let repeatMode = 'none';  // 'none' | 'all' | 'single'
 let hideMouseTimeout = null;
+let currentBlobUrl = null;  // ← これを追加（null 初期化）
 
 // 🔲初期処理🔲
 // 初期表示設定
@@ -1229,9 +1231,12 @@ async function setVideoSrc(file) {
 
     if (isHTML5_SUPPORTED(ext)) {
         isConverting = false;
-        // HTML5 ネイティブ対応
-        videoPlayer.src = file.path;
-        videoPreview.src = videoPlayer.src;
+        // ★ 修正：直接 file.path を src に設定（Electronでは file:// プロトコルでOK）
+        const fileUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`; // キャッシュ回避用タイムスタンプ（任意）
+        videoPlayer.src = fileUrl;
+        videoPreview.src = fileUrl;
+        // Blob URL を使わないのでクリーンアップ不要
+        currentBlobUrl = null;
         baseConvertFile = null;
         tempConvertFile = null;
     } else {
@@ -3119,12 +3124,21 @@ videoPlayer.addEventListener('loadedmetadata', () => {
             }
         }
         const revoke = () => {
-            URL.revokeObjectURL(blobUrl);
-            videoPlayer.removeEventListener('ended', revoke);
-            videoPlayer.removeEventListener('error', revoke);
+            if (currentBlobUrl) {
+                URL.revokeObjectURL(currentBlobUrl);
+                currentBlobUrl = null;          // ← 解放後に null クリア（再利用防止）
+                console.log('Blob URL revoked');
+            }
         };
-        videoPlayer.addEventListener('ended', revoke);
-        videoPlayer.addEventListener('error', revoke);
+        // once: true で1回きりのリスナーにする → 重複蓄積しない
+        videoPlayer.addEventListener('ended', revoke, { once: true });
+        videoPlayer.addEventListener('error', revoke, { once: true });
+
+        // 念のため：新しい動画読み込み前に古いBlobがあれば即解放
+        if (currentBlobUrl) {
+            URL.revokeObjectURL(currentBlobUrl);
+            currentBlobUrl = null;
+        }
         
         isConverting = false;
     }
