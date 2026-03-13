@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.60';
+const appName = 'xPlayer -動画プレイヤー- Ver3.61';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -65,6 +65,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.60';
 // 2026-03-13 Ver3.58 アイコンオーバーレイのサイズ調整。
 // 2026-03-13 Ver3.59 ソースコードの誤り、不要、矛盾の調査・修正。
 // 2026-03-13 Ver3.60 FullscrrenのON／OFFで背景色を統一。
+// 2026-03-13 Ver3.61 オーバーレイ表示（ズーム量）時コントロールパネル・プレイリストパネル表示抑止。
 // ---------------------------------------------------------------------
 // 2026-03-13 Ver3.xx 🔠字幕トラックの選択機能追加。（未実装）
 // 　・再生対象動画の字幕トラックを取得。
@@ -708,7 +709,7 @@ function updateOverlayDisplay(content, isInitial = false, autoHideAfter = 3000) 
     overlayDisplay.style.width = `${overlayWidth}px`;
     overlayDisplay.style.display = 'block';
     overlayDisplay.classList.add('active');
-    if (!isInitial) {
+    if (!isInitial && !isZoomMode) {
         showControlsAndFilename();
     }
     updateIconOverlay();
