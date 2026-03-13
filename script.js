@@ -2746,7 +2746,6 @@ document.addEventListener('mouseup', (e) => {
         // ドキュメントレベルでのマウスアップ時にもパン終了処理
         isPanning = false;
         resetCursorTimer();
-        showControlsAndFilename();
         updateIconOverlay();
     }
 });
@@ -3324,7 +3323,6 @@ videoPlayer.addEventListener('mousemove', (event) => {
         localStorage.setItem('translateY', translateY.toString());
 
         updateIconOverlay();
-        showControlsAndFilename();
         return;
     }
 
@@ -3380,7 +3378,7 @@ videoPlayer.addEventListener('mouseup', (e) => {
         darkOverlay.style.display = 'none';
         resetCursorTimer();
 
-        if (wasDragging || wasVolumeDragging || wasPanning) {
+        if ((wasDragging || wasVolumeDragging) && !isZoomMode) {
             showControlsAndFilename();
             updateIconOverlay();
         }
@@ -3404,7 +3402,9 @@ videoPlayer.addEventListener('click', (e) => {
             if (isVisible) {
                 hideControlsAndFilename();
             } else {
-                showControlsAndFilename();
+                if (!isZoomMode) {
+                    showControlsAndFilename();
+                }
             }
         }
         e.stopPropagation();

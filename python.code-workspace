@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "H:/Workspace/（試作中）/python"
+		},
+		{
+			"path": "H:/Workspace/（試作中）/Excel"
+		},
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"editor.fontSize": 22,
+		"debug.console.fontSize": 20,
+		"chat.editor.fontSize": 20,
+		"chat.fontSize": 20
+	}
+}
