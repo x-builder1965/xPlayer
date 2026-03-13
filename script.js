@@ -3437,7 +3437,6 @@ videoPlayer.addEventListener('wheel', (event) => {
 
         // フィードバック表示（任意だがおすすめ）
         updateOverlayDisplay(`🔍 ${newZoom > 0 ? '+' : ''}${newZoom}%`);
-        showControlsAndFilename();
 
         return;  // ここで終了 → 音量調整には行かない
     }
