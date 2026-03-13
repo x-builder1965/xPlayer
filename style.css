@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.57'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.58'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -344,13 +344,15 @@ button#modeChangeBtn.convert-active:hover {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 50vw;
-    height: 50vw;
+    width:  min(90vw, 90vh);     /* 横幅90% または 縦幅90% の小さい方 */
+    height: min(90vw, 90vh);     /* 正方形ベースで縦横比を一旦固定 */
+    max-width:  90vw;
+    max-height: 90vh;
     background-image: url('xPlayer.gif');
-    background-size: contain;
+    background-size: contain;       /* 縦横比維持・はみ出さない */
     background-repeat: no-repeat;
     background-position: center;
-    z-index: 1;
+    z-index: 10;                    /* 少し上げておくのが無難 */
     display: none;
     opacity: 1;
     pointer-events: none;
