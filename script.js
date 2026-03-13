@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.58';
+const appName = 'xPlayer -動画プレイヤー- Ver3.59';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -63,35 +63,40 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.58';
 // 2026-03-12 Ver3.56 マウス自動非表示機能追加。
 // 2026-03-13 Ver3.57 ✂️・📚・🌐・🔍・🖥️ボタンのトグル表現を変更。
 // 2026-03-13 Ver3.58 アイコンオーバーレイのサイズ調整。
+// 2026-03-13 Ver3.59 ソースコードの誤り、不要、矛盾の調査・修正。
+// ---------------------------------------------------------------------
+// 2026-03-13 Ver3.xx 🔠字幕トラックの選択機能追加。（未実装）
+// 　・再生対象動画の字幕トラックを取得。
+// 　・取得した字幕トラックはポップアップメニューで🔠クリック時に表示。
+// 　・🔠のメニューにの先頭に「（なし）」を追加し字幕なし再生を可能にする。
+// 　・動画再生中、選択された字幕トラックに即座を適応再生しメニューに✅を付ける。
+//   ※現時点では🎤音声トラックは断念。（Electronでの実装は困難）
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
 // Electronモジュールインポート
 const { ipcRenderer, fs, os, path, exec, getFilePath, classifyPath } = window.electronAPI;
 
-// 表示設定
+// 固定値設定
 const overlayTimeout = 3000;
 const seekSensitivity = 0.3;
 const volumeStep = 0.005;
 const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
-const HTML5_SUPPORTED_CONVERT = ['.mp4'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
-const homeDir = os.homedir();
-const localAppData = `${homeDir}\\AppData\\Local`;
+const HTML5_SUPPORTED_CONVERT = ['.mp4'];  // 動画変換対象外拡張子
 const chromePaths = [
-    `${localAppData}\\Google\\Chrome\\Application\\chrome.exe`,
+    `${os.homedir()}\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe`,
     `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`,
     `C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe`
 ];
-// 並び替えメニューの定義
 const SORT_MODES = {
     none:       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
     path_asc:   { label: '動画パス▲',   fn: () => [...playlist].sort((a, b) => a.file.path.localeCompare(b.file.path)) },
     path_desc:  { label: '動画パス▼',   fn: () => [...playlist].sort((a, b) => b.file.path.localeCompare(a.file.path)) },
     ctime_asc:  { label: '作成日時▲',   fn: async () => await sortByCreationTime(true) },
     ctime_desc: { label: '作成日時▼',   fn: async () => await sortByCreationTime(false)},
-    random:     { label: '（ランダム）',fn: sortRandomPlaylist }
+    random:     { label: '（ランダム）', fn: () => sortRandomPlaylist() }
 };
 
 // DOM要素取得
@@ -164,6 +169,8 @@ const cutCancelBtn = document.getElementById('cutCancelBtn');
 const randomPlayBtn = document.getElementById('randomPlayBtn');
 const repeatPlayBtn  = document.getElementById('repeatPlayBtn');
 const joinPlaylistBtn = document.getElementById('joinPlaylistBtn');
+const sortPlaylistBtn = document.getElementById('sortPlaylistBtn');
+const darkOverlay = document.getElementById('darkOverlay');
 
 // localStorage から復得
 const savedVolume = localStorage.getItem('volume');
@@ -183,7 +190,7 @@ const savedShufflePosition = localStorage.getItem('shufflePosition');
 const cutTimelineContainer = document.getElementById('cutTimelineContainer');
 const cutTimelineBar = document.getElementById('cutTimelineBar');
 
-// 状態変数初期化
+// グローバル（共通）変数
 let playlist = [];
 let currentVideoIndex = 0;
 let timeout;
@@ -280,6 +287,7 @@ if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) 
     volumeMuteBtn.setAttribute('data-tooltip', 'ミュート（Ctrl+m）');
     updateVolumeDisplay();
 }
+
 // 再生速度復元
 if (savedPlaybackSpeed && !isNaN(savedPlaybackSpeed) && parseFloat(savedPlaybackSpeed) > 0) {
     currentPlaybackRate = parseFloat(savedPlaybackSpeed);
@@ -355,7 +363,7 @@ if (savedShufflePosition !== null) {
     }
 }
 updateRandomPlayButton();
-updateRepeatPlayButton();
+updateRepeatButtonUI();
 
 // コントロールサイズ適用
 let controlSizeX = calculateControlSizeX();
@@ -473,14 +481,6 @@ function formatTime(seconds) {
     return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-// ファイル名用時間フォーマット（HHMMSS形式）
-function formatTimeForFilename(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${hours.toString().padStart(2, '0')}${minutes.toString().padStart(2, '0')}${secs.toString().padStart(2, '0')}`;
-}
-
 // クリップボード読み込み
 async function pasteFromClipboard() {
     const TIMEOUT_MS = 3000;
@@ -572,12 +572,6 @@ function hideTooltip(element) {
     }
 }
 
-// カット編集モードがアクティブ判定
-function isCutEditModeActive() {
-    return isEditMode || 
-           (editControls && editControls.style.display !== 'none');
-}
-
 // コントロール＋ファイル名表示（タイマー付き）
 function showControlsAndFilename() {
     disabledControls(false);
@@ -589,7 +583,7 @@ function showControlsAndFilename() {
     clearTimeout(timeout);
     if (!isMouseOverControls && !isUrlControlsVisible) {
         timeout = setTimeout(() => {
-            if (!isMouseOverControls && !isCutEditModeActive()) {
+            if (!isMouseOverControls && !(isEditMode || (editControls && editControls.style.display !== 'none'))) {
                 hideControlsAndFilename(); // ここで無効化
             }
         }, overlayTimeout);
@@ -875,11 +869,6 @@ function updateRandomPlayButton() {
     randomPlayBtn.classList.toggle('active', isRandomPlayMode);
 }
 
-// 繰り返し再生更新
-function updateRepeatPlayButton() {
-    repeatPlayBtn.classList.toggle('active', isRepeatPlayMode);
-}
-
 // ランダム再生トグル
 function toggleRandomPlay() {
     const wasRandom = isRandomPlayMode;
@@ -950,13 +939,6 @@ function resetShuffle() {
         shuffleOrder = [];
         shufflePosition = -1;
     }
-}
-
-// 繰り返し再生トグル
-function toggleRepeatPlay() {
-    isRepeatPlayMode = !isRepeatPlayMode;
-    localStorage.setItem('repeatPlayMode', isRepeatPlayMode);
-    updateRepeatPlayButton();
 }
 
 // 前再生動画取得
@@ -1045,7 +1027,7 @@ async function toggleUrlControls(show = null) {
     const shouldShow = show !== null ? show : !isUrlControlsVisible;
     if (shouldShow) {
         // クリップボードに有効なURLがあるかチェック（既存機能）
-        const pastedText = await pasteFromClipboard();
+        const pastedText = await pasteFromClipboard().catch(() => ({ rawText: '' }));
         const clipText = pastedText.rawText.trim() || ''; // クリップボードのテキスト（空文字も考慮）
         urlInput.value = clipText;
         if (clipText && isTwitchOrYouTube(clipText)) {
@@ -1361,14 +1343,6 @@ function urlInputEnter() {
         updateOverlayDisplay(`🌐 動画プレーヤーの設定に失敗しました（${error.message}）。別の動画を試してください。`);
         updateIconOverlay();
     }
-}
-
-// Url入力キャンセル
-function urlInputCancel() {
-    hideURLInputControls();
-    filenameControls.style.display = 'flex';
-    showControlsAndFilename();
-    updateIconOverlay();
 }
 
 // 動画プラットフォーム判定
@@ -2117,23 +2091,6 @@ function createSortMenu() {
 }
 
 // 並び替えボタンのUI更新関数
-function updateRepeatButtonUI() {
-    const btn = repeatPlayBtn;
-
-    btn.classList.remove('repeat-all', 'repeat-single');
-    btn.textContent = '🔁';  // デフォルト
-
-    if (repeatMode === 'all') {
-        btn.classList.add('repeat-all');
-        btn.setAttribute('data-tooltip', '全動画ループ中（Ctrl+Shift+R）');
-    } else if (repeatMode === 'single') {
-        btn.classList.add('repeat-single');
-        btn.textContent = '🔂';
-        btn.setAttribute('data-tooltip', '1動画ループ中（Ctrl+Shift+R）');
-    } else {
-        btn.setAttribute('data-tooltip', 'ループ無効（Ctrl+Shift+R）');
-    }
-}
 function updateRepeatButtonUI() {
     const btn = repeatPlayBtn;
 
@@ -3059,7 +3016,7 @@ randomPlayBtn.addEventListener('click', () => {
 
 // 繰り返し再生ボタンクリック
 repeatPlayBtn.addEventListener('click', () => {
-    toggleRepeatMode();  // 修正: toggleRepeatPlay() を削除、モード切替のみ
+    toggleRepeatMode();
 });
 
 // ズームスライダー変更

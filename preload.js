@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.38';
+const appName = 'xPlayer -動画プレイヤー- Ver3.59';
 // ---------------------------------------------------------------------
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const fs = require('fs').promises;
@@ -55,9 +55,7 @@ const { exec } = require('child_process');
 contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer: {
         invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
-        on: (channel, listener) => ipcRenderer.on(channel, listener),
-        removeListener: (channel, listener) => ipcRenderer.removeListener(channel, listener),
-        send: (channel, ...args) => ipcRenderer.send(channel, ...args)
+        on: (channel, listener) => ipcRenderer.on(channel, listener)
     },
     fs,
     os: { homedir: os.homedir },
@@ -77,6 +75,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
         }
     },
     classifyPath: (fullPath) => ipcRenderer.invoke('classify-path', fullPath),
-    captureScreenshot: () => ipcRenderer.invoke('capture-screenshot'),
-    appPath: __dirname
+    captureScreenshot: () => ipcRenderer.invoke('capture-screenshot')
 });
