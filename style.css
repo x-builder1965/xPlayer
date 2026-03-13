@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.60'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.63'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -98,9 +98,9 @@ video {
     transition: display 0.3s ease;
 }
 #zoomBar {
-    writing-mode: bt-lr;
-    appearance: slider-vertical;
-    -webkit-appearance: slider-vertical;
+    writing-mode: vertical-lr;   /* または vertical-rl（向きで調整） */
+    direction: rtl;              /* スライダーの方向を正しくする */
+    /* 必要に応じて他のスタイル（width/heightなど）を維持 */
 }
 #zoomDisplay {
     font-size: 14px;
