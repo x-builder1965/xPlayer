@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.63';
+const appName = 'xPlayer -動画プレイヤー- Ver3.64';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -68,6 +68,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.63';
 // 2026-03-13 Ver3.61 ホイール（ズーム量）時のコントロールパネル・プレイリストパネル表示抑止。
 // 2026-03-14 Ver3.62 処理の問題点・脆弱性対応。
 // 2026-03-14 Ver3.63 css（#zoomBar）の記載警告対応。
+// 2026-03-14 Ver3.64 初期化時の空srcエラー抑止対応。
 // ---------------------------------------------------------------------
 // 2026-03-13 Ver3.xx 🔠字幕トラックの選択機能追加。（未実装）
 // 　・再生対象動画の字幕トラックを取得。
@@ -3161,6 +3162,20 @@ joinPlaylistBtn.addEventListener('click', () => {
 
 // 動画エラー（共通化・安全・モード対応）
 videoPlayer.addEventListener('error', (e) => {
+    const error = videoPlayer.error;
+    if (!error) return;
+
+    if (error.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED &&
+        error.message.includes('Empty src attribute')) {
+        
+        console.log('初期化時の空srcエラー（無視）');
+        
+        // ★ここを追加★
+        videoPlayer.error = null;          // エラーオブジェクトをクリア
+        // videoPlayer.load();             // 必要ならここで再ロード（ただし空なら無意味）
+        return;                            // 以降のエラー表示処理を完全にスキップ
+    }
+
     // ① まずエラーオブジェクト全体をログ出力（最も情報量が多い）
     console.error('ビデオ再生エラー発生:', e);
     console.error('videoPlayer.error オブジェクト:', videoPlayer.error);
