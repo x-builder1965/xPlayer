@@ -62,7 +62,7 @@ xPlayer は **ローカル動画の再生・編集** を中心に設計された
 - 開発時は Node.js 18+ / npm が必要
 
 ## インストール・起動
-1. 最新リリースから `xPlayer Setup x64.exe` をダウンロード（現在はリリースしていません）
+1. 最新リリースから `xPlayer Setup Verx.xx.exe` をダウンロード（現在はリリースしていません）
 2. インストール後、デスクトップ／スタートメニューから起動
    - 動画ファイル（.mp4など）やプレイリスト（.amppl）をダブルクリックで関連付け再生も可能
 
@@ -73,3 +73,4 @@ cd xPlayer-windows
 npm install
 npm start          # 開発実行
 npm run build      # Windowsインストーラー生成（dist-win に出力）赤
+```
