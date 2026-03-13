@@ -332,12 +332,6 @@ select:hover .tooltip {
     left: 50%;
     transform: translateX(-50%);
 }
-button#modeChangeBtn.convert-active {
-    background-color: #9c0000;
-}
-button#modeChangeBtn.convert-active:hover {
-    background-color: #630000;
-}
 .url-controls {
     display: flex;
     gap: 10px;
@@ -673,7 +667,8 @@ caption {
 #filenameMenu.mode-active,
 #urlInputBtn.mode-active,
 #zoomBtn.mode-active,
-#fullscreenBtn.mode-active {
+#fullscreenBtn.mode-active,
+button#modeChangeBtn.convert-active {
     background: #e63946; /* 赤系オンカラー */
 }
 
@@ -683,6 +678,7 @@ button:not(.mode-active),
 #filenameMenu:not(.mode-active),
 #urlInputBtn:not(.mode-active),
 #zoomBtn:not(.mode-active),
-#fullscreenBtn:not(.mode-active) {
+#fullscreenBtn:not(.mode-active),
+button#modeChangeBtn:not(.convert-active) {
     background: #007bff; /* 青系オフカラー */
 }
