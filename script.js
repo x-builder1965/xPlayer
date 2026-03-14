@@ -69,6 +69,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.64';
 // 2026-03-14 Ver3.62 処理の問題点・脆弱性対応。
 // 2026-03-14 Ver3.63 css（#zoomBar）の記載警告対応。
 // 2026-03-14 Ver3.64 初期化時の空srcエラー抑止対応。
+// 2026-03-14 Ver3.65 main,jsでブラウザ起動対応。
 // ---------------------------------------------------------------------
 // 2026-03-13 Ver3.xx 🔠字幕トラックの選択機能追加。（未実装）
 // 　・再生対象動画の字幕トラックを取得。
@@ -80,7 +81,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.64';
 
 // 🔲共通変数設定🔲
 // Electronモジュールインポート
-const { ipcRenderer, fs, os, path, exec, getFilePath, classifyPath } = window.electronAPI;
+const { ipcRenderer, fs, os, path, getFilePath, classifyPath } = window.electronAPI;
 
 // 固定値設定
 const overlayTimeout = 3000;
@@ -90,11 +91,6 @@ const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const HTML5_SUPPORTED_CONVERT = ['.mp4'];  // 動画変換対象外拡張子
-const chromePaths = [
-    `${os.homedir()}\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe`,
-    `C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe`,
-    `C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe`
-];
 const SORT_MODES = {
     none:       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
     path_asc:   { label: '動画パス▲',   fn: () => [...playlist].sort((a, b) => a.file.path.localeCompare(b.file.path)) },
@@ -249,17 +245,6 @@ videoPlayer.removeAttribute('src');
 videoPreview.removeAttribute('src');
 appNameAndCopyright.textContent = appNameAndCopyrightValue;
 filenameMenus.style.display = 'none';
-
-// Chromeパス取得
-let application = chromePaths.find(p => {
-    try { 
-        fs.accessSync(p); 
-        return true; 
-    } 
-    catch { 
-        return false; 
-    }
-}) || chromePaths[0]; // 見つからなくても1つ目は試す
 
 // 初期化時にアイコンを正しく設定
 updateUrlButtonIcon();
@@ -1039,7 +1024,7 @@ async function toggleUrlControls(show = null) {
         if (clipText && isTwitchOrYouTube(clipText)) {
             urlInput.value = clipText;
             // 有効なURL → 自動で入力して再生（従来挙動）
-            urlInputEnter();
+            await urlInputEnter();
             // コントロールは表示しない
             return;
         }
@@ -1295,21 +1280,21 @@ function isVideoStopped() {
 }
 
 // Url再生完成
-function urlInputEnter() {
-    const url = urlInput.value.trim();
-    if (!url) {
+async function urlInputEnter() {
+    const inputUrl = urlInput.value.trim();
+    if (!inputUrl) {
         updateOverlayDisplay('🌐 動画のURLを入力してください');
         updateIconOverlay();
         return;
     }
 
-    const platform = isTwitchOrYouTube(url);
+    const platform = isTwitchOrYouTube(inputUrl);
     let playlistId = null;
     let videoId = null;
     let videoUrl = null;
 
     if (platform === 'Twitch') {
-        videoId = extractTwitchVideoId(url);
+        videoId = extractTwitchVideoId(inputUrl);
         if (!videoId) {
             updateOverlayDisplay('🌐 無効なTwitch URLです。');
             updateIconOverlay();
@@ -1317,8 +1302,8 @@ function urlInputEnter() {
         }
         videoUrl = `https://player.twitch.tv/?video=${videoId}&parent=twitch.tv&player=popout`;
     } else if (platform === 'YouTube') {
-        playlistId = extractYouTubePlaylistId(url);
-        videoId = extractYouTubeVideoId(url);
+        playlistId = extractYouTubePlaylistId(inputUrl);
+        videoId = extractYouTubeVideoId(inputUrl);
         if (!videoId) {
             updateOverlayDisplay('🌐 無効なYouTube URLです。');
             updateIconOverlay();
@@ -1330,7 +1315,7 @@ function urlInputEnter() {
             videoUrl = `https://www.youtube.com/watch?v=${videoId}&list=${playlistId}&autoplay=1`;
         }
     } else if (platform === 'Other') {
-        videoUrl = url;
+        videoUrl = inputUrl;
     } else {
         updateOverlayDisplay('🌐 無効なURLです。');
         updateIconOverlay();
@@ -1338,28 +1323,31 @@ function urlInputEnter() {
     }
 
     try {
-        const command = `${application} --profile-directory=Default --app="${videoUrl}"`;
-        exec(command);
-
-        console.log("再生動画>", command);
+        const result = await window.electronAPI.openVideoInBrowser(inputUrl);
+    
+        if (result.success) {
+            console.log("ブラウザ起動依頼成功", result.message);
+        } else {
+            updateOverlayDisplay(`🌐 ブラウザ起動に失敗しました（${result.messag}）。`);
+        }
 
         hideURLInputControls();
         filenameControls.style.display = 'flex';
         showControlsAndFilename();
         updateIconOverlay();
     } catch (error) {
-        console.error('YouTube Or Twitch Player Setup Error:', error.message, error.stack);
+        console.error("IPCエラー:", err);
         updateOverlayDisplay(`🌐 動画プレーヤーの設定に失敗しました（${error.message}）。別の動画を試してください。`);
         updateIconOverlay();
     }
 }
 
 // 動画プラットフォーム判定
-function isTwitchOrYouTube(url) {
-    if (url.includes('http')) {
-        if (url.includes('twitch.tv') && url.includes('videos')) {
+function isTwitchOrYouTube(inputUrl) {
+    if (inputUrl.includes('http')) {
+        if (inputUrl.includes('twitch.tv') && inputUrl.includes('videos')) {
             return 'Twitch';
-        } else if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        } else if (inputUrl.includes('youtube.com') || inputUrl.includes('youtu.be')) {
             return 'YouTube';
         } else {
             return 'Other';
