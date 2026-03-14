@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.66';
+const appName = 'xPlayer -動画プレイヤー- Ver3.67';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -71,6 +71,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.66';
 // 2026-03-14 Ver3.64 初期化時の空srcエラー抑止対応。
 // 2026-03-14 Ver3.65 main,jsでブラウザ起動対応。
 // 2026-03-14 Ver3.66 原因不明のツールチップ変更不良の誤認防止対応。
+// 2026-03-14 Ver3.67 ツールチップ変更不良正式対応。
 // ---------------------------------------------------------------------
 // 2026-03-13 Ver3.xx 🔠字幕トラックの選択機能追加。（未実装）
 // 　・再生対象動画の字幕トラックを取得。
@@ -538,16 +539,18 @@ function updateControlSize(valueX, valueY) {
 
 // ツールチップ表示
 function showTooltip(element) {
-    if (element.dataset.tooltip) {
-        let tooltip = element.querySelector('.tooltip');
-        if (!tooltip) {
-            tooltip = document.createElement('div');
-            tooltip.className = 'tooltip';
-            tooltip.textContent = element.dataset.tooltip;
-            element.appendChild(tooltip);
-        }
-        tooltip.classList.add('visible');
+    let tooltip = element.querySelector('.tooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.className = 'tooltip';
+        element.appendChild(tooltip);
     }
+    
+    // ★ここが重要：毎回最新のdata-tooltipを反映
+    tooltip.textContent = element.dataset.tooltip || '';
+    
+    tooltip.classList.add('visible');
+    // 位置調整などの既存処理があれば継続
 }
 
 // ツールチップ非表示
@@ -858,11 +861,9 @@ function updateRandomButtonUI() {
 
     if (isRandomPlayMode) {
         btn.classList.add('active');
-        // btn.setAttribute('data-tooltip', 'ランダム再生中（Ctrl+r）');
-        btn.setAttribute('data-tooltip', 'ランダム再生（Ctrl+r）');    // 原因不明のツールチップ変更不良の誤認防止対応
+        btn.setAttribute('data-tooltip', 'ランダム再生中（Ctrl+r）');
     } else {
-        // btn.setAttribute('data-tooltip', 'ランダム再生無効（Ctrl+r）');
-        btn.setAttribute('data-tooltip', 'ランダム再生（Ctrl+r）');    // 原因不明のツールチップ変更不良の誤認防止対応
+        btn.setAttribute('data-tooltip', 'ランダム再生無効（Ctrl+r）');
     }
 }
 
