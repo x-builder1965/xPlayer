@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.65';
+const appName = 'xPlayer -動画プレイヤー- Ver3.66';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -70,6 +70,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.65';
 // 2026-03-14 Ver3.63 css（#zoomBar）の記載警告対応。
 // 2026-03-14 Ver3.64 初期化時の空srcエラー抑止対応。
 // 2026-03-14 Ver3.65 main,jsでブラウザ起動対応。
+// 2026-03-14 Ver3.66 原因不明のツールチップ変更不良の誤認防止対応。
 // ---------------------------------------------------------------------
 // 2026-03-13 Ver3.xx 🔠字幕トラックの選択機能追加。（未実装）
 // 　・再生対象動画の字幕トラックを取得。
@@ -80,7 +81,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.65';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
-// Electronモジュールインポート
+// モジュールインポート
 const { ipcRenderer, fs, os, path, openVideoInBrowser, getFilePath, classifyPath, captureScreenshot } = window.electronAPI;
 
 // 固定値設定
@@ -184,8 +185,8 @@ const savedZoom = localStorage.getItem('zoom');
 const savedTranslateX = localStorage.getItem('translateX');
 const savedTranslateY = localStorage.getItem('translateY');
 const editFrameRate = localStorage.getItem('editFrameRate') ? parseFloat(localStorage.getItem('editFrameRate')) : 30;
-const savedRandomPlay = localStorage.getItem('randomPlayMode');
-const savedRepeatPlay = localStorage.getItem('repeatPlayMode');
+const savedIsRandomPlayMode = localStorage.getItem('isRandomPlayMode');
+const savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode');
 const savedShuffleOrder = localStorage.getItem('shuffleOrder');
 const savedShufflePosition = localStorage.getItem('shufflePosition');
 const cutTimelineContainer = document.getElementById('cutTimelineContainer');
@@ -228,14 +229,13 @@ let isUrlControlsVisible = false;
 let isCutEditing = false;  // カット編集中フラグ
 let isJoinEditing = false;  // カット編集中フラグ
 let isRandomPlayMode = false;     // ランダム再生（シャッフル）
-let isRepeatPlayMode  = false;     // リスト全体繰り返し
+let isRepeatPlayMode = 'none';  // 'none' | 'all' | 'single'
 let shuffleOrder = [];           // ランダムモード用の再生順リスト（インデックス配列）
 let shufflePosition = -1;        // 現在何番目を再生中か（-1=未開始）
 let isEditSeekDragging = false;
 let isMouseOverEditSeekBar = false;
 let currentSortMode = localStorage.getItem('playlistSortMode') || 'none';   // localStorage に保存された値があればそれを使う、なければ 'none'（読み込み順）
 let originalLoadOrder = [];  // プレイリストの「最初に読み込まれた順」を保持
-let repeatMode = 'none';  // 'none' | 'all' | 'single'
 let hideMouseTimeout = null;
 let currentBlobUrl = null;  // ← これを追加（null 初期化）
 
@@ -253,14 +253,6 @@ updateUrlButtonIcon();
 filenameMenus.style.display = 'none';
 filenameMenu.textContent = '📚';
 filenameMenu.setAttribute('data-tooltip', '編集メニューを開く (Ctrl+l)');
-
-// 再生モード復元
-if (savedRandomPlay === 'true') {
-    isRandomPlayMode = true;
-}
-if (savedRepeatPlay === 'true') {
-    isRepeatPlayMode = true;
-}
 
 // ボリューム復元
 if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
@@ -323,13 +315,18 @@ if (savedTranslateX && !isNaN(savedTranslateX) && savedTranslateY && !isNaN(save
 applyZoom(zoomValue);
 
 // 繰り返し再生モード復元
-const savedRepeatMode = localStorage.getItem('repeatMode');
-if (savedRepeatMode && ['none', 'all', 'single'].includes(savedRepeatMode)) {
-    repeatMode = savedRepeatMode;
+if (savedIsRepeatPlayMode && ['none', 'all', 'single'].includes(savedIsRepeatPlayMode)) {
+    isRepeatPlayMode = savedIsRepeatPlayMode;
 } else {
-    repeatMode = 'none';
+    isRepeatPlayMode = 'none';
 }
 updateRepeatButtonUI();
+
+// 再生モード復元
+if (savedIsRandomPlayMode === 'true') {
+    isRandomPlayMode = true;
+}
+updateRandomButtonUI();
 
 // ランダム再生リスト復元
 if (savedShuffleOrder) {
@@ -353,8 +350,6 @@ if (savedShufflePosition !== null) {
         shufflePosition = -1;
     }
 }
-updateRandomPlayButton();
-updateRepeatButtonUI();
 
 // コントロールサイズ適用
 let controlSizeX = calculateControlSizeX();
@@ -462,7 +457,7 @@ videoPlayer.addEventListener('pause', () => {
     navigator.mediaSession.playbackState = 'paused';
 });
 
-// 🔲ヘルパー関数🔲
+// 🔲共通関数🔲
 // 時間フォーマット変換
 function formatTime(seconds) {
     if (isNaN(seconds)) return '0:00:00';
@@ -856,19 +851,29 @@ function updateUrlButtonIcon() {
 }
 
 // ランダム再生更新
-function updateRandomPlayButton() {
-    randomPlayBtn.classList.toggle('active', isRandomPlayMode);
+function updateRandomButtonUI() {
+    const btn = randomPlayBtn;
+
+    btn.classList.remove('active');
+
+    if (isRandomPlayMode) {
+        btn.classList.add('active');
+        // btn.setAttribute('data-tooltip', 'ランダム再生中（Ctrl+r）');
+        btn.setAttribute('data-tooltip', 'ランダム再生（Ctrl+r）');    // 原因不明のツールチップ変更不良の誤認防止対応
+    } else {
+        // btn.setAttribute('data-tooltip', 'ランダム再生無効（Ctrl+r）');
+        btn.setAttribute('data-tooltip', 'ランダム再生（Ctrl+r）');    // 原因不明のツールチップ変更不良の誤認防止対応
+    }
 }
 
 // ランダム再生トグル
 function toggleRandomPlay() {
     const wasRandom = isRandomPlayMode;
     isRandomPlayMode = !isRandomPlayMode;
-    localStorage.setItem('randomPlayMode', isRandomPlayMode);
-    updateRandomPlayButton();
+    localStorage.setItem('isRandomPlayMode', isRandomPlayMode);
+    updateRandomButtonUI();
 
     if (isRandomPlayMode && !wasRandom) {
-        updateOverlayDisplay('🔀 ランダム再生を設定しました', false, 1500);
         // 通常 → ランダム に変更（ケース1・3）
         if (!shuffleOrder || shuffleOrder.length !== playlist.length) {
             shuffleOrder = [...Array(playlist.length).keys()];
@@ -890,7 +895,6 @@ function toggleRandomPlay() {
 
             updatePlaylistDisplay();
         }
-        // ケース1ではここまで来ない（表示変更なし）
 
         shufflePosition = shuffleOrder.indexOf(currentVideoIndex);
         if (shufflePosition < 0) shufflePosition = 0;
@@ -899,7 +903,6 @@ function toggleRandomPlay() {
         saveShuffleState();
     } 
     else if (!isRandomPlayMode && wasRandom) {
-        updateOverlayDisplay('🔀 ランダム再生を解除しました', false, 1500);
         // ランダム → 通常 に変更（ケース2・4）
         // playlist と filenameDisplay は一切変更しない（定義通り）
         shuffleOrder = [];
@@ -935,14 +938,14 @@ function resetShuffle() {
 // 前再生動画取得
 function getPrevVideoIndex() {
     if (playlist.length === 0) return -1;
-    if (repeatMode === 'single') {
+    if (isRepeatPlayMode === 'single') {
         return currentVideoIndex;
     }
     if (isRandomPlayMode && currentSortMode !== 'random') {
         // ランダムモード
         shufflePosition--;
         if (shufflePosition < 0) {
-            if (repeatMode === 'all') {  // 修正: isRepeatPlayMode → repeatMode === 'all'
+            if (isRepeatPlayMode === 'all') {
                 shufflePosition = shuffleOrder.length - 1;
             } else {
                 shufflePosition = 0;
@@ -956,7 +959,7 @@ function getPrevVideoIndex() {
         // 通常順
         let normalPosition = currentVideoIndex - 1;
         if (normalPosition < 0) {
-            if (repeatMode === 'all') {  // 修正: isRepeatPlayMode → repeatMode === 'all'
+            if (isRepeatPlayMode === 'all') {
                 normalPosition = playlist.length - 1;
             } else {
                 return -1;
@@ -969,7 +972,7 @@ function getPrevVideoIndex() {
 // 次再生動画取得
 function getNextVideoIndex() {
     if (playlist.length === 0) return -1;
-    if (repeatMode === 'single') {
+    if (isRepeatPlayMode === 'single') {
         // 1動画ループ中は次へ行かせない
         return currentVideoIndex;
     }
@@ -977,7 +980,7 @@ function getNextVideoIndex() {
         // ランダムモード
         shufflePosition++;
         if (shufflePosition >= shuffleOrder.length) {
-            if (repeatMode === 'all') {  // 修正: isRepeatPlayMode → repeatMode === 'all'
+            if (isRepeatPlayMode === 'all') {
                 shufflePosition = 0;
             } else {
                 shufflePosition = shuffleOrder.length - 1;
@@ -991,7 +994,7 @@ function getNextVideoIndex() {
         // 通常順
         let normalPosition = currentVideoIndex + 1;
         if (normalPosition >= playlist.length) {
-            if (repeatMode === 'all') {  // 修正: isRepeatPlayMode → repeatMode === 'all'
+            if (isRepeatPlayMode === 'all') {
                 normalPosition = 0;
             } else {
                 return -1;
@@ -2094,32 +2097,28 @@ function updateRepeatButtonUI() {
     btn.classList.remove('repeat-all', 'repeat-single');
     btn.textContent = '🔁';  // デフォルト
 
-    if (repeatMode === 'all') {
+    if (isRepeatPlayMode === 'all') {
         btn.classList.add('repeat-all');
-        btn.setAttribute('data-tooltip', '全動画ループ中（Ctrl+Shift+R）');
-    } else if (repeatMode === 'single') {
+        btn.setAttribute('data-tooltip', '全動画繰り返し再生中（Ctrl+Shift+r）');
+    } else if (isRepeatPlayMode === 'single') {
         btn.classList.add('repeat-single');
         btn.textContent = '🔂';
-        btn.setAttribute('data-tooltip', '1動画ループ中（Ctrl+Shift+R）');
+        btn.setAttribute('data-tooltip', '1動画繰り返し再生中（Ctrl+Shift+r）');
     } else {
-        btn.setAttribute('data-tooltip', 'ループ無効（Ctrl+Shift+R）');
+        btn.setAttribute('data-tooltip', '繰り返し再生無効（Ctrl+Shift+r）');
     }
 }
 
 // ループモード切替関数
-function toggleRepeatMode() {
-if (repeatMode === 'none') {
-        updateOverlayDisplay('🔁 全動画の繰り返し再生を設定しました', false, 1500);
-        repeatMode = 'all';
-    } else if (repeatMode === 'all') {
-        updateOverlayDisplay('🔂 1動画の繰り返し再生を設定しました', false, 1500);
-        repeatMode = 'single';
+function toggleRepeatPlay() {
+if (isRepeatPlayMode === 'none') {
+        isRepeatPlayMode = 'all';
+    } else if (isRepeatPlayMode === 'all') {
+        isRepeatPlayMode = 'single';
     } else {
-        updateOverlayDisplay('🔁 繰り返し再生を解除しました', false, 1500);
-        repeatMode = 'none';
+        isRepeatPlayMode = 'none';
     }
-
-    localStorage.setItem('repeatMode', repeatMode);
+    localStorage.setItem('isRepeatPlayMode', isRepeatPlayMode);
     updateRepeatButtonUI();
 }
 
@@ -2142,7 +2141,7 @@ function resetCursorTimer() {
     }, overlayTimeout);
 }
 
-// 🔲レンダラーイベント🔲
+// 🔲ipcRenderer ハンドラ登録🔲
 // main.js からの自動再生指示を受信
 ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
     if (!videoFiles || videoFiles.length === 0) return;
@@ -2244,7 +2243,7 @@ ipcRenderer.on('convert-error', (event, msg) => {
     updateIconOverlay();
 });
 
-// 🔲グローバルイベント🔲
+// 🔲window ハンドラ登録🔲
 // ウィンドウリサイズ
 window.addEventListener('resize', () => {
     const controlSizeX = calculateControlSizeX();
@@ -2265,6 +2264,7 @@ window.addEventListener('unload', async () => {
 	await cleanupTempFiles();
 });
 
+// 🔲document ハンドラ登録🔲
 // ショートカットキー（イベントリスナー）
 document.addEventListener('keydown', async (event) => {
     // ■ヘルプ■
@@ -2529,7 +2529,6 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
-
     // 先頭動画再生（Home）
     if (event.key === 'Home') {
         if (playlist.length > 1) {
@@ -2759,7 +2758,7 @@ document.addEventListener('fullscreenchange', () => {
     updateIconOverlay();
 });
 
-// 🔲イベントリスナー🔲
+// 🔲個別イベントリスナー登録🔲
 // ネット動画選択
 urlInputBtn.addEventListener('click', async () => {
     if (isUrlControlsVisible) {
@@ -2870,7 +2869,7 @@ playStopBtn.addEventListener('click', async () => {
 
 // 前の動画
 prevVideoBtn.addEventListener('click', async () => {
-    if (repeatMode === 'single') return; // 無効化
+    if (isRepeatPlayMode === 'single') return; // 無効化
     const prevIndex = getPrevVideoIndex();
 
     if (prevIndex >= 0) {
@@ -2917,7 +2916,7 @@ fastForwardBtn.addEventListener('click', () => {
 
 // 次の動画
 nextVideoBtn.addEventListener('click', async () => {
-    if (repeatMode === 'single') return; // 無効化
+    if (isRepeatPlayMode === 'single') return; // 無効化
     const nextIndex = getNextVideoIndex();
 
     if (nextIndex >= 0) {
@@ -3012,7 +3011,7 @@ randomPlayBtn.addEventListener('click', () => {
 
 // 繰り返し再生ボタンクリック
 repeatPlayBtn.addEventListener('click', () => {
-    toggleRepeatMode();
+    toggleRepeatPlay();
 });
 
 // ズームスライダー変更
@@ -3266,7 +3265,7 @@ videoPlayer.addEventListener('ended', async () => {
     videoPlayer.currentTime = 0;
     localStorage.setItem('currentTime', 0);
 
-    if (repeatMode === 'single') {
+    if (isRepeatPlayMode === 'single') {
         // 1動画ループ → 即座に同じ動画を再生
         videoPlayer.play().catch(() => {});
         playPauseBtn.textContent = '⏸️';

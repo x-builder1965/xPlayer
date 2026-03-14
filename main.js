@@ -1,17 +1,42 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.65';
+const appName = 'xPlayer -動画プレイヤー- Ver3.66';
 // ---------------------------------------------------------------------
+
+// 🔲共通変数設定🔲
+// モジュールインポート
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
-const { promises: fs } = require('fs');  // ← これで await 可能！
+const { promises: fs } = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
 const os = require('os');
 const { spawn, exec } = require('child_process');
 
-// 必要に応じて（開発時のみ推奨）
+// 固定値設定
+const ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
+const VIDEO_EXTENSIONS = [
+    'mp4', 'mkv', 'webm', 'avi', 'flv', 'mov', 'wmv', 'mpg', 'mpeg',
+    'ts', 'mts', 'm2ts', 'vob', 'ogv', '3gp', 'm4v', 'asf'
+];
+const VIDEO_PLAYLIST = ['amppl'];
+const VIDEO_EXTENSIONS_REGEX = new RegExp(`\\.(${VIDEO_EXTENSIONS.join('|')})$`, 'i');
+const VIDEO_PLAYLIST_REGEX = new RegExp(`\\.(${VIDEO_PLAYLIST.join('|')})$`, 'i');
+
+// グローバル（共通）変数
+let trash;
+let mainWindow = null;
+let currentFFmpeg = null;
+let currentOutputPath = null;
+let currentSegmentProcs = [];
+let currentTmpDir = null;
+let currentJoinTempFiles = [];      // 結合用の一時変換ファイルリスト
+let currentJoinConcatTxt = null;    // concatリストのtxtパス
+let isJoinCancelled = false;        // ファイル先頭付近（他のグローバル変数の近く）に追加
+
+// 🔲初期処理🔲
+// 開発中セキュリティオプション設定
 if (process.env.NODE_ENV === 'development') {
     app.commandLine.appendSwitch('disable-web-security');
     // または BrowserWindow で webSecurity: false を使用
@@ -34,11 +59,9 @@ try {
 }
 
 // === FFmpeg パス設定（asarUnpack 対応）===
-const ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 // 正しい trash の取得方法（ESM対応）
-let trash;
 try {
     const trashModule = require('trash');
     trash = trashModule.default || trashModule;  // default 優先
@@ -48,26 +71,7 @@ try {
     trash = null;
 }
 
-// === サポートするすべての動画拡張子（統一）===
-const VIDEO_EXTENSIONS = [
-    'mp4', 'mkv', 'webm', 'avi', 'flv', 'mov', 'wmv', 'mpg', 'mpeg',
-    'ts', 'mts', 'm2ts', 'vob', 'ogv', '3gp', 'm4v', 'asf'
-];
-const VIDEO_PLAYLIST = ['amppl'];
-
-// 正規表現（大文字小文字無視）
-const VIDEO_EXTENSIONS_REGEX = new RegExp(`\\.(${VIDEO_EXTENSIONS.join('|')})$`, 'i');
-const VIDEO_PLAYLIST_REGEX = new RegExp(`\\.(${VIDEO_PLAYLIST.join('|')})$`, 'i');
-
-let mainWindow = null;
-let currentFFmpeg = null;
-let currentOutputPath = null;
-let currentSegmentProcs = [];
-let currentTmpDir = null;
-
-// ================================================================
-// 共通関数
-// ================================================================
+// 🔲共通関数🔲
 // ウィンドウ作成
 function createWindow() {
     const win = new BrowserWindow({
@@ -104,6 +108,7 @@ function formatFFmpegTime(seconds) {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
 }
 
+// ファイルの作成日時取得
 function formatTimeForFilename(seconds) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -185,9 +190,35 @@ async function processCommandLineFile(filePath) {
     return [];
 }
 
-// ================================================================
+// 動画のFPS取得ヘルパー関数
+async function getFps(inputPath) {
+    return new Promise((resolve, reject) => {
+        ffmpeg.ffprobe(inputPath, (err, metadata) => {
+            if (err) return reject(err);
+            const videoStream = metadata.streams.find(s => s.codec_type === 'video');
+            if (videoStream && videoStream.r_frame_rate) {
+                const [num, den] = videoStream.r_frame_rate.split('/').map(Number);
+                const fps = num / (den || 1);
+                resolve(fps);
+            } else {
+                reject(new Error('No video stream or FPS info'));
+            }
+        });
+    });
+}
+
+// 結合用一時ファイル掃除関数
+function cleanupJoinTempFiles() {
+    currentJoinTempFiles.forEach(p => fs.unlink(p).catch(() => {}));
+    if (currentJoinConcatTxt) {
+        fs.unlink(currentJoinConcatTxt).catch(() => {});
+        currentJoinConcatTxt = null;
+    }
+    currentJoinTempFiles = [];
+}
+
+// 🔲app ハンドラ登録🔲
 // アプリ起動処理
-// ================================================================
 app.whenReady().then(() => {
     mainWindow = createWindow();
 
@@ -221,9 +252,7 @@ app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
 });
 
-// ================================================================
-// IPC ハンドラ登録
-// ================================================================
+// 🔲IPC ハンドラ登録🔲
 // フォルダ選択
 ipcMain.handle('open-folder-dialog', async () => {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
@@ -1026,27 +1055,6 @@ ipcMain.handle('show-save-join-dialog', async (event, { fileName }) => {
     return result;  // { canceled: boolean, filePath?: string }
 });
 
-let currentJoinTempFiles = [];      // 結合用の一時変換ファイルリスト
-let currentJoinConcatTxt = null;    // concatリストのtxtパス
-let isJoinCancelled = false;        // ファイル先頭付近（他のグローバル変数の近く）に追加
-
-// 動画のFPS取得ヘルパー関数
-async function getFps(inputPath) {
-    return new Promise((resolve, reject) => {
-        ffmpeg.ffprobe(inputPath, (err, metadata) => {
-            if (err) return reject(err);
-            const videoStream = metadata.streams.find(s => s.codec_type === 'video');
-            if (videoStream && videoStream.r_frame_rate) {
-                const [num, den] = videoStream.r_frame_rate.split('/').map(Number);
-                const fps = num / (den || 1);
-                resolve(fps);
-            } else {
-                reject(new Error('No video stream or FPS info'));
-            }
-        });
-    });
-}
-
 // 結合処理（全動画を厳密に統一フォーマットに変換 → 結合）
 ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate }) => {
     if (!inputPaths || !Array.isArray(inputPaths) || inputPaths.length < 2) {
@@ -1259,16 +1267,6 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
         }
     });
 });
-
-// 結合用一時ファイル掃除関数
-function cleanupJoinTempFiles() {
-    currentJoinTempFiles.forEach(p => fs.unlink(p).catch(() => {}));
-    if (currentJoinConcatTxt) {
-        fs.unlink(currentJoinConcatTxt).catch(() => {});
-        currentJoinConcatTxt = null;
-    }
-    currentJoinTempFiles = [];
-}
 
 // 結合処理専用キャンセル
 ipcMain.handle('cancel-join', async () => {
