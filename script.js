@@ -81,7 +81,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.65';
 
 // 🔲共通変数設定🔲
 // Electronモジュールインポート
-const { ipcRenderer, fs, os, path, getFilePath, classifyPath } = window.electronAPI;
+const { ipcRenderer, fs, os, path, openVideoInBrowser, getFilePath, classifyPath, captureScreenshot } = window.electronAPI;
 
 // 固定値設定
 const overlayTimeout = 3000;
@@ -1323,7 +1323,7 @@ async function urlInputEnter() {
     }
 
     try {
-        const result = await window.electronAPI.openVideoInBrowser(inputUrl);
+        const result = await openVideoInBrowser(inputUrl);
     
         if (result.success) {
             console.log("ブラウザ起動依頼成功", result.message);
@@ -3041,7 +3041,7 @@ snapshotBtn.addEventListener('click', async () => {
         zoomEndBtn.click(); // ズームリセットして終了
         hideControlsAndFilename(); // コントロールとファイル名を隠す
 
-        const result = await window.electronAPI.captureScreenshot();
+        const result = await captureScreenshot();
         if (result.success) {
             console.log('スナップショット完了！');
         } else {
