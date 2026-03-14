@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.59';
+const appName = 'xPlayer -動画プレイヤー- Ver3.65';
 // ---------------------------------------------------------------------
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const fs = require('fs').promises;
@@ -60,12 +60,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     fs,
     os: { homedir: os.homedir },
     path,
-    exec: (command) => new Promise((resolve, reject) => {
-        exec(command, (error, stdout, stderr) => {
-            if (error) reject(error);
-            else resolve({ stdout, stderr });
-        });
-    }),
+    openVideoInBrowser: (videoUrl) => ipcRenderer.invoke('open-video-in-browser', videoUrl),
     getFilePath: (file) => {
         try {
             return webUtils.getPathForFile(file);

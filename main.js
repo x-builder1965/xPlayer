@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.62';
+const appName = 'xPlayer -動画プレイヤー- Ver3.65';
 // ---------------------------------------------------------------------
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
@@ -9,7 +9,7 @@ const { promises: fs } = require('fs');  // ← これで await 可能！
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
 const os = require('os');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
 
 // 必要に応じて（開発時のみ推奨）
 if (process.env.NODE_ENV === 'development') {
@@ -1328,4 +1328,57 @@ ipcMain.handle('cancel-join', async () => {
     } catch (e) {}
 
     return true;
+});
+
+// ブラウザ起動ハンドラ
+ipcMain.handle('open-video-in-browser', async (event, videoUrl) => {
+  try {
+    // Chromeのパスをメイン側で管理（セキュリティ向上・パス漏洩防止）
+    let chromePath;
+
+    if (process.platform === 'win32') {
+      // Windowsの場合、複数の候補から最初に見つかったものを利用
+      const possiblePaths = [
+        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+        process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
+        // 必要ならさらに追加
+      ];
+
+      for (const path of possiblePaths) {
+        try {
+          require('fs').accessSync(path);
+          chromePath = path;
+          break;
+        } catch {}
+      }
+
+      if (!chromePath) {
+        throw new Error('Chromeが見つかりません。インストールを確認してください。');
+      }
+
+    } else if (process.platform === 'darwin') {
+      chromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+    } else {
+      // Linuxなど（適宜対応）
+      chromePath = 'google-chrome';
+    }
+
+    // コマンド構築（--app= でポップアップ風再生）
+    const command = `"${chromePath}" --profile-directory=Default --app="${videoUrl}" --new-window`;
+
+    // 実行（非同期でfire-and-forget）
+    exec(command, (error) => {
+      if (error) {
+        console.error('ブラウザ起動エラー:', error);
+        // 必要ならレンダラーにエラー通知IPCを送る
+      }
+    });
+
+    return { success: true, message: `起動コマンド: ${command}` };
+
+  } catch (err) {
+    console.error(err);
+    return { success: false, message: err.message };
+  }
 });
