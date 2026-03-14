@@ -1,14 +1,18 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.65';
+const appName = 'xPlayer -動画プレイヤー- Ver3.66';
 // ---------------------------------------------------------------------
+
+// 🔲共通変数設定🔲
+// モジュールインポート
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
-const fs = require('fs').promises;
+const { promises: fs } = require('fs');
 const os = require('os');
 const path = require('path');
 const { exec } = require('child_process');
 
+// 🔲初期処理🔲
 // 🔧 起動時対応: キャッシュディレクトリを事前に作成し、
 // 一部ライブラリが出す "Unable to create cache" ワーニングを抑制します。
 // - ユーザーのホームに .cache と AppData\Local\xPlayerCache を作ります（存在しなくても安全）。
@@ -49,9 +53,7 @@ const { exec } = require('child_process');
     }
 })();
 
-// ============================================================
-// 1. 基本API
-// ============================================================
+// 🔲基本API🔲
 contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer: {
         invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
