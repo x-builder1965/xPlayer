@@ -72,8 +72,9 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.67';
 // 2026-03-14 Ver3.65 main,jsでブラウザ起動対応。
 // 2026-03-14 Ver3.66 原因不明のツールチップ変更不良の誤認防止対応。
 // 2026-03-14 Ver3.67 ツールチップ変更不良正式対応。
+// 2026-03-14 Ver3.68 カット編集機能（✂️）のシークバードラック時ワイプ表示。
 // ---------------------------------------------------------------------
-// 2026-03-13 Ver3.xx 🔠字幕トラックの選択機能追加。（未実装）
+// 2026-03-14 Ver3.xx 🔠字幕トラックの選択機能追加。（未実装）
 // 　・再生対象動画の字幕トラックを取得。
 // 　・取得した字幕トラックはポップアップメニューで🔠クリック時に表示。
 // 　・🔠のメニューにの先頭に「（なし）」を追加し字幕なし再生を可能にする。
@@ -728,6 +729,7 @@ function updatePreviewPosition(e) {
     const previewWidth = 180;
     const previewHeight = 100;
     const seekRect = seekBar.getBoundingClientRect();
+    const editSeekRect = editSeekBar.getBoundingClientRect();
 
     // カーソルを中心に横位置を計算
     let x = e.clientX - previewWidth / 2;
@@ -741,8 +743,18 @@ function updatePreviewPosition(e) {
     if (x < 0) {
         x = 10;
     }
-    // Y軸：seekBarの直上に固定（プレビュー高さ + 余白）
-    const y = seekRect.top - previewHeight - 20; // seekBarの上に10pxの隙間
+
+    let y = 20;
+    if (isSeekDragging || isMouseOverSeekBar) {
+        // Y軸：seekBarの直上に固定（プレビュー高さ + 余白）
+        y = seekRect.top - previewHeight - 20; // seekBarの上に10pxの隙間
+    } else if (isEditSeekDragging || isMouseOverEditSeekBar) {
+        // Y軸：seekBarの直上に固定（プレビュー高さ + 余白）
+        y = editSeekRect.top - previewHeight + 140; // editSeekBarの下に140pxの隙間
+        if (x < 110) {
+            x = x - 100;     // マウス位置の左に100pxの隙間
+        }
+    }
 
     videoPreview.style.left = `${x}px`;
     videoPreview.style.top = `${y}px`;
@@ -2717,9 +2729,11 @@ document.addEventListener('keydown', async (event) => {
     }
 });
 
+
 // グローバル mouseup でドラッグ終了を確実に検知
 document.addEventListener('mouseup', (e) => {
     if (isSeekDragging) {
+        if (controls.style.opacity !== '1') return;
         isSeekDragging = false;
         isDragging = false;
         darkOverlay.style.display = 'none';
@@ -2733,6 +2747,25 @@ document.addEventListener('mouseup', (e) => {
         }
 
         if (isMouseOverSeekBar) {
+            videoPreview.style.display = 'block';
+        }
+    }
+
+    if (isEditSeekDragging) {
+        if (filename.style.opacity !== '1') return;
+        isEditSeekDragging = false;
+        isDragging = false;
+        darkOverlay.style.display = 'none';
+        hideOverlayDisplay();
+        
+        if (videoPlayer.duration) {
+            editSeekBar.value = (videoPreview.currentTime / videoPreview.duration) * 100;
+            videoPlayer.currentTime = videoPreview.currentTime;
+            updateTimeDisplay();
+            localStorage.setItem('currentTime', videoPlayer.currentTime);
+        }
+
+        if (isMouseOverEditSeekBar) {
             videoPreview.style.display = 'block';
         }
     }
@@ -3499,10 +3532,12 @@ editSeekBar.addEventListener('change', () => {
 editSeekBar.addEventListener('mousedown', (e) => {
     if (filename.style.opacity !== '1') return;
     if (e.button === 0 && videoPlayer.duration) {
-        seekBar.value = editSeekBar.value; // メインシークバーも同期
-        const time = videoPlayer.duration * (editSeekBar.value / 100);
-        videoPlayer.currentTime = time;
+        editSeekBar.value = seekBar.value; // メインシークバーも同期
+        videoPlayer.currentTime = videoPreview.currentTime;
+        isDragging = true;
         isEditSeekDragging = true;
+        darkOverlay.style.display = 'block';
+        seekBar.value = editSeekBar.value; // シークバーも同期
         darkOverlay.style.display = 'block';
     }
 });
@@ -3512,30 +3547,31 @@ editSeekBar.addEventListener('mouseover', (e) => {
     if (filename.style.opacity !== '1') return;
     if (!videoPlayer.duration || playlist.length === 0) return;
     isMouseOverEditSeekBar = true;
+    videoPreview.style.display = 'block';
+    // プレビュー位置更新
+    updatePreviewPosition(e);
 });
 
 // カット編集シークバー マウス移動
 editSeekBar.addEventListener('mousemove', (e) => {
     if (filename.style.opacity !== '1') return;
     if (!videoPlayer.duration || !isMouseOverEditSeekBar) return;
+    const rect = editSeekBar.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const time = videoPlayer.duration * percent;
+
+    // プレビュー時間更新・位置更新
+    videoPreview.currentTime = time;
+    updatePreviewPosition(e);
+    
     // カット編集シークバー表示更新（ドラッグ中は無視）
     if (!isEditSeekDragging) {
-        const rect = editSeekBar.getBoundingClientRect();
-        const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         editSeekBar.value = percent * 100;
-    }
-});
-
-// カット編集シークバー マウスアップ
-editSeekBar.addEventListener('mouseup', () => {
-    if (filename.style.opacity !== '1') return;
-    if (isEditSeekDragging) {
-        seekBar.value = editSeekBar.value; // メインシークバーも同期
-        const time = videoPlayer.duration * (seekBar.value / 100);
-        videoPlayer.currentTime = time;
-        isEditSeekDragging = false;
-        hideOverlayDisplay();
-        darkOverlay.style.display = 'none';
+        updateTimeDisplay();
+    } else {
+        editSeekBar.value = (videoPreview.currentTime / videoPreview.duration) * 100;
+        seekBar.value = editSeekBar.value; // シークバーも同期
+        videoPlayer.currentTime = videoPreview.currentTime;
     }
 });
 
@@ -3543,10 +3579,23 @@ editSeekBar.addEventListener('mouseup', () => {
 editSeekBar.addEventListener('mouseout', () => {
     if (filename.style.opacity !== '1') return;
     isMouseOverEditSeekBar = false;
+    videoPreview.style.display = 'none';
     // 通常の時間表示に戻す
     if (!isEditSeekDragging && videoPlayer.duration) {
         const value = (100 / videoPlayer.duration) * videoPlayer.currentTime;
         editSeekBar.value = value;
+        seekBar.value = editSeekBar.value; // シークバーも同期
+        updateTimeDisplay();
+    }
+});
+
+// カット編集シークバー マウスリーブ
+editSeekBar.addEventListener('mouseleave', () => {
+    if (filename.style.opacity !== '1') return;
+    if (isEditSeekDragging && !filename.matches(':active')) {
+        seekBar.value = editSeekBar.value; // シークバーも同期
+        isEditSeekDragging = false;
+        darkOverlay.style.display = 'none';
     }
 });
 
