@@ -198,6 +198,10 @@ const repeatPlayBtn  = document.getElementById('repeatPlayBtn');
 const joinPlaylistBtn = document.getElementById('joinPlaylistBtn');
 const sortPlaylistBtn = document.getElementById('sortPlaylistBtn');
 const darkOverlay = document.getElementById('darkOverlay');
+const cutTimelineContainer = document.getElementById('cutTimelineContainer');
+const cutTimelineBar = document.getElementById('cutTimelineBar');
+const audioTrackBtn    = document.getElementById('audioTrackBtn');
+const subtitleTrackBtn = document.getElementById('subtitleTrackBtn');
 
 // localStorage から復得
 const savedVolume = localStorage.getItem('volume');
@@ -214,8 +218,8 @@ const savedIsRandomPlayMode = localStorage.getItem('isRandomPlayMode');
 const savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode');
 const savedShuffleOrder = localStorage.getItem('shuffleOrder');
 const savedShufflePosition = localStorage.getItem('shufflePosition');
-const cutTimelineContainer = document.getElementById('cutTimelineContainer');
-const cutTimelineBar = document.getElementById('cutTimelineBar');
+const savedSelectedVoice    = localStorage.getItem('selectedVoice');
+const savedSelectedSubtitle = localStorage.getItem('selectedSubtitle');
 
 // グローバル（共通）変数
 let playlist = [];
@@ -243,6 +247,8 @@ let currentConvertPromise = null;
 let isPlaying = false;
 let isConverting = false;
 let modeChange = 'video';
+let selectedVoice    = "日本語";
+let selectedSubtitle = "（なし）";
 let baseConvertFile = null;
 let tempConvertFile = null;
 let isEditMode = false;
@@ -481,6 +487,17 @@ videoPlayer.addEventListener('play', () => {
 videoPlayer.addEventListener('pause', () => {
     navigator.mediaSession.playbackState = 'paused';
 });
+
+// 音声トラック選択・字幕トラック選択の復元
+selectedVoice = savedSelectedVoice;
+if (!savedSelectedVoice) {
+    selectedVoice = '日本語';
+}
+selectedSubtitle = savedSelectedSubtitle;
+if (!savedSelectedSubtitle) {
+    selectedSubtitle = '（なし）';
+}
+updateTrackButtonsVisibility();
 
 // 🔲共通関数🔲
 // 時間フォーマット変換
@@ -2178,6 +2195,21 @@ function resetCursorTimer() {
     }, overlayTimeout);
 }
 
+// 音声トラック・字幕トラック表示状態更新関数
+function updateTrackButtonsVisibility() {
+    if (!audioTrackBtn || !subtitleTrackBtn) return;
+
+    if (modeChange === 'video') {
+        // 再生モード → 字幕ボタン表示 / 音声ボタン非表示
+        audioTrackBtn.style.display    = 'none';
+        subtitleTrackBtn.style.display = 'inline-block';
+    } else if (modeChange === 'convert') {
+        // 変換モード → 音声ボタン表示 / 字幕ボタン非表示
+        audioTrackBtn.style.display    = 'inline-block';
+        subtitleTrackBtn.style.display = 'none';
+    }
+}
+
 // 🔲ipcRenderer ハンドラ登録🔲
 // main.js からの自動再生指示を受信
 ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
@@ -2871,6 +2903,8 @@ modeChangeBtn.addEventListener('click', () => {
         modeChangeBtn.textContent = modeChange === 'video' ? '🎬' : '🔄️';
         modeChangeBtn.setAttribute('data-tooltip', modeChange === 'video' ? '視聴モード（Ctrl+v）' : '変換モード（Ctrl+v）');
         localStorage.setItem('modeChange', modeChange);
+
+        updateTrackButtonsVisibility();
     }
 });
 
