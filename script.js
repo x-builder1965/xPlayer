@@ -76,17 +76,33 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.70';
 // 2026-03-14 Ver3.69 プレイリスト最終の動画終了時の挙動改善。
 // 2026-03-14 Ver3.70 画面サイズに合わせてプレビューのサイズ調整。
 // ---------------------------------------------------------------------
-// 2026-03-14 Ver3.xx 🔠字幕トラックの選択機能追加。（未実装）
-// 　・再生対象動画の字幕トラックを取得。
-// 　・取得した字幕トラックはポップアップメニューで🔠クリック時に表示。
-// 　・🔠のメニューにの先頭に「（なし）」を追加し字幕なし再生を可能にする。
-// 　・動画再生中、選択された字幕トラックに即座を適応再生しメニューに✅を付ける。
-//   ※現時点では🎤音声トラックは断念。（Electronでの実装は困難）
-// 2026-03-15 Ver3.xx 動画変換（🔄️）のエンコード（FFmpeg）で音声トラック・字幕トラックの処理変更。（未実装）
-// 　・日本語音声トラックのみを残す仕様→音声トラックを削除せず日本語音声トラックを先頭にする仕様に変更。
-// 　・字幕トラックを削除する仕様→字幕トラックを削除せず日本語音声トラックを先頭にする仕様に変更。
-// 2026-03-15 Ver3.xx カット編集（✂️）の再エンコード（FFmpeg）で音声トラック・字幕トラックを維持。（未実装）
-// 2026-03-15 Ver3.xx 結合編集（🎞️）の再エンコード（FFmpeg）で音声トラック・字幕トラックを維持。（未実装）
+// 2026-03-14 Ver3.xx 🎤音声トラック・🔠字幕トラックの関連機能追加。（未実装）
+// 　・ボタン配置：
+// 　　・音声トラック（🎤）・字幕トラック（🔠）ボタンをミュート（🔊）ボタンの左に配置。
+// 　・起動時：
+// 　　・起動時、localStrageから音声トラック選択（sekectedVoice）、字幕トラック選択（sekectedSubtitle）を取得。
+// 　　　・localStrageに音声トラック選択が無い場合、デフォルトで"日本語"を設定。
+// 　　　・localStrageに字幕トラック選択が無い場合、デフォルトで"（なし）"を設定。
+// 　・モード変更：
+// 　　・再生モード中は字幕トラック（🔠）ボタンを表示、音声トラック（🎤）ボタンを非表示。
+// 　　・変換モード中は字幕トラック（🔠）ボタンを非表示、音声トラック（🎤）ボタンを表示。
+// 　・プレイリスト変更：
+// 　　・プレイリストの動画選択時、対象動画の音声トラック情報、字幕トラック情報を取得。
+// 　　・字幕トラック（🔠）ボタンクリック時、字幕トラック情報を元にポップアップ字幕メニューを作成・表示。
+// 　　・字幕メニュー先頭に"（なし）"を追加。
+// 　　・字幕トラック選択を元に字幕メニューの選択マーク（✅）を設定。
+// 　　・音声トラック（🎤）ボタンクリック時、音声トラック情報を元にポップアップ音声メニューを作成・表示。
+// 　　・音声トラック選択を元に音声メニューの選択マーク（✅）を設定。
+// 　　※ポップアップメニューの形状は、並び替えメニューと同じにする。
+// 　・音声メニュー・字幕メニューの選択：
+// 　　・メニューの選択マーク（✅）を設定。
+// 　・動画再生時：
+// 　　・字幕メニューの選択言語を元に字幕を表示。選択言語が"（なし）"の場合は字幕を非表示。
+// 　・動画変換時：
+// 　　・音声メニューの選択言語の音声トラックが存在する場合、先頭へ移動。更にデフォルトも設定。
+// 　　・選択言語の音声トラックが存在しない場合、元動画の音声トラックを維持。
+// 　・その他：
+// 　　・カット編集（✂️）・結合編集（🎞️）の再エンコード（FFmpeg）で音声トラック・字幕トラックを維持。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -2439,7 +2455,7 @@ document.addEventListener('keydown', async (event) => {
 
     // ■🔎ズーム・移動・ショット■
     if (isZoomMode) {
-        // 🔄️ズームリセット（Ctrl+0）
+        // 🔘ズームリセット（Ctrl+0）
         if (event.ctrlKey && event.key === '0') {
             event.preventDefault();
             zoomResetBtn.click();
@@ -2801,7 +2817,7 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 // 🔲個別イベントリスナー登録🔲
-// ネット動画選択
+// 🌐ネット動画選択
 urlInputBtn.addEventListener('click', async () => {
     if (isUrlControlsVisible) {
         // 現在表示中 → キャンセル
@@ -2812,7 +2828,7 @@ urlInputBtn.addEventListener('click', async () => {
     }
 });
 
-// フォルダ選択
+// 📁フォルダ選択
 folderInput.addEventListener('click', async () => {
     hideOverlayDisplay();
     try {
@@ -2825,7 +2841,7 @@ folderInput.addEventListener('click', async () => {
     }
 });
 
-// ファイル選択
+// 🗒️ファイル選択
 videoInput.addEventListener('click', async () => {
     hideOverlayDisplay();
     try {
@@ -2838,7 +2854,7 @@ videoInput.addEventListener('click', async () => {
     }
 });
 
-// 動作モード切替（視聴／変換）
+// 🎬／🔄️動作モード切替（視聴／変換）
 modeChangeBtn.addEventListener('click', () => {
     if (!isPlaying && !isConverting) {
         if (modeChange === 'convert') {
@@ -2858,24 +2874,24 @@ modeChangeBtn.addEventListener('click', () => {
     }
 });
 
-// URLクリア
+// 🆑URLクリア
 urlClearBtn.addEventListener('click', () => {
     hideOverlayDisplay();
     urlInput.value = '';
     urlInput.focus();
 });
 
-// URL再生
+// ✅URL再生
 urlConfirmBtn.addEventListener('click', () => {
     urlInputEnter();
 });
 
-// 再生/一時停止
+// ▶️／⏸️再生/一時停止
 playPauseBtn.addEventListener('click', async () => {
     await togglePlayPause()
 });
 
-// 再生停止ボタン
+// ⏹️再生停止ボタン
 playStopBtn.addEventListener('click', async () => {
     const options = filenameDisplay.options;
 
@@ -2909,7 +2925,7 @@ playStopBtn.addEventListener('click', async () => {
     }
 });
 
-// 前の動画
+// ⏮️前の動画
 prevVideoBtn.addEventListener('click', async () => {
     if (isRepeatPlayMode === 'single') return; // 無効化
     const prevIndex = getPrevVideoIndex();
@@ -2926,7 +2942,7 @@ prevVideoBtn.addEventListener('click', async () => {
     updateIconOverlay();
 });
 
-// 30秒戻る
+// ⏪30秒戻る
 rewindBtn.addEventListener('click', () => {
     if (videoPlayer.duration) {
         let newTime = videoPlayer.currentTime - 30;
@@ -2941,7 +2957,7 @@ rewindBtn.addEventListener('click', () => {
     }
 });
 
-// 30秒進む
+// ⏩30秒進む
 fastForwardBtn.addEventListener('click', () => {
     if (videoPlayer.duration) {
         let newTime = videoPlayer.currentTime + 30;
@@ -2956,7 +2972,7 @@ fastForwardBtn.addEventListener('click', () => {
     }
 });
 
-// 次の動画
+// ⏭️次の動画
 nextVideoBtn.addEventListener('click', async () => {
     if (isRepeatPlayMode === 'single') return; // 無効化
     const nextIndex = getNextVideoIndex();
@@ -2973,7 +2989,7 @@ nextVideoBtn.addEventListener('click', async () => {
     updateIconOverlay();
 });
 
-// ミュート/解除
+// 🔊／🔇ミュート/解除
 volumeMuteBtn.addEventListener('click', () => {
     if (videoPlayer.volume === 0) {
         videoPlayer.volume = lastVolume || 0.2;
@@ -2993,7 +3009,7 @@ volumeMuteBtn.addEventListener('click', () => {
     updateIconOverlay();
 });
 
-// フルスクリーン切替
+// 🖥️フルスクリーン切替
 fullscreenBtn.addEventListener('click', () => {
     if (!document.fullscreenElement) {
         if (mainContainer.requestFullscreen) {
@@ -3012,7 +3028,7 @@ fullscreenBtn.addEventListener('click', () => {
     updateIconOverlay();
 });
 
-// 描画モード切替
+// ↔️／↕️描画モード切替
 fitModeBtn.addEventListener('click', () => {
     fitMode = fitMode === 'contain' ? 'cover' : 'contain';
     videoPlayer.style.objectFit = fitMode;
@@ -3031,7 +3047,7 @@ zoomPanel.addEventListener('mouseover', () => {
     }
 });
 
-// ズームモード切替
+// 🔍ズームモード切替
 zoomBtn.addEventListener('click', () => {
     isZoomMode = !isZoomMode;
     if (isZoomMode) {
@@ -3046,12 +3062,12 @@ zoomBtn.addEventListener('click', () => {
     updateIconOverlay();
 });
 
-// ランダム再生ボタンクリック
+// 🔀ランダム再生ボタンクリック
 randomPlayBtn.addEventListener('click', () => {
     toggleRandomPlay();
 });
 
-// 繰り返し再生ボタンクリック
+// 🔁／🔂繰り返し再生ボタンクリック
 repeatPlayBtn.addEventListener('click', () => {
     toggleRepeatPlay();
 });
@@ -3062,7 +3078,7 @@ zoomBar.addEventListener('input', () => {
     applyZoom(zoomPercent);
 });
 
-// ズームリセット
+// 🔘ズームリセット
 zoomResetBtn.addEventListener('click', () => {
     // ズーム値をリセットし、表示位置も中央へ戻す
     zoomBar.value = '0';
@@ -3071,7 +3087,7 @@ zoomResetBtn.addEventListener('click', () => {
     applyZoom(0);
 });
 
-// スナップショット
+// 📷スナップショット
 snapshotBtn.addEventListener('click', async () => {
     try {
         // 再生中なら一時停止してからスナップショットを撮る
@@ -3093,7 +3109,7 @@ snapshotBtn.addEventListener('click', async () => {
     }
 });
 
-// ズーム終了（Ctrl+z）
+// ❌ズーム終了（Ctrl+z）
 zoomEndBtn.addEventListener('click', () => {
     isZoomMode = false;
     zoomPanel.style.display = 'none';
@@ -3118,10 +3134,10 @@ filenameDisplay.addEventListener('change', async () => {
     }
 });
 
-// ヘルプ（開く）イベントリスナー
+// ❔ヘルプ（開く）イベントリスナー
 helpOpenBtn.addEventListener('click', openHelp);
 
-// ヘルプ（閉じる）イベントリスナー
+// ❌ヘルプ（閉じる）イベントリスナー
 helpCloseBtn.addEventListener('click', closeHelp);
 
 // 動画メタデータ読み込み
@@ -3184,7 +3200,7 @@ videoPlayer.addEventListener('loadedmetadata', () => {
     updateIconOverlay();
 });
 
-// 結合編集ボタンクリック
+// 🎞️結合編集ボタンクリック
 joinPlaylistBtn.addEventListener('click', () => {
     joinPlaylistVideos();
 });
@@ -3814,17 +3830,17 @@ tooltipElements.forEach(element => {
     element.addEventListener('mouseleave', () => hideTooltip(element));
 });
 
-// 上へボタン
+// 🔼上へボタン
 upMovePlaylistBtn.addEventListener('click', () => {
     upMovePlaylist();
 });
 
-// 下へボタン
+// 🔽下へボタン
 downMovePlaylistBtn.addEventListener('click', () => {
     downMovePlaylist();
 });
 
-// 追加ボタン
+// ➕追加ボタン
 addPlaylistBtn.addEventListener('click', async () => {
     addToPlaylist();
 
@@ -3838,7 +3854,7 @@ addPlaylistBtn.addEventListener('click', async () => {
     saveShuffleState();
 });
 
-// 削除ボタン
+// ➖削除ボタン
 removePlaylistBtn.addEventListener('click', () => {
     const selectedIndex = parseInt(filenameDisplay.value);
     if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= playlist.length) return;
@@ -3861,7 +3877,7 @@ removePlaylistBtn.addEventListener('click', () => {
     saveShuffleState();
 });
 
-// クリアボタン
+// 🆑クリアボタン
 clearPlaylistBtn.addEventListener('click', () => {
     clearPlaylist();
 
@@ -3884,12 +3900,12 @@ clearPlaylistBtn.addEventListener('click', () => {
     savePlaylistAndPlaybackState();
 });
 
-// 保存ボタン
+// 💾保存ボタン
 savePlaylistBtn.addEventListener('click', () => {
     savePlaylist();
 });
 
-// プレイリスト編集メニュー
+// 📚プレイリスト編集メニュー
 filenameMenu.addEventListener('click', () => {
     if (filenameMenus.style.display === 'none') {
         filenameMenus.style.display = 'flex';
@@ -3933,7 +3949,7 @@ dropzone.addEventListener('drop', async (e) => {
     }
 });
 
-// 編集モード切替
+// ✂️編集モード切替
 editModeBtn.addEventListener('click', () => {
     if (!videoPlayer.src) {
         updateOverlayDisplay('✂️ プレイリストが空です');
@@ -3960,7 +3976,7 @@ editModeBtn.addEventListener('click', () => {
     updateEditModeButtonUI();
 });
 
-// カット中断
+// ❌カット中断
 cutCancelBtn.addEventListener('click', async () => {
     try {
         if (isCutEditing) {
@@ -3991,7 +4007,7 @@ cutCancelBtn.addEventListener('click', async () => {
     }
 });
 
-// インマーク設定
+// 📍←インマーク設定
 setInMarkBtn.addEventListener('click', () => {
     if (videoPlayer.duration) {
         editInMark = videoPlayer.currentTime;
@@ -4000,7 +4016,7 @@ setInMarkBtn.addEventListener('click', () => {
     renderCutRanges();
 });
 
-// アウトマーク設定
+// →📍アウトマーク設定
 setOutMarkBtn.addEventListener('click', () => {
     if (videoPlayer.duration) {
         editOutMark = videoPlayer.currentTime;
@@ -4027,7 +4043,7 @@ editSeekBar.addEventListener('input', () => {
     }
 });
 
-// キャンセル
+// ❌キャンセル
 clearEditBtn.addEventListener('click', () => {
     // カット範囲を全削除
     cutRanges = [];
@@ -4042,7 +4058,7 @@ clearEditBtn.addEventListener('click', () => {
     renderCutRanges();
 });
 
-// カット範囲追加
+// ✅カット範囲追加
 addCutRangeBtn.addEventListener('click', () => {
     if (editInMark < 0 || editOutMark < 0) {
         updateOverlayDisplay('✂️ INマークとOUTマークを両方設定してください');
@@ -4064,7 +4080,7 @@ addCutRangeBtn.addEventListener('click', () => {
     renderCutRanges();
 });
 
-// 動画保存（設定した複数範囲を削除して保存）
+// 💾動画保存（設定した複数範囲を削除して保存）
 saveVideoBtn.addEventListener('click', async () => {
     if (!videoPlayer.src) {
         updateOverlayDisplay('✂️ 動画が読み込まれていません');
@@ -4145,7 +4161,7 @@ saveVideoBtn.addEventListener('click', async () => {
     }
 });
 
-// 並び替えボタンクリックイベント（トグル実装）
+// 📩並び替えボタンクリックイベント（トグル実装）
 sortPlaylistBtn.addEventListener('click', (e) => {
     e.stopPropagation();
 
