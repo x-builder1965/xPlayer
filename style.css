@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.66'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.70'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -37,8 +37,8 @@ video {
 /* プレビュー動画（ワイプ） */
 #videoPreview {
     position: absolute;
-    width: 180px;
-    height: 100px;
+    width:  clamp(140px, 14vw, 240px);
+    height: clamp(78px, 8.4vw, 135px);   /* 16:9を意識した比率 */
     border: 2px solid #007bff;
     border-radius: 8px;
     box-shadow: 0 0 15px rgba(0, 123, 255, 0.6);

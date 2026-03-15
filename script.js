@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.69';
+const appName = 'xPlayer -動画プレイヤー- Ver3.70';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -74,14 +74,19 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.69';
 // 2026-03-14 Ver3.67 ツールチップ変更不良正式対応。
 // 2026-03-14 Ver3.68 カット編集機能（✂️）のシークバードラック時ワイプ表示。
 // 2026-03-14 Ver3.69 プレイリスト最終の動画終了時の挙動改善。
+// 2026-03-14 Ver3.70 画面サイズに合わせてプレビューのサイズ調整。
 // ---------------------------------------------------------------------
 // 2026-03-14 Ver3.xx 🔠字幕トラックの選択機能追加。（未実装）
 // 　・再生対象動画の字幕トラックを取得。
 // 　・取得した字幕トラックはポップアップメニューで🔠クリック時に表示。
 // 　・🔠のメニューにの先頭に「（なし）」を追加し字幕なし再生を可能にする。
 // 　・動画再生中、選択された字幕トラックに即座を適応再生しメニューに✅を付ける。
-// 　・変換モード・カット編集・結合編集時のエンコード（FFmpeg）で元動画の字幕を維持。
 //   ※現時点では🎤音声トラックは断念。（Electronでの実装は困難）
+// 2026-03-15 Ver3.xx 動画変換（🔄️）のエンコード（FFmpeg）で音声トラック・字幕トラックの処理変更。（未実装）
+// 　・日本語音声トラックのみを残す仕様→音声トラックを削除せず日本語音声トラックを先頭にする仕様に変更。
+// 　・字幕トラックを削除する仕様→字幕トラックを削除せず日本語音声トラックを先頭にする仕様に変更。
+// 2026-03-15 Ver3.xx カット編集（✂️）の再エンコード（FFmpeg）で音声トラック・字幕トラックを維持。（未実装）
+// 2026-03-15 Ver3.xx 結合編集（🎞️）の再エンコード（FFmpeg）で音声トラック・字幕トラックを維持。（未実装）
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -728,8 +733,8 @@ function hideOverlayDisplay() {
 
 // プレビュー位置更新関数
 function updatePreviewPosition(e) {
-    const previewWidth = 180;
-    const previewHeight = 100;
+    const previewWidth  = videoPreview.offsetWidth  || 180;  // fallbackとして180
+    const previewHeight = videoPreview.offsetHeight || 100;  // fallbackとして100
     const seekRect = seekBar.getBoundingClientRect();
     const editSeekRect = editSeekBar.getBoundingClientRect();
 
@@ -749,12 +754,13 @@ function updatePreviewPosition(e) {
     let y = 20;
     if (isSeekDragging || isMouseOverSeekBar) {
         // Y軸：seekBarの直上に固定（プレビュー高さ + 余白）
-        y = seekRect.top - previewHeight - 20; // seekBarの上に10pxの隙間
+        y = seekRect.top - previewHeight - (previewHeight * 0.1); // seekBarの上に10pxの隙間
     } else if (isEditSeekDragging || isMouseOverEditSeekBar) {
         // Y軸：seekBarの直上に固定（プレビュー高さ + 余白）
-        y = editSeekRect.top - previewHeight + 140; // editSeekBarの下に140pxの隙間
-        if (x < 110) {
-            x = x - 100;     // マウス位置の左に100pxの隙間
+        y = (editSeekRect.top - previewHeight) + (previewHeight * 1.4); // editSeekBarの下に140pxの隙間
+        x = x - (previewWidth * 0.5);     // マウス位置の左に100pxの隙間
+        if (x < 40) {
+            x = 40; 
         }
     }
 
