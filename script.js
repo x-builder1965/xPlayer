@@ -2288,7 +2288,7 @@ function resetCursorTimer() {
     }, overlayTimeout);
 }
 
-// 音声トラック・字幕トラック表示状態更新関数
+// 字幕トラックボタン・音声トラックボタンの表示／非表示
 function updateTrackButtonsVisibility() {
     if (!audioTrackBtn || !subtitleTrackBtn) return;
 
@@ -2303,7 +2303,7 @@ function updateTrackButtonsVisibility() {
     }
 }
 
-// 保存済み字幕を選択状態に反映
+// 再生<video>の字幕表示切替／非表示
 function applySelectedSubtitle() {
     if (!videoPlayer.textTracks) return;
 
@@ -2316,7 +2316,7 @@ function applySelectedSubtitle() {
     });
 }
 
-// selectTrack 関数も ID で受け取るように修正が必要
+// 字幕トラックメニュー・音声トラックメニュー選択
 function selectTrack(type, label, menu, trackObj = null) {
     const currentTracks = type === 'audio' ? currentAudioTracks : currentTextTracks;
     if (trackObj && !currentTracks.includes(trackObj)) {  // 例: 字幕の場合
@@ -2363,7 +2363,7 @@ function selectTrack(type, label, menu, trackObj = null) {
     menu?.remove();
 }
 
-// 音声トラック・字幕トラックメニュー作成
+// 字幕トラックメニュー・音声トラックメニュー作成
 function createTrackMenu(type) {  // 'audio' or 'subtitle'
     const menu = document.createElement('div');
     menu.className = 'sort-menu';
@@ -2509,7 +2509,7 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
     return menu;
 }
 
-// CC/SDH 推測関数（生オブジェクト対応版・安全アクセス強化）
+// 字幕トラックCC/SDH判定
 function guessIsCCorSDH(track) {
     const tags = track.tags || {};
     const disposition = track.disposition || {};
@@ -2550,9 +2550,10 @@ function guessIsCCorSDH(track) {
     return '';
 }
 
-// 字幕トラックのタイトル再構築関数
+// 字幕トラック・音声トラックのメニュー要素作成
 function remakeTagsTitle(track) {
     const tags = track.tags || {};
+    const title = (tags.title || '').trim();
     const handler = (tags.handler_name || '').trim();
     const langCode = (tags.language || '').trim().toLowerCase();
 
@@ -2560,24 +2561,23 @@ function remakeTagsTitle(track) {
 
     let baseLabel = '';
 
-    if (excludeHandlers.includes(handler)) {
+    if (title && title !== '') {
+        baseLabel = title;
+    } else {
         // excludeHandlers の場合 → 言語名を優先
         if (langCode && languageMap[langCode]) {
             baseLabel = languageMap[langCode];
-        } else if (langCode) {
+        } else if (langCode && langCode !== '') {
             baseLabel = langCode.toUpperCase();
         } else {
             baseLabel = '字幕';
         }
+    }
 
-        // CC/SDH 推測を追加
-        const ccMark = guessIsCCorSDH(track);
-        if (ccMark) {
-            baseLabel += ` ${ccMark}`;
-        }
-    } else {
-        // それ以外 → handler_name を優先（空なら字幕）
-        baseLabel = handler || '字幕';
+    // CC/SDH 推測を追加
+    const ccMark = guessIsCCorSDH(track);
+    if (ccMark) {
+        baseLabel += ` ${ccMark}`;
     }
 
     return baseLabel;
@@ -2585,6 +2585,8 @@ function remakeTagsTitle(track) {
 
 // 音声トラック・字幕トラックメニュー表示
 function toggleTrackMenu(e, type, button) {
+    if (type === 'audio' && isConverting) return;
+
     e.stopPropagation();
 
     const existingMenu = document.querySelector('.sort-menu');
