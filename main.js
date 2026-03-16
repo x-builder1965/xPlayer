@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.66';
+const appName = 'xPlayer -動画プレイヤー- Ver3.72';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -13,6 +13,8 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
 const os = require('os');
 const { spawn, exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
 
 // 固定値設定
 const ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
@@ -603,7 +605,6 @@ ipcMain.handle('save-playlist-file', async (event, { filePath, paths }) => {
 // スナップショット（Windows の Snipping Tool を起動）
 ipcMain.handle('capture-screenshot', async (event) => {
     try {
-        const { exec } = require('child_process');
         exec('explorer.exe ms-screenclip:', () => {});
         return { success: true, message: 'Snipping Tool 起動！'};
     } catch (err) {
@@ -737,7 +738,6 @@ ipcMain.handle('open-folder', async (event, folderPath) => {
             const { spawn } = require('child_process');
             spawn('explorer', [folderPath]);
         } else if (process.platform === 'darwin') {
-            const { exec } = require('child_process');
             exec(`open "${folderPath}"`);
         } else {
             const { spawn } = require('child_process');
@@ -1379,4 +1379,61 @@ ipcMain.handle('open-video-in-browser', async (event, videoUrl) => {
     console.error(err);
     return { success: false, message: err.message };
   }
+});
+
+ipcMain.handle('get-video-tracks', async (event, filePath) => {
+    return new Promise((resolve) => {
+        ffmpeg.ffprobe(filePath, (err, metadata) => {
+            if (err) {
+                console.error('ffprobe エラー:', err);
+                return resolve({
+                    success: false,
+                    error: err.message || 'ffprobe実行に失敗しました'
+                });
+            }
+
+            const streams = metadata.streams || [];
+            const format = metadata.format || {};
+
+            const audioTracks = [];
+            const subtitleTracks = [];
+
+            streams.forEach((s, index) => {
+                // ★ ここを変更：加工した track ではなく、生の s をそのまま push
+                // （ただし index は renderer 側で必要なので付与しておく）
+                const streamWithIndex = {
+                    ...s,           // ffprobe の生ストリームオブジェクトを展開
+                    index: index    // 必要に応じて index を明示的に付与
+                };
+
+                if (s.codec_type === 'audio') {
+                    audioTracks.push(streamWithIndex);
+                } else if (
+                    s.codec_type === 'subtitle' ||
+                    s.codec_type === 'text' ||
+                    s.codec_name === 'tx3g' ||
+                    s.codec_name === 'mov_text'
+                ) {
+                    // tx3g / mov_text を字幕として強制認識
+                    subtitleTracks.push(streamWithIndex);
+                }
+            });
+
+            // format タグからの補助チェック（変更なし）
+            if (format.tags && format.tags.subtitle) {
+                console.log('format.tags に字幕情報発見:', format.tags.subtitle);
+            }
+
+            resolve({
+                success: true,
+                audio: audioTracks,
+                subtitle: subtitleTracks,
+                totalStreams: streams.length,
+                debug: {
+                    hasTx3g: streams.some(s => s.codec_name === 'tx3g'),
+                    ffprobeVersion: metadata.format?.tags?.encoder || 'unknown'
+                }
+            });
+        });
+    });
 });
