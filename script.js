@@ -2347,10 +2347,17 @@ function selectTrack(type, label, menu, trackObj = null) {
             }
             selectedSubtitle = label;
         }
-        // 再描画など
+    } else {
+        // trackObj が渡されていればそれを使う
+        if (trackObj) {
+            currentAudioTrack = trackObj;
+        } else {
+            // ラベルから逆引き（非推奨・複数あると危険）
+            const found = currentAudioTracks.find(t => remakeTagsTitle(t) === label);
+            if (found) currentAudioTrack = found;
+        }
+        selectedAudio = label;
     }
-    // audioも同様に
-    // ...
 
     // メニュー閉じる処理など
     menu?.remove();
@@ -2360,7 +2367,6 @@ function selectTrack(type, label, menu, trackObj = null) {
 function createTrackMenu(type) {  // 'audio' or 'subtitle'
     const menu = document.createElement('div');
     menu.className = 'sort-menu';
-
     // インラインスタイル（変更なし）
     menu.style.background = 'rgba(30,30,30,0.95)';
     menu.style.border = '1px solid #444';
@@ -2408,22 +2414,24 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
 
             let found = labeledTracks.some(item => item.track === selectedTrackObj);
 
-            if (!found && selectedTrackObj !== null) {
-                // 同一ラベルを探す
-                const currentLabel = remakeTagsTitle(selectedTrackObj);
-                const sameLabelItem = labeledTracks.find(item => item.label.trim() === currentLabel.trim());
+            if (!found) {
+                if (selectedTrackObj !== null) {
+                    // 同一ラベルを探す
+                    const currentLabel = remakeTagsTitle(selectedTrackObj);
+                    const sameLabelItem = labeledTracks.find(item => item.label.trim() === currentLabel.trim());
 
-                if (sameLabelItem) {
-                    // 同じラベルのものがあればそちらを選択状態に更新
-                    selectedTrackObj = sameLabelItem.track;
-                } else {
-                    // 同一ラベルも見つからない → なしにフォールバック
-                    selectedTrackObj = null;
-                    // ここで実際に字幕をオフにする処理が必要なら selectTrack('subtitle', '（なし）', menu); を呼ぶ
-                    const isNoneSelected = !selectedTrackObj;
-                    noneItem.innerHTML = isNoneSelected ? '✅ （なし）' : '　　（なし）';
-                    noneItem.onclick = () => selectTrack('subtitle', '（なし）', menu);
-                    menu.appendChild(noneItem);
+                    if (sameLabelItem) {
+                        // 同じラベルのものがあればそちらを選択状態に更新
+                        selectedTrackObj = sameLabelItem.track;
+                    } else {
+                        // 同一ラベルも見つからない → なしにフォールバック
+                        selectedTrackObj = null;
+                        // ここで実際に字幕をオフにする処理が必要なら selectTrack('subtitle', '（なし）', menu); を呼ぶ
+                        const isNoneSelected = !selectedTrackObj;
+                        noneItem.innerHTML = isNoneSelected ? '✅ （なし）' : '　　（なし）';
+                        noneItem.onclick = () => selectTrack('subtitle', '（なし）', menu);
+                        menu.appendChild(noneItem);
+                    }
                 }
             }
 
@@ -2455,12 +2463,16 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
 
             let found = labeledTracks.some(item => item.track === selectedTrackObj);
 
-            if (!found && selectedTrackObj !== null) {
-                const currentLabel = remakeTagsTitle(selectedTrackObj);
-                let sameLabelItem = labeledTracks.find(item => item.label.trim() === currentLabel.trim());
+            if (!found) {
+                if (selectedTrackObj !== null) {
+                    const currentLabel = remakeTagsTitle(selectedTrackObj);
+                    let sameLabelItem = labeledTracks.find(item => item.label.trim() === currentLabel.trim());
 
-                if (sameLabelItem) {
-                    selectedTrackObj = sameLabelItem.track;
+                    if (sameLabelItem) {
+                        selectedTrackObj = sameLabelItem.track;
+                    } else {
+                        selectedTrackObj = labeledTracks[0]?.track ?? null;
+                    }
                 } else {
                     selectedTrackObj = labeledTracks[0]?.track ?? null;
                 }
@@ -2541,12 +2553,10 @@ function guessIsCCorSDH(track) {
 // 字幕トラックのタイトル再構築関数
 function remakeTagsTitle(track) {
     const tags = track.tags || {};
-    const disposition = track.disposition || {};
-
     const handler = (tags.handler_name || '').trim();
     const langCode = (tags.language || '').trim().toLowerCase();
 
-    const excludeHandlers = ['SubtitleHandler', 'Subtitle', 'Unknown'];
+    const excludeHandlers = ['SubtitleHandler', 'Subtitle', 'AudioHandler', 'Audio', 'SoundHandler', 'Sound', 'Unknown'];
 
     let baseLabel = '';
 
