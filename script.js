@@ -446,6 +446,17 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('controlSizeY', controlSizeY);
     updateControlSize(controlSizeX, controlSizeY);
 
+    // 音声トラック選択・字幕トラック選択の復元
+    selectedVoice = savedSelectedVoice;
+    if (!savedSelectedVoice) {
+        selectedVoice = '日本語';
+    }
+    selectedSubtitle = savedSelectedSubtitle;
+    if (!savedSelectedSubtitle) {
+        selectedSubtitle = '（なし）';
+    }
+    updateTrackButtonsVisibility();
+
     // 起動時の引数有無判定
     (async () => {
         const args = await ipcRenderer.invoke('get-command-line-args');
@@ -529,32 +540,6 @@ document.addEventListener('DOMContentLoaded', () => {
         videoPlayer.addEventListener('pause', updateMetadata);
         videoPlayer.addEventListener('loadedmetadata', updateMetadata);
     }
-
-    // 再生状態に応じてプレイバックステートを通知（Windowsがキー有効／無効を判断するのに必要）
-    const updatePlaybackState = () => {
-        if (videoPlayer.paused) {
-            navigator.mediaSession.playbackState = 'paused';
-        } else {
-            navigator.mediaSession.playbackState = 'playing';
-        }
-    };
-    videoPlayer.addEventListener('play', () => {
-        navigator.mediaSession.playbackState = 'playing';
-    });
-    videoPlayer.addEventListener('pause', () => {
-        navigator.mediaSession.playbackState = 'paused';
-    });
-
-    // 音声トラック選択・字幕トラック選択の復元
-    selectedVoice = savedSelectedVoice;
-    if (!savedSelectedVoice) {
-        selectedVoice = '日本語';
-    }
-    selectedSubtitle = savedSelectedSubtitle;
-    if (!savedSelectedSubtitle) {
-        selectedSubtitle = '（なし）';
-    }
-    updateTrackButtonsVisibility();
 });
 
 // 🔲共通関数🔲
@@ -3605,6 +3590,18 @@ helpOpenBtn.addEventListener('click', openHelp);
 
 // ❌ヘルプ（閉じる）イベントリスナー
 helpCloseBtn.addEventListener('click', closeHelp);
+
+// 再生イベント
+videoPlayer.addEventListener('play', () => {
+    // 再生中をプレイバックステートを通知
+    navigator.mediaSession.playbackState = 'playing';
+});
+
+// 一時停止イベント
+videoPlayer.addEventListener('pause', () => {
+    // 一時停止をプレイバックステートを通知
+    navigator.mediaSession.playbackState = 'paused';
+});
 
 // 動画メタデータ読み込み
 videoPlayer.addEventListener('loadedmetadata', () => {
