@@ -12,6 +12,7 @@
       },
       "args": [
         ".",
+        // "H:/PlayList/歌ってみた/歌ってみた_AI 楽曲.amppl",   // 引数指定
         "--remote-debugging-port=9223"   // ← ここ重要！重複しないポート
       ],
       "outputCapture": "std"
