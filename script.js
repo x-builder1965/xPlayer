@@ -101,6 +101,7 @@ const SORT_MODES = {
 };
 // 言語コード → 表示名のマッピング
 const languageMap = {
+  // 既存のものを維持
   'jpn': '日本語',
   'eng': '英語',
   'en':  '英語',
@@ -117,8 +118,64 @@ const languageMap = {
   'ara': 'アラビア語',
   'por': 'ポルトガル語',
   'hin': 'ヒンディー語',
+  'afr': 'アフリカーンス語',     // af
+  'amh': 'アムハラ語',           // am
+  'aze': 'アゼルバイジャン語',   // az
+  'bel': 'ベラルーシ語',         // be
+  'bul': 'ブルガリア語',         // bg
+  'cat': 'カタルーニャ語',       // ca
+  'ces': 'チェコ語',             // cs
+  'dan': 'デンマーク語',         // da
+  'ell': 'ギリシャ語',           // el
+  'eus': 'バスク語',             // eu
+  'fin': 'フィンランド語',       // fi
+  'gle': 'アイルランド語',       // ga
+  'glg': 'ガリシア語',           // gl
+  'heb': 'ヘブライ語',           // he
+  'hun': 'ハンガリー語',         // hu
+  'ind': 'インドネシア語',       // id
+  'isl': 'アイスランド語',       // is
+  'kat': 'グルジア語',           // ka
+  'kaz': 'カザフ語',             // kk
+  'kir': 'キルギス語',           // ky
+  'lit': 'リトアニア語',         // lt
+  'lav': 'ラトビア語',           // lv
+  'mlt': 'マルタ語',             // mt
+  'mon': 'モンゴル語',           // mn
+  'msa': 'マレー語',             // ms
+  'nld': 'オランダ語',           // nl
+  'nob': 'ノルウェー語（ブークモール）', // nb
+  'pol': 'ポーランド語',         // pl
+  'ron': 'ルーマニア語',         // ro
+  'slk': 'スロバキア語',         // sk
+  'slv': 'スロベニア語',         // sl
+  'srp': 'セルビア語',           // sr
+  'swe': 'スウェーデン語',       // sv
+  'tha': 'タイ語',               // th
+  'tur': 'トルコ語',             // tr
+  'ukr': 'ウクライナ語',         // uk
+  'urd': 'ウルドゥー語',         // ur
+  'vie': 'ベトナム語',           // vi
+  'may': 'マレー語',      // マレー語（ms/may/msa）
+  'cze': 'チェコ語',      // チェコ語（cs/cze/ces）
+  'baq': 'バスク語',      // バスク語（eu/eus/baq）
+  'kan': 'カンナダ語',    // カンナダ語（kn/kan）
+  'mal': 'マラヤーラム語', // マラヤーラム語（ml/mal）
+  'dut': 'オランダ語',    // オランダ語（nl/dut/nld）
+  'tam': 'タミル語',      // タミル語（ta/tam）
+  'tel': 'テルグ語',      // テルグ語（te/tel）
+  'gre': 'ギリシャ語',    // ギリシャ語（el/gre/ell）
+  'rum': 'ルーマニア語',     // ISO 639-2/B 版（ron と同義）
+  // 追加：地域バリアント例（必要に応じて）
+  'zh-cn': '中国語（簡体字）',
+  'zh-tw': '中国語（繁体字）',
+  'pt-br': 'ポルトガル語（ブラジル）',
+  'es-419': 'スペイン語（ラテンアメリカ）',
+  'fr-ca': 'フランス語（カナダ）',
+  // 未指定やその他
+  'qaa': 'オリジナル言語（未指定）',  // よく使われるカスタムコード
+  'mul': '複数言語',
   'und': '未指定',
-  // 必要に応じて追加
 };
 
 // DOM要素取得
@@ -266,6 +323,8 @@ let hideMouseTimeout = null;
 let currentBlobUrl = null;  // ← これを追加（null 初期化）
 let currentAudioTracks = [];
 let currentTextTracks = [];
+let currentAudioTrack = null;
+let currentTextTrack = null;
 
 // 🔲初期処理🔲
 // 初期表示設定
@@ -2163,6 +2222,18 @@ function createSortMenu() {
         menu.appendChild(item);
     });
 
+    // ★ メニュー全体に対するマウスオーバー抑止
+    menu.addEventListener('mouseenter', () => {
+        isMouseOverControls = true;
+        clearTimeout(timeout);           // 自動非表示タイマーを即時キャンセル
+        showControlsAndFilename();       // 強制的に表示状態を維持
+    });
+    menu.addEventListener('mouseleave', () => {
+        isMouseOverControls = false;
+        // メニュー外に出たら通常の非表示タイマーを再開
+        showControlsAndFilename();       // ここでタイマーが再セットされる
+    });
+
     return menu;
 }
 
@@ -2245,12 +2316,52 @@ function applySelectedSubtitle() {
     });
 }
 
+// selectTrack 関数も ID で受け取るように修正が必要
+function selectTrack(type, label, menu, trackObj = null) {
+    const currentTracks = type === 'audio' ? currentAudioTracks : currentTextTracks;
+    if (trackObj && !currentTracks.includes(trackObj)) {  // 例: 字幕の場合
+        console.warn("選択しようとしたトラックはもう存在しません");
+        if (type === 'subtitle') {
+            currentTextTrack = null;
+            selectedSubtitle = '（なし）';
+        } else {
+            currentAudioTrack = null;
+        }
+        return;
+    }
+
+    if (type === 'subtitle') {
+        if (label === '（なし）') {
+            currentTextTrack = null;
+            selectedTrackObj = null;
+            selectedSubtitle = '（なし）';
+            // video.textTracks で適切に無効化処理
+        } else {
+            // trackObj が渡されていればそれを使う
+            if (trackObj) {
+                currentTextTrack = trackObj;
+            } else {
+                // ラベルから逆引き（非推奨・複数あると危険）
+                const found = currentTextTracks.find(t => remakeTagsTitle(t) === label);
+                if (found) currentTextTrack = found;
+            }
+            selectedSubtitle = label;
+        }
+        // 再描画など
+    }
+    // audioも同様に
+    // ...
+
+    // メニュー閉じる処理など
+    menu?.remove();
+}
+
 // 音声トラック・字幕トラックメニュー作成
 function createTrackMenu(type) {  // 'audio' or 'subtitle'
     const menu = document.createElement('div');
     menu.className = 'sort-menu';
 
-    // インラインスタイルで背景・見た目を確実に統一
+    // インラインスタイル（変更なし）
     menu.style.background = 'rgba(30,30,30,0.95)';
     menu.style.border = '1px solid #444';
     menu.style.borderRadius = '6px';
@@ -2260,45 +2371,128 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
     menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
     menu.style.maxHeight = '400px';
     menu.style.overflowY = 'auto';
+    menu.style.cursor = 'pointer';
 
     const title = document.createElement('div');
     title.className = 'menu-title';
-    //　title.textContent = type === 'audio' ? '音声トラックを選択' : '字幕トラックを選択';
     menu.appendChild(title);
 
     const tracks = type === 'audio' ? currentAudioTracks : currentTextTracks;
-    const selected = type === 'audio' ? selectedVoice : selectedSubtitle;
+    let selectedTrackObj = type === 'audio' ? currentAudioTrack : currentTextTrack;  // ← 重要: 現在再生中のトラックオブジェクト
 
-    // 字幕の場合、先頭に「（なし）」
+    // ── 字幕メニューの場合 ──
     if (type === 'subtitle') {
+        // 「（なし）」項目を先頭に追加
         const noneItem = document.createElement('div');
         noneItem.className = 'menu-item';
-        noneItem.innerHTML = selected === '（なし）' ? '✅ （なし）' : '　　（なし）';
+        // 現在「なし」が選択されているか（再生トラックがnull/未選択状態）
+        const isNoneSelected = !selectedTrackObj;
+        noneItem.innerHTML = isNoneSelected ? '✅ （なし）' : '　　（なし）';
         noneItem.onclick = () => selectTrack('subtitle', '（なし）', menu);
         menu.appendChild(noneItem);
-    }
 
-    if (tracks.length > 0) {
+        // 字幕トラック一覧
+        if (tracks.length > 0) {
+            // 表示ラベルとトラックをペアにした配列
+            const labeledTracks = tracks.map(track => ({
+                label: remakeTagsTitle(track),
+                track                     // ← トラックオブジェクトを保持
+            }));
 
-        tracks.forEach((track) => {  // ← idx は不要になったので削除
-            // 生オブジェクト対応：tags と disposition を安全にアクセス
-            const tags = track.tags || {};
-            const disposition = track.disposition || {};
+            // ラベルで昇順ソート（同一ラベルは元の順序を維持したい場合はstable sort）
+            labeledTracks.sort((a, b) => {
+                const cleanA = a.label.trim();
+                const cleanB = b.label.trim();
+                return cleanA.localeCompare(cleanB);
+            });
 
-            // remakeTagsTitle に生 track を渡す
-            let label = remakeTagsTitle(track);
-            // 音声トラックの場合：チャンネル数（channels は生オブジェクトにある）
-            if (type === 'audio' && track.channels) {
-                label += ` (${track.channels}ch)`;
+            let found = labeledTracks.some(item => item.track === selectedTrackObj);
+
+            if (!found && selectedTrackObj !== null) {
+                // 同一ラベルを探す
+                const currentLabel = remakeTagsTitle(selectedTrackObj);
+                const sameLabelItem = labeledTracks.find(item => item.label.trim() === currentLabel.trim());
+
+                if (sameLabelItem) {
+                    // 同じラベルのものがあればそちらを選択状態に更新
+                    selectedTrackObj = sameLabelItem.track;
+                } else {
+                    // 同一ラベルも見つからない → なしにフォールバック
+                    selectedTrackObj = null;
+                    // ここで実際に字幕をオフにする処理が必要なら selectTrack('subtitle', '（なし）', menu); を呼ぶ
+                    const isNoneSelected = !selectedTrackObj;
+                    noneItem.innerHTML = isNoneSelected ? '✅ （なし）' : '　　（なし）';
+                    noneItem.onclick = () => selectTrack('subtitle', '（なし）', menu);
+                    menu.appendChild(noneItem);
+                }
             }
 
-            const item = document.createElement('div');
-            item.className = 'menu-item';
-            item.innerHTML = (label === selected) ? `✅ ${label}` : `　　${label}`;
-            item.onclick = () => selectTrack(type, label, menu);
-            menu.appendChild(item);
-        });
+            labeledTracks.forEach(({ label, track }) => {
+                const item = document.createElement('div');
+                item.className = 'menu-item';
+                const isSelected = (selectedTrackObj === track);
+
+                item.innerHTML = isSelected ? `✅ ${label}` : `　　${label}`;
+                item.onclick = () => selectTrack(type, label, menu, track); // trackも渡すとより安全
+                menu.appendChild(item);
+            });
+        }
+    } 
+    // ── 音声トラックの場合 ──
+    else {
+        if (tracks.length > 0) {
+            const labeledTracks = tracks.map(track => ({
+                label: remakeTagsTitle(track),
+                track                     // ← トラックオブジェクトを保持
+            }));
+
+            // 必要に応じてソート（音声は元の順序を維持したい場合もある）
+            labeledTracks.sort((a, b) => {
+                const cleanA = a.label.trim();
+                const cleanB = b.label.trim();
+                return cleanA.localeCompare(cleanB);
+            });
+
+            let found = labeledTracks.some(item => item.track === selectedTrackObj);
+
+            if (!found && selectedTrackObj !== null) {
+                const currentLabel = remakeTagsTitle(selectedTrackObj);
+                let sameLabelItem = labeledTracks.find(item => item.label.trim() === currentLabel.trim());
+
+                if (sameLabelItem) {
+                    selectedTrackObj = sameLabelItem.track;
+                } else {
+                    selectedTrackObj = labeledTracks[0]?.track ?? null;
+                }
+            }
+
+            tracks.forEach((track) => {
+                let label = remakeTagsTitle(track);
+                if (track.channels) {
+                    label += ` (${track.channels}ch)`;
+                }
+
+                const item = document.createElement('div');
+                item.className = 'menu-item';
+                const isSelected = (selectedTrackObj === track);
+
+                item.innerHTML = isSelected ? `✅ ${label}` : `　　${label}`;
+                item.onclick = () => selectTrack(type, label, menu, track);
+                menu.appendChild(item);
+            });
+        }
     }
+
+    // メニュー全体のマウスオーバー抑止（変更なし）
+    menu.addEventListener('mouseenter', () => {
+        isMouseOverControls = true;
+        clearTimeout(timeout);
+        showControlsAndFilename();
+    });
+    menu.addEventListener('mouseleave', () => {
+        isMouseOverControls = false;
+        showControlsAndFilename();
+    });
 
     return menu;
 }
@@ -2337,14 +2531,14 @@ function guessIsCCorSDH(track) {
 
     // bit_rate は文字列の可能性があるので安全にパース
     const bitRateNum = parseInt(track.bit_rate || 0, 10);
-    if (!isNaN(bitRateNum) && bitRateNum > 0 && bitRateNum < 200) {
-        return '[CC?]';
+    if (!isNaN(bitRateNum) && bitRateNum > 0 && bitRateNum < 100) {
+        return '[CC]';
     }
 
     return '';
 }
 
-// 字幕トラックのタイトル再構築関数（生オブジェクト対応版）
+// 字幕トラックのタイトル再構築関数
 function remakeTagsTitle(track) {
     const tags = track.tags || {};
     const disposition = track.disposition || {};
@@ -2435,23 +2629,6 @@ function toggleTrackMenu(e, type, button) {
     setTimeout(() => {
         document.addEventListener('click', closeMenu, { once: true });
     }, 0);
-}
-
-// 音声トラック・字幕トラックメニュー選択
-function selectTrack(type, label, menu) {
-    if (type === 'audio') {
-        selectedVoice = label;
-        localStorage.setItem('selectedVoice', label);
-    } else {
-        selectedSubtitle = label;
-        localStorage.setItem('selectedSubtitle', label);
-
-        if (modeChange === 'video') {
-            applySelectedSubtitle();
-        }
-    }
-
-    if (menu) menu.remove();
 }
 
 // 🔲ipcRenderer ハンドラ登録🔲
