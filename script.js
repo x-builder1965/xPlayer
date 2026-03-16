@@ -2554,10 +2554,7 @@ function guessIsCCorSDH(track) {
 function remakeTagsTitle(track) {
     const tags = track.tags || {};
     const title = (tags.title || '').trim();
-    const handler = (tags.handler_name || '').trim();
     const langCode = (tags.language || '').trim().toLowerCase();
-
-    const excludeHandlers = ['SubtitleHandler', 'Subtitle', 'AudioHandler', 'Audio', 'SoundHandler', 'Sound', 'Unknown'];
 
     let baseLabel = '';
 
