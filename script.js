@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.72';
+const appName = 'xPlayer -動画プレイヤー- Ver3.73';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -77,6 +77,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.72';
 // 2026-03-14 Ver3.70 画面サイズに合わせてプレビューのサイズ調整。
 // 2026-03-15 Ver3.71 🎤音声トラック・🔠字幕トラックの関連機能追加。（開発中：Step1完了）
 // 2026-03-16 Ver3.72 🎤音声トラック・🔠字幕トラックの関連機能追加。（開発中：Step2完了）
+// 2026-03-17 Ver3.73 プレイリスト編集で動画削除（）時の次動画再生開始位置の不良対応。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1741,6 +1742,7 @@ async function removeFromPlaylist() {
                 // 次動画が存在する場合。
                 currentVideoIndex = newIndex;
                 updatePlaylistDisplay();
+                localStorage.setItem('currentTime', 0);
                 await playVideo(playlist[currentVideoIndex].file);
             } else {
                 // 次動画が存在しない（プレイリストの最後）場合。
