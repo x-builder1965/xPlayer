@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.71.1';
+const appName = 'xPlayer -動画プレイヤー- Ver3.72.1';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -76,6 +76,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.71.1';
 // 2026-03-14 Ver3.69 プレイリスト最終の動画終了時の挙動改善。
 // 2026-03-14 Ver3.70 画面サイズに合わせてプレビューのサイズ調整。
 // 2026-03-17 Ver3.71.1 初期処理をDOMContentLoadedイベント内の処理に変更。
+// 2026-03-17 Ver3.72.1 プレイリスト編集で動画削除（）時の次動画再生開始位置の不良対応。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -357,6 +358,31 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('controlSizeY', controlSizeY);
     updateControlSize(controlSizeX, controlSizeY);
 
+    // Bluetooth／システムメディアキー対応（Windows11対応）
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
+        navigator.mediaSession.setActionHandler('play', () => { playPauseBtn.click(); });
+        navigator.mediaSession.setActionHandler('pause', () => { playPauseBtn.click(); });
+        navigator.mediaSession.setActionHandler('stop', () => { playStopBtn.click(); });
+        navigator.mediaSession.setActionHandler('previoustrack', () => { prevVideoBtn.click(); });
+        navigator.mediaSession.setActionHandler('nexttrack', () => { nextVideoBtn.click(); });
+
+        // メタデータ更新（タスクバー／ロック画面に表示させるおまけ）
+        const updateMetadata = () => {
+            if (playlist.length === 0) return;
+            const current = playlist[currentVideoIndex];
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: path.basename(current.name || current.file.path),
+                artist: 'xPlayer'
+            });
+        };
+
+        // 再生状態が変わるたびにメタデータ更新
+        videoPlayer.addEventListener('play', updateMetadata);
+        videoPlayer.addEventListener('pause', updateMetadata);
+        videoPlayer.addEventListener('loadedmetadata', updateMetadata);
+    }
+
     // 起動時の引数有無判定
     (async () => {
         const args = await ipcRenderer.invoke('get-command-line-args');
@@ -415,31 +441,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateIconOverlay();
         }
     })();
-
-    // Bluetooth／システムメディアキー対応（Windows11対応）
-    if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = 'playing';
-        navigator.mediaSession.setActionHandler('play', () => { playPauseBtn.click(); });
-        navigator.mediaSession.setActionHandler('pause', () => { playPauseBtn.click(); });
-        navigator.mediaSession.setActionHandler('stop', () => { playStopBtn.click(); });
-        navigator.mediaSession.setActionHandler('previoustrack', () => { prevVideoBtn.click(); });
-        navigator.mediaSession.setActionHandler('nexttrack', () => { nextVideoBtn.click(); });
-
-        // メタデータ更新（タスクバー／ロック画面に表示させるおまけ）
-        const updateMetadata = () => {
-            if (playlist.length === 0) return;
-            const current = playlist[currentVideoIndex];
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: path.basename(current.name || current.file.path),
-                artist: 'xPlayer'
-            });
-        };
-
-        // 再生状態が変わるたびにメタデータ更新
-        videoPlayer.addEventListener('play', updateMetadata);
-        videoPlayer.addEventListener('pause', updateMetadata);
-        videoPlayer.addEventListener('loadedmetadata', updateMetadata);
-    }
 });
 
 // 🔲共通関数🔲
@@ -1548,6 +1549,7 @@ async function removeFromPlaylist() {
         newIndex = Math.max(0, playlist.length - 1);
     }
 
+    playStopBtn.click();
     if (playlist.length > 0) {
         // プレイリストに動画が存在する場合。
         if (isCurrentlyPlaying) {
@@ -1556,6 +1558,7 @@ async function removeFromPlaylist() {
                 // 次動画が存在する場合。
                 currentVideoIndex = newIndex;
                 updatePlaylistDisplay();
+                localStorage.setItem('currentTime', 0);
                 await playVideo(playlist[currentVideoIndex].file);
             } else {
                 // 次動画が存在しない（プレイリストの最後）場合。
