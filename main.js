@@ -15,6 +15,9 @@ const os = require('os');
 const { spawn, exec } = require('child_process');
 const util = require('util');
 const execPromise = util.promisify(exec);
+const { mkdir, rm, exists } = require('fs').promises;
+const tmp = require('os').tmpdir();
+const crypto = require('crypto');
 
 // 固定値設定
 const ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
@@ -25,6 +28,7 @@ const VIDEO_EXTENSIONS = [
 const VIDEO_PLAYLIST = ['amppl'];
 const VIDEO_EXTENSIONS_REGEX = new RegExp(`\\.(${VIDEO_EXTENSIONS.join('|')})$`, 'i');
 const VIDEO_PLAYLIST_REGEX = new RegExp(`\\.(${VIDEO_PLAYLIST.join('|')})$`, 'i');
+const subtitleTempDir = path.join(tmp, 'xplayer-subtitles');
 
 // グローバル（共通）変数
 let trash;
@@ -38,6 +42,16 @@ let currentJoinConcatTxt = null;    // concatリストのtxtパス
 let isJoinCancelled = false;        // ファイル先頭付近（他のグローバル変数の近く）に追加
 
 // 🔲初期処理🔲
+// アプリ起動時に一時字幕ディレクトリ作成
+(async () => {
+    try {
+        await mkdir(subtitleTempDir, { recursive: true });
+        console.log(`一時字幕ディレクトリ作成/確認: ${subtitleTempDir}`);
+    } catch (e) {
+        console.warn('一時字幕ディレクトリ作成失敗:', e);
+    }
+})();
+
 // 開発中セキュリティオプション設定
 if (process.env.NODE_ENV === 'development') {
     app.commandLine.appendSwitch('disable-web-security');
@@ -251,6 +265,23 @@ app.whenReady().then(() => {
 
 // ウインドウクローズでプロセス解放
 app.on('window-all-closed', () => {
+    (async () => {
+        try {
+            await rm(subtitleTempDir, { recursive: true, force: true });
+            console.log('アプリ終了時に一時字幕ディレクトリを削除しました');
+        } catch (err) {
+            console.warn('終了時クリーンアップ失敗:', err);
+        }
+
+        if (process.platform !== 'darwin') app.quit();
+    })();
+});
+
+// アプリ終了時やウィンドウクローズ時に一時字幕を削除（任意強化）
+app.on('window-all-closed', async () => {
+    try {
+        await rm(subtitleTempDir, { recursive: true, force: true });
+    } catch {}
     if (process.platform !== 'darwin') app.quit();
 });
 
@@ -1436,4 +1467,89 @@ ipcMain.handle('get-video-tracks', async (event, filePath) => {
             });
         });
     });
+});
+
+// ── 一時字幕ディレクトリ全体をクリーンアップするIPC ──
+ipcMain.handle('cleanup-subtitles-dir', async () => {
+    try {
+        await rm(subtitleTempDir, { recursive: true, force: true });
+        console.log(`一時字幕ディレクトリをクリーンアップしました: ${subtitleTempDir}`);
+
+        // 念のため再作成（次回使用に備える）
+        await mkdir(subtitleTempDir, { recursive: true });
+        return { success: true };
+    } catch (err) {
+        console.error('一時字幕ディレクトリクリーンアップ失敗:', err);
+        return { success: false, error: err.message };
+    }
+});
+
+// ── 字幕抽出用 IPC ──
+ipcMain.handle('extract-subtitles-to-vtt', async (event, videoPath) => {
+    if (!videoPath) return { success: false, error: 'videoPath required' };
+
+    try {
+        const metadata = await new Promise((resolve, reject) => {
+            ffmpeg.ffprobe(videoPath, (err, data) => err ? reject(err) : resolve(data));
+        });
+
+        const subtitleStreams = metadata.streams.filter(s => 
+            s.codec_type === 'subtitle' ||
+            ['webvtt', 'mov_text', 'tx3g'].includes(s.codec_name)
+        );
+
+        if (subtitleStreams.length === 0) {
+            return { success: true, subtitles: [] };
+        }
+
+        const results = [];
+
+        for (let i = 0; i < subtitleStreams.length; i++) {
+            const stream = subtitleStreams[i];
+            const index = stream.index;
+            const lang = stream.tags?.language?.toLowerCase() || 'und';
+            const title = stream.tags?.title?.trim() || '';
+
+            // ファイル名に言語を含めてわかりやすく
+            const hash = crypto.createHash('md5')
+                .update(videoPath + index + Date.now())
+                .digest('hex').slice(0, 12);
+            const vttPath = path.join(subtitleTempDir, `${hash}_${lang}.vtt`);
+
+            // 既に存在したら再利用
+            try {
+                await fs.access(vttPath);
+                results.push({ index, lang, title, vttPath });
+                continue;
+            } catch {}
+
+            // FFmpeg抽出
+            await new Promise((resolve, reject) => {
+                ffmpeg(videoPath)
+                    .outputOptions([`-map 0:${index}`, '-c:s webvtt'])
+                    .output(vttPath)
+                    .on('end', async () => {
+                        // ファイルサイズ確認
+                        const stats = await fs.stat(vttPath);
+                        console.log(`抽出完了: ${vttPath} (${stats.size} bytes)`);
+                        if (stats.size < 100) {
+                            console.warn(`警告: 字幕ファイルが小さすぎる（空の可能性）: ${vttPath}`);
+                        }
+                        resolve();
+                    })
+                    .on('error', (err, stdout, stderr) => {
+                        console.error(`字幕抽出エラー [index:${index}]:`, stderr);
+                        reject(err);
+                    })
+                    .run();
+            });
+
+            results.push({ index, lang, title, vttPath });
+        }
+
+        return { success: true, subtitles: results };
+    } catch (err) {
+        console.error('字幕抽出全体エラー:', err);
+        return { success: false, error: err.message };
+    }
 });
