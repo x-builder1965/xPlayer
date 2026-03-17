@@ -1549,7 +1549,6 @@ async function removeFromPlaylist() {
         newIndex = Math.max(0, playlist.length - 1);
     }
 
-    playStopBtn.click();
     if (playlist.length > 0) {
         // プレイリストに動画が存在する場合。
         if (isCurrentlyPlaying) {
