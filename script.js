@@ -2614,6 +2614,7 @@ function toggleTrackMenu(e, type, button) {
     menu.style.left = `${leftPosition}px`;
     menu.style.zIndex = '9999';  // 最前面に持ってくる
 
+    hideTooltip(button);
     document.body.appendChild(menu);  // body直下に追加（ビデオコンテナの影響を受けない）
 
     function closeMenu(ev) {
