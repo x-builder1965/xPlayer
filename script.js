@@ -1178,6 +1178,66 @@ async function playVideo(file) {
     isPlaying = true;
     await setVideoSrc(file);
 
+    // ── 既存の 字幕ファイル をクリア ──
+    try {
+        await ipcRenderer.invoke('cleanup-subtitles-dir');
+        console.log('前の動画の字幕ファイルをクリア');
+    } catch (err) {
+        console.warn('字幕クリーンアップ失敗:', err);
+    }
+
+    // ── 既存の <track> をクリア ──
+    while (videoPlayer.firstChild) {
+        videoPlayer.removeChild(videoPlayer.firstChild);
+    }
+
+    // ── Step2.5：muxed字幕を .vtt に抽出して <track> 追加 ──
+    let extractedSubtitles = [];
+    if (currentTextTracks.length > 0) {
+        try {
+            const extractResult = await ipcRenderer.invoke('extract-subtitles-to-vtt', file.path);
+            if (extractResult.success) {
+                extractedSubtitles = extractResult.subtitles || [];
+                console.log(`抽出された字幕: ${extractedSubtitles.length} 件`);
+            } else {
+                console.warn('字幕抽出失敗:', extractResult.error);
+            }
+        } catch (err) {
+            console.error('字幕抽出IPCエラー:', err);
+        }
+    }
+
+    if (extractedSubtitles.length > 0) {
+        extractedSubtitles.forEach(sub => {
+            const trackEl = document.createElement('track');
+            trackEl.kind = 'subtitles';
+            trackEl.srclang = sub.lang || 'und';
+            trackEl.label = sub.label || `字幕 (${sub.lang})`;
+
+            // 重要：抽出された .vtt ファイルパスを使用
+            trackEl.src = `file://${sub.vttPath.replace(/\\/g, '/')}`;
+
+            // 選択中の字幕と一致したら default
+            if (selectedSubtitle !== '（なし）' && 
+                (trackEl.label === selectedSubtitle || trackEl.srclang === selectedSubtitle)) {
+                trackEl.default = true;
+            }
+
+            // デバッグ用
+            trackEl.addEventListener('load', () => {
+                console.log(`字幕トラックロード成功: ${trackEl.label}`);
+            });
+            trackEl.addEventListener('error', (e) => {
+                console.error(`字幕トラックエラー: ${trackEl.label}`, e);
+                console.error('エラー詳細:', trackEl.track?.readyState, trackEl.track?.mode);
+            });
+
+            videoPlayer.appendChild(trackEl);
+        });
+    } else if (currentTextTracks.length > 0) {
+        console.warn('字幕はあるが抽出に失敗 → 表示不可');
+    }
+
     // 共通再生処理
     videoPlayer.load();
     videoPreview.load();
@@ -2745,6 +2805,7 @@ window.addEventListener('resize', () => {
 // ウィンドウリサイズ
 window.addEventListener('beforeunload', async function(e)  {
 	await cleanupTempFiles();
+    await ipcRenderer.invoke('cleanup-subtitles-dir');
 });
 
 window.addEventListener('unload', async () => {
