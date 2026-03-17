@@ -458,6 +458,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateTrackButtonsVisibility();
 
+    // Bluetooth／システムメディアキー対応（Windows11対応）
+    if ('mediaSession' in navigator) {
+        navigator.mediaSession.playbackState = 'playing';
+        navigator.mediaSession.setActionHandler('play', () => { playPauseBtn.click(); });
+        navigator.mediaSession.setActionHandler('pause', () => { playPauseBtn.click(); });
+        navigator.mediaSession.setActionHandler('stop', () => { playStopBtn.click(); });
+        navigator.mediaSession.setActionHandler('previoustrack', () => { prevVideoBtn.click(); });
+        navigator.mediaSession.setActionHandler('nexttrack', () => { nextVideoBtn.click(); });
+
+        // メタデータ更新（タスクバー／ロック画面に表示させるおまけ）
+        const updateMetadata = () => {
+            if (playlist.length === 0) return;
+            const current = playlist[currentVideoIndex];
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: path.basename(current.name || current.file.path),
+                artist: 'xPlayer'
+            });
+        };
+
+        // 再生状態が変わるたびにメタデータ更新
+        videoPlayer.addEventListener('play', updateMetadata);
+        videoPlayer.addEventListener('pause', updateMetadata);
+        videoPlayer.addEventListener('loadedmetadata', updateMetadata);
+    }
+
     // 起動時の引数有無判定
     (async () => {
         const args = await ipcRenderer.invoke('get-command-line-args');
@@ -516,31 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateIconOverlay();
         }
     })();
-
-    // Bluetooth／システムメディアキー対応（Windows11対応）
-    if ('mediaSession' in navigator) {
-        navigator.mediaSession.playbackState = 'playing';
-        navigator.mediaSession.setActionHandler('play', () => { playPauseBtn.click(); });
-        navigator.mediaSession.setActionHandler('pause', () => { playPauseBtn.click(); });
-        navigator.mediaSession.setActionHandler('stop', () => { playStopBtn.click(); });
-        navigator.mediaSession.setActionHandler('previoustrack', () => { prevVideoBtn.click(); });
-        navigator.mediaSession.setActionHandler('nexttrack', () => { nextVideoBtn.click(); });
-
-        // メタデータ更新（タスクバー／ロック画面に表示させるおまけ）
-        const updateMetadata = () => {
-            if (playlist.length === 0) return;
-            const current = playlist[currentVideoIndex];
-            navigator.mediaSession.metadata = new MediaMetadata({
-                title: path.basename(current.name || current.file.path),
-                artist: 'xPlayer'
-            });
-        };
-
-        // 再生状態が変わるたびにメタデータ更新
-        videoPlayer.addEventListener('play', updateMetadata);
-        videoPlayer.addEventListener('pause', updateMetadata);
-        videoPlayer.addEventListener('loadedmetadata', updateMetadata);
-    }
 });
 
 // 🔲共通関数🔲
