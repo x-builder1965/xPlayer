@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.73';
+const appName = 'xPlayer -動画プレイヤー- Ver3.74';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -78,6 +78,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.73';
 // 2026-03-15 Ver3.71 🎤音声トラック・🔠字幕トラックの関連機能追加。（開発中：Step1完了）
 // 2026-03-16 Ver3.72 🎤音声トラック・🔠字幕トラックの関連機能追加。（開発中：Step2完了）
 // 2026-03-17 Ver3.73 プレイリスト編集で動画削除（）時の次動画再生開始位置の不良対応。
+// 2026-03-17 Ver3.74 🎤音声トラック・🔠字幕トラックの関連機能追加。（開発中：Step2.5途中）
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1158,91 +1159,15 @@ async function toggleUrlControls(show = null) {
 async function playVideo(file) {
     if (!file?.path) return;
 
-    // ★ ffprobe でトラック情報を取得（事前取得・優先）
-    try {
-        const result = await getVideoTracks(file.path);
-        if (result.success) {
-            currentAudioTracks = result.audio || [];
-            currentTextTracks = result.subtitle || [];
-        } else {
-            console.warn('[ffprobe] 失敗:', result.error);
-            currentAudioTracks = [];
-            currentTextTracks = [];
-        }
-    } catch (err) {
-        console.error('[ffprobe] IPC エラー:', err);
-        currentAudioTracks = [];
-        currentTextTracks = [];
-    }
+    // 共通再生処理
+    videoPlayer.load();
+    videoPreview.load();
+    videoPreview.pause();
 
     // 動画ソース設定
     isPlaying = true;
     await setVideoSrc(file);
 
-    // ── 既存の 字幕ファイル をクリア ──
-    try {
-        await ipcRenderer.invoke('cleanup-subtitles-dir');
-        console.log('前の動画の字幕ファイルをクリア');
-    } catch (err) {
-        console.warn('字幕クリーンアップ失敗:', err);
-    }
-
-    // ── 既存の <track> をクリア ──
-    while (videoPlayer.firstChild) {
-        videoPlayer.removeChild(videoPlayer.firstChild);
-    }
-
-    // ── Step2.5：muxed字幕を .vtt に抽出して <track> 追加 ──
-    let extractedSubtitles = [];
-    if (currentTextTracks.length > 0) {
-        try {
-            const extractResult = await ipcRenderer.invoke('extract-subtitles-to-vtt', file.path);
-            if (extractResult.success) {
-                extractedSubtitles = extractResult.subtitles || [];
-                console.log(`抽出された字幕: ${extractedSubtitles.length} 件`);
-            } else {
-                console.warn('字幕抽出失敗:', extractResult.error);
-            }
-        } catch (err) {
-            console.error('字幕抽出IPCエラー:', err);
-        }
-    }
-
-    if (extractedSubtitles.length > 0) {
-        extractedSubtitles.forEach(sub => {
-            const trackEl = document.createElement('track');
-            trackEl.kind = 'subtitles';
-            trackEl.srclang = sub.lang || 'und';
-            trackEl.label = sub.label || `字幕 (${sub.lang})`;
-
-            // 重要：抽出された .vtt ファイルパスを使用
-            trackEl.src = `file://${sub.vttPath.replace(/\\/g, '/')}`;
-
-            // 選択中の字幕と一致したら default
-            if (selectedSubtitle !== '（なし）' && 
-                (trackEl.label === selectedSubtitle || trackEl.srclang === selectedSubtitle)) {
-                trackEl.default = true;
-            }
-
-            // デバッグ用
-            trackEl.addEventListener('load', () => {
-                console.log(`字幕トラックロード成功: ${trackEl.label}`);
-            });
-            trackEl.addEventListener('error', (e) => {
-                console.error(`字幕トラックエラー: ${trackEl.label}`, e);
-                console.error('エラー詳細:', trackEl.track?.readyState, trackEl.track?.mode);
-            });
-
-            videoPlayer.appendChild(trackEl);
-        });
-    } else if (currentTextTracks.length > 0) {
-        console.warn('字幕はあるが抽出に失敗 → 表示不可');
-    }
-
-    // 共通再生処理
-    videoPlayer.load();
-    videoPreview.load();
-    videoPreview.pause();
     updatePlaylistDisplay();
     // 必ず現在の再生速度を適用する
     videoPlayer.playbackRate = currentPlaybackRate;
@@ -1279,6 +1204,15 @@ async function playVideo(file) {
     // 再生開始
     playPauseBtn.textContent = '⏸️';
     playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+    console.log('<video>: ', videoPlayer);
+    console.log('実行時間: ', new Intl.DateTimeFormat('ja-JP', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        fractionalSecondDigits: 3,   // ミリ秒3桁
+        hour12: false
+    }).format(new Date()));
+    console.log('動画再生開始');
     videoPlayer.play().then(() => {
         // 再生開始後1秒待ってトラック再取得
         setTimeout(() => {
@@ -1355,13 +1289,14 @@ async function togglePlayPause() {
     if (videoPlayer.paused) {
         if (isVideoStopped()) {
             const file = playlist[currentVideoIndex].file;
-            // 動画ソース設定
-            await setVideoSrc(file);
-
             // 共通再生処理
             videoPlayer.load();
             videoPreview.load();
             videoPreview.pause();
+
+            // 動画ソース設定
+            await setVideoSrc(file);
+
             updatePlaylistDisplay();
         }
 
@@ -1404,10 +1339,116 @@ async function setVideoSrc(file) {
 
     if (isHTML5_SUPPORTED(ext)) {
         isConverting = false;
-        // ★ 修正：直接 file.path を src に設定（Electronでは file:// プロトコルでOK）
-        const fileUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`; // キャッシュ回避用タイムスタンプ（任意）
-        videoPlayer.src = fileUrl;
-        videoPreview.src = fileUrl;
+        // ★ 映像ソース
+        const response = await fetch(`file://${file.path.replace(/\\/g, '/')}`);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        // ★ ── ffprobe でトラック情報を取得（事前取得・優先） ──
+        try {
+            const result = await getVideoTracks(file.path);
+            if (result.success) {
+                currentAudioTracks = result.audio || [];
+                currentTextTracks = result.subtitle || [];
+            } else {
+                console.warn('[ffprobe] 失敗:', result.error);
+                currentAudioTracks = [];
+                currentTextTracks = [];
+            }
+        } catch (err) {
+            console.error('[ffprobe] IPC エラー:', err);
+            currentAudioTracks = [];
+            currentTextTracks = [];
+        }
+
+        // ── 既存の 字幕ファイル をクリア ──
+        try {
+            await ipcRenderer.invoke('cleanup-subtitles-dir');
+            console.log('前の動画の字幕ファイルをクリア');
+        } catch (err) {
+            console.warn('字幕クリーンアップ失敗:', err);
+        }
+        
+        // ── 既存の <track> をクリア ──
+        while (videoPlayer.firstChild) {
+            videoPlayer.removeChild(videoPlayer.firstChild);
+        }
+    
+        // ── Step2.5：muxed字幕を .vtt に抽出して <track> 追加 ──
+        let extractedSubtitles = [];
+        if (currentTextTracks.length > 0) {
+            try {
+                const extractResult = await ipcRenderer.invoke('extract-subtitles-to-vtt', file.path);
+                if (extractResult.success) {
+                    extractedSubtitles = extractResult.subtitles || [];
+                    console.log(`抽出された字幕: ${extractedSubtitles.length} 件`);
+                } else {
+                    console.warn('字幕抽出失敗:', extractResult.error);
+                }
+            } catch (err) {
+                console.error('字幕抽出IPCエラー:', err);
+            }
+        }
+    
+        if (extractedSubtitles.length > 0) {
+            // 既存の <track> をクリア
+            while (videoPlayer.firstChild) {
+                videoPlayer.removeChild(videoPlayer.firstChild);
+            }
+    
+            // ★ 3つ目のトラック（index 2）を優先（配列は0始まりなので extractedSubtitles[2]） ★
+            // なければ最後のものを選ぶ
+            const targetIndex = Math.min(2, extractedSubtitles.length - 1);
+            const sub = extractedSubtitles[targetIndex];
+            console.log(`優先トラック選択: index=${targetIndex}, lang=${sub.lang}, path=${sub.vttPath}`);
+    
+            try {
+                const fileUrl = `file://${sub.vttPath.replace(/\\/g, '/')}`;
+                const response = await fetch(fileUrl);
+                if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
+    
+                const trackEl = document.createElement('track');
+                trackEl.kind = 'subtitles';
+                trackEl.srclang = sub.lang || 'und';
+                trackEl.label = sub.label || `字幕 (${sub.lang || 'und'}) - 優先`;
+                trackEl.src = blobUrl;
+                trackEl.default = true;  // デフォルトで有効
+    
+                trackEl.addEventListener('load', () => {
+                    console.log('実行時間: ', new Intl.DateTimeFormat('ja-JP', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        fractionalSecondDigits: 3,   // ミリ秒3桁
+                        hour12: false
+                    }).format(new Date()));
+                    console.log(`優先トラックロード成功: ${trackEl.label}`);
+                    if (trackEl.track) {
+                        trackEl.track.mode = 'showing';
+                        console.log('優先トラック状態:', {
+                            mode: trackEl.track.mode,
+                            readyState: trackEl.track.readyState,
+                            cueCount: trackEl.track.cues?.length || 0
+                        });
+                    }
+                });
+    
+                trackEl.addEventListener('error', (e) => {
+                    console.error('優先トラックエラー:', e);
+                });
+    
+                videoPlayer.appendChild(trackEl);
+            } catch (err) {
+                console.error('優先VTT blob化失敗:', err);
+            }
+        } else if (currentTextTracks.length > 0) {
+            console.warn('字幕はあるが抽出に失敗 → 表示不可');
+        }   
+
+        videoPlayer.src = blobUrl;
+        videoPreview.src = blobUrl;
         // Blob URL を使わないのでクリーンアップ不要
         currentBlobUrl = null;
         baseConvertFile = null;
