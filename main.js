@@ -13,6 +13,7 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
 const os = require('os');
 const { spawn, exec } = require('child_process');
+const trashModule = require('trash');
 
 // 固定値設定
 const ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
@@ -63,7 +64,6 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 // 正しい trash の取得方法（ESM対応）
 try {
-    const trashModule = require('trash');
     trash = trashModule.default || trashModule;  // default 優先
     console.log('trash モジュール読み込み成功:', typeof trash); // → function
 } catch (err) {
@@ -576,7 +576,6 @@ ipcMain.handle('delete-temp-file', async (event, filePath) => {
         }
     } else {
         // フォールバック：完全削除
-        const fs = require('fs').promises;
         try {
             await fs.unlink(filePath);
             console.log('完全削除（フォールバック）:', filePath);
@@ -734,13 +733,11 @@ ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPa
 ipcMain.handle('open-folder', async (event, folderPath) => {
     try {
         if (process.platform === 'win32') {
-            const { spawn } = require('child_process');
             spawn('explorer', [folderPath]);
         } else if (process.platform === 'darwin') {
             const { exec } = require('child_process');
             exec(`open "${folderPath}"`);
         } else {
-            const { spawn } = require('child_process');
             spawn('xdg-open', [folderPath]);
         }
         return true;
