@@ -605,22 +605,6 @@ function disabledControls(disable) {
         controls.style.opacity = '1';
         controls.style.pointerEvents = 'auto';
     }
-    urlInputBtn.disable = disable;
-    folderInput.disable = disable;
-    videoInput.disable = disable;
-    prevVideoBtn.disable = disable;
-    rewindBtn.disable = disable;
-    playStopBtn.disable = disable;
-    playPauseBtn.disable = disable;
-    fastForwardBtn.disable = disable;
-    nextVideoBtn.disable = disable;
-    zoomBtn.disable = disable;
-    fitModeBtn.disable = disable;
-    fullscreenBtn.disable = disable;
-    helpOpenBtn.disable = disable;
-    volumeMuteBtn.disable = disable;
-    volumeBar.disable = disable;
-    seekBar.disable = disable;
 }
 
 // プレイリスト有効化／無効化
@@ -634,7 +618,6 @@ function disabledfilename(disable) {
         // 【追加】pointer-events有効化
         filename.style.pointerEvents = 'auto';
     }
-    filenameDisplay.disable = disable;
 }
 
 // 再生時間表示更新
