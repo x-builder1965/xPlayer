@@ -328,109 +328,185 @@ ipcMain.handle('process-command-line-file', async (event, filePath) => {
 });
 
 // FFmpeg 変換ハンドラ（ファイルパス返却）＋ 日本語音声優先 + 日本語字幕優先（なければ無視）
-ipcMain.handle('convert-video', async (event, filePath) => {
-    return new Promise((resolve, reject) => {
+ipcMain.handle('convert-video', async (event, filePath, preferredAudioIndex = 0) => {
+    return new Promise(async (resolve, reject) => {
         const fileName = path.basename(filePath);
-        const outName = `${path.parse(fileName).name}.mp4`;
-        const outPath = path.join(path.dirname(filePath), outName);
-        currentOutputPath = outPath;
+        const baseName = path.parse(fileName).name;
+        const ext = path.extname(filePath).toLowerCase();
+        const outDir = path.dirname(filePath);
+        const outName = `${baseName}.mp4`;
+        const outPath = path.join(outDir, outName);
+
+        const isMp4Input = ext === '.mp4';
+
+        currentOutputPath = null;  // 常に設定しておく
+
+        // 最初に必ず ffprobe を実行（metadata を取得）
+        let metadata;
+        try {
+            metadata = await new Promise((res, rej) => {
+                ffmpeg.ffprobe(filePath, (err, data) => {
+                    if (err) rej(err);
+                    else res(data);
+                });
+            });
+        } catch (probeErr) {
+            mainWindow.webContents.send('convert-error', 'メタデータ取得失敗: ' + probeErr.message);
+            return reject(probeErr);
+        }
+
+        const audioStreams = metadata.streams.filter(s => s.codec_type === 'audio');
+        const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
+
+        // mp4入力 かつ preferredAudioIndex === 0 → 変換スキップ、字幕抽出のみ
+        if (isMp4Input && preferredAudioIndex === 0) {
+            mainWindow.webContents.send('convert-progress', { percent: 100 });
+
+            try {
+                await extractSubtitlesOnly(filePath, baseName, outDir, metadata);
+                resolve(outPath);  // 元のmp4パスを返す
+            } catch (err) {
+                reject(err);
+            }
+            return;
+        }
+
+        // それ以外 → 通常の変換処理
+        const tempPath = path.join(outDir, `${baseName}_temp_${Date.now()}.mp4`);
+        currentOutputPath = tempPath;
 
         mainWindow.webContents.send('convert-progress', { percent: 0 });
 
-        // ffprobe でメタデータ取得
-        ffmpeg.ffprobe(filePath, (err, metadata) => {
-            if (err) {
-                mainWindow.webContents.send('convert-error', 'メタデータ取得失敗: ' + err.message);
-                reject(err);
-                return;
-            }
+        const targetAudioIdx = Math.max(0, Math.min(preferredAudioIndex, audioStreams.length - 1));
 
-            // === 音声処理：日本語音声があれば優先、なければ最初の音声 ===
-            const audioStreams = metadata.streams.filter(s => s.codec_type === 'audio');
-            let audioMap = '-map 0:a'; // デフォルト：最初の音声
-            let selectedAudioBitrate = '192k'; // フォールバック
+        const mapOptions = ['-map 0:V', '-map 0:a?', '-map 0:s?'];
+        const dispositionOptions = [];
 
-            if (audioStreams.length > 0) {
-                const japaneseAudio = audioStreams.find(s => 
-                    s.tags && (s.tags.language === 'jpn' || s.tags.language === 'ja' || s.tags.language === 'japanese')
-                );
-
-                let selectedStream;
-                if (japaneseAudio) {
-                    const index = audioStreams.indexOf(japaneseAudio);
-                    audioMap = `-map 0:a:${index}`;
-                    selectedStream = japaneseAudio;
-                    console.log(`日本語音声発見 (index: ${index}) → ${audioMap}`);
-                } else {
-                    selectedStream = audioStreams[0];
-                    console.log('日本語音声なし → 最初の音声を使用');
+        if (audioStreams.length > 0) {
+            mapOptions.push(`-map 0:a:${targetAudioIdx}?`);
+            for (let i = 0; i < audioStreams.length; i++) {
+                if (i !== targetAudioIdx) {
+                    mapOptions.push(`-map 0:a:${i}?`);
                 }
+            }
+            dispositionOptions.push('-disposition:a:0', 'default');
+            for (let i = 1; i < audioStreams.length; i++) {
+                dispositionOptions.push(`-disposition:a:${i}`, '0');
+            }
+        }
 
-                // 選択された音声のビットレートを取得（bit_rate は文字列で入る場合あり）
-                if (selectedStream.bit_rate) {
-                    const bitrate = parseInt(selectedStream.bit_rate, 10);
-                    if (!isNaN(bitrate) && bitrate > 0) {
-                        selectedAudioBitrate = `${Math.round(bitrate / 1000)}k`;
-                        console.log(`元音声ビットレート: ${selectedAudioBitrate}`);
-                    }
+        const ff = ffmpeg(filePath)
+            .outputOptions(mapOptions)
+            .outputOptions(dispositionOptions)
+            .outputOptions([
+                '-c:v', 'libx264',
+                '-preset', 'veryfast',
+                '-crf', '23',
+                '-c:a', 'aac',
+                '-b:a', '192k',
+                '-c:s', 'mov_text',
+                '-movflags', '+faststart'
+            ])
+            .on('progress', (progress) => {
+                if (progress.percent !== undefined) {
+                    mainWindow.webContents.send('convert-progress', { percent: progress.percent });
                 }
-            } else {
-                console.log('音声ストリームがありません');
-            }
+            })
+            .on('end', async () => {
+                const fsPromises = require('fs').promises;
+                currentFFmpeg = null;
+                currentOutputPath = null;
 
-            // === 字幕処理：日本語字幕があれば優先、なければ無視 ===
-            const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
-            let subtitleOptions = [];
+                try {
+                    let originalOutPathExists = false;
+                    try {
+                        await fsPromises.access(outPath);
+                        originalOutPathExists = true;
+                    } catch {}
 
-            const japaneseSub = subtitleStreams.find(s => 
-                s.tags && (s.tags.language === 'jpn' || s.tags.language === 'ja' || s.tags.language === 'japanese')
-            );
-
-            if (japaneseSub) {
-                const idx = subtitleStreams.indexOf(japaneseSub);
-                subtitleOptions = [
-                    `-map 0:s:${idx}`,
-                    '-c:s', 'mov_text'
-                ];
-                console.log(`日本語字幕発見 (index: ${idx}) → 出力に含む`);
-            } else {
-                console.log('日本語字幕なし → 字幕は出力しない');
-            }
-
-            // === FFmpeg コマンド構築 ===
-            const ff = ffmpeg(filePath)
-                .outputOptions('-map 0:v')
-                .outputOptions(audioMap)
-                .outputOptions(subtitleOptions)
-                .outputOptions('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23')
-                .outputOptions('-c:a', 'aac', `-b:a`, selectedAudioBitrate)  // ← ここが動的！
-                .outputOptions('-movflags', '+faststart')
-                .on('progress', (progress) => {
-                    if (progress.percent !== undefined) {
-                        mainWindow.webContents.send('convert-progress', { percent: progress.percent });
+                    if (originalOutPathExists) {
+                        await trash(outPath);
                     }
-                })
-                .on('end', () => {
-                    currentFFmpeg = null;
-                    currentOutputPath = null;
+
+                    await fsPromises.rename(tempPath, outPath);
+                    console.log(`変換完了: ${outPath}`);
+
+                    if (!isMp4Input) {
+                        await trash(filePath);
+                    }
+
+                    await extractSubtitlesOnly(filePath, baseName, outDir, metadata);
+
                     resolve(outPath);
-                })
-                .on('error', (err, stdout, stderr) => {
-                    if (err.message.includes('ffmpeg was killed')) {
-                        console.log('変換がユーザーにより中断されました:', filePath);
-                        return;
-                    }
-                    currentFFmpeg = null;
-                    currentOutputPath = null;
-                    mainWindow.webContents.send('convert-error', err.message);
-                    reject(err);
-                })
-                .save(outPath);
+                } catch (moveErr) {
+                    mainWindow.webContents.send('convert-error', '後処理エラー: ' + moveErr.message);
+                    reject(moveErr);
+                }
+            })
+            .on('error', (err, stdout, stderr) => {
+                if (err.message.includes('ffmpeg was killed')) {
+                    console.log('変換中断:', filePath);
+                    return;
+                }
+                console.error('FFmpegエラー:', stderr);
+                mainWindow.webContents.send('convert-error', err.message + '\n' + stderr);
+                currentFFmpeg = null;
+                currentOutputPath = null;
+                reject(err);
+            })
+            .save(tempPath);
 
-            currentFFmpeg = ff;
-        });
+        currentFFmpeg = ff;
     });
 });
+
+// 字幕抽出関数（変更なし、metadataを引数で受け取る）
+async function extractSubtitlesOnly(inputPath, baseName, outDir, metadata) {
+    const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
+    if (subtitleStreams.length === 0) {
+        return;
+    }
+
+    for (const [idx, sub] of subtitleStreams.entries()) {
+        const lang = sub.tags?.language || sub.tags?.lang || 'und';
+        const vttPath = path.join(outDir, `${baseName}_track${idx}_${lang}.vtt`);
+
+        mainWindow.webContents.send('subtitle-extraction-progress', {
+            filePath: inputPath,
+            subtitleCount: subtitleStreams.length,
+            subtitleIndex: idx,
+            message: `字幕抽出中...（${idx + 1}/${subtitleStreams.length}）`
+        });
+
+        try {
+            await new Promise((res) => {  // エラー時も継続するため rej を使わず res で終わる
+                ffmpeg(inputPath)
+                    .outputOptions([
+                        `-map 0:s:${idx}`,
+                        '-vn', '-an',
+                        '-c:s', 'webvtt'
+                    ])
+                    .on('end', () => {
+                        res();
+                    })
+                    .on('error', (err, stdout, stderr) => {
+                        console.error(`抽出エラー (track ${idx}):`, stderr || err.message);
+                        res();  // エラーでも次へ進む
+                    })
+                    .save(vttPath);
+            });
+        } catch (e) {
+            console.warn(`トラック ${idx} 失敗（スキップ）`);
+        }
+    }
+
+    mainWindow.webContents.send('subtitle-extraction-progress', {
+        filePath: inputPath,
+        subtitleCount: subtitleStreams.length,
+        subtitleIndex: subtitleStreams.length,
+        message: `字幕抽出完了（${subtitleStreams.length}/${subtitleStreams.length}）`
+    });
+}
 
 // 変換キャンセル（ロック待機 + リトライ）
 ipcMain.handle('cancel-conversion', async () => {
@@ -765,9 +841,6 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                 }
                 const duration = metadata.format.duration || 0;
 
-                console.log(`入力動画のduration: ${duration.toFixed(2)}秒`);
-                console.log(`クライアント指定モード: ${requestedMode} → 使用モード: ${useCopyMode ? 'copy' : 'reencode'}`);
-
                 // ranges の正規化・ソート・マージ
                 const normalized = (ranges || []).map(r => ({ 
                     in: Math.max(0, Math.min(duration, r.in)), 
@@ -847,11 +920,6 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                 }
 
                 // ★ ここから判定ロジックを削除し、クライアント指定に従う
-                console.log(
-                    `モード: ${useCopyMode ? 'コピーモード（高速・ストリームコピー）' : '再エンコードモード（高精度）'} ` +
-                    `(クライアント指示による)`
-                );
-
                 if (!useCopyMode) {
                     // ── 再エンコードモード（精度優先） ──
                     const filters = [];
@@ -906,7 +974,6 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                                             err.message?.includes('ffmpeg was killed');
 
                             if (isKilled) {
-                                console.log('cut-video-multiple (reencode): ユーザーにより中断されました');
                                 // reject せず、キャンセルとして扱う
                                 mainWindow.webContents.send('cut-progress', { 
                                     stage: 'cancelled', 
@@ -992,7 +1059,6 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                                         err.message.includes('SIGKILL') ||
                                         err.message.includes('ffmpeg was killed')
                                     )) {
-                                        console.log('cut-video-multiple (copy concat): ユーザーによりキャンセルされました');
                                         // reject せず正常終了扱い
                                         res();  // ← これで Promise がフルフィルされる
                                         return;
@@ -1097,11 +1163,6 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
                     return acc;
                 }, {});
                 targetFps = Object.keys(fpsCounts).reduce((a, b) => fpsCounts[a] > fpsCounts[b] ? a : b);
-
-                // または最大値で決定（コメントアウト中 - 好みで切り替え）
-                // targetFps = Math.max(...fpsList);
-
-                console.log(`入力FPSリスト: ${fpsList.join(', ')} → 採用FPS: ${targetFps}`);
             } else {
                 console.warn('FPS取得失敗 - デフォルト30使用');
             }
