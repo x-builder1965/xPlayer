@@ -78,6 +78,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.73.1';
 // 2026-03-17 Ver3.71.1 初期処理をDOMContentLoadedイベント内の処理に変更。
 // 2026-03-17 Ver3.72.1 プレイリスト編集で動画削除（）時の次動画再生開始位置の不良対応。
 // 2026-03-19 Ver3.73.1 コントロールパネル、プレイリストパネルの活性・非活性処理見直し。
+// 2026-03-19 Ver3.74.1 動画変換（🔄️）mp4→mp4変換、字幕切出など追加。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -91,7 +92,7 @@ const volumeStep = 0.005;
 const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
-const HTML5_SUPPORTED_CONVERT = ['.mp4'];  // 動画変換対象外拡張子
+const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
 const SORT_MODES = {
     none:       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
     path_asc:   { label: '動画パス▲',   fn: () => [...playlist].sort((a, b) => a.file.path.localeCompare(b.file.path)) },
@@ -921,14 +922,22 @@ function resetShuffle() {
 function getPrevVideoIndex() {
     if (playlist.length === 0) return -1;
     if (isRepeatPlayMode === 'single') {
-        return currentVideoIndex;
+        if (modeChange === 'video') {
+            return currentVideoIndex;
+        } else {
+            return -1;
+        }
     }
     if (isRandomPlayMode && currentSortMode !== 'random') {
         // ランダムモード
         shufflePosition--;
         if (shufflePosition < 0) {
             if (isRepeatPlayMode === 'all') {
-                shufflePosition = shuffleOrder.length - 1;
+                if (modeChange === 'video') {
+                    shufflePosition = shuffleOrder.length - 1;
+                } else {
+                    return -1;
+                }
             } else {
                 shufflePosition = 0;
                 saveShuffleState(); // 現在のシャッフル位置を保存
@@ -942,7 +951,11 @@ function getPrevVideoIndex() {
         let normalPosition = currentVideoIndex - 1;
         if (normalPosition < 0) {
             if (isRepeatPlayMode === 'all') {
-                normalPosition = playlist.length - 1;
+                if (modeChange === 'video') {
+                    normalPosition = playlist.length - 1;
+                } else {
+                    return -1;
+                }
             } else {
                 return -1;
             }
@@ -955,15 +968,22 @@ function getPrevVideoIndex() {
 function getNextVideoIndex() {
     if (playlist.length === 0) return -1;
     if (isRepeatPlayMode === 'single') {
-        // 1動画ループ中は次へ行かせない
-        return currentVideoIndex;
+        if (modeChange === 'video') {
+            return currentVideoIndex;
+        } else {
+            return -1;
+        }
     }
     if (isRandomPlayMode && currentSortMode !== 'random') {
         // ランダムモード
         shufflePosition++;
         if (shufflePosition >= shuffleOrder.length) {
             if (isRepeatPlayMode === 'all') {
-                shufflePosition = 0;
+                if (modeChange === 'video') {
+                    shufflePosition = 0;
+                } else {
+                    return -1;
+                }
             } else {
                 shufflePosition = shuffleOrder.length - 1;
                 saveShuffleState(); // 現在のシャッフル位置を保存
@@ -977,7 +997,11 @@ function getNextVideoIndex() {
         let normalPosition = currentVideoIndex + 1;
         if (normalPosition >= playlist.length) {
             if (isRepeatPlayMode === 'all') {
-                normalPosition = 0;
+                if (modeChange === 'video') {
+                    normalPosition = 0;
+                } else {
+                    return -1;
+                }
             } else {
                 return -1;
             }
@@ -1222,7 +1246,7 @@ async function setVideoSrc(file) {
         try {
             isConverting = true;
             updatePlaylistDisplay();
-            updateOverlayDisplay('🔄️ 変換中…（FFmpeg）');
+            // updateOverlayDisplay('🔄️ 変換中…（FFmpeg）');
             // シークバーを赤色に変更
             seekBar.classList.add('converting');
             currentConvertPromise = ipcRenderer.invoke('convert-video', file.path);
@@ -1231,17 +1255,19 @@ async function setVideoSrc(file) {
             const response = await fetch(`file://${convertedPath}`);
             const blob = await response.blob();
             const blobUrl = URL.createObjectURL(blob);
-
             videoPlayer.src = blobUrl;
             videoPreview.src = videoPlayer.src;
 
             baseConvertFile = file.path;
             tempConvertFile = convertedPath;
             
-            // 変換完了後、シークバーをリセット
+            // 変換完了後、シークバーをリセット・シークバーの色を元に戻す
             seekBar.value = 0;
-            // シークバーの色を元に戻す
             seekBar.classList.remove('converting');
+
+            if (playlist.length === currentVideoIndex + 1) {
+                updateOverlayDisplay('🔄️ 変換完了', false, 3000);
+            }
         } catch (err) {
             console.error("変換失敗:", err);
             isConverting = false;
@@ -1651,7 +1677,7 @@ async function cleanupTempFiles() {
     if (isConverting) {
         await ipcRenderer.invoke('cancel-conversion');  // 即中断
         isConverting = false;
-        setTimeout(hideOverlayDisplay, 1000);
+        updateOverlayDisplay('🔄️ 変換中止', false, 3000);
     }
 }
 
@@ -1862,7 +1888,6 @@ function renderCutRanges() {
         });
 
         // タイムラインバー部分
-        console.log('カット範囲描画:', cutRanges);
         if (!cutTimelineContainer || !cutTimelineBar) return;
 
         cutTimelineBar.innerHTML = ''; // クリア
@@ -1897,8 +1922,6 @@ function renderCutRanges() {
         inMarker.appendChild(inLine);
         
         cutTimelineBar.appendChild(inMarker);
-        
-        console.log(`Inマーク表示: ${formatTime(editInMark)} @ ${inLeft.toFixed(2)}%`);
     }
     
     // 3. Outマーク（白い縦線）
@@ -1914,8 +1937,6 @@ function renderCutRanges() {
         outMarker.appendChild(outLine);
         
         cutTimelineBar.appendChild(outMarker);
-        
-        console.log(`Outマーク表示: ${formatTime(editOutMark)} @ ${outLeft.toFixed(2)}%`);
     }
 }
 
@@ -2133,9 +2154,12 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
 
 // 変換進捗受信
 ipcRenderer.on('convert-progress', (event, { percent }) => {
-    updateOverlayDisplay(`🔄️ 変換中… ${Math.round(percent)}%`);
+    const playListCount = playlist.length;
+    const playListCurrent = parseInt(filenameDisplay.value);
+    updateOverlayDisplay(`🔄️ 変換中…（${playListCurrent + 1}/${playListCount}） ${Math.round(percent)}%`);
     // シークバーに進捗を表示
-    seekBar.value = percent;
+    const totalPercent = ((playListCurrent * 100) + percent) / (playListCount * 100) * 100;
+    seekBar.value = totalPercent;
 });
 
 // カット進捗受信（ 詳細ペイロード対応）
@@ -2213,7 +2237,7 @@ ipcRenderer.on('join-progress', (event, payload) => {
                 break;
         }
     } catch (e) {
-        updateOverlayDisplay('🎞️ 結合処理中…', true, 0);
+        updateOverlayDisplay('🎞️ 結合処理中…', false, 0);
     }
 });
 
@@ -2224,6 +2248,11 @@ ipcRenderer.on('convert-error', (event, msg) => {
     updateOverlayDisplay(`🔄️ 変換失敗`, false, 3000);
     filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
     updateIconOverlay();
+});
+
+// 字幕ファイル出力開始
+ipcRenderer.on('subtitle-extraction-progress', (e, data) => {
+    updateOverlayDisplay(`🔄️ 字幕抽出中…（${data.subtitleIndex}/${data.subtitleCount}）`, false, 0);
 });
 
 // 🔲window ハンドラ登録🔲
@@ -2864,16 +2893,11 @@ playStopBtn.addEventListener('click', async () => {
     updateIconOverlay();
 
     // 5. FFmpeg変換中ならキャンセル
-    if (isConverting) {
-        await ipcRenderer.invoke('cancel-conversion');
-        isConverting = false;
-        setTimeout(hideOverlayDisplay, 1000);
-    }
+    cleanupTempFiles();
 });
 
 // ⏮️前の動画
 prevVideoBtn.addEventListener('click', async () => {
-    if (isRepeatPlayMode === 'single') return; // 無効化
     const prevIndex = getPrevVideoIndex();
 
     if (prevIndex >= 0) {
@@ -2920,7 +2944,6 @@ fastForwardBtn.addEventListener('click', () => {
 
 // ⏭️次の動画
 nextVideoBtn.addEventListener('click', async () => {
-    if (isRepeatPlayMode === 'single') return; // 無効化
     const nextIndex = getNextVideoIndex();
 
     if (nextIndex >= 0) {
@@ -3102,13 +3125,7 @@ videoPlayer.addEventListener('pause', () => {
 videoPlayer.addEventListener('loadedmetadata', () => {
     // 変換ファイル削除
     if (isConverting) {
-        if (modeChange === 'video') {
-            // 一時ファイル削除
-            if (tempConvertFile) {
-                ipcRenderer.invoke('delete-temp-file', tempConvertFile)
-                    .catch(e => console.warn('一時ファイル削除失敗:', e));
-            }
-        } else {
+        if (modeChange === 'convert') {
             // プレイリスト更新
             const currentIndex = playlist.findIndex(item => item.file.path === baseConvertFile);
             if (currentIndex !== -1) {
@@ -3121,18 +3138,11 @@ videoPlayer.addEventListener('loadedmetadata', () => {
                 saveShuffleState(); // 現在のシャッフル位置を保存
                 updatePlaylistDisplay();
             }
-
-            // 動画ファイル削除
-            if (baseConvertFile) {
-                ipcRenderer.invoke('delete-temp-file', baseConvertFile)
-                    .catch(e => console.warn('動画ファイル削除失敗:', e));
-            }
         }
         const revoke = () => {
             if (currentBlobUrl) {
                 URL.revokeObjectURL(currentBlobUrl);
                 currentBlobUrl = null;          // ← 解放後に null クリア（再利用防止）
-                console.log('Blob URL revoked');
             }
         };
         // once: true で1回きりのリスナーにする → 重複蓄積しない
@@ -3221,8 +3231,6 @@ videoPlayer.addEventListener('error', (e) => {
         console.warn('拡張子抽出失敗:', err);
         return;
     }
-
-    console.log(`再生しようとしたファイル拡張子: ${ext} (src: ${currentSrc})`);
 
     // 共通関数で判定
     if (isHTML5_SUPPORTED(ext)) {
