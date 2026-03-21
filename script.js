@@ -80,6 +80,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.73.1';
 // 2026-03-19 Ver3.73.1 コントロールパネル、プレイリストパネルの活性・非活性処理見直し。
 // 2026-03-19 Ver3.74.1 動画変換（🔄️）mp4→mp4変換、字幕切出など追加。
 // 2026-03-19 Ver3.75.1 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step1完了）
+// 2026-03-21 Ver3.75.1 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step2完了）
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1257,6 +1258,20 @@ async function togglePlayPause() {
 async function setVideoSrc(file) {
     const ext = path.extname(file.path).toLowerCase();
 
+    // 音声トラック情報・字幕トラック情報取得
+    const result = await ipcRenderer.invoke('get-video-tracks', file.path);
+    if (result.success) {
+        currentAudioTracks = result.audio || [];
+        currentTextTracks = result.subtitle || [];
+    } else {
+        console.warn('[ffprobe] 失敗:', result.error);
+        currentAudioTracks = [];
+        currentTextTracks = [];
+    }
+console.log('currentAudioTracks: ', currentAudioTracks);
+console.log('currentTextTracks: ', currentTextTracks);
+
+    // video.src設定
     if (isHTML5_SUPPORTED(ext)) {
         isConverting = false;
         // ★ 修正：直接 file.path を src に設定（Electronでは file:// プロトコルでOK）

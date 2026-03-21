@@ -1438,3 +1438,79 @@ ipcMain.handle('open-video-in-browser', async (event, videoUrl) => {
     return { success: false, message: err.message };
   }
 });
+
+// 音声トラック情報・字幕トラック情報取得
+ipcMain.handle('get-video-tracks', async (event, filePath) => {
+    try {
+        // ffprobe を Promise化
+        const metadata = await new Promise((resolve, reject) => {
+            ffmpeg.ffprobe(filePath, (err, data) => {
+                if (err) return reject(err);
+                resolve(data);
+            });
+        });
+
+        const streams = metadata.streams || [];
+        const format = metadata.format || {};
+
+        const audioTracks = [];
+        const subtitleTracks = [];
+
+        streams.forEach((s, index) => {
+            const streamWithIndex = { ...s, index };
+
+            if (s.codec_type === 'audio') {
+                audioTracks.push(streamWithIndex);
+            } else if (
+                s.codec_type === 'subtitle' ||
+                s.codec_type === 'text' ||
+                s.codec_name === 'tx3g' ||
+                s.codec_name === 'mov_text'
+            ) {
+                subtitleTracks.push(streamWithIndex);
+            }
+        });
+
+        // ★ ここで初めて await が安全に使える
+        const outDir = path.dirname(filePath);
+        const baseName = path.parse(path.basename(filePath)).name;
+        for (const [idx, sub] of subtitleTracks.entries()) {
+            const lang = sub.tags?.language || sub.tags?.lang || 'und';
+            const vttPath = path.join(outDir, `${baseName}_track${idx}_${lang}.vtt`);
+
+            let exists = false;
+            try {
+                await fs.stat(vttPath);   // ← ここで安全に await 可能
+                exists = true;
+            } catch {
+                // 存在しない → false のまま
+            }
+
+            sub.vttPath = vttPath;
+            sub.exists = exists;
+        }
+
+        // format.tags の補助チェック（省略可）
+        if (format.tags?.subtitle) {
+            console.log('format.tags に字幕情報発見:', format.tags.subtitle);
+        }
+
+        return {
+            success: true,
+            audio: audioTracks,
+            subtitle: subtitleTracks,
+            totalStreams: streams.length,
+            debug: {
+                hasTx3g: streams.some(s => s.codec_name === 'tx3g'),
+                ffprobeVersion: metadata.format?.tags?.encoder || 'unknown'
+            }
+        };
+
+    } catch (err) {
+        console.error('ffprobe または処理中にエラー:', err);
+        return {
+            success: false,
+            error: err.message || '処理に失敗しました'
+        };
+    }
+});
