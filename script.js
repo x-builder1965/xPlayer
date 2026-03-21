@@ -1339,17 +1339,6 @@ async function togglePlayPause() {
 async function setVideoSrc(file) {
     const ext = path.extname(file.path).toLowerCase();
 
-    // 音声トラック情報・字幕トラック情報取得
-    const result = await ipcRenderer.invoke('get-video-tracks', file.path);
-    if (result.success) {
-        currentAudioTracks = result.audio || [];
-        currentSubtitlesTracks = result.subtitle || [];
-    } else {
-        console.warn('[ffprobe] 失敗:', result.error);
-        currentAudioTracks = [];
-        currentSubtitlesTracks = [];
-    }
-
     // video.src設定
     if (isHTML5_SUPPORTED(ext)) {
         isConverting = false;
@@ -4385,4 +4374,36 @@ videoPlayer.addEventListener('timeupdate', () => {
         // 双方のシークバーを同期
         seekBar.value = (videoPlayer.currentTime / videoPlayer.duration) * 100;
     }
+});
+
+// 🎤音声選択クリック時
+voiceSelectBtn.addEventListener('click', async () => {
+    // 音声トラック情報・字幕トラック情報取得
+    const result = await ipcRenderer.invoke('get-video-tracks', file.path);
+    if (result.success) {
+        currentAudioTracks = result.audio || [];
+        currentSubtitlesTracks = result.subtitle || [];
+    } else {
+        console.warn('[ffprobe] 失敗:', result.error);
+        currentAudioTracks = [];
+        currentSubtitlesTracks = [];
+    }
+
+
+});
+
+// 🔠字幕選択クリック時
+subtitleSelectBtn.addEventListener('click', async () => {
+    // 音声トラック情報・字幕トラック情報取得
+    const result = await ipcRenderer.invoke('get-video-tracks', file.path);
+    if (result.success) {
+        currentAudioTracks = result.audio || [];
+        currentSubtitlesTracks = result.subtitle || [];
+    } else {
+        console.warn('[ffprobe] 失敗:', result.error);
+        currentAudioTracks = [];
+        currentSubtitlesTracks = [];
+    }
+
+
 });
