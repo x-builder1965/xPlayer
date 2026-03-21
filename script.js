@@ -2347,6 +2347,20 @@ function getMenuItem(track) {
     return baseLabel;
 }
 
+// 動画音声トラック・字幕トラック取得
+async function getVideoTraks(filePath) {
+    // 音声トラック情報・字幕トラック情報取得
+    const result = await ipcRenderer.invoke('get-video-tracks', filePath);
+    if (result.success) {
+        currentAudioTracks = result.audio || [];
+        currentSubtitlesTracks = result.subtitle || [];
+    } else {
+        console.warn('[ffprobe] 失敗:', result.error);
+        currentAudioTracks = [];
+        currentSubtitlesTracks = [];
+    }
+}
+
 // 🔲ipcRenderer ハンドラ登録🔲
 // main.js からの自動再生指示を受信
 ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
@@ -4378,32 +4392,23 @@ videoPlayer.addEventListener('timeupdate', () => {
 
 // 🎤音声選択クリック時
 voiceSelectBtn.addEventListener('click', async () => {
-    // 音声トラック情報・字幕トラック情報取得
-    const result = await ipcRenderer.invoke('get-video-tracks', file.path);
-    if (result.success) {
-        currentAudioTracks = result.audio || [];
-        currentSubtitlesTracks = result.subtitle || [];
-    } else {
-        console.warn('[ffprobe] 失敗:', result.error);
-        currentAudioTracks = [];
-        currentSubtitlesTracks = [];
-    }
+    if (playList.length === 0) return;
+
+    // 動画音声トラック・字幕トラック取得
+    const filePath = playlist[currentVideoIndex].file;
+    getVideoTraks(filePath);
 
 
 });
 
 // 🔠字幕選択クリック時
 subtitleSelectBtn.addEventListener('click', async () => {
-    // 音声トラック情報・字幕トラック情報取得
-    const result = await ipcRenderer.invoke('get-video-tracks', file.path);
-    if (result.success) {
-        currentAudioTracks = result.audio || [];
-        currentSubtitlesTracks = result.subtitle || [];
-    } else {
-        console.warn('[ffprobe] 失敗:', result.error);
-        currentAudioTracks = [];
-        currentSubtitlesTracks = [];
-    }
+    if (playList.length === 0) return;
+
+    // 動画音声トラック・字幕トラック取得
+    const filePath = playlist[currentVideoIndex].file;
+    getVideoTraks(filePath);
+
 
 
 });
