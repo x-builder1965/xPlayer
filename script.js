@@ -197,7 +197,7 @@ const savedShufflePosition = localStorage.getItem('shufflePosition');
 const cutTimelineContainer = document.getElementById('cutTimelineContainer');
 const cutTimelineBar = document.getElementById('cutTimelineBar');
 const savedCurrentSortMode = localStorage.getItem('playlistSortMode');
-const savedSelectedVoice = localStorage.getItem('selectedVoice');
+const savedSelectedAudio = localStorage.getItem('selectedAudio');
 const savedSelectedSubtitle = localStorage.getItem('selectedSubtitle');
 
 // グローバル（共通）変数
@@ -245,6 +245,12 @@ let isMouseOverEditSeekBar = false;
 let originalLoadOrder = [];  // プレイリストの「最初に読み込まれた順」を保持
 let hideMouseTimeout = null;
 let currentBlobUrl = null;  // ← これを追加（null 初期化）
+let editFrameRate = 30;
+let currentSortMode = 'none';
+let selectedAudio = 'jpn';
+let letselectedSubtitle = 'none';
+let currentAudioIndex = 0;
+let currentSubtitlesIndex = 0;
 
 // 🔲初期処理🔲
 document.addEventListener('DOMContentLoaded', () => {
@@ -406,10 +412,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 音声言語・字幕言語の復元
-    if (!savedSelectedVoice) {
-        selectedVoice = 'jpn';
+    if (!savedSelectedAudio) {
+        selectedAudio = 'jpn';
     } else {
-        selectedVoice = savedSelectedVoice;
+        selectedAudio = savedSelectedAudio;
     }
     if (!savedSelectedSubtitle) {
         selectedSubtitle = 'none';
@@ -1262,14 +1268,12 @@ async function setVideoSrc(file) {
     const result = await ipcRenderer.invoke('get-video-tracks', file.path);
     if (result.success) {
         currentAudioTracks = result.audio || [];
-        currentTextTracks = result.subtitle || [];
+        currentSubtitlesTracks = result.subtitle || [];
     } else {
         console.warn('[ffprobe] 失敗:', result.error);
         currentAudioTracks = [];
-        currentTextTracks = [];
+        currentSubtitlesTracks = [];
     }
-console.log('currentAudioTracks: ', currentAudioTracks);
-console.log('currentTextTracks: ', currentTextTracks);
 
     // video.src設定
     if (isHTML5_SUPPORTED(ext)) {
@@ -1296,7 +1300,7 @@ console.log('currentTextTracks: ', currentTextTracks);
             // updateOverlayDisplay('🔄️ 変換中…（FFmpeg）');
             // シークバーを赤色に変更
             seekBar.classList.add('converting');
-            currentConvertPromise = ipcRenderer.invoke('convert-video', file.path);
+            currentConvertPromise = ipcRenderer.invoke('convert-video', file.path, currentAudioIndex);
             const convertedPath = await currentConvertPromise;
 
             const response = await fetch(`file://${convertedPath}`);
