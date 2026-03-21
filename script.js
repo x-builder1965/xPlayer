@@ -326,6 +326,8 @@ let selectedAudio = 'jpn';
 let letselectedSubtitle = 'none';
 let currentAudioIndex = 0;
 let currentSubtitlesIndex = 0;
+let currentAudioTracks = [];
+let currentSubtitlesTracks = [];
 
 //🔲初期処理🔲
 document.addEventListener('DOMContentLoaded', () => {
@@ -4392,23 +4394,26 @@ videoPlayer.addEventListener('timeupdate', () => {
 
 // 🎤音声選択クリック時
 voiceSelectBtn.addEventListener('click', async () => {
-    if (playList.length === 0) return;
+    if (playlist.length === 0) return;
 
     // 動画音声トラック・字幕トラック取得
-    const filePath = playlist[currentVideoIndex].file;
-    getVideoTraks(filePath);
+    const filePath = playlist[currentVideoIndex].file.path;
+    await getVideoTraks(filePath);
 
+    if (currentAudioTracks.length > 0) {
 
+    }   
 });
 
 // 🔠字幕選択クリック時
 subtitleSelectBtn.addEventListener('click', async () => {
-    if (playList.length === 0) return;
+    if (playlist.length === 0) return;
 
     // 動画音声トラック・字幕トラック取得
-    const filePath = playlist[currentVideoIndex].file;
-    getVideoTraks(filePath);
+    const filePath = playlist[currentVideoIndex].file.path;
+    await getVideoTraks(filePath);
 
+    if (currentSubtitlesTracks.length > 0) {
 
-
+    }   
 });
