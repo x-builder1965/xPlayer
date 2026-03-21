@@ -103,6 +103,81 @@ const SORT_MODES = {
     ctime_desc: { label: '作成日時▼',   fn: async () => await sortByCreationTime(false)},
     random:     { label: '（ランダム）', fn: () => sortRandomPlaylist() }
 };
+const languageMap = {
+    'jpn': '日本語',
+    'eng': '英語',
+    'fra': 'フランス語',
+    'fre': 'フランス語',
+    'deu': 'ドイツ語',
+    'ger': 'ドイツ語',
+    'spa': 'スペイン語',
+    'ita': 'イタリア語',
+    'chi': '中国語',
+    'zho': '中国語',
+    'kor': '韓国語',
+    'rus': 'ロシア語',
+    'ara': 'アラビア語',
+    'por': 'ポルトガル語',
+    'hin': 'ヒンディー語',
+    'afr': 'アフリカーンス語',
+    'amh': 'アムハラ語',
+    'aze': 'アゼルバイジャン語',
+    'bel': 'ベラルーシ語',
+    'bul': 'ブルガリア語',
+    'cat': 'カタルーニャ語',
+    'ces': 'チェコ語',
+    'dan': 'デンマーク語',
+    'ell': 'ギリシャ語',
+    'eus': 'バスク語',
+    'fin': 'フィンランド語',
+    'gle': 'アイルランド語',
+    'glg': 'ガリシア語',
+    'heb': 'ヘブライ語',
+    'hun': 'ハンガリー語',
+    'ind': 'インドネシア語',
+    'isl': 'アイスランド語',
+    'kat': 'グルジア語',
+    'kaz': 'カザフ語',
+    'kir': 'キルギス語',
+    'lit': 'リトアニア語',
+    'lav': 'ラトビア語',
+    'mlt': 'マルタ語',
+    'mon': 'モンゴル語',
+    'msa': 'マレー語',
+    'nld': 'オランダ語',
+    'nob': 'ノルウェー語',
+    'pol': 'ポーランド語',
+    'ron': 'ルーマニア語',
+    'slk': 'スロバキア語',
+    'slv': 'スロベニア語',
+    'srp': 'セルビア語',
+    'swe': 'スウェーデン語',
+    'tha': 'タイ語',
+    'tur': 'トルコ語',
+    'ukr': 'ウクライナ語',
+    'urd': 'ウルドゥー語',
+    'vie': 'ベトナム語',
+    'may': 'マレー語',
+    'cze': 'チェコ語',
+    'baq': 'バスク語',
+    'kan': 'カンナダ語',
+    'mal': 'マラヤーラム語',
+    'dut': 'オランダ語',
+    'tam': 'タミル語',
+    'tel': 'テルグ語',
+    'gre': 'ギリシャ語',
+    'rum': 'ルーマニア語',
+    // 追加：地域バリアント例（必要に応じて）
+    'zh-cn': '中国語（簡体字）',
+    'zh-tw': '中国語（繁体字）',
+    'pt-br': 'ポルトガル語（ブラジル）',
+    'es-419': 'スペイン語（ラテンアメリカ）',
+    'fr-ca': 'フランス語（カナダ）',
+    // 未指定やその他
+    'qaa': 'オリジナル言語（未指定）',
+    'mul': '複数言語',
+    'und': '未指定',
+};
 
 // DOM要素取得
 const videoPlayer = document.getElementById('videoPlayer');
@@ -252,7 +327,7 @@ let letselectedSubtitle = 'none';
 let currentAudioIndex = 0;
 let currentSubtitlesIndex = 0;
 
-// 🔲初期処理🔲
+//🔲初期処理🔲
 document.addEventListener('DOMContentLoaded', () => {
     // 初期表示設定
     videoPlayer.removeAttribute('src');
@@ -2207,6 +2282,80 @@ function updateTrackButtonsVisibility() {
         if (voiceSelectBtn) voiceSelectBtn.style.display = 'inline-block';
         if (subtitleSelectBtn) subtitleSelectBtn.style.display = 'none';
     }
+}
+
+// 字幕トラックCC/SDH判定
+function guessIsCCorSDH(track) {
+    const codec_type = trak.codec_type ? trak.codec_type : '';
+    if (codec_type === 'subtitle') return '';
+    
+    const tags = track.tags || {};
+    const disposition = track.disposition || {};
+
+    const handler = (tags.handler_name || '').toLowerCase();
+    const title   = (tags.title || '').toLowerCase();
+    const lang    = (tags.language || '').toLowerCase();
+
+    const ccKeywords = [
+        'cc', 'closed caption', 'captions', 'caption', 'subtitles for the deaf',
+        'sdh', 'subtitles for deaf and hard of hearing', 'hearing impaired'
+    ];
+
+    const hasCCKeyword = ccKeywords.some(kw => 
+        handler.includes(kw) || title.includes(kw)
+    );
+
+    if (hasCCKeyword) {
+        return disposition.forced === 1 ? '[SDH]' : '[CC]';
+    }
+
+    if (lang === 'eng' || lang === 'en') {
+        if (disposition.hearing_impaired === 1) {
+            return '[CC/SDH]';
+        }
+    }
+
+    if (handler.match(/\(cc\)$/i) || handler.match(/cc$/i) || title.match(/\[cc\]/i)) {
+        return '[CC]';
+    }
+
+    // bit_rate は文字列の可能性があるので安全にパース
+    const bitRateNum = parseInt(track.bit_rate || 0, 10);
+    if (!isNaN(bitRateNum) && bitRateNum > 0 && bitRateNum < 100) {
+        return '[CC]';
+    }
+
+    return '';
+}
+
+// 字幕トラック・音声トラックのメニュー項目取得
+function getMenuItem(track) {
+    const tags = track.tags || {};
+    const title = (tags.title || '').trim();
+    const langCode = (tags.language || '').trim().toLowerCase();
+
+    let baseLabel = '';
+
+    if (title && title !== '') {
+        baseLabel = title;
+    } else {
+        // excludeHandlers の場合 → 言語名を優先
+        if (langCode && languageMap[langCode]) {
+            baseLabel = languageMap[langCode];
+        } else if (langCode && langCode !== '') {
+            baseLabel = langCode.toUpperCase();
+        } else {
+            baseLabel = '字幕';
+        }
+    }
+
+    // CC/SDH 推測を追加
+    const ccMark = guessIsCCorSDH(track);
+    if (ccMark) {
+        baseLabel += ` ${ccMark}`;
+    }
+
+    return baseLabel;
 }
 
 // 🔲ipcRenderer ハンドラ登録🔲
