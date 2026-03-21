@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Electron: Main",
+      "name": "Debug Electron: Main",
       "type": "node",
       "request": "launch",
       "cwd": "${workspaceFolder}",
@@ -11,25 +11,31 @@
         "runtimeExecutable": "${workspaceFolder}/node_modules/.bin/electron.cmd"
       },
       "args": [
-        ".",
-        "D:/（試作中）/JavaApp/xPlayerテストデータ/アウトロー.mp4",   // 引数指定
-        "--remote-debugging-port=9223"   // ← ここ重要！重複しないポート
+        ".",                          // カレントディレクトリのアプリを起動
+        "--remote-debugging-port=9223" // Rendererアタッチ用ポート（必須）
       ],
-      "outputCapture": "std"
+      "console": "integratedTerminal",
+      "outputCapture": "std",
+      "timeout": 30000
     },
     {
-      "name": "Electron: Renderer",
+      "name": "Debug Electron: Renderer",
       "type": "chrome",
       "request": "attach",
       "port": 9223,
-      "webRoot": "${workspaceFolder}",
-      "timeout": 30000
+      "webRoot": "${workspaceFolder}",     // または "${workspaceFolder}/src" などRendererのルートに
+      "timeout": 60000,                    // 起動遅延対策で長めに
+      "sourceMaps": true,
+      "trace": true                        // 接続エラー時に便利
     }
   ],
   "compounds": [
     {
-      "name": "Electron: All",
-      "configurations": ["Electron: Main", "Electron: Renderer"]
+      "name": "Debug Electron: All",
+      "configurations": [
+        "Debug Electron: Main",
+        "Debug Electron: Renderer"
+      ]
     }
   ]
 }
