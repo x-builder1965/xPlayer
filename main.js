@@ -217,6 +217,83 @@ function cleanupJoinTempFiles() {
     currentJoinTempFiles = [];
 }
 
+// 正規表現の特殊文字をエスケープする関数（baseName に . などが入る場合対策）
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// 字幕抽出関数（変更なし、metadataを引数で受け取る）
+async function extractSubtitlesOnly(inputPath, baseName, outDir, metadata) {
+    const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
+    if (subtitleStreams.length === 0) {
+        return;
+    }
+
+    // 字幕抽出準備中
+    mainWindow.webContents.send('subtitle-extraction-progress', {
+        filePath: inputPath,
+        subtitleCount: subtitleStreams.length,
+        subtitleIndex: 0,
+        message: `字幕抽出準備中...（0/${subtitleStreams.length}）`
+    });
+    // 既存の対象動画の全vttファイル削除
+    try {
+        const files = await fs.readdir(outDir);
+        const targetPattern = new RegExp(`^${escapeRegExp(baseName)}_.*\\.vtt$`, 'i');
+
+        for (const file of files) {
+            if (targetPattern.test(file)) {
+                const fullPath = path.join(outDir, file);
+                await trash(fullPath);
+            }
+        }
+    } catch (err) {
+        console.warn('古い .vtt ファイル削除中にエラー（続行）:', err.message);
+        // 削除失敗しても字幕抽出は続行（致命的でない）
+    }
+
+    // 字幕抽出中
+    for (const [idx, sub] of subtitleStreams.entries()) {
+        const lang = sub.tags?.language || sub.tags?.lang || 'und';
+        const vttPath = path.join(outDir, `${baseName}_track${idx}_${lang}.vtt`);
+
+        mainWindow.webContents.send('subtitle-extraction-progress', {
+            filePath: inputPath,
+            subtitleCount: subtitleStreams.length,
+            subtitleIndex: idx,
+            message: `字幕抽出中...（${idx + 1}/${subtitleStreams.length}）`
+        });
+
+        try {
+            await new Promise((res) => {  // エラー時も継続するため rej を使わず res で終わる
+                ffmpeg(inputPath)
+                    .outputOptions([
+                        `-map 0:s:${idx}`,
+                        '-vn', '-an',
+                        '-c:s', 'webvtt'
+                    ])
+                    .on('end', () => {
+                        res();
+                    })
+                    .on('error', (err, stdout, stderr) => {
+                        console.error(`抽出エラー (track ${idx}):`, stderr || err.message);
+                        res();  // エラーでも次へ進む
+                    })
+                    .save(vttPath);
+            });
+        } catch (e) {
+            console.warn(`トラック ${idx} 失敗（スキップ）`);
+        }
+    }
+
+    mainWindow.webContents.send('subtitle-extraction-progress', {
+        filePath: inputPath,
+        subtitleCount: subtitleStreams.length,
+        subtitleIndex: subtitleStreams.length,
+        message: `字幕抽出完了（${subtitleStreams.length}/${subtitleStreams.length}）`
+    });
+}
+
 // 🔲app ハンドラ登録🔲
 // アプリ起動処理
 app.whenReady().then(() => {
@@ -497,82 +574,6 @@ ipcMain.handle('convert-video', async (event, filePath, preferredAudioIndex = 0)
         currentFFmpeg = ff;
     });
 });
-
-// 正規表現の特殊文字をエスケープする関数（baseName に . などが入る場合対策）
-function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-// 字幕抽出関数（変更なし、metadataを引数で受け取る）
-async function extractSubtitlesOnly(inputPath, baseName, outDir, metadata) {
-    const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
-    if (subtitleStreams.length === 0) {
-        return;
-    }
-
-    // 字幕抽出準備中
-    mainWindow.webContents.send('subtitle-extraction-progress', {
-        filePath: inputPath,
-        subtitleCount: subtitleStreams.length,
-        subtitleIndex: 0,
-        message: `字幕抽出準備中...（0/${subtitleStreams.length}）`
-    });
-    // 既存の対象動画の全vttファイル削除
-    try {
-        const files = await fs.readdir(outDir);
-        const targetPattern = new RegExp(`^${escapeRegExp(baseName)}_.*\\.vtt$`, 'i');
-
-        for (const file of files) {
-            if (targetPattern.test(file)) {
-                const fullPath = path.join(outDir, file);
-                await trash(fullPath);
-            }
-        }
-    } catch (err) {
-        console.warn('古い .vtt ファイル削除中にエラー（続行）:', err.message);
-        // 削除失敗しても字幕抽出は続行（致命的でない）
-    }
-
-    // 字幕抽出中
-    for (const [idx, sub] of subtitleStreams.entries()) {
-        const lang = sub.tags?.language || sub.tags?.lang || 'und';
-        const vttPath = path.join(outDir, `${baseName}_track${idx}_${lang}.vtt`);
-
-        mainWindow.webContents.send('subtitle-extraction-progress', {
-            filePath: inputPath,
-            subtitleCount: subtitleStreams.length,
-            subtitleIndex: idx,
-            message: `字幕抽出中...（${idx + 1}/${subtitleStreams.length}）`
-        });
-
-        try {
-            await new Promise((res) => {  // エラー時も継続するため rej を使わず res で終わる
-                ffmpeg(inputPath)
-                    .outputOptions([
-                        `-map 0:s:${idx}`,
-                        '-vn', '-an',
-                        '-c:s', 'webvtt'
-                    ])
-                    .on('end', () => {
-                        res();
-                    })
-                    .on('error', (err, stdout, stderr) => {
-                        console.error(`抽出エラー (track ${idx}):`, stderr || err.message);
-                        res();  // エラーでも次へ進む
-                    })
-                    .save(vttPath);
-            });
-        } catch (e) {
-            console.warn(`トラック ${idx} 失敗（スキップ）`);
-        }
-    }
-
-    mainWindow.webContents.send('subtitle-extraction-progress', {
-        filePath: inputPath,
-        subtitleCount: subtitleStreams.length,
-        subtitleIndex: subtitleStreams.length,
-        message: `字幕抽出完了（${subtitleStreams.length}/${subtitleStreams.length}）`
-    });
-}
 
 // 変換キャンセル（ロック待機 + リトライ）
 ipcMain.handle('cancel-conversion', async () => {
