@@ -322,8 +322,8 @@ let originalLoadOrder = [];  // プレイリストの「最初に読み込まれ
 let hideMouseTimeout = null;
 let currentBlobUrl = null;  // ← これを追加（null 初期化）
 let editFrameRate = 30;
-let currentSortMode = 'none';
-let selectedAudio = 'jpn';
+let currentSortMode = '（なし）';
+let selectedAudio = '日本語';
 let letselectedSubtitle = 'none';
 let currentAudioIndex = 0;
 let currentSubtitlesIndex = 0;
@@ -493,12 +493,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 音声言語・字幕言語の復元
     if (!savedSelectedAudio) {
-        selectedAudio = 'jpn';
+        selectedAudio = '日本語';
     } else {
         selectedAudio = savedSelectedAudio;
     }
     if (!savedSelectedSubtitle) {
-        selectedSubtitle = 'none';
+        selectedSubtitle = '（なし）';
     } else {
         selectedSubtitle = savedSelectedSubtitle;
     }
@@ -2296,15 +2296,18 @@ async function getVideoTraks(filePath) {
 async function toggleTrackMenu(e, type, button) {
     // 字幕選択ボタンイベント抑止
     e.stopPropagation();
-    // 並び替えメニュー非表示
+
+    // メニュー非表示
     const existingMenu = document.querySelector('.sort-menu');
     if (existingMenu) {
         existingMenu.remove();
+        return;
     }
 
     // 動画音声トラック・字幕トラック取得
     const filePath = playlist[currentVideoIndex].file.path;
     await getVideoTraks(filePath);
+    if (currentSubtitlesTracks.length === 0) return;
 
     // 音声メニュー・字幕メニュー作成
     const menu = createTrackMenu(type);
@@ -2342,8 +2345,9 @@ async function toggleTrackMenu(e, type, button) {
     menu.style.left = `${leftPosition}px`;
     menu.style.zIndex = '9999';  // 最前面に持ってくる
 
+    // ツールチップ非表示
     hideTooltip(button);
-    document.body.appendChild(menu);  // body直下に追加（ビデオコンテナの影響を受けない）
+    document.body.appendChild(menu);
 
     function closeMenu(ev) {
         if (!menu.contains(ev.target) && ev.target !== button) {
@@ -2391,26 +2395,30 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
     });
 
     // selectedTrackObj（選択項目）の判定・再設定
+    const currentLabel = type === 'subtitle' ? selectedSubtitle : selectedAudio;
+    const topItemTrack = type === 'subtitle' ? null : labeledTracks[0]?.track ?? null;
+    const sameLabelItem = labeledTracks.find(item => 
+        item.label.trim().toLowerCase().includes(currentLabel.toLowerCase())
+    );
     if (!selectedTrackObj) {
         // メニュー未選択の場合
-        if (type === 'subtitle') {
-            selectedTrackObj = null;
+        if (!sameLabelItem) {
+            // 類似項目がメニューに存在しない場合
+            selectedTrackObj = topItemTrack;
         } else {
-            selectedTrackObj = labeledTracks[0]?.track ?? null;
+            // 類似項目がメニューに存在する場合
+            selectedTrackObj = sameLabelItem.track;
         }
     } else {
         // メニュー選択済の場合
-        const found = labeledTracks.some(item => item.track.index === selectedTrackObj.index);
-        if (!found) {
+        const foundItemTrack = labeledTracks.some(item => 
+            item.track.index === selectedTrackObj.index
+        );
+        if (!foundItemTrack) {
             // 選択項目がメニューに存在しない場合
-            const sameLabelItem = labeledTracks.find(item => item.label.trim() === currentLabel.trim());
             if (!sameLabelItem) {
                 // 類似項目がメニューに存在しない場合
-                if (type === 'subtitle') {
-                    selectedTrackObj = null;
-                } else {
-                    selectedTrackObj = labeledTracks[0]?.track ?? null;
-                }
+                selectedTrackObj = topItemTrack;
             } else {
                 // 類似項目がメニューに存在する場合
                 selectedTrackObj = sameLabelItem.track;
@@ -2461,6 +2469,8 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
 
 // 字幕トラック・音声トラックのメニュー項目取得
 function getMenuItem(track) {
+    const channels = (track.channels || '');
+    const type = (track.codec_type || '');
     const tags = track.tags || {};
     const title = (tags.title || '').trim();
     const langCode = (tags.language || '').trim().toLowerCase();
@@ -2476,14 +2486,25 @@ function getMenuItem(track) {
         } else if (langCode && langCode !== '') {
             baseLabel = langCode.toUpperCase();
         } else {
-            baseLabel = '字幕';
+            if (type === 'audio') {
+                baseLabel = '音声';
+            } else if (type === 'subtitle') {
+                baseLabel = '字幕';
+            } else {
+                baseLabel = '不明';
+            }
         }
     }
 
-    // CC/SDH 推測を追加
-    const ccMark = guessIsCCorSDH(track);
-    if (ccMark) {
-        baseLabel += ` ${ccMark}`;
+    if (type === 'audio') {
+        // channelsを追加
+        baseLabel += ` (${channels}ch)`;
+    } else if (type === 'subtitle') {
+        // CC/SDH 推測を追加
+        const ccMark = guessIsCCorSDH(track);
+        if (ccMark) {
+            baseLabel += ` ${ccMark}`;
+        }
     }
 
     return baseLabel;
@@ -4618,9 +4639,7 @@ voiceSelectBtn.addEventListener('click', async (e) => {
     if (modeChange !== 'convert') return;
     if (playlist.length === 0) return;
 
-    if (currentAudioTracks.length > 0) {
-        toggleTrackMenu(e, 'audio', voiceSelectBtn);
-    }   
+    toggleTrackMenu(e, 'audio', voiceSelectBtn);
 });
 
 // 🔠字幕選択クリック時
@@ -4628,7 +4647,5 @@ subtitleSelectBtn.addEventListener('click', async (e) => {
     if (modeChange !== 'video') return;
     if (playlist.length === 0) return;
 
-    if (currentSubtitlesTracks.length > 0) {
-        toggleTrackMenu(e, 'subtitle', subtitleSelectBtn);
-    }   
+    toggleTrackMenu(e, 'subtitle', subtitleSelectBtn);
 });
