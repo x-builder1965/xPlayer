@@ -2364,6 +2364,334 @@ async function getVideoTraks(filePath) {
     }
 }
 
+// 音声・字幕メニュー表示・非表示
+function toggleTrackMenu(e, type, button) {
+    // 字幕選択ボタンイベント抑止
+    e.stopPropagation();
+    // 並び替えメニュー非表示
+    const existingMenu = document.querySelector('.sort-menu');
+    if (existingMenu) {
+        existingMenu.remove();
+    }
+
+    // 音声メニュー・字幕メニュー作成
+    const menu = createTrackMenu(type);
+
+    // ★ 座標基準を window / document.body に統一（フルスクリーンでも安全）
+    const btnRect = button.getBoundingClientRect();  // 画面基準の絶対位置
+
+    // 仮追加して高さ取得
+    const tempDiv = document.createElement('div');
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.visibility = 'hidden';
+    tempDiv.appendChild(menu);
+    document.body.appendChild(tempDiv);
+
+    const menuHeight = menu.offsetHeight;
+    document.body.removeChild(tempDiv);
+
+    // 上側表示（画面基準で計算）
+    let topPosition = btnRect.top - menuHeight - 4;  // ボタンの上端からメニュー高さ分引く
+
+    // 上側が画面外に出る場合、下側にフォールバック
+    if (topPosition < 0) {
+        topPosition = btnRect.bottom + 4;
+        console.log('[toggleTrackMenu] 上側スペース不足 → 下側表示');
+    }
+
+    // 右側がはみ出たら左寄せ調整（任意）
+    let leftPosition = btnRect.left;
+    if (leftPosition + 200 > window.innerWidth) {   // メニュー幅を200pxと仮定
+        leftPosition = window.innerWidth - 220;     // 少し余裕を持たせる
+    }
+
+    menu.style.position = 'fixed';  // ← absolute → fixed に変更（画面基準で固定）
+    menu.style.top  = `${topPosition}px`;
+    menu.style.left = `${leftPosition}px`;
+    menu.style.zIndex = '9999';  // 最前面に持ってくる
+
+    hideTooltip(button);
+    document.body.appendChild(menu);  // body直下に追加（ビデオコンテナの影響を受けない）
+
+    function closeMenu(ev) {
+        if (!menu.contains(ev.target) && ev.target !== button) {
+            menu.remove();
+        }
+    }
+
+    setTimeout(() => {
+        document.addEventListener('click', closeMenu, { once: true });
+    }, 0);
+}
+
+// 字幕メニュー・音声メニュー作成
+function createTrackMenu(type) {  // 'audio' or 'subtitle'
+    const menu = document.createElement('div');
+    menu.className = 'sort-menu';
+    // インラインスタイル（変更なし）
+    menu.style.background = 'rgba(30,30,30,0.95)';
+    menu.style.border = '1px solid #444';
+    menu.style.borderRadius = '6px';
+    menu.style.padding = '6px 0';
+    menu.style.zIndex = '1001';
+    menu.style.minWidth = '240px';
+    menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
+    menu.style.maxHeight = '400px';
+    menu.style.overflowY = 'auto';
+    menu.style.cursor = 'pointer';
+
+    const title = document.createElement('div');
+    title.className = 'menu-title';
+    menu.appendChild(title);
+
+    const tracks = type === 'audio' ? currentAudioTracks : currentSubtitlesTracks;
+    let selectedTrackObj = type === 'audio' ? currentAudioTrack : currentSubtitlesTrack;
+
+    // ── 字幕メニューの場合 ──
+    if (type === 'subtitle') {
+        // 「（なし）」項目を先頭に追加
+        const noneItem = document.createElement('div');
+        noneItem.className = 'menu-item';
+        // 現在「なし」が選択されているか（再生トラックがnull/未選択状態）
+        const isNoneSelected = !selectedTrackObj;
+        noneItem.innerHTML = isNoneSelected ? '✅ （なし）' : '　　（なし）';
+        noneItem.onclick = () => selectTrack('subtitle', '（なし）', menu);
+        menu.appendChild(noneItem);
+
+        // 字幕トラック一覧
+        if (tracks.length > 0) {
+            // 表示ラベルとトラックをペアにした配列
+            const labeledTracks = tracks.map(track => ({
+                label: getMenuItem(track),
+                track                     // ← トラックオブジェクトを保持
+            }));
+
+            // ラベルで昇順ソート（同一ラベルは元の順序を維持したい場合はstable sort）
+            labeledTracks.sort((a, b) => {
+                const cleanA = a.label.trim();
+                const cleanB = b.label.trim();
+                return cleanA.localeCompare(cleanB);
+            });
+
+            let found = labeledTracks.some(item => item.track === selectedTrackObj);
+
+            if (!found) {
+                if (selectedTrackObj !== null) {
+                    // 同一ラベルを探す
+                    const currentLabel = getMenuItem(selectedTrackObj);
+                    const sameLabelItem = labeledTracks.find(item => item.label.trim() === currentLabel.trim());
+
+                    if (sameLabelItem) {
+                        // 同じラベルのものがあればそちらを選択状態に更新
+                        selectedTrackObj = sameLabelItem.track;
+                    } else {
+                        // 同一ラベルも見つからない → なしにフォールバック
+                        selectedTrackObj = null;
+                        // ここで実際に字幕をオフにする処理が必要なら selectTrack('subtitle', '（なし）', menu); を呼ぶ
+                        const isNoneSelected = !selectedTrackObj;
+                        noneItem.innerHTML = isNoneSelected ? '✅ （なし）' : '　　（なし）';
+                        noneItem.onclick = () => selectTrack('subtitle', '（なし）', menu);
+                        menu.appendChild(noneItem);
+                    }
+                }
+            }
+
+            labeledTracks.forEach(({ label, track }) => {
+                const item = document.createElement('div');
+                item.className = 'menu-item';
+                const isSelected = (selectedTrackObj === track);
+
+                item.innerHTML = isSelected ? `✅ ${label}` : `　　${label}`;
+                item.onclick = () => selectTrack(type, label, menu, track); // trackも渡すとより安全
+                menu.appendChild(item);
+            });
+        }
+    } 
+    // ── 音声トラックの場合 ──
+    else {
+        if (tracks.length > 0) {
+            const labeledTracks = tracks.map(track => ({
+                label: getMenuItem(track),
+                track                     // ← トラックオブジェクトを保持
+            }));
+
+            // 必要に応じてソート（音声は元の順序を維持したい場合もある）
+            labeledTracks.sort((a, b) => {
+                const cleanA = a.label.trim();
+                const cleanB = b.label.trim();
+                return cleanA.localeCompare(cleanB);
+            });
+
+            let found = labeledTracks.some(item => item.track === selectedTrackObj);
+
+            if (!found) {
+                if (selectedTrackObj !== null) {
+                    const currentLabel = getMenuItem(selectedTrackObj);
+                    let sameLabelItem = labeledTracks.find(item => item.label.trim() === currentLabel.trim());
+
+                    if (sameLabelItem) {
+                        selectedTrackObj = sameLabelItem.track;
+                    } else {
+                        selectedTrackObj = labeledTracks[0]?.track ?? null;
+                    }
+                } else {
+                    selectedTrackObj = labeledTracks[0]?.track ?? null;
+                }
+            }
+
+            tracks.forEach((track) => {
+                let label = getMenuItem(track);
+                if (track.channels) {
+                    label += ` (${track.channels}ch)`;
+                }
+
+                const item = document.createElement('div');
+                item.className = 'menu-item';
+                const isSelected = (selectedTrackObj === track);
+
+                item.innerHTML = isSelected ? `✅ ${label}` : `　　${label}`;
+                item.onclick = () => selectTrack(type, label, menu, track);
+                menu.appendChild(item);
+            });
+        }
+    }
+
+    // メニュー全体のマウスオーバー抑止（変更なし）
+    menu.addEventListener('mouseenter', () => {
+        isMouseOverControls = true;
+        clearTimeout(timeout);
+        showControlsAndFilename();
+    });
+    menu.addEventListener('mouseleave', () => {
+        isMouseOverControls = false;
+        showControlsAndFilename();
+    });
+
+    return menu;
+}
+
+
+// 字幕トラック・音声トラックのメニュー項目取得
+function getMenuItem(track) {
+    const tags = track.tags || {};
+    const title = (tags.title || '').trim();
+    const langCode = (tags.language || '').trim().toLowerCase();
+
+    let baseLabel = '';
+
+    if (title && title !== '') {
+        baseLabel = title;
+    } else {
+        // excludeHandlers の場合 → 言語名を優先
+        if (langCode && languageMap[langCode]) {
+            baseLabel = languageMap[langCode];
+        } else if (langCode && langCode !== '') {
+            baseLabel = langCode.toUpperCase();
+        } else {
+            baseLabel = '字幕';
+        }
+    }
+
+    // CC/SDH 推測を追加
+    const ccMark = guessIsCCorSDH(track);
+    if (ccMark) {
+        baseLabel += ` ${ccMark}`;
+    }
+
+    return baseLabel;
+}
+
+// 字幕トラックCC/SDH判定
+function guessIsCCorSDH(track) {
+    const codec_type = trak.codec_type ? trak.codec_type : '';
+    if (codec_type === 'subtitle') return '';
+    
+    const tags = track.tags || {};
+    const disposition = track.disposition || {};
+
+    const handler = (tags.handler_name || '').toLowerCase();
+    const title   = (tags.title || '').toLowerCase();
+    const lang    = (tags.language || '').toLowerCase();
+
+    const ccKeywords = [
+        'cc', 'closed caption', 'captions', 'caption', 'subtitles for the deaf',
+        'sdh', 'subtitles for deaf and hard of hearing', 'hearing impaired'
+    ];
+
+    const hasCCKeyword = ccKeywords.some(kw => 
+        handler.includes(kw) || title.includes(kw)
+    );
+
+    if (hasCCKeyword) {
+        return disposition.forced === 1 ? '[SDH]' : '[CC]';
+    }
+
+    if (lang === 'eng' || lang === 'en') {
+        if (disposition.hearing_impaired === 1) {
+            return '[CC/SDH]';
+        }
+    }
+
+    if (handler.match(/\(cc\)$/i) || handler.match(/cc$/i) || title.match(/\[cc\]/i)) {
+        return '[CC]';
+    }
+
+    // bit_rate は文字列の可能性があるので安全にパース
+    const bitRateNum = parseInt(track.bit_rate || 0, 10);
+    if (!isNaN(bitRateNum) && bitRateNum > 0 && bitRateNum < 100) {
+        return '[CC]';
+    }
+
+    return '';
+}
+
+// 字幕メニュー・音声メニュー選択
+function selectTrack(type, label, menu, trackObj = null) {
+    const currentTracks = type === 'audio' ? currentAudioTracks : currentSubtitlesTracks;
+    if (trackObj && !currentTracks.includes(trackObj)) {  // 例: 字幕の場合
+        console.warn("選択しようとしたトラックはもう存在しません");
+        if (type === 'subtitle') {
+            currentSubtitlesTrack = null;
+            selectedSubtitle = '（なし）';
+        } else {
+            currentAudioTrack = null;
+        }
+        return;
+    }
+
+    if (type === 'subtitle') {
+        if (label === '（なし）') {
+            currentSubtitlesTrack = null;
+            selectedTrackObj = null;
+            selectedSubtitle = '（なし）';
+            // video.textTracks で適切に無効化処理
+        } else {
+            // trackObj が渡されていればそれを使う
+            if (trackObj) {
+                currentSubtitlesTrack = trackObj;
+            } else {
+                // ラベルから逆引き（非推奨・複数あると危険）
+                const found = currentSubtitlesTracks.find(t => getMenuItem(t) === label);
+                if (found) currentSubtitlesTrack = found;
+            }
+            selectedSubtitle = label;
+        }
+    } else {
+        // trackObj が渡されていればそれを使う
+        if (trackObj) {
+            currentAudioTrack = trackObj;
+        } else {
+            // ラベルから逆引き（非推奨・複数あると危険）
+            const found = currentAudioTracks.find(t => getMenuItem(t) === label);
+            if (found) currentAudioTrack = found;
+        }
+        selectedAudio = label;
+    }
+
+    // メニュー閉じる処理など
+    menu?.remove();
+}
+
 // 🔲ipcRenderer ハンドラ登録🔲
 // main.js からの自動再生指示を受信
 ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
@@ -4400,6 +4728,7 @@ videoPlayer.addEventListener('timeupdate', () => {
 
 // 🎤音声選択クリック時
 voiceSelectBtn.addEventListener('click', async () => {
+    if (modeChange !== 'convert') return;
     if (playlist.length === 0) return;
 
     // 動画音声トラック・字幕トラック取得
@@ -4407,12 +4736,13 @@ voiceSelectBtn.addEventListener('click', async () => {
     await getVideoTraks(filePath);
 
     if (currentAudioTracks.length > 0) {
-
+        toggleTrackMenu(e, 'audio', voiceSelectBtn);
     }   
 });
 
 // 🔠字幕選択クリック時
 subtitleSelectBtn.addEventListener('click', async () => {
+    if (modeChange !== 'video') return;
     if (playlist.length === 0) return;
 
     // 動画音声トラック・字幕トラック取得
@@ -4420,6 +4750,6 @@ subtitleSelectBtn.addEventListener('click', async () => {
     await getVideoTraks(filePath);
 
     if (currentSubtitlesTracks.length > 0) {
-
+        toggleTrackMenu(e, 'subtitle', subtitleSelectBtn);
     }   
 });
