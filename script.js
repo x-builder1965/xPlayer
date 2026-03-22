@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.73.1';
+const appName = 'xPlayer -動画プレイヤー- Ver3.75.1';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -324,7 +324,7 @@ let editFrameRate = 30;
 let currentSortMode = 'none';
 let selectedAudio = 'jpn';
 let letselectedSubtitle = 'none';
-let currentAudioIndex = 0;
+let currentAudioIndex = 1;
 let currentSubtitlesIndex = 0;
 let currentAudioTracks = [];
 let currentSubtitlesTracks = [];
@@ -2371,10 +2371,10 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
 });
 
 // 変換進捗受信
-ipcRenderer.on('convert-progress', (event, { percent }) => {
+ipcRenderer.on('convert-progress', (e, { percent }) => {
     const playListCount = playlist.length;
     const playListCurrent = parseInt(filenameDisplay.value);
-    updateOverlayDisplay(`🔄️ 変換中…（${playListCurrent + 1}/${playListCount}） ${Math.round(percent)}%`);
+    updateOverlayDisplay(`🔄️ 変換中…（${playListCurrent + 1}/${playListCount}） ${Math.round(percent)}%`, false, 0);
     // シークバーに進捗を表示
     const totalPercent = ((playListCurrent * 100) + percent) / (playListCount * 100) * 100;
     seekBar.value = totalPercent;
@@ -2470,7 +2470,12 @@ ipcRenderer.on('convert-error', (event, msg) => {
 
 // 字幕ファイル出力開始
 ipcRenderer.on('subtitle-extraction-progress', (e, data) => {
-    updateOverlayDisplay(`🔄️ 字幕抽出中…（${data.subtitleIndex}/${data.subtitleCount}）`, false, 0);
+    const playListCount = playlist.length;
+    const playListCurrent = parseInt(filenameDisplay.value);
+    updateOverlayDisplay(`🔄️ 字幕抽出中…（${playListCurrent + 1}/${playListCount}） 100%（${data.subtitleIndex}/${data.subtitleCount}）`, false, 0);
+    // シークバーに進捗を表示
+    const totalPercent = ((playListCurrent * 100) + 100) / (playListCount * 100) * 100;
+    seekBar.value = totalPercent;
 });
 
 // 🔲window ハンドラ登録🔲

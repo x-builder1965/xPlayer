@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.66';
+const appName = 'xPlayer -動画プレイヤー- Ver3.75.1';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -339,9 +339,9 @@ ipcMain.handle('convert-video', async (event, filePath, preferredAudioIndex = 0)
 
         const isMp4Input = ext === '.mp4';
 
-        currentOutputPath = null;  // 常に設定しておく
+        currentOutputPath = null;
 
-        // 最初に必ず ffprobe を実行（metadata を取得）
+        // ffprobe でメタデータ取得
         let metadata;
         try {
             metadata = await new Promise((res, rej) => {
@@ -361,100 +361,136 @@ ipcMain.handle('convert-video', async (event, filePath, preferredAudioIndex = 0)
         // mp4入力 かつ preferredAudioIndex === 0 → 変換スキップ、字幕抽出のみ
         if (isMp4Input && preferredAudioIndex === 0) {
             mainWindow.webContents.send('convert-progress', { percent: 100 });
-
             try {
                 await extractSubtitlesOnly(filePath, baseName, outDir, metadata);
-                resolve(outPath);  // 元のmp4パスを返す
+                resolve(filePath);  // 元パスを返す
             } catch (err) {
                 reject(err);
             }
             return;
         }
 
-        // それ以外 → 通常の変換処理
+        // 対象音声インデックス（defaultにするトラック）
+        const targetAudioIdx = Math.max(0, Math.min(preferredAudioIndex, audioStreams.length - 1));
+
+        // ビデオストリームのインデックスを動的に取得（attached pic除外）
+        const videoStreamIndex = metadata.streams.findIndex(s => 
+            s.codec_type === 'video' && !s.disposition?.attached_pic
+        ) !== -1 ? metadata.streams.findIndex(s => 
+            s.codec_type === 'video' && !s.disposition?.attached_pic
+        ) : 0;
+
+        const mapOptions = [
+            '-map', `0:${videoStreamIndex}`,                    // 本物のビデオ
+            '-map', '-0:v:m:disposition:attached_pic',          // attached pic除外
+        ];
+
+        const dispositionOptions = [];
+
+        if (audioStreams.length > 0) {
+            // 音声は全マップ（順序入替はせず、defaultだけ変更）
+            for (let i = 0; i < audioStreams.length; i++) {
+                mapOptions.push(`-map 0:a:${i}?`);
+            }
+
+            // default設定：targetAudioIdx番目をdefaultに、他を解除
+            dispositionOptions.push(`-disposition:a:${targetAudioIdx}`, 'default');
+            for (let i = 0; i < audioStreams.length; i++) {
+                if (i !== targetAudioIdx) {
+                    dispositionOptions.push(`-disposition:a:${i}`, '0');
+                }
+            }
+        }
+
+        // 字幕全マップ
+        mapOptions.push('-map 0:s?');
+
+        const ff = ffmpeg(filePath)
+            .outputOptions(mapOptions)
+            .outputOptions(dispositionOptions);
+
+        // ================ コーデック分岐（ここが核心） ================
+        if (isMp4Input) {
+            // mp4入力 → 完全コピーモード（映像・音声・字幕すべてcopy）
+            ff.outputOptions([
+                '-c:v', 'copy',
+                '-c:a', 'copy',          // 音声copy（default変更は効く）
+                '-c:s', 'copy',
+                '-movflags', '+faststart'
+            ]);
+        } else {
+            // 非mp4入力 → 映像再エンコード、音声・字幕はcopy
+            // 映像ビットレートを動的に決定（元映像のbit_rateを基準）
+            let videoBitrate = '1500k';  // デフォルト
+            const videoStream = metadata.streams[videoStreamIndex];
+            if (videoStream?.bit_rate) {
+                const br = parseInt(videoStream.bit_rate, 10);
+                if (!isNaN(br) && br > 0) {
+                    videoBitrate = `${Math.round(br / 1000)}k`;
+                }
+            }
+
+            ff.outputOptions([
+                '-c:v', 'libx264',
+                '-preset', 'veryfast',
+                '-b:v', videoBitrate,    // ← 映像ビットレート動的
+                '-c:a', 'copy',          // 音声copy（default変更効く）
+                '-c:s', 'mov_text',      // ← ここをcopy → mov_text に変更（必須）
+                '-movflags', '+faststart'
+            ]);
+        }
+        // =============================================================
+
         const tempPath = path.join(outDir, `${baseName}_temp_${Date.now()}.mp4`);
         currentOutputPath = tempPath;
 
         mainWindow.webContents.send('convert-progress', { percent: 0 });
 
-        const targetAudioIdx = Math.max(0, Math.min(preferredAudioIndex, audioStreams.length - 1));
-
-        const mapOptions = ['-map 0:V', '-map 0:a?', '-map 0:s?'];
-        const dispositionOptions = [];
-
-        if (audioStreams.length > 0) {
-            mapOptions.push(`-map 0:a:${targetAudioIdx}?`);
-            for (let i = 0; i < audioStreams.length; i++) {
-                if (i !== targetAudioIdx) {
-                    mapOptions.push(`-map 0:a:${i}?`);
-                }
+        ff.on('progress', (progress) => {
+            if (progress.percent !== undefined) {
+                mainWindow.webContents.send('convert-progress', { percent: progress.percent });
             }
-            dispositionOptions.push('-disposition:a:0', 'default');
-            for (let i = 1; i < audioStreams.length; i++) {
-                dispositionOptions.push(`-disposition:a:${i}`, '0');
-            }
-        }
+        })
+        .on('end', async () => {
+            const fsPromises = require('fs').promises;
+            currentFFmpeg = null;
+            currentOutputPath = null;
 
-        const ff = ffmpeg(filePath)
-            .outputOptions(mapOptions)
-            .outputOptions(dispositionOptions)
-            .outputOptions([
-                '-c:v', 'libx264',
-                '-preset', 'veryfast',
-                '-crf', '23',
-                '-c:a', 'aac',
-                '-b:a', '192k',
-                '-c:s', 'mov_text',
-                '-movflags', '+faststart'
-            ])
-            .on('progress', (progress) => {
-                if (progress.percent !== undefined) {
-                    mainWindow.webContents.send('convert-progress', { percent: progress.percent });
-                }
-            })
-            .on('end', async () => {
-                const fsPromises = require('fs').promises;
-                currentFFmpeg = null;
-                currentOutputPath = null;
-
+            try {
+                let originalOutPathExists = false;
                 try {
-                    let originalOutPathExists = false;
-                    try {
-                        await fsPromises.access(outPath);
-                        originalOutPathExists = true;
-                    } catch {}
+                    await fsPromises.access(outPath);
+                    originalOutPathExists = true;
+                } catch {}
 
-                    if (originalOutPathExists) {
-                        await trash(outPath);
-                    }
-
-                    await fsPromises.rename(tempPath, outPath);
-                    console.log(`変換完了: ${outPath}`);
-
-                    if (!isMp4Input) {
-                        await trash(filePath);
-                    }
-
-                    await extractSubtitlesOnly(filePath, baseName, outDir, metadata);
-
-                    resolve(outPath);
-                } catch (moveErr) {
-                    mainWindow.webContents.send('convert-error', '後処理エラー: ' + moveErr.message);
-                    reject(moveErr);
+                if (originalOutPathExists) {
+                    await trash(outPath);
                 }
-            })
-            .on('error', (err, stdout, stderr) => {
-                if (err.message.includes('ffmpeg was killed')) {
-                    console.log('変換中断:', filePath);
-                    return;
+                await fsPromises.rename(tempPath, outPath);
+                if (!isMp4Input) {
+                    await trash(filePath);
                 }
-                console.error('FFmpegエラー:', stderr);
-                mainWindow.webContents.send('convert-error', err.message + '\n' + stderr);
-                currentFFmpeg = null;
-                currentOutputPath = null;
-                reject(err);
-            })
-            .save(tempPath);
+
+                await extractSubtitlesOnly(outPath, baseName, outDir, metadata);
+
+                resolve(outPath);
+            } catch (moveErr) {
+                mainWindow.webContents.send('convert-error', '後処理エラー: ' + moveErr.message);
+                reject(moveErr);
+            }
+        })
+        .on('error', (err, stdout, stderr) => {
+            if (err.message.includes('ffmpeg was killed')) {
+                console.log('変換中断:', filePath);
+                return;
+            }
+            console.error('FFmpegエラー:', stderr);
+            mainWindow.webContents.send('convert-error', err.message + '\n' + stderr);
+            currentFFmpeg = null;
+            currentOutputPath = null;
+            reject(err);
+        })
+        .save(tempPath);
 
         currentFFmpeg = ff;
     });
