@@ -81,6 +81,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.75.1';
 // 2026-03-19 Ver3.74.1 動画変換（🔄️）mp4→mp4変換、字幕切出など追加。
 // 2026-03-19 Ver3.75.1 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step1完了）
 // 2026-03-22 Ver3.75.1 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step2完了）
+// 2026-03-22 Ver3.75.1 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step3開発中）
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -324,7 +325,7 @@ let editFrameRate = 30;
 let currentSortMode = 'none';
 let selectedAudio = 'jpn';
 let letselectedSubtitle = 'none';
-let currentAudioIndex = 1;
+let currentAudioIndex = 0;
 let currentSubtitlesIndex = 0;
 let currentAudioTracks = [];
 let currentSubtitlesTracks = [];
