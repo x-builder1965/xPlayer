@@ -615,7 +615,7 @@ async function updateTrack(type) {
     const track = type === 'audio' ? currentAudioTrack : currentSubtitleTrack;
     const label = type === 'audio' ? '' : selectedSubtitleLabel;
 
-    selectTrackMenu(type, null, label, track);
+    await selectTrackMenu(type, null, label, track);
 }
 
 // 時間フォーマット変換
@@ -2476,7 +2476,8 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
     } else {
         // メニュー選択済の場合
         const foundItemTrack = labeledTracks.some(item => 
-            item.track.index === selectedTrackObj.index
+            (item.track.index === selectedTrackObj.index) && 
+            (item.track.vttPath === selectedTrackObj.vttPath)
         );
         if (!foundItemTrack) {
             // 選択項目がメニューに存在しない場合
@@ -2628,7 +2629,7 @@ function guessIsCCorSDH(track) {
 }
 
 // 字幕メニュー・音声メニュー選択
-function selectTrackMenu(type, menu, label, trackObj = null) {
+async function selectTrackMenu(type, menu, label, trackObj = null) {
     const currentTracks = type === 'audio' ? currentAudioTracks : currentSubtitleTracks;
     
     // まれなケースの予防（メニュー選択直後に再生・変換動画が変わるなど...）
