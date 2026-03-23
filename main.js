@@ -435,18 +435,6 @@ ipcMain.handle('convert-video', async (event, filePath, preferredAudioIndex = 0)
         const audioStreams = metadata.streams.filter(s => s.codec_type === 'audio');
         const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
 
-        // mp4入力 かつ preferredAudioIndex === 0 → 変換スキップ、字幕抽出のみ
-        if (isMp4Input && preferredAudioIndex === 0) {
-            mainWindow.webContents.send('convert-progress', { percent: 100 });
-            try {
-                await extractSubtitlesOnly(filePath, baseName, outDir, metadata);
-                resolve(filePath);  // 元パスを返す
-            } catch (err) {
-                reject(err);
-            }
-            return;
-        }
-
         // 対象音声インデックス（defaultにするトラック）
         const targetAudioIdx = Math.max(0, Math.min(preferredAudioIndex, audioStreams.length - 1));
 
