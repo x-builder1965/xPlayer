@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.75.1';
+const appName = 'xPlayer -動画プレイヤー- Ver3.75.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -78,10 +78,11 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.75.1';
 // 2026-03-17 Ver3.71.1 初期処理をDOMContentLoadedイベント内の処理に変更。
 // 2026-03-17 Ver3.72.1 プレイリスト編集で動画削除（）時の次動画再生開始位置の不良対応。
 // 2026-03-19 Ver3.73.1 コントロールパネル、プレイリストパネルの活性・非活性処理見直し。
-// 2026-03-19 Ver3.74.1 動画変換（🔄️）mp4→mp4変換、字幕切出など追加。
-// 2026-03-19 Ver3.75.1 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step1完了）
-// 2026-03-22 Ver3.75.1 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step2完了）
-// 2026-03-22 Ver3.75.1 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step3開発中）
+// 2026-03-19 Ver3.74.2 動画変換（🔄️）mp4→mp4変換、字幕切出など追加。
+// 2026-03-19 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step1完了）
+// 2026-03-22 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step2完了）
+// 2026-03-22 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step3･4完了）
+// 2026-03-24 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step5完了）
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -3231,6 +3232,17 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
+    // 🔠字幕・🎤音声選択（Ctrl+t）
+    if (event.ctrlKey && event.key === 't') {
+        event.preventDefault();
+        if (modeChange === 'video') {
+            subtitleSelectBtn.click();
+        } else {
+            voiceSelectBtn.click();
+        }
+        return;
+    }
+
     // 🔊ミュート／🔇ミュート解除（Ctrl+m）
     if (event.ctrlKey && event.key === 'm') {
         event.preventDefault();
@@ -4772,6 +4784,9 @@ voiceSelectBtn.addEventListener('click', async (e) => {
     if (playlist.length === 0) return;
 
     toggleTrackMenu(e, 'audio', voiceSelectBtn);
+
+    showControlsAndFilename();
+    updateIconOverlay();
 });
 
 // 🔠字幕選択クリック時
@@ -4780,4 +4795,7 @@ subtitleSelectBtn.addEventListener('click', async (e) => {
     if (playlist.length === 0) return;
 
     toggleTrackMenu(e, 'subtitle', subtitleSelectBtn);
+    
+    showControlsAndFilename();
+    updateIconOverlay();
 });

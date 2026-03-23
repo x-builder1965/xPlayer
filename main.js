@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.75.1';
+const appName = 'xPlayer -動画プレイヤー- Ver3.75.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲

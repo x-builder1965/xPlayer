@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.75.1'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.75.2'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -92,7 +92,7 @@
                 </div>
                 <div class="control-row">
                     <button id="voiceSelectBtn" data-tooltip="音声選択（Ctrl+t）">🎤</button>
-                    <button id="subtitleSelectBtn" data-tooltip="字幕選択（Gtrl+t）">🔠</button>
+                    <button id="subtitleSelectBtn" data-tooltip="字幕選択（Ctrl+t）">🔠</button>
                     <button id="volumeMuteBtn" data-tooltip="ミュート（Ctrl+m）">🔊</button>
                     <span id="volumeDisplay" data-tooltip="音量（↑↓／Swipe Up Down／Wheel）">20%</span>
                     <input type="range" id="volumeBar" value="0.2" min="0" max="1" step="0.01" data-tooltip="音量変更（↑↓／Swipe Up Down）">
@@ -164,14 +164,14 @@
                                 <td class="icon">✂️</td>
                                 <td class="key">Ctrl+e</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・カット編集モードの開始（青）／終了（赤）。</td>
+                                <td class="note">・カット編集モードの開始（青）／終了（赤）。<br>※音声：１トラックのみ残します。字幕：欠損します。</td>
                             </tr>
                             <tr>
                                 <td>　・動画結合</td>
                                 <td class="icon">🎞️</td>
                                 <td class="key">Ctrl+j</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリスト内の動画を結合。</td>
+                                <td class="note">・プレイリスト内の動画を結合。<br>※音声：１トラックのみ残します。字幕：欠損します。</td>
                             </tr>
                             <tr>
                                 <td>　・プレイリスト</td>
@@ -298,6 +298,13 @@
                                 <td class="key">Ctrl+h</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・プレイヤーの操作説明（当画面）を開く。</td>
+                            </tr>
+                            <tr>
+                                <td>　・字幕／音声選択</td>
+                                <td class="icon">🔠／🎤</td>
+                                <td class="key">Ctrl+t</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・再生モード：字幕メニュー表示、変換モード：音声メニュー表示<br>※字幕表示には事前に変換処理が必要</td>
                             </tr>
                             <tr>
                                 <td>　・ミュート設定／解除</td>
