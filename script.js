@@ -2514,10 +2514,12 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
         let isSelected = false;
         if (selectedTrackObj) {
             isSelected = (selectedTrackObj.index === track.index);
-            if (type === 'subtitle') {
-                currentSubtitleTrack = track;
-            } else {
-                currentAudioTrack =  track;
+            if (isSelected) {
+                if (type === 'subtitle') {
+                    currentSubtitleTrack = track;
+                } else {
+                    currentAudioTrack =  track;
+                }
             }
         }
         item.innerHTML = isSelected ? `✅ ${label}` : `　　${label}`;
