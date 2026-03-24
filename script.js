@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.76.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.77.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -84,6 +84,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.76.2';
 // 2026-03-22 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step3･4完了）
 // 2026-03-24 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step5完了）
 // 2026-03-24 Ver3.76.2 字幕なし動画に前再生中の動画の字幕が表示される問題対応。
+// 2026-03-24 Ver3.77.2 字幕メニューの項目表記見直し。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -2458,46 +2459,39 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
     }));
 
     // 必要に応じてソート（音声は元の順序を維持したい場合もある）
-    labeledTracks.sort((a, b) => {
-        const cleanA = a.label.trim();
-        const cleanB = b.label.trim();
-        return cleanA.localeCompare(cleanB);
-    });
+    // labeledTracks.sort((a, b) => {
+    //     const cleanA = a.label.trim();
+    //     const cleanB = b.label.trim();
+    //     return cleanA.localeCompare(cleanB);
+    // });
 
     // selectedTrackObj（選択項目）の判定・再設定
-    const currentLabel = type === 'subtitle' ? selectedSubtitleLabel : selectedAudioLabel;
-    const topItemTrack = type === 'subtitle' ? null : labeledTracks[0]?.track ?? null;
-    const sameLabelItem = labeledTracks.find(item => 
-        item.label.trim().toLowerCase().includes(currentLabel.toLowerCase())
-    );
-    if (!selectedTrackObj) {
-        // メニュー未選択の場合
-        if (!sameLabelItem) {
-            // 類似項目がメニューに存在しない場合
-            selectedTrackObj = topItemTrack;
-        } else {
-            // 類似項目がメニューに存在する場合
-            selectedTrackObj = sameLabelItem.track;
-        }
+    // 現在選択中の「言語名」（クリーン版）を取得
+    let currentCleanLabel = '';
+    if (type === 'subtitle') {
+        currentCleanLabel = selectedSubtitleLabel ? getCleanLabel(selectedSubtitleLabel) : '';
     } else {
-        // メニュー選択済の場合
-        const foundItemTrack = labeledTracks.some(item => 
-            (item.track.index === selectedTrackObj.index) && 
-            (item.track.vttPath === selectedTrackObj.vttPath)
+        currentCleanLabel = selectedAudioLabel ? getCleanLabel(selectedAudioLabel) : '';
+    }
+    // 同じ言語名の項目を探す（includes → 厳密に言語名で一致）
+    const sameLabelItem = labeledTracks.find(item => 
+        getCleanLabel(item.label).toLowerCase() === currentCleanLabel.toLowerCase()
+    );
+    const topItemTrack = type === 'subtitle' ? null : labeledTracks[0]?.track ?? null;
+
+    // selectedTrackObj の決定ロジック（少し整理）
+    if (!selectedTrackObj) {
+        selectedTrackObj = sameLabelItem ? sameLabelItem.track : topItemTrack;
+    } else {
+        const isStillExists = labeledTracks.some(item =>
+            item.track.index === selectedTrackObj.index &&
+            item.track.vttPath === selectedTrackObj.vttPath
         );
-        if (!foundItemTrack) {
-            // 選択項目がメニューに存在しない場合
-            if (!sameLabelItem) {
-                // 類似項目がメニューに存在しない場合
-                selectedTrackObj = topItemTrack;
-            } else {
-                // 類似項目がメニューに存在する場合
-                selectedTrackObj = sameLabelItem.track;
-            }
-        } else {
-            // 選択項目がメニューに存在する場合
-            // 何もしない（選択項目を選択項目に設定）
+
+        if (!isStillExists) {
+            selectedTrackObj = sameLabelItem ? sameLabelItem.track : topItemTrack;
         }
+        // 存在する場合はそのまま（何もしない）
     }
 
     // メニュー作成
@@ -2548,6 +2542,23 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
     return menu;
 }
 
+// フルラベルから「言語名だけ」を抽出する関数
+function getCleanLabel(fullLabel) {
+    if (!fullLabel) return '';
+    // 「日本語(1234文)」や「English (5ch)」などから括弧とその中身を除去
+    return fullLabel.replace(/\s*\([^)]*\)$/, '').trim();
+}
+
+// 逆に、言語名から該当するフルラベルを探す関数（必要に応じて使用）
+function findFullLabelByCleanName(labeledTracks, cleanName) {
+    if (!cleanName) return '';
+    const lowerClean = cleanName.toLowerCase();
+    const found = labeledTracks.find(item => 
+        getCleanLabel(item.label).toLowerCase() === lowerClean
+    );
+    return found ? found.label : cleanName;
+}
+
 // 字幕トラック・音声トラックのメニュー項目取得
 function getMenuItem(track) {
     const channels = (track.channels || '');
@@ -2582,9 +2593,14 @@ function getMenuItem(track) {
         baseLabel += ` (${channels}ch)`;
     } else if (type === 'subtitle') {
         // CC/SDH 推測を追加
-        const ccMark = guessIsCCorSDH(track);
-        if (ccMark) {
-            baseLabel += ` ${ccMark}`;
+        // const ccMark = guessIsCCorSDH(track);
+        // if (ccMark) {
+        //    baseLabel += ` ${ccMark}`;
+        // }
+        // 文言数取得
+        const NumberOfFrames = track.nb_frames;
+        if (NumberOfFrames) {
+            baseLabel += ` (${NumberOfFrames}文)`;
         }
     }
 
@@ -2635,7 +2651,7 @@ function guessIsCCorSDH(track) {
 }
 
 // 字幕メニュー・音声メニュー選択
-async function selectTrackMenu(type, menu, label, trackObj = null) {
+async function selectTrackMenu(type, menu, fullLabel, trackObj = null) {
     const currentTracks = type === 'audio' ? currentAudioTracks : currentSubtitleTracks;
     if (currentTracks.length === 0) {
         clearVideoSubtitle();
@@ -2666,20 +2682,20 @@ async function selectTrackMenu(type, menu, label, trackObj = null) {
         const currentTime = videoPlayer.currentTime || 0;
         const wasPlaying  = !videoPlayer.paused;
         // 動画字幕更新
-        updateVideoSubtitle(label, trackObj);
+        updateVideoSubtitle(fullLabel, trackObj);
         // 動画再生状態・時間復旧
         videoPlayer.currentTime = currentTime;
         if (wasPlaying) videoPlayer.play().catch(() => {});
 
         currentSubtitleTrack = trackObj;
-        selectedSubtitleLabel = label;
+        selectedSubtitleLabel = trackObj ? getCleanLabel(fullLabel) : '（なし）';
         localStorage.setItem('selectedSubtitleTrack', JSON.stringify(currentSubtitleTrack));
         localStorage.setItem('selectedSubtitleLabel', selectedSubtitleLabel);
     } else {
         updateVideoAudio(trackObj, currentTracks);
         
         currentAudioTrack = trackObj;
-        selectedAudioLabel = label;
+        selectedAudioLabel = trackObj ? getCleanLabel(fullLabel) : '';
         localStorage.setItem('selectedAudioTrack', JSON.stringify(currentSubtitleTrack));
         localStorage.setItem('selectedAudioLabel', selectedAudioLabel);
     }
