@@ -2246,6 +2246,10 @@ function createSortMenu() {
     menu.style.zIndex = '1001';
     menu.style.minWidth = '160px';
     menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
+    menu.style.whiteSpace = 'pre';        // ← これが大事！タブを保持
+    menu.style.fontFamily = 'monospace';  // 等幅フォントで揃えやすくする
+    menu.style.lineHeight = '1.0';
+    menu.style.fontSize = '16px';
 
     Object.entries(SORT_MODES).forEach(([key, {label}]) => {
         const item = document.createElement('div');
@@ -2434,11 +2438,15 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
     menu.style.borderRadius = '6px';
     menu.style.padding = '6px 0';
     menu.style.zIndex = '1001';
-    menu.style.minWidth = '240px';
+    menu.style.minWidth = '200px';
     menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
     menu.style.maxHeight = '400px';
     menu.style.overflowY = 'auto';
     menu.style.cursor = 'pointer';
+    menu.style.whiteSpace = 'pre';        // ← これが大事！タブを保持
+    menu.style.fontFamily = 'monospace';  // 等幅フォントで揃えやすくする
+    menu.style.lineHeight = '2.0';
+    menu.style.fontSize = '16px';
 
     const title = document.createElement('div');
     title.className = 'menu-title';
