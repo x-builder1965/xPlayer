@@ -611,13 +611,8 @@ async function updateTrack(type) {
 
     await toggleTrackMenu(null, type, null);
 
-    clearVideoSubtitle();
-    const tracks = type === 'audio' ? currentAudioTracks : currentSubtitleTracks;
-    if (tracks.length === 0) return;
-
     const track = type === 'audio' ? currentAudioTrack : currentSubtitleTrack;
     const label = type === 'audio' ? '' : selectedSubtitleLabel;
-
     await selectTrackMenu(type, null, label, track);
 }
 
@@ -2642,6 +2637,10 @@ function guessIsCCorSDH(track) {
 // 字幕メニュー・音声メニュー選択
 async function selectTrackMenu(type, menu, label, trackObj = null) {
     const currentTracks = type === 'audio' ? currentAudioTracks : currentSubtitleTracks;
+    if (currentTracks.length === 0) {
+        clearVideoSubtitle();
+        return;
+    }
     
     // まれなケースの予防（メニュー選択直後に再生・変換動画が変わるなど...）
     let found = false;
