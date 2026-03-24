@@ -2471,7 +2471,7 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
     if (type === 'subtitle') {
         currentCleanLabel = selectedSubtitleLabel ? getCleanLabel(selectedSubtitleLabel) : '';
     } else {
-        currentCleanLabel = selectedAudioLabel ? getCleanLabel(selectedAudioLabel) : '';
+        currentCleanLabel = selectedAudioLabel ? getCleanLabel(selectedAudioLabel) : '日本語';
     }
     // 同じ言語名の項目を探す（includes → 厳密に言語名で一致）
     const sameLabelItem = labeledTracks.find(item => 
@@ -2483,11 +2483,19 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
     if (!selectedTrackObj) {
         selectedTrackObj = sameLabelItem ? sameLabelItem.track : topItemTrack;
     } else {
-        const isStillExists = labeledTracks.some(item =>
-            item.track.index === selectedTrackObj.index &&
-            item.track.vttPath === selectedTrackObj.vttPath
-        );
-
+        const isStillExists = labeledTracks.some(item => {
+            const candidate = item.track;
+            if (type === 'subtitle') {
+                // 字幕の場合：index + vttPath の両方で厳密に比較（必須）
+                return candidate.index === selectedTrackObj.index &&
+                       candidate.vttPath === selectedTrackObj.vttPath;
+            } else {
+                // 音声の場合：index + languageで比較（より安全）
+                // 必要に応じて codec_name や title も追加可能
+                return candidate.index === selectedTrackObj.index &&
+                       (candidate.tags?.language === selectedTrackObj.tags?.language);   // langCode があれば
+            }
+        });
         if (!isStillExists) {
             selectedTrackObj = sameLabelItem ? sameLabelItem.track : topItemTrack;
         }
@@ -2695,7 +2703,7 @@ async function selectTrackMenu(type, menu, fullLabel, trackObj = null) {
         updateVideoAudio(trackObj, currentTracks);
         
         currentAudioTrack = trackObj;
-        selectedAudioLabel = trackObj ? getCleanLabel(fullLabel) : '';
+        selectedAudioLabel = trackObj ? getCleanLabel(fullLabel) : '日本語';
         localStorage.setItem('selectedAudioTrack', JSON.stringify(currentSubtitleTrack));
         localStorage.setItem('selectedAudioLabel', selectedAudioLabel);
     }
