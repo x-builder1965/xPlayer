@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.75.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.76.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -83,6 +83,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.75.2';
 // 2026-03-22 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step2完了）
 // 2026-03-22 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step3･4完了）
 // 2026-03-24 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step5完了）
+// 2026-03-24 Ver3.76.2 字幕なし動画に前再生中の動画の字幕が表示される問題対応。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -610,6 +611,7 @@ async function updateTrack(type) {
 
     await toggleTrackMenu(null, type, null);
 
+    clearVideoSubtitle();
     const tracks = type === 'audio' ? currentAudioTracks : currentSubtitleTracks;
     if (tracks.length === 0) return;
 
