@@ -86,6 +86,10 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.77.2';
 // 2026-03-24 Ver3.76.2 字幕なし動画に前再生中の動画の字幕が表示される問題対応。
 // 2026-03-24 Ver3.77.2 字幕メニューの項目表記見直し。
 // ---------------------------------------------------------------------
+// 2026-03-25 Ver3.x1.2 字幕メニュー選択時の警告表示（未実装）
+// 2026-03-25 Ver3.x2.2 動画変換中の進捗表示改善（未実装）
+// 2026-03-25 Ver3.x3.2 custom protocol で動画読み込み（file:// → video://）（未実装）
+// ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -375,13 +379,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // 再生速度復元
     if (savedPlaybackSpeed && !isNaN(savedPlaybackSpeed) && parseFloat(savedPlaybackSpeed) > 0) {
         currentPlaybackRate = parseFloat(savedPlaybackSpeed);
-        videoPlayer.playbackRate = currentPlaybackRate;
-        if (speedSelect) speedSelect.value = currentPlaybackRate.toFixed(2);
     } else {
         currentPlaybackRate = 1.0;
-        videoPlayer.playbackRate = 1.0;
-        if (speedSelect) speedSelect.value = "1.00";
     }
+    if (speedSelect) speedSelect.value = currentPlaybackRate.toFixed(2);
 
     // 描画モード復元
     if (savedFitMode && ['contain', 'cover'].includes(savedFitMode)) {
@@ -528,16 +529,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         currentSubtitleTrack = selectedSubtitleTrack;
     }
+    // 音声メニューボタン・字幕メニューボタン切替（初期化）
+    updateTrackButtonsVisibility();
 
-    // 起動時の引数有無判定
     (async () => {
+        // 起動時の引数有無判定
         const args = await ipcRenderer.invoke('get-command-line-args');
         if (args && args.length > 0) {
             // main.js が auto-play-files を送信するので、ここでは何もしない
             return;
         }
 
-        // ── 引数なし → 状態復元 ──
+        // 引数なし → 状態復元
         const savedOriginalOrder = localStorage.getItem('originalLoadOrder');
         if (savedOriginalOrder) {
             try {
@@ -560,8 +563,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }));
                     currentVideoIndex = parsedCurrentVideoIndex;
                     await playVideo(playlist[currentVideoIndex].file);
-                    // 常に一時停止
-                    // アプリ起動後1秒後に強制トリガー
+                    // 常に一時停止、アプリ起動後250ms後に強制トリガー
                     setTimeout(() => {
                         if (videoPlayer.src) {
                             videoPlayer.play().then(() => videoPlayer.pause()).catch(() => {});
@@ -588,8 +590,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     })();
 });
-
-updateTrackButtonsVisibility();
 
 // 🔲共通関数🔲
 // 音声トラック・字幕トラック更新
@@ -1246,26 +1246,9 @@ async function playVideo(file) {
     videoPreview.load();
     videoPreview.pause();
     updatePlaylistDisplay();
-    // 必ず現在の再生速度を適用する
+
+    // 再生速度復元（起動時のvideo.load前では設定ができていないため設定）
     videoPlayer.playbackRate = currentPlaybackRate;
-    if (speedSelect) {
-        speedSelect.value = currentPlaybackRate.toFixed(2);
-    }
-    // ボリューム復元
-    const savedVolume = localStorage.getItem('volume');
-    if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
-        videoPlayer.volume = savedVolume;
-        volumeBar.value = savedVolume;
-        lastVolume = savedVolume;
-        volumeMuteBtn.textContent = savedVolume == 0 ? '🔇' : '🔊';
-        volumeMuteBtn.setAttribute('data-tooltip', savedVolume == 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
-    } else {
-        videoPlayer.volume = volumeBar.value || 0.2;
-        lastVolume = videoPlayer.volume;
-        volumeMuteBtn.textContent = '🔊';
-        volumeMuteBtn.setAttribute('data-tooltip', 'ミュート（Ctrl+m）');
-    }
-    updateVolumeDisplay();
 
     if (modeChange === 'convert') {
         // 再生即終了 → 最後尾へ
@@ -1357,6 +1340,9 @@ async function togglePlayPause() {
             videoPreview.load();
             videoPreview.pause();
             updatePlaylistDisplay();
+
+            // 再生速度復元
+            videoPlayer.playbackRate = currentPlaybackRate;
         }
 
         if (modeChange === 'convert') {
@@ -2600,11 +2586,6 @@ function getMenuItem(track) {
         // channelsを追加
         baseLabel += ` (${channels}ch)`;
     } else if (type === 'subtitle') {
-        // CC/SDH 推測を追加
-        // const ccMark = guessIsCCorSDH(track);
-        // if (ccMark) {
-        //    baseLabel += ` ${ccMark}`;
-        // }
         // 文言数取得
         const NumberOfFrames = track.nb_frames;
         if (NumberOfFrames) {
@@ -2613,49 +2594,6 @@ function getMenuItem(track) {
     }
 
     return baseLabel;
-}
-
-// 字幕トラックCC/SDH判定
-function guessIsCCorSDH(track) {
-    const codec_type = track.codec_type ? track.codec_type : '';
-    
-    const tags = track.tags || {};
-    const disposition = track.disposition || {};
-
-    const handler = (tags.handler_name || '').toLowerCase();
-    const title   = (tags.title || '').toLowerCase();
-    const lang    = (tags.language || '').toLowerCase();
-
-    const ccKeywords = [
-        'cc', 'closed caption', 'captions', 'caption', 'subtitles for the deaf',
-        'sdh', 'subtitles for deaf and hard of hearing', 'hearing impaired'
-    ];
-
-    const hasCCKeyword = ccKeywords.some(kw => 
-        handler.includes(kw) || title.includes(kw)
-    );
-
-    if (hasCCKeyword) {
-        return disposition.forced === 1 ? '[SDH]' : '[CC]';
-    }
-
-    if (lang === 'eng' || lang === 'en') {
-        if (disposition.hearing_impaired === 1) {
-            return '[CC/SDH]';
-        }
-    }
-
-    if (handler.match(/\(cc\)$/i) || handler.match(/cc$/i) || title.match(/\[cc\]/i)) {
-        return '[CC]';
-    }
-
-    // bit_rate は文字列の可能性があるので安全にパース
-    const bitRateNum = parseInt(track.bit_rate || 0, 10);
-    if (!isNaN(bitRateNum) && bitRateNum > 0 && bitRateNum < 100) {
-        return '[CC]';
-    }
-
-    return '';
 }
 
 // 字幕メニュー・音声メニュー選択
@@ -3934,7 +3872,8 @@ videoPlayer.addEventListener('ended', async () => {
         return;
     }
 
-    // 修正: 常にgetNextVideoIndex()を呼び、次があれば再生（ランダムOFF・repeat 'none' でも次動画に進む）
+    // 常にgetNextVideoIndex()を呼び、次があれば再生
+    // （ランダムOFF・repeat 'none' でも次動画に進む）
     const nextIndex = getNextVideoIndex();
 
     if (nextIndex >= 0) {
