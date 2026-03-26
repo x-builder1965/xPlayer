@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.66';
+const appName = 'xPlayer -動画プレイヤー- Ver3.74.1';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -65,7 +65,6 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 // 正しい trash の取得方法（ESM対応）
 try {
     trash = trashModule.default || trashModule;  // default 優先
-    console.log('trash モジュール読み込み成功:', typeof trash); // → function
 } catch (err) {
     console.error('trash モジュール読み込み失敗:', err);
     trash = null;
@@ -82,9 +81,9 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            webSecurity: false,           // ← 追加（または削除して app.commandLine に任せる）
+            webSecurity: true,           // ← 追加（または削除して app.commandLine に任せる）
             additionalArguments: [
-                '--disable-web-security=false',  // 開発中だけ false
+                '--disable-web-security',  // 開発中だけ false
                 '--content-security-policy="default-src \'self\'; script-src \'self\'; object-src \'none\';"'  // eval 禁止
             ],
             sandbox: false
@@ -360,10 +359,8 @@ ipcMain.handle('convert-video', async (event, filePath) => {
                     const index = audioStreams.indexOf(japaneseAudio);
                     audioMap = `-map 0:a:${index}`;
                     selectedStream = japaneseAudio;
-                    console.log(`日本語音声発見 (index: ${index}) → ${audioMap}`);
                 } else {
                     selectedStream = audioStreams[0];
-                    console.log('日本語音声なし → 最初の音声を使用');
                 }
 
                 // 選択された音声のビットレートを取得（bit_rate は文字列で入る場合あり）
@@ -371,11 +368,8 @@ ipcMain.handle('convert-video', async (event, filePath) => {
                     const bitrate = parseInt(selectedStream.bit_rate, 10);
                     if (!isNaN(bitrate) && bitrate > 0) {
                         selectedAudioBitrate = `${Math.round(bitrate / 1000)}k`;
-                        console.log(`元音声ビットレート: ${selectedAudioBitrate}`);
                     }
                 }
-            } else {
-                console.log('音声ストリームがありません');
             }
 
             // === 字幕処理：日本語字幕があれば優先、なければ無視 ===
@@ -392,9 +386,6 @@ ipcMain.handle('convert-video', async (event, filePath) => {
                     `-map 0:s:${idx}`,
                     '-c:s', 'mov_text'
                 ];
-                console.log(`日本語字幕発見 (index: ${idx}) → 出力に含む`);
-            } else {
-                console.log('日本語字幕なし → 字幕は出力しない');
             }
 
             // === FFmpeg コマンド構築 ===
@@ -417,7 +408,6 @@ ipcMain.handle('convert-video', async (event, filePath) => {
                 })
                 .on('error', (err, stdout, stderr) => {
                     if (err.message.includes('ffmpeg was killed')) {
-                        console.log('変換がユーザーにより中断されました:', filePath);
                         return;
                     }
                     currentFFmpeg = null;
@@ -452,7 +442,6 @@ ipcMain.handle('cancel-conversion', async () => {
             try {
                 await fs.access(currentOutputPath, fs.constants.F_OK | fs.constants.W_OK);
                 await fs.unlink(currentOutputPath);
-                console.log('中断: 一時ファイル削除成功:', currentOutputPath);
                 break;
             } catch (err) {
                 if (err.code === 'EBUSY' || err.code === 'EPERM') {
@@ -460,7 +449,6 @@ ipcMain.handle('cancel-conversion', async () => {
                     elapsed += interval;
                     continue;
                 } else if (err.code === 'ENOENT') {
-                    console.log('中断: ファイルは既に存在しません:', currentOutputPath);
                     break;
                 } else {
                     console.error('削除エラー:', err);
@@ -504,7 +492,6 @@ ipcMain.handle('cancel-cut', async () => {
     if (currentTmpDir) {
         try {
             await fs.rm(currentTmpDir, { recursive: true, force: true });
-            console.log('cut中断: 一時ディレクトリ削除成功:', currentTmpDir);
         } catch (e) {
             console.warn('cut中断: 一時ディレクトリ削除失敗:', e);
         }
@@ -526,7 +513,6 @@ ipcMain.handle('cancel-cut', async () => {
                     if (!targetPath) break;
                     await fs.access(targetPath, fs.constants.F_OK | fs.constants.W_OK);
                     await fs.unlink(targetPath);
-                    console.log('cut中断: 一時ファイル削除成功:', targetPath);
                     break;
                 } catch (err) {
                     // If the error is due to bad argument (null/undefined), stop trying
@@ -539,7 +525,6 @@ ipcMain.handle('cancel-cut', async () => {
                         elapsed += interval;
                         continue;
                     } else if (err && err.code === 'ENOENT') {
-                        console.log('cut中断: ファイルは既に存在しません:', targetPath);
                         break;
                     } else {
                         console.error('cut中断: 削除エラー:', err);
@@ -568,7 +553,6 @@ ipcMain.handle('delete-temp-file', async (event, filePath) => {
     if (typeof trash === 'function') {
         try {
             await trash(filePath);  // ここでゴミ箱に移動
-            console.log('ゴミ箱移動成功:', filePath);
             return { success: true };
         } catch (err) {
             console.error('ゴミ箱移動失敗:', err);
@@ -578,7 +562,6 @@ ipcMain.handle('delete-temp-file', async (event, filePath) => {
         // フォールバック：完全削除
         try {
             await fs.unlink(filePath);
-            console.log('完全削除（フォールバック）:', filePath);
             return { success: true, fallback: true };
         } catch (err) {
             console.error('削除失敗:', err);
@@ -702,7 +685,6 @@ ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPa
                 currentOutputPath = outPath;
             })
             .on('end', () => {
-                console.log(`カット完了: ${outPath}`);
                 currentFFmpeg = null;
                 currentOutputPath = null;
                 mainWindow.webContents.send('cut-progress', { stage: 'done', type: 'single', percent: 100, outPath });
@@ -712,7 +694,6 @@ ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPa
                 const msg = err && err.message ? err.message : String(err);
                 // ユーザーによる kill はエラー扱いにしない
                 if (msg.includes('ffmpeg was killed') || msg.includes('was killed with signal')) {
-                    console.log('カットがユーザーにより中断されました (single):', msg);
                     try { mainWindow.webContents.send('cut-progress', { stage: 'cancelled', message: 'ユーザーにより中断されました' }); } catch (e) {}
                     currentFFmpeg = null;
                     currentOutputPath = null;
@@ -764,9 +745,6 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                     return reject(new Error('メタデータ取得失敗'));
                 }
                 const duration = metadata.format.duration || 0;
-
-                console.log(`入力動画のduration: ${duration.toFixed(2)}秒`);
-                console.log(`クライアント指定モード: ${requestedMode} → 使用モード: ${useCopyMode ? 'copy' : 'reencode'}`);
 
                 // ranges の正規化・ソート・マージ
                 const normalized = (ranges || []).map(r => ({ 
@@ -846,12 +824,6 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                     return reject(new Error('有効なセグメントがありません'));
                 }
 
-                // ★ ここから判定ロジックを削除し、クライアント指定に従う
-                console.log(
-                    `モード: ${useCopyMode ? 'コピーモード（高速・ストリームコピー）' : '再エンコードモード（高精度）'} ` +
-                    `(クライアント指示による)`
-                );
-
                 if (!useCopyMode) {
                     // ── 再エンコードモード（精度優先） ──
                     const filters = [];
@@ -906,7 +878,6 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                                             err.message?.includes('ffmpeg was killed');
 
                             if (isKilled) {
-                                console.log('cut-video-multiple (reencode): ユーザーにより中断されました');
                                 // reject せず、キャンセルとして扱う
                                 mainWindow.webContents.send('cut-progress', { 
                                     stage: 'cancelled', 
@@ -992,7 +963,6 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                                         err.message.includes('SIGKILL') ||
                                         err.message.includes('ffmpeg was killed')
                                     )) {
-                                        console.log('cut-video-multiple (copy concat): ユーザーによりキャンセルされました');
                                         // reject せず正常終了扱い
                                         res();  // ← これで Promise がフルフィルされる
                                         return;
@@ -1097,11 +1067,6 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
                     return acc;
                 }, {});
                 targetFps = Object.keys(fpsCounts).reduce((a, b) => fpsCounts[a] > fpsCounts[b] ? a : b);
-
-                // または最大値で決定（コメントアウト中 - 好みで切り替え）
-                // targetFps = Math.max(...fpsList);
-
-                console.log(`入力FPSリスト: ${fpsList.join(', ')} → 採用FPS: ${targetFps}`);
             } else {
                 console.warn('FPS取得失敗 - デフォルト30使用');
             }
@@ -1128,7 +1093,6 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
             // 変換フェーズ（以降は変更なし）
             for (let i = 0; i < inputPaths.length; i++) {
                 if (isJoinCancelled) {
-                    console.log(`キャンセル検知：残りの変換（${i+1}以降）をスキップ`);
                     break;  // 以降の変換を完全に止める
                 }
 
@@ -1162,7 +1126,6 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
                         .on('end', res)
                         .on('error', (err) => {
                             if (err.message.includes('killed with signal SIGKILL') || isJoinCancelled) {
-                                console.log('変換キャンセル検知');
                                 res();  // ここは await new Promise なので resolve で抜ける
                                 return;
                             }
@@ -1182,7 +1145,6 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
 
             // ★★★ ここにフラグチェックを追加 ★★★
             if (isJoinCancelled) {
-                console.log('キャンセル済み：結合フェーズをスキップします');
                 cleanupJoinTempFiles();               // 一時ファイルを確実に掃除
                 currentFFmpeg = null;
                 currentOutputPath = null;
@@ -1242,7 +1204,6 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
                         // ユーザーキャンセルによる kill → reject せず静かに処理
                         currentFFmpeg = null;
                         currentOutputPath = null;
-                        console.log('結合処理がユーザーによりキャンセルされました');
                         // resolve するか、特別な値を返す（例: null や { cancelled: true }）
                         resolve({ cancelled: true, message: 'ユーザーによりキャンセル' });
                         return;
@@ -1292,7 +1253,6 @@ ipcMain.handle('cancel-join', async () => {
                 if (!currentOutputPath) break;
                 await fs.access(currentOutputPath, fs.constants.F_OK | fs.constants.W_OK);
                 await fs.unlink(currentOutputPath);
-                console.log('join中断: 出力ファイル削除成功:', currentOutputPath);
                 break;
             } catch (err) {
                 if (err.code === 'EBUSY' || err.code === 'EPERM') {
@@ -1300,7 +1260,6 @@ ipcMain.handle('cancel-join', async () => {
                     elapsed += interval;
                     continue;
                 } else if (err.code === 'ENOENT') {
-                    console.log('join中断: ファイルは既に存在しません:', currentOutputPath);
                     break;
                 } else {
                     console.error('join中断削除エラー:', err);
