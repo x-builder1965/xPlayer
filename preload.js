@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.66';
+const appName = 'xPlayer -動画プレイヤー- Ver3.79.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -72,5 +72,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
         }
     },
     classifyPath: (fullPath) => ipcRenderer.invoke('classify-path', fullPath),
-    captureScreenshot: () => ipcRenderer.invoke('capture-screenshot')
+    captureScreenshot: () => ipcRenderer.invoke('capture-screenshot'),
+    openFolderDialog: () => ipcRenderer.invoke('open-folder-dialog'),
+    openVideoDialog: () => ipcRenderer.invoke('open-video-dialog'),
+    savePlaylistDialog: () => ipcRenderer.invoke('save-playlist-dialog'),
+    showSaveCutDialog: (options) => ipcRenderer.invoke('show-save-cut-dialog', options),
+    showSaveJoinDialog: (options) => ipcRenderer.invoke('show-save-join-dialog', options),
+    getCommandLineArgs: () => ipcRenderer.invoke('get-command-line-args'),
+    convertVideo: (filePath) => ipcRenderer.invoke('convert-video', filePath),
+    cancelConversion: () => ipcRenderer.invoke('cancel-conversion'),
+    cancelCut: () => ipcRenderer.invoke('cancel-cut'),
+    cancelJoin: () => ipcRenderer.invoke('cancel-join'),
+    deleteTempFile: (filePath) => ipcRenderer.invoke('delete-temp-file', filePath),
+    savePlaylistFile: (data) => ipcRenderer.invoke('save-playlist-file', data),
+    joinVideos: (data) => ipcRenderer.invoke('join-videos', data),
+    cutVideoMultiple: (data) => ipcRenderer.invoke('cut-video-multiple', data),
+    getVideoTracks: (filePath) => ipcRenderer.invoke('get-video-tracks', filePath),
 });

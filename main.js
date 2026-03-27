@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.75.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.79.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -82,9 +82,9 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            webSecurity: false,           // ← 追加（または削除して app.commandLine に任せる）
+            webSecurity: true,           // ← 追加（または削除して app.commandLine に任せる）
             additionalArguments: [
-                '--disable-web-security=false',  // 開発中だけ false
+                '--disable-web-security',  // 開発中だけ false
                 '--content-security-policy="default-src \'self\'; script-src \'self\'; object-src \'none\';"'  // eval 禁止
             ],
             sandbox: false
@@ -583,7 +583,6 @@ ipcMain.handle('cancel-conversion', async () => {
             try {
                 await fs.access(currentOutputPath, fs.constants.F_OK | fs.constants.W_OK);
                 await fs.unlink(currentOutputPath);
-                console.log('中断: 一時ファイル削除成功:', currentOutputPath);
                 break;
             } catch (err) {
                 if (err.code === 'EBUSY' || err.code === 'EPERM') {
@@ -635,7 +634,6 @@ ipcMain.handle('cancel-cut', async () => {
     if (currentTmpDir) {
         try {
             await fs.rm(currentTmpDir, { recursive: true, force: true });
-            console.log('cut中断: 一時ディレクトリ削除成功:', currentTmpDir);
         } catch (e) {
             console.warn('cut中断: 一時ディレクトリ削除失敗:', e);
         }
@@ -657,7 +655,6 @@ ipcMain.handle('cancel-cut', async () => {
                     if (!targetPath) break;
                     await fs.access(targetPath, fs.constants.F_OK | fs.constants.W_OK);
                     await fs.unlink(targetPath);
-                    console.log('cut中断: 一時ファイル削除成功:', targetPath);
                     break;
                 } catch (err) {
                     // If the error is due to bad argument (null/undefined), stop trying
@@ -699,7 +696,6 @@ ipcMain.handle('delete-temp-file', async (event, filePath) => {
     if (typeof trash === 'function') {
         try {
             await trash(filePath);  // ここでゴミ箱に移動
-            console.log('ゴミ箱移動成功:', filePath);
             return { success: true };
         } catch (err) {
             console.error('ゴミ箱移動失敗:', err);
@@ -709,7 +705,6 @@ ipcMain.handle('delete-temp-file', async (event, filePath) => {
         // フォールバック：完全削除
         try {
             await fs.unlink(filePath);
-            console.log('完全削除（フォールバック）:', filePath);
             return { success: true, fallback: true };
         } catch (err) {
             console.error('削除失敗:', err);
@@ -833,7 +828,6 @@ ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPa
                 currentOutputPath = outPath;
             })
             .on('end', () => {
-                console.log(`カット完了: ${outPath}`);
                 currentFFmpeg = null;
                 currentOutputPath = null;
                 mainWindow.webContents.send('cut-progress', { stage: 'done', type: 'single', percent: 100, outPath });
@@ -974,7 +968,6 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                     return reject(new Error('有効なセグメントがありません'));
                 }
 
-                // ★ ここから判定ロジックを削除し、クライアント指定に従う
                 if (!useCopyMode) {
                     // ── 再エンコードモード（精度優先） ──
                     const filters = [];
@@ -1278,7 +1271,6 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
                         .on('end', res)
                         .on('error', (err) => {
                             if (err.message.includes('killed with signal SIGKILL') || isJoinCancelled) {
-                                console.log('変換キャンセル検知');
                                 res();  // ここは await new Promise なので resolve で抜ける
                                 return;
                             }
@@ -1408,7 +1400,6 @@ ipcMain.handle('cancel-join', async () => {
                 if (!currentOutputPath) break;
                 await fs.access(currentOutputPath, fs.constants.F_OK | fs.constants.W_OK);
                 await fs.unlink(currentOutputPath);
-                console.log('join中断: 出力ファイル削除成功:', currentOutputPath);
                 break;
             } catch (err) {
                 if (err.code === 'EBUSY' || err.code === 'EPERM') {

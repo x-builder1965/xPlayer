@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.77.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.79.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -85,17 +85,41 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.77.2';
 // 2026-03-24 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step5完了）
 // 2026-03-24 Ver3.76.2 字幕なし動画に前再生中の動画の字幕が表示される問題対応。
 // 2026-03-24 Ver3.77.2 字幕メニューの項目表記見直し。
+// 2026-03-19 Ver3.78.1 再生速度の復元不良、不要ロジックの見直し。（mainブランチ差分取り込み）
+// 2026-03-19 Ver3.79.1 動画結合の「結合中… xxxx%」の異常値表示対応。（mainブランチ差分取り込み）
 // ---------------------------------------------------------------------
 // 2026-03-25 Ver3.x1.2 字幕メニュー選択時の警告表示（未実装）
 // 2026-03-25 Ver3.x2.2 動画変換中の進捗表示改善（未実装）
 // 2026-03-25 Ver3.x3.x 背景壁紙の取り込み機能追加（未実装）
-// 2026-03-25 Ver3.x4.x custom protocol で動画読み込み（file:// → video://）（未実装）
-// 2026-03-25 Ver4.x5.x ネイティブ<video>をmpv.js / libmpv に入替（未実装）
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
 // モジュールインポート
-const { ipcRenderer, fs, os, path, openVideoInBrowser, getFilePath, classifyPath, captureScreenshot } = window.electronAPI;
+ const { 
+    ipcRenderer, 
+    fs, 
+    os, 
+    path, 
+    openVideoInBrowser, 
+    getFilePath, 
+    classifyPath, 
+    captureScreenshot,
+    openFolderDialog,
+    openVideoDialog,
+    savePlaylistDialog,
+    showSaveCutDialog,
+    showSaveJoinDialog,
+    getCommandLineArgs,
+    convertVideo,
+    cancelConversion,
+    cancelCut,
+    cancelJoin,
+    deleteTempFile,
+    savePlaylistFile,
+    joinVideos,
+    cutVideoMultiple,
+    getVideoTracks
+} = window.electronAPI;
 
 // 固定値設定
 const overlayTimeout = 3000;
@@ -331,7 +355,6 @@ let isEditSeekDragging = false;
 let isMouseOverEditSeekBar = false;
 let originalLoadOrder = [];  // プレイリストの「最初に読み込まれた順」を保持
 let hideMouseTimeout = null;
-let currentBlobUrl = null;  // ← これを追加（null 初期化）
 let editFrameRate = 30;
 let currentSortMode = '（なし）';
 let selectedAudioLabel = '日本語';
@@ -364,14 +387,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ボリューム復元
     if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
         volumeBar.value = savedVolume;
-        videoPlayer.volume = savedVolume;
         lastVolume = savedVolume;
         volumeMuteBtn.textContent = savedVolume == 0 ? '🔇' : '🔊';
         volumeMuteBtn.setAttribute('data-tooltip', savedVolume == 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
     } else {
         volumeBar.value = 0.2;
-        videoPlayer.volume = 0.2;
         lastVolume = 0.2;
         volumeMuteBtn.textContent = '🔊';
         volumeMuteBtn.setAttribute('data-tooltip', 'ミュート（Ctrl+m）');
@@ -381,8 +402,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // 再生速度復元
     if (savedPlaybackSpeed && !isNaN(savedPlaybackSpeed) && parseFloat(savedPlaybackSpeed) > 0) {
         currentPlaybackRate = parseFloat(savedPlaybackSpeed);
+        if (speedSelect) speedSelect.value = currentPlaybackRate.toFixed(2);
     } else {
         currentPlaybackRate = 1.0;
+        if (speedSelect) speedSelect.value = "1.00";
     }
     if (speedSelect) speedSelect.value = currentPlaybackRate.toFixed(2);
 
@@ -536,7 +559,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     (async () => {
         // 起動時の引数有無判定
-        const args = await ipcRenderer.invoke('get-command-line-args');
+        const args = await getCommandLineArgs();
         if (args && args.length > 0) {
             // main.js が auto-play-files を送信するので、ここでは何もしない
             return;
@@ -564,7 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         name: path
                     }));
                     currentVideoIndex = parsedCurrentVideoIndex;
-                    await playVideo(playlist[currentVideoIndex].file);
+                    await playVideo(playlist[currentVideoIndex].file, savedCurrentTime);
                     // 常に一時停止、アプリ起動後250ms後に強制トリガー
                     setTimeout(() => {
                         if (videoPlayer.src) {
@@ -1236,7 +1259,7 @@ async function toggleUrlControls(show = null) {
 }
 
 // 動画再生
-async function playVideo(file) {
+async function playVideo(file, currentTime) {
     if (!file?.path) return;
 
     // 動画ソース設定
@@ -1257,9 +1280,9 @@ async function playVideo(file) {
         setVideoDurationTime(); // duration が NaN でも安全に処理
     } else {
         // 再生時間復元
-        const savedCurrentTime = parseFloat(localStorage.getItem('currentTime'));
-        if (!isNaN(savedCurrentTime) && savedCurrentTime >= 0) {
-            videoPlayer.currentTime = savedCurrentTime;
+        if (!isNaN(currentTime) && currentTime >= 0) {
+            videoPlayer.currentTime = currentTime;
+            localStorage.setItem('currentTime', videoPlayer.currentTime);
         }
     }
 
@@ -1343,8 +1366,10 @@ async function togglePlayPause() {
             videoPreview.pause();
             updatePlaylistDisplay();
 
-            // 再生速度復元
+            // 必ず現在の再生速度を適用する
             videoPlayer.playbackRate = currentPlaybackRate;
+            // 現在の音量を適用する
+            videoPlayer.volume = volumeBar.value;
         }
 
         if (modeChange === 'convert') {
@@ -1382,48 +1407,45 @@ async function togglePlayPause() {
 
 // 動画ソース設定
 async function setVideoSrc(file) {
-    const ext = path.extname(file.path).toLowerCase();
+    // クエリパラメータを除去して正しい拡張子を取得
+    let cleanPath = file.path;
+    if (cleanPath.includes('?')) {
+        cleanPath = cleanPath.split('?')[0];
+    }
+    const ext = path.extname(cleanPath).toLowerCase();
 
     // video.src設定
     if (isHTML5_SUPPORTED(ext)) {
         isConverting = false;
-        // ★ 修正：直接 file.path を src に設定（Electronでは file:// プロトコルでOK）
-        const fileUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`; // キャッシュ回避用タイムスタンプ（任意）
-        videoPlayer.src = fileUrl;
-        videoPreview.src = fileUrl;
+        const videoUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
+        videoPlayer.src = videoUrl;
+        videoPreview.src = videoUrl;
         // Blob URL を使わないのでクリーンアップ不要
         currentBlobUrl = null;
         baseConvertFile = null;
         tempConvertFile = null;
     } else {
-        // 非対応 → FFmpeg変換
-        if (isConverting) {
-            updateOverlayDisplay('🔄️ 変換中… しばらくお待ちください');
-            return;
-        }
+        const wasIsPlaying = isPlaying;
         playStopBtn.click();
-
         try {
             isConverting = true;
             updatePlaylistDisplay();
             // updateOverlayDisplay('🔄️ 変換中…（FFmpeg）');
             // シークバーを赤色に変更
             seekBar.classList.add('converting');
-            currentConvertPromise = ipcRenderer.invoke('convert-video', file.path, currentAudioIndex);
+            currentConvertPromise = convertVideo(file.path);
             const convertedPath = await currentConvertPromise;
 
-            const response = await fetch(`file://${convertedPath}`);
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            videoPlayer.src = blobUrl;
-            videoPreview.src = videoPlayer.src;
-
+            const videoUrl = `file://${convertedPath}`;
+            videoPlayer.src = videoUrl;
+            videoPreview.src = videoUrl;
             baseConvertFile = file.path;
             tempConvertFile = convertedPath;
             
             // 変換完了後、シークバーをリセット・シークバーの色を元に戻す
             seekBar.value = 0;
             seekBar.classList.remove('converting');
+            isPlaying = wasIsPlaying;
 
             if (playlist.length === currentVideoIndex + 1) {
                 updateOverlayDisplay('🔄️ 変換完了', false, 3000);
@@ -1592,9 +1614,7 @@ async function playlistSet(videoFiles) {
         }));
 
         currentVideoIndex = 0;
-        localStorage.setItem('currentTime', 0);
-
-        await playVideo(playlist[currentVideoIndex].file);
+        await playVideo(playlist[currentVideoIndex].file, 0);
         savePlaylistAndPlaybackState();
         resetShuffle();
         saveShuffleState();
@@ -1605,10 +1625,11 @@ async function playlistSet(videoFiles) {
 
 // HTML5対応拡張子判定
 function isHTML5_SUPPORTED(ext) {
+    const cleanExt = ext.split('?')[0].toLowerCase();
     if (modeChange === 'video') {
-        return HTML5_SUPPORTED.includes(ext.toLowerCase());
+        return HTML5_SUPPORTED.includes(cleanExt);
     } else {
-        return HTML5_SUPPORTED_CONVERT.includes(ext.toLowerCase());
+        return HTML5_SUPPORTED_CONVERT.includes(cleanExt);
     }
 }
 
@@ -1673,7 +1694,7 @@ function updateEditModeButtonUI() {
 // プレイリスト追加
 async function addToPlaylist() {
     try {
-        const files = await ipcRenderer.invoke('open-video-dialog');
+        const files = await openVideoDialog();
         if (!files || files.length === 0) return;
 
         const newFiles = files.map(file => ({ path: file.path, name: file.path }));
@@ -1733,8 +1754,7 @@ async function removeFromPlaylist() {
                 // 次動画が存在する場合。
                 currentVideoIndex = newIndex;
                 updatePlaylistDisplay();
-                localStorage.setItem('currentTime', 0);
-                await playVideo(playlist[currentVideoIndex].file);
+                await playVideo(playlist[currentVideoIndex].file, 0);
             } else {
                 // 次動画が存在しない（プレイリストの最後）場合。
                 currentVideoIndex = newIndex;
@@ -1791,12 +1811,12 @@ async function savePlaylist() {
         return;
     }
 
-    const result = await ipcRenderer.invoke('save-playlist-dialog');
+    const result = await savePlaylistDialog();
     if (result.canceled) return;
 
     // ← ここから追加
     const paths = playlist.map(item => item.file.path);
-    const saveResult = await ipcRenderer.invoke('save-playlist-file', {
+    const saveResult = await savePlaylistFile({
         filePath: result.filePath,
         paths: paths
     });
@@ -1831,8 +1851,7 @@ async function addFilesFromPaths(fullPaths) {
         playlistSet(newFiles);           // プレイリストUI更新
         if (playlist.length === newFiles.length) {
             // 初回追加なら先頭から再生開始
-            videoPlayer.currentTime = 0;
-            await playVideo(0);
+            playVideo(playlist[0].file.path, 0);
         }
     }
 }
@@ -1841,7 +1860,7 @@ async function addFilesFromPaths(fullPaths) {
 async function cleanupTempFiles() {
     // FFmpeg変換中断
     if (isConverting) {
-        await ipcRenderer.invoke('cancel-conversion');  // 即中断
+        await cancelConversion();  // 即中断
         isConverting = false;
         updateOverlayDisplay('🔄️ 変換中止', false, 3000);
     }
@@ -1865,7 +1884,7 @@ async function joinPlaylistVideos() {
     const defaultName = `${baseName}_join×${fileCount}.mp4`;
 
     // 保存ダイアログ
-    const saveResult = await ipcRenderer.invoke('show-save-join-dialog', { fileName: defaultName });
+    const saveResult = await showSaveJoinDialog({ fileName: defaultName });
 
     if (saveResult.canceled) {
         return;
@@ -1881,7 +1900,7 @@ async function joinPlaylistVideos() {
     try {
         const videoPaths = playlist.map(item => item.file.path);
 
-        const result = await ipcRenderer.invoke('join-videos', {
+        const result = await joinVideos({
             inputPaths: videoPaths,
             outputPath: outputPath,
             frameRate: editFrameRate || 30
@@ -2331,7 +2350,7 @@ function updateTrackButtonsVisibility() {
 // 動画音声トラック・字幕トラック取得
 async function getVideoTraks(filePath) {
     // 音声トラック情報・字幕トラック情報取得
-    const result = await ipcRenderer.invoke('get-video-tracks', filePath);
+    const result = await getVideoTracks(filePath);
     if (result.success) {
         currentAudioTracks = result.audio || [];
         currentSubtitleTracks = result.subtitle || [];
@@ -2791,7 +2810,7 @@ ipcRenderer.on('join-progress', (event, payload) => {
                 updateOverlayDisplay('🎞️ 結合開始…', true, 0);
                 break;
             case 'join':
-                updateOverlayDisplay(`🎞️ 結合中… ${Math.round(payload.percent)}%`, true, 0);
+                updateOverlayDisplay(`🎞️ 結合中…`, true, 0);
                 break;
             case 'join-done':
                 updateOverlayDisplay('🎞️ 結合完了！', false, 1500);
@@ -3110,10 +3129,9 @@ document.addEventListener('keydown', async (event) => {
     // 先頭動画再生（Home）
     if (event.key === 'Home') {
         if (playlist.length > 1) {
-            currentVideoIndex = 0;
             localStorage.setItem('currentTime', 0);
             updatePlaylistDisplay();
-            await playVideo(playlist[currentVideoIndex].file);
+            await playVideo(playlist[currentVideoIndex].file, 0);
             savePlaylistAndPlaybackState();
             showControlsAndFilename();
             updateIconOverlay();
@@ -3167,9 +3185,8 @@ document.addEventListener('keydown', async (event) => {
     if (event.key === 'End') {
         if (playlist.length > 1) {
             currentVideoIndex = playlist.length - 1;
-            localStorage.setItem('currentTime', 0);
             updatePlaylistDisplay();
-            await playVideo(playlist[currentVideoIndex].file);
+            await playVideo(playlist[currentVideoIndex].file, 0);
             savePlaylistAndPlaybackState();
             showControlsAndFilename();
             updateIconOverlay();
@@ -3384,7 +3401,7 @@ urlInputBtn.addEventListener('click', async () => {
 folderInput.addEventListener('click', async () => {
     hideOverlayDisplay();
     try {
-        const videoFiles = await ipcRenderer.invoke('open-folder-dialog');
+        const videoFiles = await openFolderDialog();
         playlistSet(videoFiles);
     } catch (e) {
         updateOverlayDisplay('📁 フォルダ選択エラー');
@@ -3397,7 +3414,7 @@ folderInput.addEventListener('click', async () => {
 videoInput.addEventListener('click', async () => {
     hideOverlayDisplay();
     try {
-        const videoFiles = await ipcRenderer.invoke('open-video-dialog');
+        const videoFiles = await openVideoDialog();
         playlistSet(videoFiles);
     } catch (e) {
         updateOverlayDisplay('🗒️ ファイル選択エラー');
@@ -3481,9 +3498,8 @@ prevVideoBtn.addEventListener('click', async () => {
     if (prevIndex >= 0) {
         await cleanupTempFiles();
         currentVideoIndex = prevIndex;
-        localStorage.setItem('currentTime', 0);
         updatePlaylistDisplay();
-        await playVideo(playlist[currentVideoIndex].file);
+        await playVideo(playlist[currentVideoIndex].file, 0);
         savePlaylistAndPlaybackState();
     }
     showControlsAndFilename();
@@ -3527,9 +3543,8 @@ nextVideoBtn.addEventListener('click', async () => {
     if (nextIndex >= 0) {
         await cleanupTempFiles();
         currentVideoIndex = nextIndex;
-        localStorage.setItem('currentTime', 0);
         updatePlaylistDisplay();
-        await playVideo(playlist[currentVideoIndex].file);
+        await playVideo(playlist[currentVideoIndex].file, 0);
         savePlaylistAndPlaybackState();
     }
     showControlsAndFilename();
@@ -3674,8 +3689,7 @@ filenameDisplay.addEventListener('change', async () => {
         await cleanupTempFiles();
 
         currentVideoIndex = selectedIndex;
-        localStorage.setItem('currentTime', 0);
-        await playVideo(playlist[currentVideoIndex].file);
+        await playVideo(playlist[currentVideoIndex].file, 0);
         savePlaylistAndPlaybackState();
         updateIconOverlay();
     }
@@ -3703,7 +3717,13 @@ videoPlayer.addEventListener('pause', () => {
 videoPlayer.addEventListener('loadedmetadata', () => {
     // 変換ファイル削除
     if (isConverting) {
-        if (modeChange === 'convert') {
+        if (modeChange === 'video') {
+            // 一時ファイル削除
+            if (tempConvertFile) {
+                deleteTempFile(tempConvertFile)
+                    .catch(e => console.warn('一時ファイル削除失敗:', e));
+            }
+        } else {
             // プレイリスト更新
             const currentIndex = playlist.findIndex(item => item.file.path === baseConvertFile);
             if (currentIndex !== -1) {
@@ -3716,21 +3736,12 @@ videoPlayer.addEventListener('loadedmetadata', () => {
                 saveShuffleState(); // 現在のシャッフル位置を保存
                 updatePlaylistDisplay();
             }
-        }
-        const revoke = () => {
-            if (currentBlobUrl) {
-                URL.revokeObjectURL(currentBlobUrl);
-                currentBlobUrl = null;          // ← 解放後に null クリア（再利用防止）
-            }
-        };
-        // once: true で1回きりのリスナーにする → 重複蓄積しない
-        videoPlayer.addEventListener('ended', revoke, { once: true });
-        videoPlayer.addEventListener('error', revoke, { once: true });
 
-        // 念のため：新しい動画読み込み前に古いBlobがあれば即解放
-        if (currentBlobUrl) {
-            URL.revokeObjectURL(currentBlobUrl);
-            currentBlobUrl = null;
+            // 動画ファイル削除
+            if (baseConvertFile) {
+                deleteTempFile(baseConvertFile)
+                    .catch(e => console.warn('動画ファイル削除失敗:', e));
+            }
         }
         
         isConverting = false;
@@ -3794,17 +3805,10 @@ videoPlayer.addEventListener('error', (e) => {
         return;
     }
 
-    // Blob URL かローカルファイルかを判定
+    //拡張子抽出
     let ext = '';
     try {
-        if (currentSrc.startsWith('blob:')) {
-            const currentItem = playlist[currentVideoIndex];
-            if (currentItem?.file?.path) {
-                ext = path.extname(currentItem.file.path).toLowerCase();
-            }
-        } else {
-            ext = path.extname(currentSrc).toLowerCase();
-        }
+        ext = path.extname(currentSrc).toLowerCase();
     } catch (err) {
         console.warn('拡張子抽出失敗:', err);
         return;
@@ -3862,7 +3866,7 @@ videoPlayer.addEventListener('timeupdate', () => {
     }
 });
 
-// 動画終了：Blob URL 解放 + 次の動画へ
+// 動画終了、次の動画へ
 videoPlayer.addEventListener('ended', async () => {
     videoPlayer.currentTime = 0;
     localStorage.setItem('currentTime', 0);
@@ -3880,12 +3884,13 @@ videoPlayer.addEventListener('ended', async () => {
 
     if (nextIndex >= 0) {
         currentVideoIndex = nextIndex;
-        await playVideo(playlist[currentVideoIndex].file);
+        await playVideo(playlist[currentVideoIndex].file, 0);
         savePlaylistAndPlaybackState();
     } else {
         // 次なし → 停止
         playStopBtn.click();
         currentVideoIndex = 0
+        localStorage.setItem('currentTime', 0);
         updatePlaylistDisplay();
         savePlaylistAndPlaybackState();
     }
@@ -4525,10 +4530,10 @@ editModeBtn.addEventListener('click', () => {
 cutCancelBtn.addEventListener('click', async () => {
     try {
         if (isCutEditing) {
-            await ipcRenderer.invoke('cancel-cut');
+            await cancelCut();
             updateOverlayDisplay('✂️ カット中断しました');
         } else if (isJoinEditing) {
-            await ipcRenderer.invoke('cancel-join');
+            await cancelJoin();
             updateOverlayDisplay('🎞️ 結合中断しました');
         }
     } catch (e) {
@@ -4645,7 +4650,7 @@ saveVideoBtn.addEventListener('click', async () => {
         const ext = path.extname(fileName);
         const defaultOutName = `${baseNameWithoutExt}_trimmed${ext}`;
 
-        const saveResult = await ipcRenderer.invoke('show-save-cut-dialog', { fileName: defaultOutName });
+        const saveResult = await showSaveCutDialog({ fileName: defaultOutName });
         if (saveResult.canceled) {
             setTimeout(hideOverlayDisplay, 1500);
             return;
@@ -4667,7 +4672,7 @@ saveVideoBtn.addEventListener('click', async () => {
         const requestedMode = window.currentEditMode || 'copy';  // fallback
 
         // main.js に複数範囲削除のハンドラを呼ぶ
-        const result = await ipcRenderer.invoke('cut-video-multiple', {
+        const result = await cutVideoMultiple({
             inputPath: currentFile.file.path,
             ranges: alignedRanges,
             outputPath: saveResult.filePath,
