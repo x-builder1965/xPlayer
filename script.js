@@ -1274,6 +1274,8 @@ async function playVideo(file, currentTime) {
 
     // 再生速度復元（起動時のvideo.load前では設定ができていないため設定）
     videoPlayer.playbackRate = currentPlaybackRate;
+    // 現在の音量を適用する
+    videoPlayer.volume = volumeBar.value;
 
     if (modeChange === 'convert') {
         // 再生即終了 → 最後尾へ
