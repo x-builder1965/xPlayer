@@ -1,10 +1,11 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.74.1';
+const appName = 'xPlayer -動画プレイヤー- Ver3.75.1';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-03-26 Ver3.74.1 ベースバージョン。
+// 2026-03-27 Ver3.75.1 動画結合の「結合中… xxxx%」の異常値表示対応。
 // ---------------------------------------------------------------------
 // 2026-03-26 Ver4.01.3 ネイティブ＜video＞をmpv.js / libmpv に入替（未実装）
 // ---------------------------------------------------------------------
@@ -2134,7 +2135,7 @@ ipcRenderer.on('join-progress', (event, payload) => {
                 updateOverlayDisplay('🎞️ 結合開始…', true, 0);
                 break;
             case 'join':
-                updateOverlayDisplay(`🎞️ 結合中… ${Math.round(payload.percent)}%`, true, 0);
+                updateOverlayDisplay(`🎞️ 結合中…`, true, 0);
                 break;
             case 'join-done':
                 updateOverlayDisplay('🎞️ 結合完了！', false, 1500);
