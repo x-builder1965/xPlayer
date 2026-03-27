@@ -1,9 +1,8 @@
-// ---------------------------------------------------------------------
-const copyright = 'Copyright © 2025 @x-builder, Japan';
+// preload.js ----------------------------------------------------------
+const copyright = 'Copyright © 2025-2026 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
 const appName = 'xPlayer -動画プレイヤー- Ver3.74.1';
 // ---------------------------------------------------------------------
-
 // 🔲共通変数設定🔲
 // モジュールインポート
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
