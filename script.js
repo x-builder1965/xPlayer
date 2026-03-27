@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.74.1';
+const appName = 'xPlayer -動画プレイヤー- Ver3.75.1';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -79,6 +79,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.74.1';
 // 2026-03-17 Ver3.72.1 プレイリスト編集で動画削除（）時の次動画再生開始位置の不良対応。
 // 2026-03-19 Ver3.73.1 コントロールパネル、プレイリストパネルの活性・非活性処理見直し。
 // 2026-03-19 Ver3.74.1 再生速度の復元不良、不要ロジックの見直し。
+// 2026-03-19 Ver3.75.1 動画結合の「結合中… xxxx%」の異常値表示対応。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -2206,7 +2207,7 @@ ipcRenderer.on('join-progress', (event, payload) => {
                 updateOverlayDisplay('🎞️ 結合開始…', true, 0);
                 break;
             case 'join':
-                updateOverlayDisplay(`🎞️ 結合中… ${Math.round(payload.percent)}%`, true, 0);
+                updateOverlayDisplay(`🎞️ 結合中…`, true, 0);
                 break;
             case 'join-done':
                 updateOverlayDisplay('🎞️ 結合完了！', false, 1500);
