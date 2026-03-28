@@ -2758,8 +2758,10 @@ async function deleteTempVideo() {
     if (delConvertFile) {  // 前の loadedmetadata でセットした変数など
         // ハンドルを確実に解放
         videoPlayer.pause();
-        videoPlayer.src = '';           // 重要：srcをクリア
-        videoPlayer.load();             // これでリソース解放を促す
+        videoPlayer.removeAttribute('src');
+        videoPreview.removeAttribute('src');
+        videoPlayer.load();
+        videoPreview.load();
 
         await deleteTempFile(delConvertFile);
         delConvertFile = null;  // クリア
@@ -2913,13 +2915,13 @@ window.addEventListener('resize', () => {
 });
 
 // ウィンドウ終了前
-window.addEventListener('beforeunload', async function(e)  {
-    await cleanupTempFiles();
+window.addEventListener('beforeunload', function(e)  {
+    cleanupTempFiles();
 });
 
 // ウィンドウ終了
-window.addEventListener('unload', async () => {
-    await cleanupTempFiles();
+window.addEventListener('unload', () => {
+    cleanupTempFiles();
 });
 
 // 🔲document ハンドラ登録🔲
