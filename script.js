@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.81.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.82.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -89,6 +89,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.81.2';
 // 2026-03-19 Ver3.79.2 動画結合の「結合中… xxxx%」の異常値表示対応。（mainブランチ差分取り込み）
 // 2026-03-25 Ver3.80.2 字幕メニュー選択時の字幕ファイルなし警告表示。
 // 2026-03-28 Ver3.81.2 動画変換中の進捗表示改善・一時ファイル削除不良対応。
+// 2026-03-28 Ver3.82.2 動画変換時の一時フォルダを%AppData\Local\Tempに現行。
 // ---------------------------------------------------------------------
 // 2026-03-25 Ver3.x3.x 背景壁紙の取り込み機能追加（未実装）
 // ---------------------------------------------------------------------
@@ -127,7 +128,7 @@ const seekSensitivity = 0.3;
 const volumeStep = 0.005;
 const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
-const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
+const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
 const SORT_MODES = {
     none:       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
@@ -1264,7 +1265,7 @@ async function playVideo(file, currentTime) {
     if (!file?.path) return;
 
     // 一時ファイル削除
-    deleteTempVideo();
+    await deleteTempVideo();
     // 動画ソース設定
     isPlaying = true;
     await setVideoSrc(file);
@@ -1435,7 +1436,7 @@ async function setVideoSrc(file) {
             updatePlaylistDisplay();
             // シークバーを赤色に変更
             seekBar.classList.add('converting');
-            currentConvertPromise = convertVideo(file.path, modeChange);
+            currentConvertPromise = convertVideo(file.path, modeChange, currentAudioIndex);
             const convertedPath = await currentConvertPromise;
 
             const videoUrl = `file://${convertedPath}`;
@@ -1444,12 +1445,31 @@ async function setVideoSrc(file) {
             baseConvertFile = file.path;
             tempConvertFile = convertedPath;
             
+            // パスのパラメータ排除・対応拡張子判定
+            let cleanPath = baseConvertFile;
+            if (cleanPath.includes('?')) {
+                cleanPath = cleanPath.split('?')[0];
+            }
+            const ext = path.extname(cleanPath).toLowerCase();
+            const validExt = isHTML5_SUPPORTED(ext);
+            // 削除ファイル設定
+            delConvertFile = null;
+            if (!validExt) {
+                if (baseConvertFile != tempConvertFile) {
+                    if (modeChange === 'video') {
+                        delConvertFile = tempConvertFile;
+                    } else {
+                        delConvertFile = baseConvertFile;
+                    }
+                }
+            }
+
             // 変換完了後、シークバーをリセット・シークバーの色を元に戻す
             seekBar.value = 0;
             seekBar.classList.remove('converting');
             isPlaying = wasIsPlaying;
 
-            if (playlist.length === currentVideoIndex + 1) {
+            if (modeChange === 'convert' && playlist.length === currentVideoIndex + 1) {
                 updateOverlayDisplay('🔄️ 変換終了', false, 3000);
             }
         } catch (err) {
@@ -1858,7 +1878,7 @@ async function addFilesFromPaths(fullPaths) {
     }
 }
 
-// 一時ファイル削除
+// 動画変換中止・一時ファイル削除
 async function cleanupTempFiles() {
     // FFmpeg変換中断
     if (isConverting) {
@@ -1868,7 +1888,7 @@ async function cleanupTempFiles() {
     }
 
     // 一時ファイル削除
-    deleteTempVideo();
+    await deleteTempVideo();
 }
 
 // 全動画結合処理
@@ -2741,7 +2761,6 @@ async function deleteTempVideo() {
         videoPlayer.src = '';           // 重要：srcをクリア
         videoPlayer.load();             // これでリソース解放を促す
 
-        await new Promise(r => setTimeout(r, 300)); // 少し待機
         await deleteTempFile(delConvertFile);
         delConvertFile = null;  // クリア
     }
@@ -2756,8 +2775,13 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
 
 // 変換進捗受信
 ipcRenderer.on('convert-progress', (e, { percent, step }) => {
-    const playListCount = playlist.length;
-    const playListCurrent = parseInt(filenameDisplay.value);
+    let playListCount = playlist.length;
+    let playListCurrent = parseInt(filenameDisplay.value);
+    if (modeChange === 'video') {
+        playListCount = 1;
+        playListCurrent = 0;
+    }
+
     let title = '変換中…';
     if (step === 1) {
         if (percent === 100) {
@@ -2775,8 +2799,13 @@ ipcRenderer.on('convert-progress', (e, { percent, step }) => {
 
 // 字幕ファイル出力開始
 ipcRenderer.on('subtitle-extraction-progress', (e, data) => {
-    const playListCount = playlist.length;
-    const playListCurrent = parseInt(filenameDisplay.value);
+    let playListCount = playlist.length;
+    let playListCurrent = parseInt(filenameDisplay.value);
+    if (modeChange === 'video') {
+        playListCount = 1;
+        playListCurrent = 0;
+    }
+
     updateOverlayDisplay(`🔄️ 字幕作成中…（${playListCurrent + 1}/${playListCount}） 100%（${data.subtitleIndex}/${data.subtitleCount}）`, false, 0);
     // シークバーに進捗を表示
     const totalPercent = ((playListCurrent * 100) + 100) / (playListCount * 100) * 100;
@@ -3750,23 +3779,6 @@ videoPlayer.addEventListener('pause', () => {
 videoPlayer.addEventListener('loadedmetadata', () => {
     // 変換ファイル削除
     if (isConverting) {
-        // パスのパラメータ排除・対応拡張子判定
-        let cleanPath = baseConvertFile;
-        if (cleanPath.includes('?')) {
-            cleanPath = cleanPath.split('?')[0];
-        }
-        const ext = path.extname(cleanPath).toLowerCase();
-        const validExt = isHTML5_SUPPORTED(ext);
-        // 削除ファイル設定
-        delConvertFile = null;
-        if (!validExt) {
-            if (modeChange === 'video') {
-                delConvertFile = tempConvertFile;
-            } else {
-                delConvertFile = baseConvertFile;
-            }
-        }
-
         // プレイリスト更新
         if (modeChange === 'convert') {
             const currentIndex = playlist.findIndex(item => item.file.path === baseConvertFile);
@@ -3910,7 +3922,7 @@ videoPlayer.addEventListener('ended', async () => {
     localStorage.setItem('currentTime', 0);
 
     // 一時ファイル削除
-    deleteTempVideo();
+    await deleteTempVideo();
 
     if (isRepeatPlayMode === 'single') {
         // 1動画ループ → 即座に同じ動画を再生

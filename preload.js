@@ -79,7 +79,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     showSaveCutDialog: (options) => ipcRenderer.invoke('show-save-cut-dialog', options),
     showSaveJoinDialog: (options) => ipcRenderer.invoke('show-save-join-dialog', options),
     getCommandLineArgs: () => ipcRenderer.invoke('get-command-line-args'),
-    convertVideo: (filePath) => ipcRenderer.invoke('convert-video', filePath),
+    convertVideo: (filePath, modeChange, preferredAudioIndex) => ipcRenderer.invoke('convert-video', filePath, modeChange, preferredAudioIndex),
     cancelConversion: () => ipcRenderer.invoke('cancel-conversion'),
     cancelCut: () => ipcRenderer.invoke('cancel-cut'),
     cancelJoin: () => ipcRenderer.invoke('cancel-join'),

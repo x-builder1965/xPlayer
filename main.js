@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.81.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.82.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -418,7 +418,7 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
 
         currentOutputPath = null;
 
-        // ffprobe でメタデータ取得
+        // ffprobe でメタデータ取得（省略・変更なし）
         let metadata;
         try {
             metadata = await new Promise((res, rej) => {
@@ -432,13 +432,12 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
             return reject(probeErr);
         }
 
+        // 音声・字幕処理部分（変更なし）
         const audioStreams = metadata.streams.filter(s => s.codec_type === 'audio');
         const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
 
-        // 対象音声インデックス（defaultにするトラック）
         const targetAudioIdx = Math.max(0, Math.min(preferredAudioIndex, audioStreams.length - 1));
 
-        // ビデオストリームのインデックスを動的に取得（attached pic除外）
         const videoStreamIndex = metadata.streams.findIndex(s => 
             s.codec_type === 'video' && !s.disposition?.attached_pic
         ) !== -1 ? metadata.streams.findIndex(s => 
@@ -446,19 +445,16 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
         ) : 0;
 
         const mapOptions = [
-            '-map', `0:${videoStreamIndex}`,                    // 本物のビデオ
-            '-map', '-0:v:m:disposition:attached_pic',          // attached pic除外
+            '-map', `0:${videoStreamIndex}`,
+            '-map', '-0:v:m:disposition:attached_pic',
         ];
 
         const dispositionOptions = [];
 
         if (audioStreams.length > 0) {
-            // 音声は全マップ（順序入替はせず、defaultだけ変更）
             for (let i = 0; i < audioStreams.length; i++) {
                 mapOptions.push(`-map 0:a:${i}?`);
             }
-
-            // default設定：targetAudioIdx番目をdefaultに、他を解除
             dispositionOptions.push(`-disposition:a:${targetAudioIdx}`, 'default');
             for (let i = 0; i < audioStreams.length; i++) {
                 if (i !== targetAudioIdx) {
@@ -467,26 +463,22 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
             }
         }
 
-        // 字幕全マップ
         mapOptions.push('-map 0:s?');
 
         const ff = ffmpeg(filePath)
             .outputOptions(mapOptions)
             .outputOptions(dispositionOptions);
 
-        // ================ コーデック分岐（ここが核心） ================
+        // コーデック分岐（変更なし）
         if (isMp4Input) {
-            // mp4入力 → 完全コピーモード（映像・音声・字幕すべてcopy）
             ff.outputOptions([
                 '-c:v', 'copy',
-                '-c:a', 'copy',          // 音声copy（default変更は効く）
+                '-c:a', 'copy',
                 '-c:s', 'copy',
                 '-movflags', '+faststart'
             ]);
         } else {
-            // 非mp4入力 → 映像再エンコード、音声・字幕はcopy
-            // 映像ビットレートを動的に決定（元映像のbit_rateを基準）
-            let videoBitrate = '1500k';  // デフォルト
+            let videoBitrate = '1500k';
             const videoStream = metadata.streams[videoStreamIndex];
             if (videoStream?.bit_rate) {
                 const br = parseInt(videoStream.bit_rate, 10);
@@ -498,15 +490,24 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
             ff.outputOptions([
                 '-c:v', 'libx264',
                 '-preset', 'veryfast',
-                '-b:v', videoBitrate,    // ← 映像ビットレート動的
-                '-c:a', 'copy',          // 音声copy（default変更効く）
-                '-c:s', 'mov_text',      // ← ここをcopy → mov_text に変更（必須）
+                '-b:v', videoBitrate,
+                '-c:a', 'copy',
+                '-c:s', 'mov_text',
                 '-movflags', '+faststart'
             ]);
         }
-        // =============================================================
 
-        const tempPath = path.join(outDir, `${baseName}_temp_${Date.now()}.mp4`);
+        // Tempフォルダをユーザーの %AppData\Local\Temp に設定
+        const tempBaseDir = path.join(os.tmpdir(), 'xPlayer');
+        try {
+            // フォルダが存在しない場合は再帰的に作成
+            await fs.mkdir(tempBaseDir, { recursive: true });
+        } catch (mkdirErr) {
+            console.error('xPlayer tempフォルダ作成失敗:', mkdirErr);
+            mainWindow.webContents.send('convert-error', '一時フォルダ作成失敗: ' + mkdirErr.message);
+            return reject(mkdirErr);
+        }
+        const tempPath = path.join(tempBaseDir, `${baseName}_temp_${Date.now()}.mp4`);
         currentOutputPath = tempPath;
 
         mainWindow.webContents.send('convert-progress', { 
@@ -523,19 +524,22 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
             }
         })
         .on('end', async () => {
-            const fsPromises = require('fs').promises;
             currentFFmpeg = null;
             currentOutputPath = null;
 
             try {
-                // 一時動画ファイル→動画ファイルのファイル名変更
                 mainWindow.webContents.send('convert-progress', { 
                     percent: 100,
                     step: 2
                 });
-                await fsPromises.rename(tempPath, outPath);
+                // Temp → 出力先へ「安全に移動」（rename → copy + unlink）
+                await fs.copyFile(tempPath, outPath);
+                await fs.unlink(tempPath);
+
                 // 字幕ファイル出力
-                await extractSubtitlesOnly(outPath, baseName, outDir, metadata);
+                if (modeChange === 'convert') {
+                    await extractSubtitlesOnly(outPath, baseName, outDir, metadata);
+                }
 
                 resolve(outPath);
             } catch (moveErr) {
