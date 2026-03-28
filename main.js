@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.79.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.81.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -405,7 +405,7 @@ ipcMain.handle('process-command-line-file', async (event, filePath) => {
 });
 
 // FFmpeg 変換ハンドラ（ファイルパス返却）＋ 日本語音声優先 + 日本語字幕優先（なければ無視）
-ipcMain.handle('convert-video', async (event, filePath, preferredAudioIndex = 0) => {
+ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAudioIndex = 0) => {
     return new Promise(async (resolve, reject) => {
         const fileName = path.basename(filePath);
         const baseName = path.parse(fileName).name;
@@ -509,11 +509,17 @@ ipcMain.handle('convert-video', async (event, filePath, preferredAudioIndex = 0)
         const tempPath = path.join(outDir, `${baseName}_temp_${Date.now()}.mp4`);
         currentOutputPath = tempPath;
 
-        mainWindow.webContents.send('convert-progress', { percent: 0 });
+        mainWindow.webContents.send('convert-progress', { 
+            percent: 0,
+            step: 1
+        });
 
         ff.on('progress', (progress) => {
             if (progress.percent !== undefined) {
-                mainWindow.webContents.send('convert-progress', { percent: progress.percent });
+                mainWindow.webContents.send('convert-progress', { 
+                    percent: progress.percent,
+                    step: 1
+                });
             }
         })
         .on('end', async () => {
@@ -522,22 +528,13 @@ ipcMain.handle('convert-video', async (event, filePath, preferredAudioIndex = 0)
             currentOutputPath = null;
 
             try {
-                mainWindow.webContents.send('convert-progress', 100);
-                let originalOutPathExists = false;
-                try {
-                    await fsPromises.access(outPath);
-                    originalOutPathExists = true;
-                } catch {}
-                mainWindow.webContents.send('convert-progress', 100);
-                if (originalOutPathExists) {
-                    await trash(outPath);
-                }
-                mainWindow.webContents.send('convert-progress', 100);
+                // 一時動画ファイル→動画ファイルのファイル名変更
+                mainWindow.webContents.send('convert-progress', { 
+                    percent: 100,
+                    step: 2
+                });
                 await fsPromises.rename(tempPath, outPath);
-                if (!isMp4Input) {
-                    await trash(filePath);
-                }
-
+                // 字幕ファイル出力
                 await extractSubtitlesOnly(outPath, baseName, outDir, metadata);
 
                 resolve(outPath);
