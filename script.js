@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.82.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.83.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -90,8 +90,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.82.2';
 // 2026-03-25 Ver3.80.2 字幕メニュー選択時の字幕ファイルなし警告表示。
 // 2026-03-28 Ver3.81.2 動画変換中の進捗表示改善・一時ファイル削除不良対応。
 // 2026-03-28 Ver3.82.2 動画変換時の一時フォルダを%AppData\Local\Tempに現行。
-// ---------------------------------------------------------------------
-// 2026-03-25 Ver3.x3.x 背景壁紙の取り込み機能追加（未実装）
+// 2026-03-30 Ver3.83.2 背景壁紙（🖼️）の取り込み機能追加。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -119,7 +118,8 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.82.2';
     savePlaylistFile,
     joinVideos,
     cutVideoMultiple,
-    getVideoTracks
+    getVideoTracks,
+    openWallpaperDialog
 } = window.electronAPI;
 
 // 固定値設定
@@ -255,6 +255,7 @@ const volumeDisplay = document.getElementById('volumeDisplay');
 const overlayDisplay = document.getElementById('overlayDisplay');
 const iconOverlay = document.getElementById('iconOverlay');
 const appNameAndCopyright = document.getElementById('appNameAndCopyright');
+const wallpaperBtn = document.getElementById('wallpaperBtn');
 const helpOpenBtn = document.getElementById('helpOpenBtn');
 const helpCloseBtn = document.getElementById('helpCloseBtn');
 const helpContainer = document.querySelector('.help-container');
@@ -311,6 +312,7 @@ const savedSelectedAudioLabel = localStorage.getItem('selectedAudioLabel');
 const savedSelectedAudioTrack = localStorage.getItem('selectedAudioTrack');
 const savedSelectedSubtitleLabel = localStorage.getItem('selectedSubtitleLabel');
 const savedSelectedSubtitleTrack = localStorage.getItem('selectedSubtitleTrack');
+const savedWallpaperPath = localStorage.getItem('wallpaperPath');
 
 // グローバル（共通）変数
 let playlist = [];
@@ -381,10 +383,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初期化時にアイコンを正しく設定
     updateUrlButtonIcon();
 
+    // プレイリスト関連の初期化
+    filenameMenus.style.display = 'none';
+    filenameMenu.textContent = '📚';
+    filenameMenu.setAttribute('data-tooltip', '編集メニューを開く (Ctrl+l)');
+
     // 初期状態：メニューは閉じておく
     filenameMenus.style.display = 'none';
     filenameMenu.textContent = '📚';
     filenameMenu.setAttribute('data-tooltip', '編集メニューを開く (Ctrl+l)');
+
+    // 背景壁紙の復元
+    if (savedWallpaperPath) {
+        videoContainer.style.backgroundImage = savedWallpaperPath;
+    } else {
+        videoContainer.style.backgroundImage = 'none';
+    }
 
     // ボリューム復元
     if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
@@ -3279,10 +3293,17 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
+    // 🖼️背景壁紙選択（Ctrl+w）
+    if (event.ctrlKey && event.key === 'w') {
+        event.preventDefault();
+        wallpaperBtn.click();
+        return;
+    }
+
     // ❓ヘルプ開く（Ctrl+h）
     if (event.ctrlKey && event.key === 'h') {
         event.preventDefault();
-        openHelp();
+        helpOpenBtn.click();
         return;
     }
 
@@ -3755,6 +3776,36 @@ filenameDisplay.addEventListener('change', async () => {
         currentVideoIndex = selectedIndex;
         await playVideo(playlist[currentVideoIndex].file, 0);
         savePlaylistAndPlaybackState();
+        updateIconOverlay();
+    }
+});
+
+// 🖼️背景壁紙選択
+wallpaperBtn.addEventListener('click', async () => {
+    hideOverlayDisplay();
+
+    try {
+        const wallpaper = await openWallpaperDialog();
+
+        if (wallpaper === null) {
+            // キャンセルされた場合 → 背景壁紙を非表示
+            if (!videoContainer) return;
+        
+            videoContainer.style.backgroundImage = 'none';
+        } else {
+            // 壁紙が選択された場合 → 設定
+            if (!videoContainer) return;
+        
+            // ローカルファイルのパスをCSSで使える形式に変換
+            const wallpaperUrl = `url("file://${wallpaper.path.replace(/\\/g, '/')}")`;
+        
+            videoContainer.style.backgroundImage = wallpaperUrl;
+        }
+        localStorage.setItem('wallpaperPath', videoContainer.style.backgroundImage);
+        updateIconOverlay();
+    } catch (e) {
+        updateOverlayDisplay('🖼️ 背景壁紙選択エラー');
+        console.error('背景壁紙選択エラー:', e);
         updateIconOverlay();
     }
 });

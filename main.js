@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.82.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.83.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -391,6 +391,34 @@ ipcMain.handle('show-save-cut-dialog', async (event, { fileName }) => {
         properties: ['createDirectory', 'showOverwriteConfirmation']
     });
     return result;
+});
+
+// 背景壁紙選択（単ファイル選択）
+ipcMain.handle('open-wallpaper-dialog', async () => {
+    const result = await dialog.showOpenDialog({
+        title: '背景壁紙を選択',
+        properties: ['openFile'],           // 単ファイル選択
+        filters: [
+            { 
+                name: '画像ファイル', 
+                extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg']
+            },
+            { 
+                name: 'すべてのファイル', 
+                extensions: ['*'] 
+            }
+        ]
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return null;   // キャンセル時は null を返す
+    }
+
+    const filePath = result.filePaths[0];
+    return {
+        name: path.basename(filePath),
+        path: filePath
+    };
 });
 
 // コマンドライン引数取得

@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.70'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.83.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -24,6 +24,10 @@ body {
     cursor: auto;
     display: flex;
     background-color: #1c2526 !important;
+    background-image: none;
+    background-size: cover;           /* ← これを追加 */
+    background-position: center;      /* ← 中央寄せ（おすすめ） */
+    background-repeat: no-repeat;     /* ← 繰り返し防止 */
 }
 .video-container:fullscreen {
     background-color: #1c2526 !important;
