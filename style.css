@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.83.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.85.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -611,15 +611,6 @@ caption {
 .sort-menu div:active {
     background: rgba(0, 80, 180, 0.6);
 }
-#repeatPlayBtn.repeat-all {
-    background: #e63946 !important;   /* 赤系：全動画 */
-}
-#repeatPlayBtn.repeat-single {
-    background: #f4d03f !important;   /* 黄系：１動画 */
-}
-#repeatPlayBtn:not(.repeat-all):not(.repeat-single) {
-    background: #007bff;              /* 青系：無効 */
-}
 /* モードアクティブ時の赤を最優先で適用 */
 .mode-active,
 #randomPlayBtn.active,
@@ -628,18 +619,24 @@ caption {
 #urlInputBtn.mode-active,
 #zoomBtn.mode-active,
 #fullscreenBtn.mode-active,
-button#modeChangeBtn.convert-active {
+button#modeChangeBtn.convert-active,
+#repeatPlayBtn.repeat-all {
     background: #e63946 !important;   /* 赤系：有効 */
 }
-
-/* 青（非アクティブ）のデフォルトも明示的に */
-button:not(.mode-active),
-#randomPlayBtn:not(.active),
-#editModeBtn:not(.mode-active),
-#filenameMenu:not(.mode-active),
-#urlInputBtn:not(.mode-active),
-#zoomBtn:not(.mode-active),
-#fullscreenBtn:not(.mode-active),
-button#modeChangeBtn:not(.convert-active) {
-    background: #007bff;              /* 青系：無効 */
+#repeatPlayBtn.repeat-single {
+    background: #f4d03f !important;   /* 黄系：１動画 */
+}
+.mode-active:hover,
+#randomPlayBtn.active:hover,
+#editModeBtn.mode-active:hover,
+#filenameMenu.mode-active:hover,
+#urlInputBtn.mode-active:hover,
+#zoomBtn.mode-active:hover,
+#fullscreenBtn.mode-active:hover,
+button#modeChangeBtn.convert-active:hover,
+#repeatPlayBtn.repeat-all:hover {
+    background: #e6394785 !important;   /* 赤系：有効 */
+}
+#repeatPlayBtn.repeat-single:hover {
+    background: #f4d03f7a !important;   /* 黄系：１動画 */
 }
