@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.83.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.84.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -91,6 +91,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.83.2';
 // 2026-03-28 Ver3.81.2 動画変換中の進捗表示改善・一時ファイル削除不良対応。
 // 2026-03-28 Ver3.82.2 動画変換時の一時フォルダを%AppData\Local\Tempに現行。
 // 2026-03-30 Ver3.83.2 背景壁紙（🖼️）の取り込み機能追加。
+// 2026-03-30 Ver3.84.2 動画変換の一時ファイル削除処理見直し。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1278,22 +1279,9 @@ async function toggleUrlControls(show = null) {
 async function playVideo(file, currentTime) {
     if (!file?.path) return;
 
-    // 一時ファイル削除
-    await deleteTempVideo();
     // 動画ソース設定
     isPlaying = true;
     await setVideoSrc(file);
-
-    // 共通再生処理
-    videoPlayer.load();
-    videoPreview.load();
-    videoPreview.pause();
-    updatePlaylistDisplay();
-
-    // 再生速度復元（起動時のvideo.load前では設定ができていないため設定）
-    videoPlayer.playbackRate = currentPlaybackRate;
-    // 現在の音量を適用する
-    videoPlayer.volume = volumeBar.value;
 
     if (modeChange === 'convert') {
         // 再生即終了 → 最後尾へ
@@ -1376,20 +1364,9 @@ async function togglePlayPause() {
     isPlaying = true;
     if (videoPlayer.paused) {
         if (isVideoStopped()) {
-            const file = playlist[currentVideoIndex].file;
             // 動画ソース設定
+            const file = playlist[currentVideoIndex].file;
             await setVideoSrc(file);
-
-            // 共通再生処理
-            videoPlayer.load();
-            videoPreview.load();
-            videoPreview.pause();
-            updatePlaylistDisplay();
-
-            // 必ず現在の再生速度を適用する
-            videoPlayer.playbackRate = currentPlaybackRate;
-            // 現在の音量を適用する
-            videoPlayer.volume = volumeBar.value;
         }
 
         if (modeChange === 'convert') {
@@ -1443,9 +1420,13 @@ async function setVideoSrc(file) {
         baseConvertFile = null;
         tempConvertFile = null;
     } else {
-        const wasIsPlaying = isPlaying;
-        playStopBtn.click();
         try {
+            // 一時ファイル削除
+            await deleteTempVideo();
+
+            const wasIsPlaying = isPlaying;
+            playStopBtn.click();
+
             isConverting = true;
             updatePlaylistDisplay();
             // シークバーを赤色に変更
@@ -1505,6 +1486,17 @@ async function setVideoSrc(file) {
     } else {
         await updateTrack('audio');
     }
+
+    // 共通再生処理
+    videoPlayer.load();
+    videoPreview.load();
+    videoPreview.pause();
+    updatePlaylistDisplay();
+
+    // 再生速度復元（起動時のvideo.load前では設定ができていないため設定）
+    videoPlayer.playbackRate = currentPlaybackRate;
+    // 現在の音量を適用する
+    videoPlayer.volume = volumeBar.value;
 }
 
 // 動画／停止中判定
@@ -2804,9 +2796,6 @@ ipcRenderer.on('convert-progress', (e, { percent, step }) => {
             title = '変換完了';
         }
         updateOverlayDisplay(`🔄️ ${title}（${playListCurrent + 1}/${playListCount}） ${Math.round(percent)}%`, false, 0);
-    } else {
-        title = 'クローナップ中';
-        updateOverlayDisplay(`🔄️ ${title}（${playListCurrent + 1}/${playListCount}）`, false, 0);
     }
     // シークバーに進捗を表示
     const totalPercent = ((playListCurrent * 100) + percent) / (playListCount * 100) * 100;
