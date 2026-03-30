@@ -3293,8 +3293,8 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
-    // 🖼️背景壁紙選択（Ctrl+w）
-    if (event.ctrlKey && event.key === 'w') {
+    // 🖼️背景壁紙選択（Ctrl+p）
+    if (event.ctrlKey && event.key === 'p') {
         event.preventDefault();
         wallpaperBtn.click();
         return;
