@@ -3739,7 +3739,7 @@ snapshotBtn.addEventListener('click', async () => {
     try {
         // 再生中なら一時停止してからスナップショットを撮る
         if (!videoPlayer.paused) {
-            await togglePlayPause();
+            playPauseBtn.click();
         }
         // スナップショットに映り込まないように
         zoomEndBtn.click(); // ズームリセットして終了
@@ -4011,9 +4011,7 @@ videoPlayer.addEventListener('contextmenu', async (event) => {
     if (event.ctrlKey) {
         playStopBtn.click();
     } else {
-        await togglePlayPause();
-        showControlsAndFilename();
-        updateIconOverlay();
+        playPauseBtn.click();
     }
 });
 
