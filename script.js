@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.85.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.86.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -93,6 +93,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.85.2';
 // 2026-03-30 Ver3.83.2 背景壁紙（🖼️）の取り込み機能追加。
 // 2026-03-30 Ver3.84.2 動画変換の一時ファイル削除処理見直し。
 // 2026-03-31 Ver3.85.2 ボタンのスタイル（色）見直し。
+// 2026-03-31 Ver3.86.2 縦ドラック時の音量調整。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -127,7 +128,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.85.2';
 // 固定値設定
 const overlayTimeout = 3000;
 const seekSensitivity = 0.3;
-const volumeStep = 0.005;
+const volumeStep = 0.001;
 const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
