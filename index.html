@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.83.2'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.88.2'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -27,6 +27,7 @@
                     <select id="filenameDisplay" data-tooltip="再生動画リスト">
                         <option value=""></option>
                     </select>
+                    <button id="filterBtn" class="filter-btn" data-tooltip="プレイリストフィルタ（Ctrl+g）">▼</button>
                     <button id="randomPlayBtn" class="play-mode-btn" data-tooltip="ランダム再生 (Ctrl+r)">🔀</button>
                     <button id="repeatPlayBtn"  class="play-mode-btn" data-tooltip="繰り返し再生 (Ctrl+Shift+r)">🔁</button>
                     <div class="filename-menus">
@@ -66,6 +67,14 @@
                         <div id="cutRangesList" style="max-height:400px; overflow:auto; background:#12121222;"></div>
                     </div>
                 </div>
+            </div>
+            <div id="filterPanel" class="filter-panel" style="display:none;">
+                <div class="filter-panel-header">
+                    <input id="playlistFilterInput" type="text" placeholder="フィルタ条件" data-tooltip="プレイリストを絞り込み">
+                    <button id="filterClearBtn" data-tooltip="フィルタクリア（Shift+c）">🆑</button>
+                    <button id="filterCloseBtn" data-tooltip="フィルタ閉じる（Ctrl+g）">❌</button>
+                </div>
+                <div id="filterList" class="filter-list"></div>
             </div>
             <div id="overlayDisplay"></div>
             <div id="iconOverlay" class="icon-overlay"></div>
@@ -189,6 +198,13 @@
                                 <td class="note">・プレイリスト内の動画をランダムに再生。🔀（青）：通常再生／🔀（赤）：ランダム再生。</td>
                             </tr>
                             <tr>
+                                <td>　・プレイリストフィルタ</td>
+                                <td class="icon">🔻</td>
+                                <td class="key">Ctrl+g</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・フィルタ条件でプレイリスト動画を絞り込み、クリックで再生。</td>
+                            </tr>
+                            <tr>
                                 <td>　・繰り返し再生</td>
                                 <td class="icon">🔁／🔂</td>
                                 <td class="key">Ctrl+Shift+r</td>
@@ -201,6 +217,41 @@
                                 <td class="key">Ctrl+l</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・プレイリスト編集を開始（青）／終了（赤）。</td>
+                            </tr>
+                            <tr>
+                                <td class="sub-title">リストフィルタパネル</td>
+                                <td class="icon sub-title"></td>
+                                <td class="key sub-title"></td>
+                                <td class="mouse sub-title"></td>
+                                <td class="note sub-title"></td>
+                            </tr>
+                            <tr>
+                                <td>　・フィルタ条件入力</td>
+                                <td class="icon">Text Box</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・フィルタの条件を入力。</td>
+                            </tr>
+                            <tr>
+                                <td>　・フィルタ条件クリア</td>
+                                <td class="icon">🆑</td>
+                                <td class="key">Shift+c</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・フィルタ条件を全クリア。</td>
+                            </tr>
+                            <tr>
+                                <td>　・フィルタパネル閉じる</td>
+                                <td class="icon">❌</td>
+                                <td class="key">Ctrl+g</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・フィルタパネルを閉じる。</td>
+                            </tr>
+                            <tr>
+                                <td>　・フィルタリスト</td>
+                                <td class="icon">list</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリスト内のフィルタ条件に一致する動画選択再生。</td>
                             </tr>
                             <tr>
                                 <td class="sub-title">コントロールパネル</td>

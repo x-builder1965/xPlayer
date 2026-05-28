@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.87.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.88.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -84,6 +84,67 @@ video {
 }
 .controls {
     bottom: 20px;
+}
+.filter-panel {
+    position: absolute;
+    left: 5%;
+    right: 5%;
+    top: 80px;
+    bottom: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.55);
+    padding: 12px;
+    border-radius: 8px;
+    z-index: 900;
+    overflow: visible;
+}
+.filter-panel-header {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    overflow: visible;
+}
+#playlistFilterInput {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #007bff;
+    background: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    font-size: 16px;
+}
+#playlistFilterInput::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+.filter-list {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    gap: 6px;
+    padding-right: 4px;
+}
+.filter-item {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.filter-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+.filter-empty {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+}
+button.filter-btn.active {
+    background-color: #ff0000;
 }
 #zoomPanel {
     position: absolute;

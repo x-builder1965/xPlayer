@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.87.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.88.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -95,6 +95,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.87.2';
 // 2026-03-31 Ver3.85.2 ボタンのスタイル（色）見直し。
 // 2026-03-31 Ver3.86.2 縦ドラック時の音量調整。
 // 2026-03-31 Ver3.87.2 ZoomPanelの枠線削除。
+// 2026-05-28 Ver3.88.2 プレイリストのフィルタ機能（▼）追加。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -290,6 +291,12 @@ const randomPlayBtn = document.getElementById('randomPlayBtn');
 const repeatPlayBtn  = document.getElementById('repeatPlayBtn');
 const joinPlaylistBtn = document.getElementById('joinPlaylistBtn');
 const sortPlaylistBtn = document.getElementById('sortPlaylistBtn');
+const filterBtn = document.getElementById('filterBtn');
+const filterPanel = document.getElementById('filterPanel');
+const playlistFilterInput = document.getElementById('playlistFilterInput');
+const filterClearBtn = document.getElementById('filterClearBtn');
+const filterCloseBtn = document.getElementById('filterCloseBtn');
+const filterList = document.getElementById('filterList');
 const darkOverlay = document.getElementById('darkOverlay');
 const voiceSelectBtn = document.getElementById('voiceSelectBtn');
 const subtitleSelectBtn = document.getElementById('subtitleSelectBtn');
@@ -347,6 +354,8 @@ let modeChange = 'video';
 let baseConvertFile = null;
 let tempConvertFile = null;
 let isEditMode = false;
+let isFilterPanelVisible = false;
+let filterText = '';
 let editInMark = -1;  // インマーク（秒）
 let editOutMark = -1; // アウトマーク（秒）
 let cutRanges = []; // 配列 of { in: seconds, out: seconds }
@@ -1002,6 +1011,75 @@ function savePlaylistAndPlaybackState() {
         localStorage.removeItem('currentTime');
     }
     updateIconOverlay();
+    if (isFilterPanelVisible) {
+        updateFilterList();
+    }
+}
+
+function updateFilterButtonUI() {
+    if (!filterBtn) return;
+    filterBtn.classList.toggle('active', isFilterPanelVisible);
+}
+
+function toggleFilterPanel() {
+    isFilterPanelVisible = !isFilterPanelVisible;
+    if (filterPanel) {
+        filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
+    }
+    updateFilterButtonUI();
+    if (isFilterPanelVisible) {
+        updateFilterList();
+        playlistFilterInput?.focus();
+    }
+}
+
+function clearPlaylistFilter() {
+    filterText = '';
+    if (playlistFilterInput) {
+        playlistFilterInput.value = '';
+    }
+    updateFilterList();
+}
+
+function updateFilterList() {
+    if (!filterList) return;
+    filterList.innerHTML = '';
+    if (playlist.length === 0) {
+        filterList.innerHTML = '<div class="filter-empty">プレイリストが空です。</div>';
+        return;
+    }
+
+    const query = filterText.trim().toLowerCase();
+    const results = playlist
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => {
+            const name = (item.name || '').toLowerCase();
+            const pathText = (item.file?.path || '').toLowerCase();
+            return query === '' || name.includes(query) || pathText.includes(query);
+        });
+
+    if (results.length === 0) {
+        filterList.innerHTML = '<div class="filter-empty">一致する動画がありません。</div>';
+        return;
+    }
+
+    results.forEach(({ item, index }) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'filter-item';
+        button.textContent = item.name || item.file?.path || '無題';
+        button.title = item.file?.path || '';
+        button.addEventListener('click', async () => {
+            currentVideoIndex = index;
+            await playVideo(item.file, 0);
+            updatePlaylistDisplay();
+            savePlaylistAndPlaybackState();
+            isFilterPanelVisible = false;
+            if (filterPanel) filterPanel.style.display = 'none';
+            updateFilterButtonUI();
+        });
+        filterList.appendChild(button);
+    });
 }
 
 // プレイリスト表示更新
@@ -1026,6 +1104,7 @@ function updatePlaylistDisplay() {
             filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
         }
         updateIconOverlay();
+        if (isFilterPanelVisible) updateFilterList();
         return;
     }
     playlist.forEach((item, index) => {
@@ -1036,6 +1115,7 @@ function updatePlaylistDisplay() {
     });
     filenameDisplay.value = currentVideoIndex;
     updateIconOverlay();
+    if (isFilterPanelVisible) updateFilterList();
 }
 
 // urlInputBtn の表示状態を更新するヘルパー関数
@@ -3127,6 +3207,23 @@ document.addEventListener('keydown', async (event) => {
         }
     }
 
+    // ■リストフィルタパネル■
+    if (filterPanel.style.display === 'flex') {
+        // 🆑フィルタ条件クリア（shift+c）
+        if (event.shiftKey && event.key.toLowerCase() === 'c') {
+            event.preventDefault();
+            filterClearBtn.click();
+            return;
+        }
+        
+        // ❌フィルタ閉じる（Ctrl+g）
+        if (event.ctrlKey && event.key === 'g') {
+            event.preventDefault();
+            filterCloseBtn.click();
+            return;
+        }
+    }
+
     // ■プレイリストパネル■
     // 🎬／🔄️ファイル選択（Ctrl+r）  ※ただしURL入力欄がフォーカスされている場合は貼り付けを許可
     if (event.ctrlKey && event.key === 'v') {
@@ -3150,6 +3247,13 @@ document.addEventListener('keydown', async (event) => {
     if (event.ctrlKey && event.key === 'j') {
         event.preventDefault();
         joinPlaylistBtn.click();
+        return;
+    }
+
+    // ▼プレイリストフィルタ（Ctrl＋g）
+    if (event.ctrlKey && event.key === 'g') {
+        event.preventDefault();
+        filterBtn.click();
         return;
     }
 
@@ -3701,7 +3805,27 @@ zoomBtn.addEventListener('click', () => {
     updateIconOverlay();
 });
 
-// 🔀ランダム再生ボタンクリック
+// ▼プレイリストフィルタ表示切替
+filterBtn.addEventListener('click', () => {
+    toggleFilterPanel();
+});
+
+playlistFilterInput.addEventListener('input', () => {
+    filterText = playlistFilterInput.value || '';
+    updateFilterList();
+});
+
+filterClearBtn.addEventListener('click', () => {
+    clearPlaylistFilter();
+});
+
+filterCloseBtn.addEventListener('click', () => {
+    isFilterPanelVisible = false;
+    if (filterPanel) filterPanel.style.display = 'none';
+    updateFilterButtonUI();
+});
+
+// �🔀ランダム再生ボタンクリック
 randomPlayBtn.addEventListener('click', () => {
     toggleRandomPlay();
 });
