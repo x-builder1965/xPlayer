@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.90.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.91.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -98,6 +98,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.90.2';
 // 2026-05-28 Ver3.88.2 プレイリストのフィルタ機能（▼）追加。
 // 2026-05-28 Ver3.89.2 フィルタパネルの位置調整（編集コントロールの有無で位置を変える）。
 // 2026-05-28 Ver3.90.2 フィルタパネルとカット編集パネルの同時表示を抑止。
+// 2026-05-28 Ver3.91.2 プレイリストをフィルタリストに統合する。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -135,6 +136,7 @@ const seekSensitivity = 0.3;
 const volumeStep = 0.001;
 const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
+const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
 const SORT_MODES = {
@@ -297,7 +299,6 @@ const filterBtn = document.getElementById('filterBtn');
 const filterPanel = document.getElementById('filterPanel');
 const playlistFilterInput = document.getElementById('playlistFilterInput');
 const filterClearBtn = document.getElementById('filterClearBtn');
-const filterCloseBtn = document.getElementById('filterCloseBtn');
 const filterList = document.getElementById('filterList');
 const darkOverlay = document.getElementById('darkOverlay');
 const voiceSelectBtn = document.getElementById('voiceSelectBtn');
@@ -386,6 +387,7 @@ let currentSubtitleTracks = [];
 let currentAudioTrack = null;
 let currentSubtitleTrack = null;
 let delConvertFile = null;
+let playlistPathArea = null;
 
 //🔲初期処理🔲
 document.addEventListener('DOMContentLoaded', () => {
@@ -394,9 +396,68 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPreview.removeAttribute('src');
     appNameAndCopyright.textContent = appNameAndCopyrightValue;
     filenameMenus.style.display = 'none';
+    filenameDisplay.style.display = 'none';
+    filterBtn.style.display = 'none';
 
     // 初期化時にアイコンを正しく設定
     updateUrlButtonIcon();
+
+    // 再生中動画パス表示用のテキストエリアを作成
+    try {
+        playlistPathArea = document.createElement('textarea');
+        playlistPathArea.id = 'playlistPathArea';
+        playlistPathArea.readOnly = true;
+        playlistPathArea.className = 'playlist-path-area';
+        playlistPathArea.rows = 1;
+        playlistPathArea.style.flex = '1';
+        playlistPathArea.style.minWidth = '240px';
+        playlistPathArea.style.resize = 'vertical';
+        playlistPathArea.style.overflowX = 'hidden';
+        playlistPathArea.style.overflowY = 'hidden';
+        playlistPathArea.style.whiteSpace = 'pre-wrap';
+        playlistPathArea.style.wordBreak = 'break-all';
+        playlistPathArea.wrap = 'soft';
+        if (playlistFilterInput) {
+            const cs = window.getComputedStyle(playlistFilterInput);
+            playlistPathArea.style.background = cs.backgroundColor || 'rgba(0,0,0,0.5)';
+            playlistPathArea.style.color = cs.color || '#fff';
+            playlistPathArea.style.border = cs.border || '1px solid #007bff';
+            playlistPathArea.style.fontSize = cs.fontSize || '16px';
+            playlistPathArea.style.fontFamily = cs.fontFamily || 'sans-serif';
+        }
+        if (filenameControls && filterBtn) {
+            filenameControls.insertBefore(playlistPathArea, filterBtn);
+            // クリックでフィルタパネルを開閉し、表示時には再生中アイテム位置へスクロール
+            try {
+                playlistPathArea.style.cursor = 'pointer';
+                playlistPathArea.addEventListener('click', () => {
+                    if (!filterPanel) return;
+                    isFilterPanelVisible = !isFilterPanelVisible;
+                    filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
+                    updateFilterButtonUI();
+                    if (isFilterPanelVisible) {
+                        updateFilterList();
+                        try { playlistFilterInput?.focus(); } catch (e) {}
+                        // 少し遅延して要素を探してスクロール
+                        setTimeout(() => {
+                            try {
+                                const el = filterList ? filterList.querySelector('[data-index="' + currentVideoIndex + '"]') : null;
+                                if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            } catch (e) {}
+                        }, 50);
+                    }
+                });
+            } catch (e) {
+                console.warn('playlistPathArea click handler attach failed', e);
+            }
+        }
+        if (filenameDisplay) {
+            // filenameDisplay.style.display = 'none';
+            // filterBtn.style.display = 'none';
+        }
+    } catch (e) {
+        console.warn('playlistPathArea create failed', e);
+    }
 
     // プレイリスト関連の初期化
     filenameMenus.style.display = 'none';
@@ -633,15 +694,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateIconOverlay();
                 } else {
                     filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                    playlistPathArea.value = appNameAndCopyrightValueLine;
                     updateIconOverlay();
                 }
             } catch (e) {
                 console.error('プレイリスト復元エラー:', e);
                 filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                playlistPathArea.value = appNameAndCopyrightValueLine;
                 updateIconOverlay();
             }
         } else {
             filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+            playlistPathArea.value = appNameAndCopyrightValueLine;
             updateIconOverlay();
         }
     })();
@@ -786,7 +850,7 @@ function showControlsAndFilename() {
     clearTimeout(timeout);
     if (!isMouseOverControls && !isUrlControlsVisible) {
         timeout = setTimeout(() => {
-            if (!isMouseOverControls && !(isEditMode || (editControls && editControls.style.display !== 'none'))) {
+            if (!isMouseOverControls && !isFilterPanelVisible && !(isEditMode || (editControls && editControls.style.display !== 'none'))) {
                 hideControlsAndFilename(); // ここで無効化
             }
         }, overlayTimeout);
@@ -807,6 +871,11 @@ function hideControlsAndFilename() {
     }, 300);
     videoPlayer.style.cursor = 'none';
     videoContainer.style.cursor = 'none';
+
+    isFilterPanelVisible = false;
+    if (filterPanel) filterPanel.style.display = 'none';
+    updateFilterButtonUI();
+
     updateIconOverlay();
 }
 
@@ -1078,7 +1147,11 @@ function updateFilterList() {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'filter-item';
-        button.textContent = item.name || item.file?.path || '無題';
+        // 識別用の属性と現在再生中クラス
+        button.dataset.index = index;
+        if (index === currentVideoIndex) button.classList.add('current');
+        const displayText = item.name || item.file?.path || '無題';
+        button.textContent = (index === currentVideoIndex ? '▶️ ' : '') + displayText;
         button.title = item.file?.path || '';
         button.addEventListener('click', async () => {
             currentVideoIndex = index;
@@ -1091,6 +1164,89 @@ function updateFilterList() {
         });
         filterList.appendChild(button);
     });
+}
+
+function getFilteredIndices() {
+    const q = (filterText || '').trim().toLowerCase();
+    if (!q) return playlist.map((_, idx) => idx);
+    return playlist
+        .map((item, idx) => ({ item, idx }))
+        .filter(({ item }) => {
+            const name = (item.name || '').toLowerCase();
+            const pathText = (item.file?.path || '').toLowerCase();
+            return name.includes(q) || pathText.includes(q);
+        })
+        .map(({ idx }) => idx);
+}
+
+async function applySortFiltered(modeKey = currentSortMode) {
+    if (!SORT_MODES[modeKey]) return;
+    currentSortMode = modeKey;
+    localStorage.setItem('playlistSortMode', modeKey);
+
+    const indices = getFilteredIndices();
+    if (indices.length === 0) return;
+    if (indices.length === playlist.length) {
+        await applySort(modeKey);
+        return;
+    }
+
+    const items = indices.map(i => playlist[i]);
+    let sorted = [];
+
+    if (modeKey === 'none') {
+        sorted = items.slice().sort((a, b) => {
+            const ai = originalLoadOrder.indexOf(a.file.path);
+            const bi = originalLoadOrder.indexOf(b.file.path);
+            return (ai === -1 ? 1 : ai) - (bi === -1 ? 1 : bi);
+        });
+    } else if (modeKey === 'path_asc' || modeKey === 'path_desc') {
+        sorted = items.slice().sort((a, b) => a.file.path.localeCompare(b.file.path));
+        if (modeKey === 'path_desc') sorted.reverse();
+    } else if (modeKey === 'random') {
+        sorted = items.slice();
+        shuffle(sorted);
+    } else if (modeKey === 'ctime_asc' || modeKey === 'ctime_desc') {
+        sorted = await sortItemsByCreationTime(items, modeKey === 'ctime_asc');
+    } else {
+        const fullSorted = await SORT_MODES[modeKey].fn();
+        const fullPaths = fullSorted.map(x => x.file.path);
+        sorted = items.slice().sort((a, b) => fullPaths.indexOf(a.file.path) - fullPaths.indexOf(b.file.path));
+    }
+
+    const newPlaylist = playlist.slice();
+    indices.forEach((idx, i) => {
+        newPlaylist[idx] = sorted[i];
+    });
+
+    const prevPath = playlist[currentVideoIndex]?.file?.path;
+    playlist = newPlaylist;
+    if (prevPath) {
+        const newIndex = playlist.findIndex(item => item.file.path === prevPath);
+        currentVideoIndex = newIndex >= 0 ? newIndex : 0;
+    }
+
+    updatePlaylistDisplay();
+    savePlaylistAndPlaybackState();
+}
+
+function shuffleFiltered() {
+    const indices = getFilteredIndices();
+    if (indices.length === 0) return;
+    const items = indices.map(i => playlist[i]);
+    shuffle(items);
+    const newPlaylist = playlist.slice();
+    indices.forEach((idx, i) => {
+        newPlaylist[idx] = items[i];
+    });
+    const prevPath = playlist[currentVideoIndex]?.file?.path;
+    playlist = newPlaylist;
+    if (prevPath) {
+        const newIndex = playlist.findIndex(item => item.file.path === prevPath);
+        currentVideoIndex = newIndex >= 0 ? newIndex : 0;
+    }
+    updatePlaylistDisplay();
+    savePlaylistAndPlaybackState();
 }
 
 // プレイリスト表示更新
@@ -1107,17 +1263,25 @@ function updatePlaylistDisplay() {
                     filenameDisplay.innerHTML = `<option value="">▶️ ${parsedPlaylist[currentVideoIndex]}</option>`;
                 } else {
                     filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                    playlistPathArea.value = appNameAndCopyrightValueLine;
                 }
             } catch (e) {
                 filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+                playlistPathArea.value = appNameAndCopyrightValueLine;
             }
         } else {
             filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+            playlistPathArea.value = appNameAndCopyrightValueLine;
         }
         updateIconOverlay();
         if (isFilterPanelVisible) updateFilterList();
         return;
     }
+    const currentPath = getCurrentPlaybackPath();
+    try {
+        if (playlistPathArea) playlistPathArea.value = currentPath ? `▶️ ${currentPath}` : '';
+    } catch (e) {}
+
     playlist.forEach((item, index) => {
         const option = document.createElement('option');
         option.value = index;
@@ -1127,6 +1291,25 @@ function updatePlaylistDisplay() {
     filenameDisplay.value = currentVideoIndex;
     updateIconOverlay();
     if (isFilterPanelVisible) updateFilterList();
+}
+
+function getCurrentPlaybackPath() {
+    let currentPath = playlist[currentVideoIndex]?.file?.path || '';
+    if (!currentPath && videoPlayer?.src) {
+        try {
+            currentPath = decodeURIComponent(videoPlayer.src.replace(/^file:\/\//, ''));
+            const queryIndex = currentPath.indexOf('?');
+            if (queryIndex !== -1) {
+                currentPath = currentPath.slice(0, queryIndex);
+            }
+            if (/^\/([A-Za-z]:)/.test(currentPath)) {
+                currentPath = currentPath.slice(1);
+            }
+        } catch (e) {
+            currentPath = '';
+        }
+    }
+    return currentPath;
 }
 
 // urlInputBtn の表示状態を更新するヘルパー関数
@@ -1164,33 +1347,39 @@ function toggleRandomPlay() {
     updateRandomButtonUI();
 
     if (isRandomPlayMode && !wasRandom) {
-        // 通常 → ランダム に変更（ケース1・3）
-        if (!shuffleOrder || shuffleOrder.length !== playlist.length) {
-            shuffleOrder = [...Array(playlist.length).keys()];
-            shuffle(shuffleOrder);
-        }
+        const indices = getFilteredIndices();
+        if (indices.length !== playlist.length) {
+            shuffleFiltered();
+            currentSortMode = 'random';
+        } else {
+            // 通常 → ランダム に変更（ケース1・3）
+            if (!shuffleOrder || shuffleOrder.length !== playlist.length) {
+                shuffleOrder = [...Array(playlist.length).keys()];
+                shuffle(shuffleOrder);
+            }
 
-        // ケース3対応：（ランダム）が選択中なら表示に適用
-        if (currentSortMode === 'random') {
-            const currentPath = playlist[currentVideoIndex]?.file?.path;
-            playlist = shuffleOrder.map(i => ({ ...playlist[i] }));
+            // ケース3対応：（ランダム）が選択中なら表示に適用
+            if (currentSortMode === 'random') {
+                const currentPath = playlist[currentVideoIndex]?.file?.path;
+                playlist = shuffleOrder.map(i => ({ ...playlist[i] }));
 
-            if (currentPath) {
-                currentVideoIndex = playlist.findIndex(p => p.file.path === currentPath);
-                if (currentVideoIndex < 0) currentVideoIndex = 0;
+                if (currentPath) {
+                    currentVideoIndex = playlist.findIndex(p => p.file.path === currentPath);
+                    if (currentVideoIndex < 0) currentVideoIndex = 0;
+                }
+
+                shufflePosition = shuffleOrder.indexOf(currentVideoIndex);
+                if (shufflePosition < 0) shufflePosition = 0;
+
+                updatePlaylistDisplay();
             }
 
             shufflePosition = shuffleOrder.indexOf(currentVideoIndex);
             if (shufflePosition < 0) shufflePosition = 0;
 
-            updatePlaylistDisplay();
+            savePlaylistAndPlaybackState();
+            saveShuffleState();
         }
-
-        shufflePosition = shuffleOrder.indexOf(currentVideoIndex);
-        if (shufflePosition < 0) shufflePosition = 0;
-
-        savePlaylistAndPlaybackState();
-        saveShuffleState();
     } 
     else if (!isRandomPlayMode && wasRandom) {
         // ランダム → 通常 に変更（ケース2・4）
@@ -1566,6 +1755,7 @@ async function setVideoSrc(file) {
             isConverting = false;
             updateOverlayDisplay('🔄️ 変換失敗', false, 5000);
             filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+            playlistPathArea.value = appNameAndCopyrightValueLine;
             updateIconOverlay();
             // 変換失敗時もシークバーをリセット
             seekBar.value = 0;
@@ -1894,6 +2084,7 @@ async function removeFromPlaylist() {
     } else {
         // プレイリストが空になった場合
         filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+        playlistPathArea.value = appNameAndCopyrightValueLine;
         updateIconOverlay();
         playStopBtn.click();
     }
@@ -1910,6 +2101,7 @@ async function clearPlaylist() {
     await cleanupTempFiles();
 
     filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+    playlistPathArea.value = appNameAndCopyrightValueLine;
     updateIconOverlay();
     playStopBtn.click();
 
@@ -2391,8 +2583,7 @@ function createSortMenu() {
         item.innerHTML = (currentSortMode === key ? '✅ ' : '　　') + label;
 
         item.addEventListener('click', async () => {
-            await applySort(key);
-            menu.remove();  // 選択したら即閉じる
+                await applySortFiltered(key);
         });
 
         item.addEventListener('mouseover', () => {
@@ -2917,6 +3108,7 @@ ipcRenderer.on('convert-error', (event, msg) => {
     isConverting = false;
     updateOverlayDisplay(`🔄️ 変換失敗`, false, 3000);
     filenameDisplay.innerHTML = `<option value="">${appNameAndCopyrightValue}</option>`;
+    playlistPathArea.value = appNameAndCopyrightValueLine;
     updateIconOverlay();
 });
 
@@ -3224,13 +3416,6 @@ document.addEventListener('keydown', async (event) => {
         if (event.shiftKey && event.key.toLowerCase() === 'c') {
             event.preventDefault();
             filterClearBtn.click();
-            return;
-        }
-        
-        // ❌フィルタ閉じる（Ctrl+g）
-        if (event.ctrlKey && event.key === 'g') {
-            event.preventDefault();
-            filterCloseBtn.click();
             return;
         }
     }
@@ -3828,12 +4013,6 @@ playlistFilterInput.addEventListener('input', () => {
 
 filterClearBtn.addEventListener('click', () => {
     clearPlaylistFilter();
-});
-
-filterCloseBtn.addEventListener('click', () => {
-    isFilterPanelVisible = false;
-    if (filterPanel) filterPanel.style.display = 'none';
-    updateFilterButtonUI();
 });
 
 // �🔀ランダム再生ボタンクリック

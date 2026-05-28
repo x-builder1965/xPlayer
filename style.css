@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.88.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.91.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -118,6 +118,26 @@ video {
 #playlistFilterInput::placeholder {
     color: rgba(255, 255, 255, 0.6);
 }
+.playlist-path-area {
+    flex: 1;
+    min-width: 240px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #007bff;
+    background: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    font-size: 16px;
+    font-family: inherit;
+    resize: vertical;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+}
+.playlist-path-area:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+}
 .filter-list {
     flex: 1;
     overflow-y: auto;
@@ -142,6 +162,9 @@ video {
 .filter-empty {
     color: rgba(255, 255, 255, 0.8);
     font-size: 14px;
+}
+button.filter-btn {
+    display: none;
 }
 button.filter-btn.active {
     background-color: #ff0000;
@@ -307,6 +330,7 @@ select#speedSelect {
     position: relative;
 }
 select#filenameDisplay {
+    display: none;
     width: 100%;
     white-space: nowrap;
     overflow: hidden;
