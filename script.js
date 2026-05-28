@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.89.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.90.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -97,6 +97,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.89.2';
 // 2026-03-31 Ver3.87.2 ZoomPanelの枠線削除。
 // 2026-05-28 Ver3.88.2 プレイリストのフィルタ機能（▼）追加。
 // 2026-05-28 Ver3.89.2 フィルタパネルの位置調整（編集コントロールの有無で位置を変える）。
+// 2026-05-28 Ver3.90.2 フィルタパネルとカット編集パネルの同時表示を抑止。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1022,30 +1023,18 @@ function updateFilterButtonUI() {
     filterBtn.classList.toggle('active', isFilterPanelVisible);
 }
 
-function getFilterPanelTopFromEditHeight() {
-    const defaultTop = 80;
-    const verticalGap = 36;
-    if (!editControls || editControls.style.display === 'none') {
-        return `${defaultTop}px`;
-    }
-
-    const editTop = editControls.offsetTop || 0;
-    const editHeight = editControls.offsetHeight || 0;
-    const calculatedTop = editTop + editHeight + verticalGap;
-    return `${Math.max(defaultTop, calculatedTop)}px`;
-}
-
-function updateFilterPanelPosition() {
-    if (!filterPanel) return;
-    filterPanel.style.top = getFilterPanelTopFromEditHeight();
-}
-
 function toggleFilterPanel() {
     isFilterPanelVisible = !isFilterPanelVisible;
     if (filterPanel) {
         filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
         if (isFilterPanelVisible) {
-            updateFilterPanelPosition();
+            // フィルタパネル表示時はカット編集パネルを閉じる（同時表示抑止）
+            if (isEditMode) {
+                isEditMode = false;
+                if (editControls) editControls.style.display = 'none';
+                if (editModeBtn) editModeBtn.classList.remove('active');
+                updateEditModeButtonUI();
+            }
         }
     }
     updateFilterButtonUI();
@@ -2259,9 +2248,6 @@ function renderCutRanges() {
         
         cutTimelineBar.appendChild(outMarker);
     }
-
-    // フィルタパネル位置を再計算
-    updateFilterPanelPosition();
 }
 
 // 作成日時で並び替える非同期関数（fs.stat を使って取得）
@@ -4753,6 +4739,12 @@ editModeBtn.addEventListener('click', () => {
     
     isEditMode = !isEditMode;
     if (isEditMode) {
+        // 編集モード開始時はフィルタパネルを閉じる（同時表示抑止）
+        if (isFilterPanelVisible) {
+            isFilterPanelVisible = false;
+            if (filterPanel) filterPanel.style.display = 'none';
+            updateFilterButtonUI();
+        }
         editControls.style.display = 'flex';
         editModeBtn.classList.add('active');
         // 初期化
@@ -4769,8 +4761,6 @@ editModeBtn.addEventListener('click', () => {
     }
     // ボタン表示を更新（ここが今回のメイン変更点）
     updateEditModeButtonUI();
-    // フィルタパネル位置を再計算
-    updateFilterPanelPosition();
 });
 
 // ❌カット中断
@@ -4853,8 +4843,6 @@ clearEditBtn.addEventListener('click', () => {
 
     // リスト再描画
     renderCutRanges();
-    // フィルタパネル位置を再計算
-    updateFilterPanelPosition();
 });
 
 // ✅カット範囲追加
@@ -4877,8 +4865,6 @@ addCutRangeBtn.addEventListener('click', () => {
     outMarkDisplay.textContent = '--:--:--';
 
     renderCutRanges();
-    // フィルタパネル位置を再計算
-    updateFilterPanelPosition();
 });
 
 // 💾動画保存（設定した複数範囲を削除して保存）
