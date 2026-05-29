@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.92.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.93.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -100,6 +100,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.92.2';
 // 2026-05-28 Ver3.90.2 フィルタパネルとカット編集パネルの同時表示を抑止。
 // 2026-05-28 Ver3.91.2 プレイリストをフィルタリストに統合する。
 // 2026-05-29 Ver3.92.2 並び替えメニュー選択時の挙動不正対応。
+// 2026-05-29 Ver3.93.2 フィルタリスト内の行数に合わせてフィルタパネルの高さを動的に調整。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1079,6 +1080,26 @@ function clearPlaylistFilter() {
     updateFilterList();
 }
 
+function adjustFilterPanelHeight() {
+    if (!filterPanel || !filterList) return;
+    if (window.getComputedStyle(filterPanel).display === 'none') return;
+
+    const header = filterPanel.querySelector('.filter-panel-header');
+    const rows = Array.from(filterList.children);
+    const rowGap = parseFloat(getComputedStyle(filterList).rowGap) || 0;
+    const totalRowsHeight = rows.reduce((total, el) => total + el.offsetHeight, 0);
+    const listHeight = totalRowsHeight + Math.max(0, rows.length - 1) * rowGap;
+    const headerHeight = header ? header.offsetHeight : 48;
+    const panelPadding = 24; // 12px top + 12px bottom
+    const gapBetweenHeaderAndList = 8;
+    const desiredPanelHeight = headerHeight + listHeight + panelPadding + gapBetweenHeaderAndList;
+    const maxPanelHeight = window.innerHeight - 250; // control panel と余白分を確保
+    const actualHeight = Math.min(desiredPanelHeight, maxPanelHeight);
+
+    filterPanel.style.height = `${actualHeight}px`;
+    filterList.style.maxHeight = `${Math.max(0, actualHeight - headerHeight - panelPadding - gapBetweenHeaderAndList)}px`;
+}
+
 function updateFilterList() {
     if (!filterList) return;
     filterList.innerHTML = '';
@@ -1123,6 +1144,7 @@ function updateFilterList() {
         });
         filterList.appendChild(button);
     });
+    adjustFilterPanelHeight();
 }
 
 function getFilteredIndices() {
@@ -3927,7 +3949,11 @@ filterClearBtn.addEventListener('click', () => {
     clearPlaylistFilter();
 });
 
-// �🔀ランダム再生ボタンクリック
+window.addEventListener('resize', () => {
+    if (isFilterPanelVisible) adjustFilterPanelHeight();
+});
+
+// 🔀ランダム再生ボタンクリック
 randomPlayBtn.addEventListener('click', () => {
     toggleRandomPlay();
 });
