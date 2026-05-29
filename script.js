@@ -402,61 +402,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // 初期化時にアイコンを正しく設定
     updateUrlButtonIcon();
 
-    // 再生中動画パス表示用のテキストエリアを作成
-    try {
-        playlistPathArea = document.createElement('textarea');
-        playlistPathArea.id = 'playlistPathArea';
+    // 再生中動画パス表示用のテキストエリアを取得し、クリックでフィルタパネルを開閉
+    playlistPathArea = document.getElementById('playlistPathArea');
+    if (playlistPathArea) {
         playlistPathArea.readOnly = true;
-        playlistPathArea.className = 'playlist-path-area';
-        playlistPathArea.rows = 1;
-        playlistPathArea.style.flex = '1';
-        playlistPathArea.style.minWidth = '240px';
-        playlistPathArea.style.resize = 'vertical';
-        playlistPathArea.style.overflowX = 'hidden';
-        playlistPathArea.style.overflowY = 'hidden';
-        playlistPathArea.style.whiteSpace = 'pre-wrap';
-        playlistPathArea.style.wordBreak = 'break-all';
-        playlistPathArea.wrap = 'soft';
-        if (playlistFilterInput) {
-            const cs = window.getComputedStyle(playlistFilterInput);
-            playlistPathArea.style.background = cs.backgroundColor || 'rgba(0,0,0,0.5)';
-            playlistPathArea.style.color = cs.color || '#fff';
-            playlistPathArea.style.border = cs.border || '1px solid #007bff';
-            playlistPathArea.style.fontSize = cs.fontSize || '16px';
-            playlistPathArea.style.fontFamily = cs.fontFamily || 'sans-serif';
-        }
-        if (filenameControls && filterBtn) {
-            filenameControls.insertBefore(playlistPathArea, filterBtn);
-            // クリックでフィルタパネルを開閉し、表示時には再生中アイテム位置へスクロール
-            try {
-                playlistPathArea.style.cursor = 'pointer';
-                playlistPathArea.addEventListener('click', () => {
-                    if (!filterPanel) return;
-                    isFilterPanelVisible = !isFilterPanelVisible;
-                    filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
-                    updateFilterButtonUI();
-                    if (isFilterPanelVisible) {
-                        updateFilterList();
-                        try { playlistFilterInput?.focus(); } catch (e) {}
-                        // 少し遅延して要素を探してスクロール
-                        setTimeout(() => {
-                            try {
-                                const el = filterList ? filterList.querySelector('[data-index="' + currentVideoIndex + '"]') : null;
-                                if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            } catch (e) {}
-                        }, 50);
-                    }
-                });
-            } catch (e) {
-                console.warn('playlistPathArea click handler attach failed', e);
+        playlistPathArea.addEventListener('click', () => {
+            if (!filterPanel) return;
+            isFilterPanelVisible = !isFilterPanelVisible;
+            filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
+            updateFilterButtonUI();
+            if (isFilterPanelVisible) {
+                updateFilterList();
+                try { playlistFilterInput?.focus(); } catch (e) {}
+                setTimeout(() => {
+                    try {
+                        const el = filterList ? filterList.querySelector('[data-index="' + currentVideoIndex + '"]') : null;
+                        if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } catch (e) {}
+                }, 50);
             }
-        }
-        if (filenameDisplay) {
-            // filenameDisplay.style.display = 'none';
-            // filterBtn.style.display = 'none';
-        }
-    } catch (e) {
-        console.warn('playlistPathArea create failed', e);
+        });
     }
 
     // プレイリスト関連の初期化
@@ -1093,6 +1058,10 @@ function updateFilterButtonUI() {
 }
 
 function toggleFilterPanel() {
+    if (filenameMenus && filenameMenus.style.display === 'flex') {
+        return;
+    }
+
     isFilterPanelVisible = !isFilterPanelVisible;
     if (filterPanel) {
         filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
@@ -4872,11 +4841,21 @@ filenameMenu.addEventListener('click', () => {
         filenameMenu.textContent = '📚';
         filenameMenu.classList.add('mode-active');
         filenameMenu.setAttribute('data-tooltip', '編集メニューを閉じる (Ctrl+l)');
+
+        // 編集メニュー表示中はフィルタ条件をクリアし、フィルタ入力を抑止
+        if (isFilterPanelVisible) {
+            isFilterPanelVisible = false;
+            if (filterPanel) filterPanel.style.display = 'none';
+            updateFilterButtonUI();
+        }
+        clearPlaylistFilter();
+        if (playlistFilterInput) playlistFilterInput.disabled = true;
     } else {
         filenameMenus.style.display = 'none';
         filenameMenu.textContent = '📚';
         filenameMenu.classList.remove('mode-active');
         filenameMenu.setAttribute('data-tooltip', '編集メニューを開く (Ctrl+l)');
+        if (playlistFilterInput) playlistFilterInput.disabled = false;
     }
 });
 

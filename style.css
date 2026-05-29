@@ -133,6 +133,7 @@ video {
     white-space: pre-wrap;
     word-break: break-all;
     overflow-wrap: anywhere;
+    cursor: pointer;
 }
 .playlist-path-area:focus {
     outline: none;
