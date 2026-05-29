@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.91.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.92.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -99,6 +99,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.91.2';
 // 2026-05-28 Ver3.89.2 フィルタパネルの位置調整（編集コントロールの有無で位置を変える）。
 // 2026-05-28 Ver3.90.2 フィルタパネルとカット編集パネルの同時表示を抑止。
 // 2026-05-28 Ver3.91.2 プレイリストをフィルタリストに統合する。
+// 2026-05-29 Ver3.92.2 並び替えメニュー選択時の挙動不正対応。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -2494,8 +2495,10 @@ function createSortMenu() {
 
         item.innerHTML = (currentSortMode === key ? '✅ ' : '　　') + label;
 
-        item.addEventListener('click', async () => {
-                await applySortFiltered(key);
+        item.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            await applySortFiltered(key);
+            menu.remove();
         });
 
         item.addEventListener('mouseover', () => {
