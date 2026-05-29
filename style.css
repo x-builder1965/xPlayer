@@ -108,18 +108,63 @@ video {
     align-items: center;
     overflow: visible;
 }
+
+#filterModeBtn {
+    width: 60px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 2px solid #007bff;
+    background: #007bff;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+#filterModeBtn:hover {
+    background: #0056b3;
+    border-color: #0056b3;
+}
+
+#filterModeBtn.mode-or {
+    background: #e63946;
+    border-color: #d62828;
+}
+
+#filterModeBtn.mode-or:hover {
+    background: #d62828;
+    border-color: #c41500;
+}
+
 #playlistFilterInput {
     flex: 1;
     padding: 8px 12px;
     border-radius: 6px;
-    border: 1px solid #007bff;
-    background: rgba(0, 0, 0, 0.5);
+    border: 2px solid #007bff;
+    background: rgba(0, 0, 0, 0.8);
     color: #ffffff;
     font-size: 16px;
 }
+
+#playlistFilterInput:hover {
+    background: rgba(0, 0, 0, 0.9);
+    border-color: #007bff;
+}
+
+#playlistFilterInput:focus {
+    outline: none;
+    background: rgba(0, 0, 0, 0.95);
+    border-color: #ffee00;
+    box-shadow: 0 0 8px rgba(0, 191, 255, 0.4);
+}
+
 #playlistFilterInput::placeholder {
     color: rgba(255, 255, 255, 0.6);
 }
+
 .playlist-path-area {
     flex: 1;
     min-width: 240px;

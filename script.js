@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.94.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.95.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -102,6 +102,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.94.2';
 // 2026-05-29 Ver3.92.2 並び替えメニュー選択時の挙動不正対応。
 // 2026-05-29 Ver3.93.2 フィルタリスト内の行数に合わせてフィルタパネルの高さを動的に調整。
 // 2026-05-29 Ver3.94.2 フィルタ条件クリア後、再生中アイテムの位置にスクロールする。
+// 2026-05-29 Ver3.95.2 フィルタ条件の改善。（スペースで区切られた複数語句のAND条件対応、フィルタ条件の履歴管理とlocalStrage保存・復元）
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -298,6 +299,7 @@ const repeatPlayBtn  = document.getElementById('repeatPlayBtn');
 const joinPlaylistBtn = document.getElementById('joinPlaylistBtn');
 const sortPlaylistBtn = document.getElementById('sortPlaylistBtn');
 const filterPanel = document.getElementById('filterPanel');
+const filterModeBtn = document.getElementById('filterModeBtn');
 const playlistFilterInput = document.getElementById('playlistFilterInput');
 const filterClearBtn = document.getElementById('filterClearBtn');
 const filterList = document.getElementById('filterList');
@@ -360,6 +362,8 @@ let tempConvertFile = null;
 let isEditMode = false;
 let isFilterPanelVisible = false;
 let filterText = '';
+let filterHistory = []; // フィルタ履歴
+let filterMode = 'AND'; // フィルタモード：'AND' または 'OR'
 let editInMark = -1;  // インマーク（秒）
 let editOutMark = -1; // アウトマーク（秒）
 let cutRanges = []; // 配列 of { in: seconds, out: seconds }
@@ -400,6 +404,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 初期化時にアイコンを正しく設定
     updateUrlButtonIcon();
+
+    // フィルタ履歴をlocalStorageから復元
+    loadFilterHistory();
+
+    // フィルタモードボタンを初期化（AND状態）
+    if (filterModeBtn) {
+        filterModeBtn.textContent = filterMode;
+        filterModeBtn.classList.remove('mode-or');
+    }
 
     // 再生中動画パス表示用のテキストエリアを取得し、クリックでフィルタパネルを開閉
     playlistPathArea = document.getElementById('playlistPathArea');
@@ -1123,12 +1136,24 @@ function updateFilterList() {
     }
 
     const query = filterText.trim().toLowerCase();
+    const keywords = query === '' ? [] : query.split(/\s+/).filter(k => k.length > 0);
+    
     const results = playlist
         .map((item, index) => ({ item, index }))
         .filter(({ item }) => {
+            if (keywords.length === 0) return true;
+            
             const name = (item.name || '').toLowerCase();
             const pathText = (item.file?.path || '').toLowerCase();
-            return query === '' || name.includes(query) || pathText.includes(query);
+            const fullText = name + ' ' + pathText;
+            
+            if (filterMode === 'AND') {
+                // すべてのキーワードを含む
+                return keywords.every(keyword => fullText.includes(keyword));
+            } else { // 'OR'
+                // いずれかのキーワードを含む
+                return keywords.some(keyword => fullText.includes(keyword));
+            }
         });
 
     if (results.length === 0) {
@@ -1164,12 +1189,21 @@ function updateFilterList() {
 function getFilteredIndices() {
     const q = (filterText || '').trim().toLowerCase();
     if (!q) return playlist.map((_, idx) => idx);
+    
+    const keywords = q.split(/\s+/).filter(k => k.length > 0);
+    
     return playlist
         .map((item, idx) => ({ item, idx }))
         .filter(({ item }) => {
             const name = (item.name || '').toLowerCase();
             const pathText = (item.file?.path || '').toLowerCase();
-            return name.includes(q) || pathText.includes(q);
+            const fullText = name + ' ' + pathText;
+            
+            if (filterMode === 'AND') {
+                return keywords.every(keyword => fullText.includes(keyword));
+            } else { // 'OR'
+                return keywords.some(keyword => fullText.includes(keyword));
+            }
         })
         .map(({ idx }) => idx);
 }
@@ -3954,10 +3988,96 @@ zoomBtn.addEventListener('click', () => {
     updateIconOverlay();
 });
 
+// フィルタ履歴をlocalStorageから復元
+function loadFilterHistory() {
+    const saved = localStorage.getItem('filterHistory');
+    if (saved) {
+        try {
+            filterHistory = JSON.parse(saved);
+            if (filterHistory.length > 30) {
+                filterHistory = filterHistory.slice(-30);
+            }
+        } catch (e) {
+            filterHistory = [];
+        }
+    }
+    updateFilterHistoryDatalist();
+}
+
+// フィルタ履歴をlocalStorageに保存
+function saveFilterHistory() {
+    localStorage.setItem('filterHistory', JSON.stringify(filterHistory));
+}
+
+// フィルタ履歴に項目を追加
+function addToFilterHistory(text) {
+    if (!text || text.trim() === '') return;
+    
+    const trimmedText = text.trim();
+    // 既に存在していれば削除して末尾に追加（最新の並べを下に）
+    const index = filterHistory.indexOf(trimmedText);
+    if (index !== -1) {
+        filterHistory.splice(index, 1);
+    }
+    
+    filterHistory.push(trimmedText);
+    
+    // 最大30件に制限
+    if (filterHistory.length > 30) {
+        filterHistory = filterHistory.slice(-30);
+    }
+    
+    saveFilterHistory();
+    updateFilterHistoryDatalist();
+}
+
+// フィルタ履歴datalistを更新
+function updateFilterHistoryDatalist() {
+    const datalist = document.getElementById('filterHistoryList');
+    if (!datalist) return;
+    
+    datalist.innerHTML = '';
+    filterHistory.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item;
+        datalist.appendChild(option);
+    });
+}
+
 playlistFilterInput.addEventListener('input', () => {
     filterText = playlistFilterInput.value || '';
     updateFilterList();
 });
+
+// Enterキーで履歴に追加
+playlistFilterInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const text = playlistFilterInput.value;
+        if (text.trim() !== '') {
+            addToFilterHistory(text);
+        }
+    }
+});
+
+// AND/ORボタンをクリックして切り替え
+if (filterModeBtn) {
+    filterModeBtn.addEventListener('click', () => {
+        filterMode = filterMode === 'AND' ? 'OR' : 'AND';
+        filterModeBtn.textContent = filterMode;
+        
+        // ボタンのクラスを更新
+        if (filterMode === 'OR') {
+            filterModeBtn.classList.add('mode-or');
+        } else {
+            filterModeBtn.classList.remove('mode-or');
+        }
+        
+        // フィルタリストを更新
+        if (isFilterPanelVisible) {
+            updateFilterList();
+        }
+    });
+}
 
 filterClearBtn.addEventListener('click', () => {
     clearPlaylistFilter();
