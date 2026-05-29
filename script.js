@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.93.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.94.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -101,6 +101,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.93.2';
 // 2026-05-28 Ver3.91.2 プレイリストをフィルタリストに統合する。
 // 2026-05-29 Ver3.92.2 並び替えメニュー選択時の挙動不正対応。
 // 2026-05-29 Ver3.93.2 フィルタリスト内の行数に合わせてフィルタパネルの高さを動的に調整。
+// 2026-05-29 Ver3.94.2 フィルタ条件クリア後、再生中アイテムの位置にスクロールする。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1072,12 +1073,25 @@ function toggleFilterPanel() {
     }
 }
 
+function scrollCurrentFilterItemIntoView() {
+    if (!filterList) return;
+    try {
+        const el = filterList.querySelector('[data-index="' + currentVideoIndex + '"]');
+        if (el && typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    } catch (e) {}
+}
+
 function clearPlaylistFilter() {
     filterText = '';
     if (playlistFilterInput) {
         playlistFilterInput.value = '';
     }
     updateFilterList();
+    if (isFilterPanelVisible) {
+        scrollCurrentFilterItemIntoView();
+    }
 }
 
 function adjustFilterPanelHeight() {
