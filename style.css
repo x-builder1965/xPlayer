@@ -164,12 +164,6 @@ video {
     color: rgba(255, 255, 255, 0.8);
     font-size: 14px;
 }
-button.filter-btn {
-    display: none;
-}
-button.filter-btn.active {
-    background-color: #ff0000;
-}
 #zoomPanel {
     position: absolute;
     right: 20px;
@@ -318,7 +312,6 @@ input#urlInput {
     width: 100%;
     display: none;
 }
-select#filenameDisplay,
 select#speedSelect {
     background: rgba(0, 0, 0, 0.5);
     color: #ffffff;
@@ -329,18 +322,8 @@ select#speedSelect {
     box-sizing: border-box;
     cursor: pointer;
     position: relative;
-}
-select#filenameDisplay {
-    display: none;
-    width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-select#speedSelect {
     width: 120px;
 }
-select#filenameDisplay option,
 select#speedSelect option {
     background: #1c2526;
     color: #ffffff;
