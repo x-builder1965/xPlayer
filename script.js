@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.95.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.96.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -103,6 +103,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.95.2';
 // 2026-05-29 Ver3.93.2 フィルタリスト内の行数に合わせてフィルタパネルの高さを動的に調整。
 // 2026-05-29 Ver3.94.2 フィルタ条件クリア後、再生中アイテムの位置にスクロールする。
 // 2026-05-29 Ver3.95.2 フィルタ条件の改善。（スペースで区切られた複数語句のAND条件対応、フィルタ条件の履歴管理とlocalStrage保存・復元）
+// 2026-05-30 Ver3.96.2 プレイリスト編集メニュー（📚）の廃止と各編集ボタン（📩🔼🔽➕➖🆑💾🆑）の配置変更。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -400,7 +401,6 @@ document.addEventListener('DOMContentLoaded', () => {
     videoPlayer.removeAttribute('src');
     videoPreview.removeAttribute('src');
     appNameAndCopyright.textContent = appNameAndCopyrightValue;
-    filenameMenus.style.display = 'none';
 
     // 初期化時にアイコンを正しく設定
     updateUrlButtonIcon();
@@ -437,10 +437,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // プレイリスト関連の初期化
-    filenameMenus.style.display = 'none';
-    filenameMenu.textContent = '📚';
-    filenameMenu.setAttribute('data-tooltip', '編集メニューを開く (Ctrl+l)');
-
     // 背景壁紙の復元
     if (savedWallpaperPath) {
         videoContainer.style.backgroundImage = savedWallpaperPath;
@@ -1062,10 +1058,6 @@ function updateFilterButtonUI() {
 }
 
 function toggleFilterPanel() {
-    if (filenameMenus && filenameMenus.style.display === 'flex') {
-        return;
-    }
-
     isFilterPanelVisible = !isFilterPanelVisible;
     if (filterPanel) {
         filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
@@ -3287,11 +3279,9 @@ document.addEventListener('keydown', async (event) => {
     }
     
     // ■プレイリスト編集
-    if (filename.style.opacity === '1' && filenameMenus.style.display === 'flex') {
+    if (filename.style.opacity === '1') {
         // 📩プレイリスト並び替え 表示（shift+m）
         if (event.shiftKey && event.key.toLowerCase() === 'm') {
-            // filenameMenu が開いている場合はそちらを優先しても良いが、
-            // 要件では「並び替え（📩）」なので独立して開く
             event.preventDefault();
             sortPlaylistBtn.click();
             return;
@@ -3454,13 +3444,6 @@ document.addEventListener('keydown', async (event) => {
     if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'r') {
         event.preventDefault();
         repeatPlayBtn.click();
-        return;
-    }
-
-    // 📚プレイリスト編集 表示／非表示（Ctrl+l）
-    if (event.ctrlKey && event.key.toLowerCase() === 'l' ) {
-        event.preventDefault();
-        filenameMenu.click();
         return;
     }
 
@@ -4874,16 +4857,19 @@ tooltipElements.forEach(element => {
 
 // 🔼上へボタン
 upMovePlaylistBtn.addEventListener('click', () => {
+    clearPlaylistFilter();
     upMovePlaylist();
 });
 
 // 🔽下へボタン
 downMovePlaylistBtn.addEventListener('click', () => {
+    clearPlaylistFilter();
     downMovePlaylist();
 });
 
 // ➕追加ボタン
 addPlaylistBtn.addEventListener('click', async () => {
+    clearPlaylistFilter();
     addToPlaylist();
 
     // shuffleOrder の最後に追加
@@ -4898,6 +4884,7 @@ addPlaylistBtn.addEventListener('click', async () => {
 
 // ➖削除ボタン
 removePlaylistBtn.addEventListener('click', () => {
+    clearPlaylistFilter();
     const selectedIndex = currentVideoIndex;
     if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= playlist.length) return;
 
@@ -4921,18 +4908,8 @@ removePlaylistBtn.addEventListener('click', () => {
 
 // 🆑クリアボタン
 clearPlaylistBtn.addEventListener('click', () => {
+    clearPlaylistFilter();
     clearPlaylist();
-
-    shuffleOrder = [];
-    shufflePosition = -1;
-    saveShuffleState();
-
-    updatePlaylistDisplay();
-    savePlaylistAndPlaybackState();
-});
-
-clearPlaylistBtn.addEventListener('click', () => {
-    // ... 既存のクリア処理 ...
 
     shuffleOrder = [];
     shufflePosition = -1;
@@ -4944,32 +4921,8 @@ clearPlaylistBtn.addEventListener('click', () => {
 
 // 💾保存ボタン
 savePlaylistBtn.addEventListener('click', () => {
+    clearPlaylistFilter();
     savePlaylist();
-});
-
-// 📚プレイリスト編集メニュー
-filenameMenu.addEventListener('click', () => {
-    if (filenameMenus.style.display === 'none') {
-        filenameMenus.style.display = 'flex';
-        filenameMenu.textContent = '📚';
-        filenameMenu.classList.add('mode-active');
-        filenameMenu.setAttribute('data-tooltip', '編集メニューを閉じる (Ctrl+l)');
-
-        // 編集メニュー表示中はフィルタ条件をクリアし、フィルタ入力を抑止
-        if (isFilterPanelVisible) {
-            isFilterPanelVisible = false;
-            if (filterPanel) filterPanel.style.display = 'none';
-            updateFilterButtonUI();
-        }
-        clearPlaylistFilter();
-        if (playlistFilterInput) playlistFilterInput.disabled = true;
-    } else {
-        filenameMenus.style.display = 'none';
-        filenameMenu.textContent = '📚';
-        filenameMenu.classList.remove('mode-active');
-        filenameMenu.setAttribute('data-tooltip', '編集メニューを開く (Ctrl+l)');
-        if (playlistFilterInput) playlistFilterInput.disabled = false;
-    }
 });
 
 // 既存のドラッグ＆ドロップ処理無効化
@@ -5221,6 +5174,7 @@ saveVideoBtn.addEventListener('click', async () => {
 
 // 📩並び替えボタンクリックイベント（トグル実装）
 sortPlaylistBtn.addEventListener('click', (e) => {
+    clearPlaylistFilter();
     e.stopPropagation();
 
     const existingMenu = document.querySelector('.sort-menu');

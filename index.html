@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.95.2'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.96.2'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -27,17 +27,6 @@
                     <textarea id="playlistPathArea" class="playlist-path-area" readonly rows="1" data-tooltip="再生中動画パス"></textarea>
                     <button id="randomPlayBtn" class="play-mode-btn" data-tooltip="ランダム再生 (Ctrl+r)">🔀</button>
                     <button id="repeatPlayBtn"  class="play-mode-btn" data-tooltip="繰り返し再生 (Ctrl+Shift+r)">🔁</button>
-                    <div class="filename-menus">
-                        <span class="spacer"></span>
-                        <button id="sortPlaylistBtn" data-tooltip="並び替え（Shift+m）">📩</button>
-                        <button id="upMovePlaylistBtn" data-tooltip="上へ（Shift+p／Home）">🔼</button>
-                        <button id="downMovePlaylistBtn" data-tooltip="下へ（Shift+n／End）">🔽</button>
-                        <button id="addPlaylistBtn" data-tooltip="追加（Shift+a）">➕</button>
-                        <button id="removePlaylistBtn" data-tooltip="削除（Shift+d）">➖</button>
-                        <button id="clearPlaylistBtn" data-tooltip="クリア（Shift+c）">🆑</button>
-                        <button id="savePlaylistBtn" data-tooltip="保存（Shift+s）">💾</button>
-                    </div>
-                    <button id="filenameMenu" data-tooltip="プレイリスト編集（Ctrl+l）">📚</button>
                 </div>
                 <div class="url-controls">
                     <input id="urlInput" type="text" placeholder="動画のURLを入力" data-tooltip="動画のURLを入力">
@@ -70,7 +59,15 @@
                     <button id="filterModeBtn" data-tooltip="AND/ORを切り替え">AND</button>
                     <input id="playlistFilterInput" type="text" placeholder="フィルタ条件（スペース区切りで複数条件）" data-tooltip="プレイリストを絞り込み（スペースで複数条件）" list="filterHistoryList">
                     <datalist id="filterHistoryList"></datalist>
-                    <button id="filterClearBtn" data-tooltip="フィルタクリア（Shift+c）">🆑</button>
+                    <button id="filterClearBtn" data-tooltip="フィルタクリア（Shift+c）">🔘</button>
+                    <span class="spacer"></span>
+                    <button id="sortPlaylistBtn" data-tooltip="並び替え（Shift+m）">📩</button>
+                    <button id="upMovePlaylistBtn" data-tooltip="上へ（Shift+p／Home）">🔼</button>
+                    <button id="downMovePlaylistBtn" data-tooltip="下へ（Shift+n／End）">🔽</button>
+                    <button id="addPlaylistBtn" data-tooltip="追加（Shift+a）">➕</button>
+                    <button id="removePlaylistBtn" data-tooltip="削除（Shift+d）">➖</button>
+                    <button id="clearPlaylistBtn" data-tooltip="クリア（Shift+c）">🆑</button>
+                    <button id="savePlaylistBtn" data-tooltip="保存（Shift+s）">💾</button>
                 </div>
                 <div id="filterList" class="filter-list"></div>
             </div>
@@ -203,14 +200,7 @@
                                 <td class="note">・プレイリスト内の動画を繰り返し再生。🔁（青）：繰返無効／🔁（赤）：全動画繰返／🔂（黄）：１動画繰返。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト編集切替</td>
-                                <td class="icon">📚</td>
-                                <td class="key">Ctrl+l</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリスト編集を開始（青）／終了（赤）。</td>
-                            </tr>
-                            <tr>
-                                <td class="sub-title">フィルタパネル</td>
+                                <td class="sub-title">フィルタリストパネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
                                 <td class="mouse sub-title"></td>
@@ -238,7 +228,56 @@
                                 <td class="note">・フィルタ条件を全クリア。</td>
                             </tr>
                             <tr>
-                                <td>　・フィルタリスト</td>
+                                <td>　・プレイリスト並び替え</td>
+                                <td class="icon">📩</td>
+                                <td class="key">Shift+m</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストを並び替え（（なし）／動画パス▲／動画パス▼／作成日時▲／作成日時▼／（ランダム））。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 上へ移動</td>
+                                <td class="icon">🔼</td>
+                                <td class="key">Shift+p</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択動画を上へ移動。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 下へ移動</td>
+                                <td class="icon">🔽</td>
+                                <td class="key">Shift+n</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択動画を下へ移動。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 動画追加</td>
+                                <td class="icon">➕</td>
+                                <td class="key">Shift+a</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの最後に選択した動画・プレイリスト内の動画を追加。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 動画削除</td>
+                                <td class="icon">➖</td>
+                                <td class="key">Shift+d</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択位置の動画を削除。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 クリア</td>
+                                <td class="icon">🆑</td>
+                                <td class="key">Shift+c</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの全動画をクリア。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 保存</td>
+                                <td class="icon">💾</td>
+                                <td class="key">Shift+s</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストを名前をつけて保存。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリリスト</td>
                                 <td class="icon">List</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse">Click</td>
@@ -495,62 +534,6 @@
                                 <td class="key">Shift+c</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・カット編集を全クリア。</td>
-                            </tr>
-                            <tr>
-                                <td class="sub-title">プレイリスト編集（📚）</td>
-                                <td class="icon sub-title"></td>
-                                <td class="key sub-title"></td>
-                                <td class="mouse sub-title"></td>
-                                <td class="note sub-title"></td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト並び替え</td>
-                                <td class="icon">📩</td>
-                                <td class="key">Shift+m</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストを並び替え（（なし）／動画パス▲／動画パス▼／作成日時▲／作成日時▼／（ランダム））。</td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 上へ移動</td>
-                                <td class="icon">🔼</td>
-                                <td class="key">Shift+p</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択動画を上へ移動。</td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 下へ移動</td>
-                                <td class="icon">🔽</td>
-                                <td class="key">Shift+n</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択動画を下へ移動。</td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 動画追加</td>
-                                <td class="icon">➕</td>
-                                <td class="key">Shift+a</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの最後に選択した動画・プレイリスト内の動画を追加。</td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 動画削除</td>
-                                <td class="icon">➖</td>
-                                <td class="key">Shift+d</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択位置の動画を削除。</td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 クリア</td>
-                                <td class="icon">🆑</td>
-                                <td class="key">Shift+c</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの全動画をクリア。</td>
-                            </tr>
-                            <tr>
-                                <td>　・プレイリスト編集 保存</td>
-                                <td class="icon">💾</td>
-                                <td class="key">Shift+s</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストを名前をつけて保存。</td>
                             </tr>
                             <tr>
                                 <td class="sub-title">その他操作</td>

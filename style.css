@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.93.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.96.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -257,10 +257,6 @@ video {
 .filename-controls button {
     min-width: 36px;   /* または 40px など好みで */
     flex: 0 0 auto;    /* 縮まないようにしてもOK */
-}
-.filename-menus {
-    display: none; 
-    gap: 6px; 
 }
 button {
     font-size: 16px;
