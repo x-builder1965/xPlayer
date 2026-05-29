@@ -2560,6 +2560,7 @@ function createSortMenu() {
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
             await applySortFiltered(key);
+            clearPlaylistFilter();
             menu.remove();
         });
 
