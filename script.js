@@ -3396,6 +3396,12 @@ document.addEventListener('keydown', async (event) => {
 
     // ■リストフィルタパネル■
     if (filterPanel.style.display === 'flex') {
+        // AND/OR切替（shift+a）
+        if (event.shiftKey && event.key.toLowerCase() === 'a') {
+            event.preventDefault();
+            filterModeBtn.click();
+            return;
+        }
         // 🆑フィルタ条件クリア（shift+c）
         if (event.shiftKey && event.key.toLowerCase() === 'c') {
             event.preventDefault();
@@ -4060,24 +4066,22 @@ playlistFilterInput.addEventListener('keydown', (e) => {
 });
 
 // AND/ORボタンをクリックして切り替え
-if (filterModeBtn) {
-    filterModeBtn.addEventListener('click', () => {
-        filterMode = filterMode === 'AND' ? 'OR' : 'AND';
-        filterModeBtn.textContent = filterMode;
-        
-        // ボタンのクラスを更新
-        if (filterMode === 'OR') {
-            filterModeBtn.classList.add('mode-or');
-        } else {
-            filterModeBtn.classList.remove('mode-or');
-        }
-        
-        // フィルタリストを更新
-        if (isFilterPanelVisible) {
-            updateFilterList();
-        }
-    });
-}
+filterModeBtn.addEventListener('click', () => {
+    filterMode = filterMode === 'AND' ? 'OR' : 'AND';
+    filterModeBtn.textContent = filterMode;
+    
+    // ボタンのクラスを更新
+    if (filterMode === 'OR') {
+        filterModeBtn.classList.add('mode-or');
+    } else {
+        filterModeBtn.classList.remove('mode-or');
+    }
+    
+    // フィルタリストを更新
+    if (isFilterPanelVisible) {
+        updateFilterList();
+    }
+});
 
 filterClearBtn.addEventListener('click', () => {
     clearPlaylistFilter();
