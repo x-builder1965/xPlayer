@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.96.2'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.00.2'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -56,6 +56,7 @@
             </div>
             <div id="filterPanel" class="filter-panel" style="display:none;">
                 <div class="filter-panel-header">
+                    <span id="itemCount" data-tooltip="絞込動画数/総動画数）">00,000 / 00,000</span>
                     <button id="filterModeBtn" data-tooltip="AND/ORを切り替え">AND</button>
                     <input id="playlistFilterInput" type="text" placeholder="フィルタ条件（スペース区切りで複数条件）" data-tooltip="プレイリストを絞り込み（スペースで複数条件）" list="filterHistoryList">
                     <datalist id="filterHistoryList"></datalist>

@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.99.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.00.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -107,6 +107,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.99.2';
 // 2026-05-30 Ver3.97.2 プレイリストの操作方法の見直し。
 // 2026-05-30 Ver3.98.2 プレイリストの並び替え実施後、選択動画の位置に現在再生中の動画行の位置を設定しスクロールするように変更。
 // 2026-05-30 Ver3.99.2 プレイリスト編集 追加（➕）の挿入位置を最終行→選択行に変更。
+// 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -310,6 +311,7 @@ const filterList = document.getElementById('filterList');
 const darkOverlay = document.getElementById('darkOverlay');
 const voiceSelectBtn = document.getElementById('voiceSelectBtn');
 const subtitleSelectBtn = document.getElementById('subtitleSelectBtn');
+const itemCount = document.getElementById('itemCount');
 
 // localStorage から復得
 const savedVolume = localStorage.getItem('volume');
@@ -1131,6 +1133,7 @@ function updateFilterList() {
     filterList.innerHTML = '';
     if (playlist.length === 0) {
         filterList.innerHTML = '<div class="filter-empty">プレイリストが空です。</div>';
+        updateItemCount(0, 0);   // ← 追加
         return;
     }
 
@@ -1154,6 +1157,9 @@ function updateFilterList() {
                 return keywords.some(keyword => fullText.includes(keyword));
             }
         });
+
+    // 件数表示を更新（ここがメイン）
+    updateItemCount(results.length, playlist.length);
 
     if (results.length === 0) {
         filterList.innerHTML = '<div class="filter-empty">一致する動画がありません。</div>';
@@ -1283,6 +1289,16 @@ function shuffleFiltered() {
     savePlaylistAndPlaybackState();
 }
 
+// 件数表示更新用ヘルパー関数（新設）
+function updateItemCount(filtered, total) {
+    if (!itemCount) return;
+    
+    const filteredStr = filtered.toLocaleString('ja-JP');
+    const totalStr = total.toLocaleString('ja-JP');
+    
+    itemCount.textContent = `${filteredStr} / ${totalStr}`;
+}
+
 // プレイリスト表示更新
 function updatePlaylistDisplay() {
     const currentPath = getCurrentPlaybackPath();
@@ -1296,6 +1312,7 @@ function updatePlaylistDisplay() {
     if (playlist.length === 0) {
         updateIconOverlay();
         if (isFilterPanelVisible) updateFilterList();
+        updateItemCount(0, 0);   // ← 追加
         return;
     }
 
@@ -1304,6 +1321,7 @@ function updatePlaylistDisplay() {
     }
 
     if (isFilterPanelVisible) updateFilterList();
+    updateItemCount(playlist.length, playlist.length);   // ← 追加（フィルタ未使用時は総数/総数）
     updateIconOverlay();
 }
 
