@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.97.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.98.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -105,6 +105,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.97.2';
 // 2026-05-29 Ver3.95.2 フィルタ条件の改善。（スペースで区切られた複数語句のAND条件対応、フィルタ条件の履歴管理とlocalStrage保存・復元）
 // 2026-05-30 Ver3.96.2 プレイリスト編集メニュー（📚）の廃止と各編集ボタン（📩🔼🔽➕➖🆑💾🆑）の配置変更。
 // 2026-05-30 Ver3.97.2 プレイリストの操作方法の見直し。
+// 2026-05-30 Ver3.98.2 プレイリストの並び替え実施後、選択動画の位置に現在再生中の動画行の位置を設定しスクロールするように変更。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1402,6 +1403,10 @@ function toggleRandomPlay() {
 
         // 表示はそのまま、次回 next/prev が通常順になるだけ
     }
+
+    // フィルタ条件をクリアし、再生動画の行位置にスクロール
+    selectedPlaylistIndex = currentVideoIndex;
+    clearPlaylistFilter();
 }
 
 // シンプルなFisher-Yatesシャッフル
@@ -2551,6 +2556,7 @@ async function applySort(modeKey = currentSortMode) {
     if (prevCurrentPath) {
         const newIndex = playlist.findIndex(item => item.file.path === prevCurrentPath);
         currentVideoIndex = newIndex >= 0 ? newIndex : 0;
+        selectedPlaylistIndex = currentVideoIndex;
     }
 
     updatePlaylistDisplay();
