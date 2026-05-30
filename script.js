@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.98.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.99.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -106,6 +106,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.98.2';
 // 2026-05-30 Ver3.96.2 プレイリスト編集メニュー（📚）の廃止と各編集ボタン（📩🔼🔽➕➖🆑💾🆑）の配置変更。
 // 2026-05-30 Ver3.97.2 プレイリストの操作方法の見直し。
 // 2026-05-30 Ver3.98.2 プレイリストの並び替え実施後、選択動画の位置に現在再生中の動画行の位置を設定しスクロールするように変更。
+// 2026-05-30 Ver3.99.2 プレイリスト編集 追加（➕）の挿入位置を最終行→選択行に変更。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -2041,10 +2042,15 @@ async function addToPlaylist() {
 
         const newFiles = files.map(file => ({ path: file.path, name: file.path }));
 
-        let insertIndex = playlist.length; // 末尾追加
+        let insertIndex = selectedPlaylistIndex; // 選択行に追加
         const formattedFiles = newFiles.map(f => ({ file: { path: f.path }, name: f.name }));
         playlist.splice(insertIndex, 0, ...formattedFiles);
         if (selectedPlaylistIndex < 0) selectedPlaylistIndex = insertIndex;
+
+        // 新しい再生中インデックスを計算
+        if (insertIndex <= currentVideoIndex) {
+            currentVideoIndex += formattedFiles.length;
+        }
 
         // ★ 追加後も「現在のプレイリスト順」を「なし」の基準とする
         const currentPaths = playlist.map(item => item.file.path);
