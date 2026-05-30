@@ -96,11 +96,11 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.98.2';
 // 2026-03-31 Ver3.86.2 縦ドラック時の音量調整。
 // 2026-03-31 Ver3.87.2 ZoomPanelの枠線削除。
 // 2026-05-28 Ver3.88.2 プレイリストのフィルタ機能（▼）追加。
-// 2026-05-28 Ver3.89.2 フィルタパネルの位置調整（編集コントロールの有無で位置を変える）。
-// 2026-05-28 Ver3.90.2 フィルタパネルとカット編集パネルの同時表示を抑止。
+// 2026-05-28 Ver3.89.2 フィルタリストパネルの位置調整（編集コントロールの有無で位置を変える）。
+// 2026-05-28 Ver3.90.2 フィルタリストパネルとカット編集パネルの同時表示を抑止。
 // 2026-05-28 Ver3.91.2 プレイリストをフィルタリストに統合する。
 // 2026-05-29 Ver3.92.2 並び替えメニュー選択時の挙動不正対応。
-// 2026-05-29 Ver3.93.2 フィルタリスト内の行数に合わせてフィルタパネルの高さを動的に調整。
+// 2026-05-29 Ver3.93.2 フィルタリスト内の行数に合わせてフィルタリストパネルの高さを動的に調整。
 // 2026-05-29 Ver3.94.2 フィルタ条件クリア後、再生中アイテムの位置にスクロールする。
 // 2026-05-29 Ver3.95.2 フィルタ条件の改善。（スペースで区切られた複数語句のAND条件対応、フィルタ条件の履歴管理とlocalStrage保存・復元）
 // 2026-05-30 Ver3.96.2 プレイリスト編集メニュー（📚）の廃止と各編集ボタン（📩🔼🔽➕➖🆑💾🆑）の配置変更。
@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
         filterModeBtn.classList.remove('mode-or');
     }
 
-    // 再生中動画パス表示用のテキストエリアを取得し、クリックでフィルタパネルを開閉
+    // 再生中動画パス表示用のテキストエリアを取得し、クリックでフィルタリストパネルを開閉
     playlistPathArea = document.getElementById('playlistPathArea');
     if (playlistPathArea) {
         playlistPathArea.readOnly = true;
@@ -1067,7 +1067,7 @@ function toggleFilterPanel() {
     if (filterPanel) {
         filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
         if (isFilterPanelVisible) {
-            // フィルタパネル表示時はカット編集パネルを閉じる（同時表示抑止）
+            // フィルタリストパネル表示時はカット編集パネルを閉じる（同時表示抑止）
             if (isEditMode) {
                 isEditMode = false;
                 if (editControls) editControls.style.display = 'none';
@@ -3427,7 +3427,7 @@ document.addEventListener('keydown', async (event) => {
         }
     }
 
-    // ■リストフィルタパネル■
+    // ■フィルタリストパネル■
     if (filterPanel.style.display === 'flex') {
         // AND/OR切替（shift+a）
         if (event.shiftKey && event.key.toLowerCase() === 'a') {
@@ -5006,7 +5006,7 @@ editModeBtn.addEventListener('click', () => {
     
     isEditMode = !isEditMode;
     if (isEditMode) {
-        // 編集モード開始時はフィルタパネルを閉じる（同時表示抑止）
+        // 編集モード開始時はフィルタリストパネルを閉じる（同時表示抑止）
         if (isFilterPanelVisible) {
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
