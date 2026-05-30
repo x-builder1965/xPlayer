@@ -108,6 +108,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.00.2';
 // 2026-05-30 Ver3.98.2 プレイリストの並び替え実施後、選択動画の位置に現在再生中の動画行の位置を設定しスクロールするように変更。
 // 2026-05-30 Ver3.99.2 プレイリスト編集 追加（➕）の挿入位置を最終行→選択行に変更。
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
+// 2026-05-30 Ver4.01.2 動画再生中にランダム再生（🔀）をONにしたとき、現在再生中の動画がシャッフル後の先頭に来るように変更。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1399,16 +1400,13 @@ function toggleRandomPlay() {
                     currentVideoIndex = playlist.findIndex(p => p.file.path === currentPath);
                     if (currentVideoIndex < 0) currentVideoIndex = 0;
                 }
-
-                shufflePosition = shuffleOrder.indexOf(currentVideoIndex);
-                if (shufflePosition < 0) shufflePosition = 0;
-
-                updatePlaylistDisplay();
             }
 
+            // shuffle関数によりcurrentVideoIndexが先頭(0)に移動しているため、初期位置は0になります
             shufflePosition = shuffleOrder.indexOf(currentVideoIndex);
             if (shufflePosition < 0) shufflePosition = 0;
 
+            updatePlaylistDisplay();
             savePlaylistAndPlaybackState();
             saveShuffleState();
         }
@@ -1434,6 +1432,16 @@ function shuffle(array) {
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
+
+    // 2. 再生中動画(currentVideoIndex)が存在する場合、配列の先頭に移動
+    if (typeof currentVideoIndex !== 'undefined' && currentVideoIndex !== null && currentVideoIndex >= 0) {
+        const indexInArray = array.indexOf(currentVideoIndex);
+        if (indexInArray > -1) {
+            // 配列から一度削除し、先頭(0番目)に挿入
+            array.splice(indexInArray, 1);
+            array.unshift(currentVideoIndex);
+        }
+    }
 }
 
 // 再シャッフル
@@ -1442,7 +1450,10 @@ function resetShuffle() {
         // ランダムモードONになった → シャッフル順を今生成
         shuffleOrder = [...Array(playlist.length).keys()]; // 0〜length-1 の配列
         shuffle(shuffleOrder);                             // シャッフル
-        shufflePosition = -1;                              // リセット
+
+        // 先頭に移動した再生中動画からスタートするため、ポジションを 0 に設定
+        shufflePosition = 0; 
+        saveShuffleState();
     } else {
         // OFFになったらクリア
         shuffleOrder = [];
