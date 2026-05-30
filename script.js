@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.96.2';
+const appName = 'xPlayer -動画プレイヤー- Ver3.97.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -104,6 +104,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver3.96.2';
 // 2026-05-29 Ver3.94.2 フィルタ条件クリア後、再生中アイテムの位置にスクロールする。
 // 2026-05-29 Ver3.95.2 フィルタ条件の改善。（スペースで区切られた複数語句のAND条件対応、フィルタ条件の履歴管理とlocalStrage保存・復元）
 // 2026-05-30 Ver3.96.2 プレイリスト編集メニュー（📚）の廃止と各編集ボタン（📩🔼🔽➕➖🆑💾🆑）の配置変更。
+// 2026-05-30 Ver3.97.2 プレイリストの操作方法の見直し。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -335,6 +336,7 @@ const savedWallpaperPath = localStorage.getItem('wallpaperPath');
 // グローバル（共通）変数
 let playlist = [];
 let currentVideoIndex = 0;
+let selectedPlaylistIndex = -1;
 let timeout;
 let isDragging = false;
 let dragStartX = 0;
@@ -428,7 +430,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 try { playlistFilterInput?.focus(); } catch (e) {}
                 setTimeout(() => {
                     try {
-                        const el = filterList ? filterList.querySelector('[data-index="' + currentVideoIndex + '"]') : null;
+                        const targetIndex = selectedPlaylistIndex >= 0 ? selectedPlaylistIndex : currentVideoIndex;
+                        const el = filterList ? filterList.querySelector('[data-index="' + targetIndex + '"]') : null;
                         if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     } catch (e) {}
                 }, 50);
@@ -647,6 +650,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         name: path
                     }));
                     currentVideoIndex = parsedCurrentVideoIndex;
+                    selectedPlaylistIndex = currentVideoIndex;
                     await playVideo(playlist[currentVideoIndex].file, savedCurrentTime);
                     // 常に一時停止、アプリ起動後250ms後に強制トリガー
                     setTimeout(() => {
@@ -1081,7 +1085,8 @@ function toggleFilterPanel() {
 function scrollCurrentFilterItemIntoView() {
     if (!filterList) return;
     try {
-        const el = filterList.querySelector('[data-index="' + currentVideoIndex + '"]');
+        const targetIndex = selectedPlaylistIndex >= 0 ? selectedPlaylistIndex : currentVideoIndex;
+        const el = filterList.querySelector('[data-index="' + targetIndex + '"]');
         if (el && typeof el.scrollIntoView === 'function') {
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
@@ -1160,11 +1165,17 @@ function updateFilterList() {
         // 識別用の属性と現在再生中クラス
         button.dataset.index = index;
         if (index === currentVideoIndex) button.classList.add('current');
+        if (index === selectedPlaylistIndex) button.classList.add('selected');
         const displayText = item.name || item.file?.path || '無題';
         const showPlaybackIcon = index === currentVideoIndex && !isVideoStopped();
         button.textContent = (showPlaybackIcon ? '▶️ ' : '') + displayText;
         button.title = item.file?.path || '';
-        button.addEventListener('click', async () => {
+        button.addEventListener('click', () => {
+            selectedPlaylistIndex = index;
+            updateFilterList();
+        });
+        button.addEventListener('dblclick', async () => {
+            selectedPlaylistIndex = index;
             currentVideoIndex = index;
             await playVideo(item.file, 0);
             updatePlaylistDisplay();
@@ -1284,6 +1295,10 @@ function updatePlaylistDisplay() {
         updateIconOverlay();
         if (isFilterPanelVisible) updateFilterList();
         return;
+    }
+
+    if (selectedPlaylistIndex < 0 || selectedPlaylistIndex >= playlist.length) {
+        selectedPlaylistIndex = currentVideoIndex >= 0 && currentVideoIndex < playlist.length ? currentVideoIndex : 0;
     }
 
     if (isFilterPanelVisible) updateFilterList();
@@ -1920,6 +1935,7 @@ async function playlistSet(videoFiles) {
         }));
 
         currentVideoIndex = 0;
+        selectedPlaylistIndex = 0;
         await playVideo(playlist[currentVideoIndex].file, 0);
         savePlaylistAndPlaybackState();
         resetShuffle();
@@ -1941,36 +1957,42 @@ function isHTML5_SUPPORTED(ext) {
 
 // 上へ移動
 function upMovePlaylist() {
-    const currentIndex = currentVideoIndex;
-    if (isNaN(currentIndex) || currentIndex <= 0 || playlist.length === 0) return;
+    const selectedIndex = selectedPlaylistIndex >= 0 && selectedPlaylistIndex < playlist.length ? selectedPlaylistIndex : currentVideoIndex;
+    if (isNaN(selectedIndex) || selectedIndex <= 0 || playlist.length === 0) return;
 
     // 配列から移動
-    const [movedItem] = playlist.splice(currentIndex, 1);
-    playlist.splice(currentIndex - 1, 0, movedItem);
+    const [movedItem] = playlist.splice(selectedIndex, 1);
+    playlist.splice(selectedIndex - 1, 0, movedItem);
 
     // 再生中インデックスが影響を受ける場合の調整
-    if (currentVideoIndex === currentIndex) {
+    if (currentVideoIndex === selectedIndex) {
         currentVideoIndex -= 1;
+    } else if (currentVideoIndex === selectedIndex - 1) {
+        currentVideoIndex += 1;
     }
 
+    selectedPlaylistIndex = selectedIndex - 1;
     updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
 }
 
 // 下へ移動
 function downMovePlaylist() {
-    const currentIndex = currentVideoIndex;
-    if (isNaN(currentIndex) || currentIndex >= playlist.length - 1 || playlist.length === 0) return;
+    const selectedIndex = selectedPlaylistIndex >= 0 && selectedPlaylistIndex < playlist.length ? selectedPlaylistIndex : currentVideoIndex;
+    if (isNaN(selectedIndex) || selectedIndex >= playlist.length - 1 || playlist.length === 0) return;
 
     // 配列から移動
-    const [movedItem] = playlist.splice(currentIndex, 1);
-    playlist.splice(currentIndex + 1, 0, movedItem);
+    const [movedItem] = playlist.splice(selectedIndex, 1);
+    playlist.splice(selectedIndex + 1, 0, movedItem);
 
     // 再生中インデックスが影響を受ける場合の調整
-    if (currentVideoIndex === currentIndex) {
+    if (currentVideoIndex === selectedIndex) {
         currentVideoIndex += 1;
+    } else if (currentVideoIndex === selectedIndex + 1) {
+        currentVideoIndex -= 1;
     }
 
+    selectedPlaylistIndex = selectedIndex + 1;
     updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
 }
@@ -2008,6 +2030,7 @@ async function addToPlaylist() {
         let insertIndex = playlist.length; // 末尾追加
         const formattedFiles = newFiles.map(f => ({ file: { path: f.path }, name: f.name }));
         playlist.splice(insertIndex, 0, ...formattedFiles);
+        if (selectedPlaylistIndex < 0) selectedPlaylistIndex = insertIndex;
 
         // ★ 追加後も「現在のプレイリスト順」を「なし」の基準とする
         const currentPaths = playlist.map(item => item.file.path);
@@ -2028,7 +2051,7 @@ async function addToPlaylist() {
 
 // プレイリスト削除
 async function removeFromPlaylist() {
-    const selectedIndex = currentVideoIndex;
+    const selectedIndex = selectedPlaylistIndex >= 0 && selectedPlaylistIndex < playlist.length ? selectedPlaylistIndex : currentVideoIndex;
     if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= playlist.length) {
         updateOverlayDisplay('📚 削除する動画を選択してください', false, 2000);
         return;
@@ -2053,17 +2076,21 @@ async function removeFromPlaylist() {
     }
 
     if (playlist.length > 0) {
-        currentVideoIndex = newIndex;
+        if (currentVideoIndex === selectedIndex) {
+            currentVideoIndex = newIndex;
+        } else if (currentVideoIndex > selectedIndex) {
+            currentVideoIndex -= 1;
+        }
+        selectedPlaylistIndex = newIndex;
         updatePlaylistDisplay();
         if (isCurrentlyPlaying) {
-            await playVideo(playlist[currentVideoIndex].file, 0);
-        } else {
             playStopBtn.click();
         }
     } else {
         playlistPathArea.value = appNameAndCopyrightValueLine;
         updateIconOverlay();
         playStopBtn.click();
+        selectedPlaylistIndex = -1;
     }
     savePlaylistAndPlaybackState();
     resetShuffle();
@@ -4886,7 +4913,7 @@ addPlaylistBtn.addEventListener('click', async () => {
 // ➖削除ボタン
 removePlaylistBtn.addEventListener('click', () => {
     clearPlaylistFilter();
-    const selectedIndex = currentVideoIndex;
+    const selectedIndex = selectedPlaylistIndex >= 0 && selectedPlaylistIndex < playlist.length ? selectedPlaylistIndex : currentVideoIndex;
     if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= playlist.length) return;
 
     removeFromPlaylist();

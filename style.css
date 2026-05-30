@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.96.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver3.97.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -206,6 +206,18 @@ video {
 }
 .filter-item:hover {
     background: rgba(255, 255, 255, 0.12);
+}
+.filter-item.selected {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+.filter-item.current {
+    background: rgba(0, 123, 255, 0.25);
+    border-color: rgba(0, 123, 255, 0.7);
+}
+.filter-item.current.selected {
+    background: rgba(0, 123, 255, 0.35);
+    border-color: rgba(0, 123, 255, 0.9);
 }
 .filter-empty {
     color: rgba(255, 255, 255, 0.8);
