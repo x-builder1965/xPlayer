@@ -1602,6 +1602,10 @@ async function playVideo(file, currentTime) {
         playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
     });
 
+    // フィルタ条件をクリアし、再生動画の行位置にスクロール
+    selectedPlaylistIndex = currentVideoIndex;
+    clearPlaylistFilter();
+
     startPeriodicSave();
     showControlsAndFilename();
     updatePlaylistDisplay();
@@ -1698,6 +1702,11 @@ async function togglePlayPause() {
         localStorage.setItem('currentTime', videoPlayer.currentTime);
         stopPeriodicSave();
     }
+
+    // フィルタ条件をクリアし、再生動画の行位置にスクロール
+    selectedPlaylistIndex = currentVideoIndex;
+    clearPlaylistFilter();
+
     showControlsAndFilename();
     updateIconOverlay();
 }
