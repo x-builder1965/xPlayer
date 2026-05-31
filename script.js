@@ -1701,6 +1701,9 @@ async function togglePlayPause() {
         if (isVideoStopped() || currentVideoIndex === -1) {
             // 動画ソース設定
             currentVideoIndex = 0;
+            if (selectedPlaylistIndex >= 0) {
+                currentVideoIndex = selectedPlaylistIndex;
+            }
             const file = playlist[currentVideoIndex].file;
             await setVideoSrc(file);
         }
