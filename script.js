@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.03.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.04.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -111,10 +111,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.03.2';
 // 2026-05-30 Ver4.01.2 動画再生中にランダム再生（🔀）をONにしたとき、現在再生中の動画がシャッフル後の先頭に来るように変更。
 // 2026-05-31 Ver4.02.2 再生停止（⏹️）クリック後の動画再生（▶️）の不良対応。
 // 2026-05-31 Ver4.03.2 再生停止（⏹️）クリックで再生時間を０にリセット。
-// ---------------------------------------------------------------------
-// 2026-05-31 Ver4.xx.2 プレイリスト編集 追加（➕）の機能追加。（未実装）
-//     ・追加（➕）クリックでポップアップメニュー（「選択行に追加」「選択行の下に追加」）を表示。
-//     ・メニューアイテムクリックで動画ファイル選択ダイアログを表示して、選択した動画をメニューアイテムどおりに追加。
+// 2026-05-31 Ver4.04.2 プレイリスト編集 追加（➕）に「選択行に追加」「選択行の下に追加」機能追加。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -162,6 +159,10 @@ const SORT_MODES = {
     ctime_asc:  { label: '作成日時▲',   fn: async () => await sortByCreationTime(true) },
     ctime_desc: { label: '作成日時▼',   fn: async () => await sortByCreationTime(false)},
     random:     { label: '（ランダム）', fn: () => sortRandomPlaylist() }
+};
+const ADD_MODES = {
+    Add0: { label: '選択行に追加',     fn: () => addToPlaylist(0) },
+    Add1: { label: '選択行の下に追加', fn: () => addToPlaylist(1) }
 };
 const languageMap = {
     'jpn': '日本語',
@@ -395,6 +396,7 @@ let originalLoadOrder = [];  // プレイリストの「最初に読み込まれ
 let hideMouseTimeout = null;
 let editFrameRate = 30;
 let currentSortMode = '（なし）';
+let currentAddMode = 0;
 let selectedAudioLabel = '日本語';
 let selectedAudioTrack = [];
 let selectedSubtitleLabel = '（なし）';
@@ -2074,14 +2076,14 @@ function updateEditModeButtonUI() {
 }
 
 // プレイリスト追加
-async function addToPlaylist() {
+async function addToPlaylist(addPosition = 0) {
     try {
         const files = await openVideoDialog();
         if (!files || files.length === 0) return;
 
         const newFiles = files.map(file => ({ path: file.path, name: file.path }));
 
-        let insertIndex = selectedPlaylistIndex; // 選択行に追加
+        let insertIndex = selectedPlaylistIndex + addPosition;
         const formattedFiles = newFiles.map(f => ({ file: { path: f.path }, name: f.name }));
         playlist.splice(insertIndex, 0, ...formattedFiles);
         if (selectedPlaylistIndex < 0) selectedPlaylistIndex = insertIndex;
@@ -2095,6 +2097,11 @@ async function addToPlaylist() {
         const currentPaths = playlist.map(item => item.file.path);
         originalLoadOrder = [...currentPaths];
         localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
+
+        // shuffleOrder の最後に追加
+        if (shuffleOrder && shuffleOrder.length > 0) {
+            shuffleOrder.push(playlist.length - 1);
+        }
 
         updatePlaylistDisplay();
         savePlaylistAndPlaybackState();
@@ -2618,7 +2625,7 @@ async function applySort(modeKey = currentSortMode) {
     saveShuffleState();
 }
 
-// ポップアップメニュー作成関数
+// 並び替えポップアップメニュー作成関数
 function createSortMenu() {
     const menu = document.createElement('div');
     menu.className = 'sort-menu';  // CSSで位置・スタイルを調整
@@ -2696,6 +2703,55 @@ if (isRepeatPlayMode === 'none') {
     updateRepeatButtonUI();
 }
 
+// プレイリスト追加ポップアップメニュー作成関数
+function createAddMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'sort-menu';  // CSSで位置・スタイルを調整
+    menu.style.position = 'absolute';
+    menu.style.background = 'rgba(30,30,30,0.95)';
+    menu.style.border = '1px solid #444';
+    menu.style.borderRadius = '6px';
+    menu.style.padding = '6px 0';
+    menu.style.zIndex = '1001';
+    menu.style.minWidth = '160px';
+    menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
+    menu.style.whiteSpace = 'pre';        // ← これが大事！タブを保持
+    menu.style.fontFamily = 'monospace';  // 等幅フォントで揃えやすくする
+    menu.style.lineHeight = '1.0';
+    menu.style.fontSize = '16px';
+
+    Object.entries(ADD_MODES).forEach(([key, {label}]) => {
+        const item = document.createElement('div');
+        item.style.padding = '8px 16px';
+        item.style.cursor = 'pointer';
+        item.style.whiteSpace = 'nowrap';
+        item.style.color = currentAddMode === key ? '#00ccff' : '#eee';
+        item.innerHTML = label;
+
+        item.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            if (key === 'Add0') {
+                await addToPlaylist(0);  // 選択位置に追加
+            } else if (key === 'Add1') {
+                await addToPlaylist(1);  // 選択位置の次に追加
+            }
+            clearPlaylistFilter();
+            menu.remove();
+        });
+
+        item.addEventListener('mouseover', () => {
+            item.style.background = 'rgba(0,123,255,0.2)';
+        });
+        item.addEventListener('mouseout', () => {
+            item.style.background = 'none';
+        });
+
+        menu.appendChild(item);
+    });
+
+    return menu;
+}
+
 // マウス表示・自動非表示の設定
 function resetCursorTimer() {
     if (isPanning) {    
@@ -2753,7 +2809,6 @@ async function toggleTrackMenu(e, type, button) {
     const existingMenu = document.querySelector('.sort-menu');
     if (existingMenu) {
         existingMenu.remove();
-        return;
     }
 
     // 動画音声トラック・字幕トラック取得
@@ -3366,8 +3421,65 @@ document.addEventListener('keydown', async (event) => {
         }
     }
     
-    // ■プレイリスト編集
-    if (filename.style.opacity === '1') {
+    // ■🔎ズーム・移動・ショット■
+    if (isZoomMode) {
+        // 🔘ズームリセット（Ctrl+0）
+        if (event.ctrlKey && event.key === '0') {
+            event.preventDefault();
+            zoomResetBtn.click();
+            return;
+        }
+
+        // 📷スナップショット（Ctrl+s）
+        if (event.ctrlKey && event.key === 's') {
+            event.preventDefault();
+            snapshotBtn.click();
+            return;
+        }
+
+        // ズームイン（Ctrl+↑）
+        if (event.ctrlKey && event.key === 'ArrowUp') {
+            event.preventDefault();
+            let newZoom = zoomValue + 1;
+            if (newZoom > 500) newZoom = 500;
+            zoomBar.value = newZoom.toString();
+            applyZoom(newZoom);
+            return;
+        }
+
+        // ズームアウト（Ctrl+↓）
+        if (event.ctrlKey && event.key === 'ArrowDown') {
+            event.preventDefault();
+            let newZoom = zoomValue - 1;
+            if (newZoom < -100) newZoom = -100;
+            zoomBar.value = newZoom.toString();
+            applyZoom(newZoom);
+            return;
+        }
+
+        // ❌ズーム終了（Ctrl+z）
+        if (event.ctrlKey && event.key === 'z') {
+            event.preventDefault();
+            zoomEndBtn.click();
+            return;
+        }
+    }
+
+    // ■フィルタリストパネル■
+    if (filterPanel.style.display === 'flex') {
+        // AND/OR切替（shift+a）
+        if (event.shiftKey && event.key.toLowerCase() === 'a') {
+            event.preventDefault();
+            filterModeBtn.click();
+            return;
+        }
+        // 🆑フィルタ条件クリア（shift+0）
+        if (event.shiftKey && event.key === '0') {
+            event.preventDefault();
+            filterClearBtn.click();
+            return;
+        }
+
         // 📩プレイリスト並び替え 表示（shift+m）
         if (event.shiftKey && event.key.toLowerCase() === 'm') {
             event.preventDefault();
@@ -3425,66 +3537,6 @@ document.addEventListener('keydown', async (event) => {
                 savePlaylistBtn.click();
                 return;
             }
-        }
-    }
-
-    // ■🔎ズーム・移動・ショット■
-    if (isZoomMode) {
-        // 🔘ズームリセット（Ctrl+0）
-        if (event.ctrlKey && event.key === '0') {
-            event.preventDefault();
-            zoomResetBtn.click();
-            return;
-        }
-
-        // 📷スナップショット（Ctrl+s）
-        if (event.ctrlKey && event.key === 's') {
-            event.preventDefault();
-            snapshotBtn.click();
-            return;
-        }
-
-        // ズームイン（Ctrl+↑）
-        if (event.ctrlKey && event.key === 'ArrowUp') {
-            event.preventDefault();
-            let newZoom = zoomValue + 1;
-            if (newZoom > 500) newZoom = 500;
-            zoomBar.value = newZoom.toString();
-            applyZoom(newZoom);
-            return;
-        }
-
-        // ズームアウト（Ctrl+↓）
-        if (event.ctrlKey && event.key === 'ArrowDown') {
-            event.preventDefault();
-            let newZoom = zoomValue - 1;
-            if (newZoom < -100) newZoom = -100;
-            zoomBar.value = newZoom.toString();
-            applyZoom(newZoom);
-            return;
-        }
-
-        // ❌ズーム終了（Ctrl+z）
-        if (event.ctrlKey && event.key === 'z') {
-            event.preventDefault();
-            zoomEndBtn.click();
-            return;
-        }
-    }
-
-    // ■フィルタリストパネル■
-    if (filterPanel.style.display === 'flex') {
-        // AND/OR切替（shift+a）
-        if (event.shiftKey && event.key.toLowerCase() === 'a') {
-            event.preventDefault();
-            filterModeBtn.click();
-            return;
-        }
-        // 🆑フィルタ条件クリア（shift+c）
-        if (event.shiftKey && event.key.toLowerCase() === 'c') {
-            event.preventDefault();
-            filterClearBtn.click();
-            return;
         }
     }
 
@@ -4957,14 +5009,40 @@ downMovePlaylistBtn.addEventListener('click', () => {
 });
 
 // ➕追加ボタン
-addPlaylistBtn.addEventListener('click', async () => {
+addPlaylistBtn.addEventListener('click', async (e) => {
     clearPlaylistFilter();
-    addToPlaylist();
+    e.stopPropagation();
 
-    // shuffleOrder の最後に追加
-    if (shuffleOrder && shuffleOrder.length > 0) {
-        shuffleOrder.push(playlist.length - 1);
+    const existingMenu = document.querySelector('.sort-menu');
+    if (existingMenu) {
+        existingMenu.remove();
+        document.removeEventListener('click', closeMenu); // ← ここも後で修正必要
     }
+
+    document.querySelectorAll('.sort-menu').forEach(m => m.remove());
+
+    const targetContainer = document.fullscreenElement || mainContainer;
+    const menu = createAddMenu();
+
+    const containerRect = targetContainer.getBoundingClientRect();
+    const btnRect = addPlaylistBtn.getBoundingClientRect();
+
+    menu.style.position = 'absolute';
+    menu.style.left = `${btnRect.left - containerRect.left}px`;
+    menu.style.top  = `${btnRect.bottom - containerRect.top + 4}px`;
+
+    targetContainer.appendChild(menu);
+
+    function closeMenu(ev) {    // ← function宣言ならhoistingされるのでOK
+        if (!menu.contains(ev.target) && ev.target !== sortPlaylistBtn) {
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+        }
+    }
+
+    setTimeout(() => {
+        document.addEventListener('click', closeMenu, { once: true });
+    }, 0);
 
     updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
@@ -5270,7 +5348,6 @@ sortPlaylistBtn.addEventListener('click', (e) => {
     if (existingMenu) {
         existingMenu.remove();
         document.removeEventListener('click', closeMenu); // ← ここも後で修正必要
-        return;
     }
 
     document.querySelectorAll('.sort-menu').forEach(m => m.remove());
