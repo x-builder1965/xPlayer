@@ -87,9 +87,8 @@ video {
 }
 .filter-panel {
     position: absolute;
-    left: 5%;
-    right: 5%;
     top: 80px;
+    width: 90%;
     max-height: calc(100vh - 220px);
     display: flex;
     flex-direction: column;
