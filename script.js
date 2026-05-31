@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.01.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.02.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -109,6 +109,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.01.2';
 // 2026-05-30 Ver3.99.2 プレイリスト編集 追加（➕）の挿入位置を最終行→選択行に変更。
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
 // 2026-05-30 Ver4.01.2 動画再生中にランダム再生（🔀）をONにしたとき、現在再生中の動画がシャッフル後の先頭に来るように変更。
+// 2026-05-31 Ver4.02.2 再生停止（⏹️）クリック後の動画再生（▶️）の不良対応。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1697,8 +1698,9 @@ function setVideoDurationTime() {
 async function togglePlayPause() {
     isPlaying = true;
     if (videoPlayer.paused) {
-        if (isVideoStopped()) {
+        if (isVideoStopped() || currentVideoIndex === -1) {
             // 動画ソース設定
+            currentVideoIndex = 0;
             const file = playlist[currentVideoIndex].file;
             await setVideoSrc(file);
         }
