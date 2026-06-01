@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.05.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.07.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -66,6 +66,7 @@ video {
     transition: opacity 0.2s ease;
 }
 .filename,
+.filter-panel, 
 .controls {
     position: absolute;
     width: 90%;
@@ -82,24 +83,15 @@ video {
 .filename {
     top: 20px;
 }
-.controls {
-    bottom: 20px;
-}
 .filter-panel {
-    position: absolute;
     top: 80px;
-    width: 90%;
     max-height: calc(100vh - 220px);
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    background: rgba(0, 0, 0, 0.55);
-    padding: 12px;
-    border-radius: 8px;
-    z-index: 900;
     overflow: visible;
     height: auto;
     min-height: 120px;
+}
+.controls {
+    bottom: 20px;
 }
 .filter-panel-header {
     display: flex;
@@ -138,30 +130,14 @@ video {
     border-color: #c41500;
 }
 
-#playlistFilterInput {
-    flex: 1;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 2px solid #007bff;
-    background: rgba(0, 0, 0, 0.8);
+Input#playlistFilterInput {
+    background: rgba(0, 0, 0, 0.5);
     color: #ffffff;
+    border: 1px solid #007bff;
+    border-radius: 5px;
+    padding: 6px 12px;
     font-size: 16px;
-}
-
-#playlistFilterInput:hover {
-    background: rgba(0, 0, 0, 0.9);
-    border-color: #007bff;
-}
-
-#playlistFilterInput:focus {
-    outline: none;
-    background: rgba(0, 0, 0, 0.95);
-    border-color: #ffee00;
-    box-shadow: 0 0 8px rgba(0, 191, 255, 0.4);
-}
-
-#playlistFilterInput::placeholder {
-    color: rgba(255, 255, 255, 0.6);
+    flex: 1;
 }
 
 .playlist-path-area {
