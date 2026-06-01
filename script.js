@@ -163,8 +163,8 @@ const SORT_MODES = {
     random:     { label: '（ランダム）', fn: () => sortRandomPlaylist() }
 };
 const ADD_MODES = {
-    Add0: { label: '選択行に追加',     fn: () => addToPlaylist(0) },
-    Add1: { label: '選択行の下に追加', fn: () => addToPlaylist(1) }
+    Add0: { label: '選択行に追加',     fn: async () => await addToPlaylist(0) },
+    Add1: { label: '選択行の下に追加', fn: async () => await addToPlaylist(1) }
 };
 const languageMap = {
     'jpn': '日本語',
@@ -2732,11 +2732,7 @@ function createAddMenu() {
 
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
-            if (key === 'Add0') {
-                await addToPlaylist(0);  // 選択位置に追加
-            } else if (key === 'Add1') {
-                await addToPlaylist(1);  // 選択位置の次に追加
-            }
+            await ADD_MODES[key].fn();
             clearPlaylistFilter();
             menu.remove();
         });
