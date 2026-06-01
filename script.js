@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.05.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.06.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -113,6 +113,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.05.2';
 // 2026-05-31 Ver4.03.2 再生停止（⏹️）クリックで再生時間を０にリセット。
 // 2026-05-31 Ver4.04.2 プレイリスト編集 追加（➕）に「選択行に追加」「選択行の下に追加」機能追加。
 // 2026-06-01 Ver4.05.2 動画のURLの入力中、フィルタ条件入力中はショートカット無効に変更。
+// 2026-06-01 Ver4.06.2 Homeキー入力時の挙動不良対応。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -3632,7 +3633,7 @@ document.addEventListener('keydown', async (event) => {
     // 先頭動画再生（Home）
     if (event.key === 'Home') {
         if (playlist.length > 1) {
-            localStorage.setItem('currentTime', 0);
+            currentVideoIndex = 0;
             updatePlaylistDisplay();
             await playVideo(playlist[currentVideoIndex].file, 0);
             savePlaylistAndPlaybackState();
