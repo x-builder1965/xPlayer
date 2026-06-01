@@ -107,7 +107,7 @@ video {
     border: 2px solid #007bff;
     background: #007bff;
     color: #ffffff;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -149,7 +149,6 @@ Input#playlistFilterInput {
     background: rgba(0, 0, 0, 0.5);
     color: #ffffff;
     font-size: 16px;
-    font-family: inherit;
     resize: vertical;
     overflow: hidden;
     white-space: pre-wrap;
@@ -196,7 +195,7 @@ Input#playlistFilterInput {
 }
 .filter-empty {
     color: rgba(255, 255, 255, 0.8);
-    font-size: 14px;
+    font-size: 16px;
 }
 #zoomPanel {
     position: absolute;
@@ -219,7 +218,7 @@ Input#playlistFilterInput {
     /* 必要に応じて他のスタイル（width/heightなど）を維持 */
 }
 #zoomDisplay {
-    font-size: 14px;
+    font-size: 16px;
     color: #ffffff;
     text-align: center;
     min-width: 50px;
@@ -414,7 +413,7 @@ select#speedSelect option {
     color: #ffffff;
     padding: 5px 10px;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 16px;
     white-space: nowrap;
     z-index: 1000;
     opacity: 0;
@@ -427,6 +426,7 @@ select#speedSelect option {
 button:hover .tooltip,
 input[type="range"]:hover .tooltip,
 input#urlInput:hover .tooltip,
+input#playlistFilterInput:hover .tooltip,
 select:hover .tooltip {
     top: -30px;
     left: 50%;
@@ -434,8 +434,12 @@ select:hover .tooltip {
 }
 .url-controls {
     display: flex;
-    gap: 10px;
+    gap: 6px;
     display: none;
+}
+.url-controls button {
+    min-width: 36px;   /* または 40px など好みで */
+    flex: 0 0 auto;    /* 縮まないようにしてもOK */
 }
 .icon-overlay {
     position: absolute;
