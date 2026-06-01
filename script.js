@@ -3336,8 +3336,24 @@ window.addEventListener('unload', () => {
 // 🔲document ハンドラ登録🔲
 // ショートカットキー（イベントリスナー）
 document.addEventListener('keydown', async (event) => {
-    if (document.activeElement === urlInput) return;  // 動画のURLの入力中はショートカット無効
-    if (document.activeElement === playlistFilterInput) return;  // フィルタ条件入力中はショートカット無効
+    // 動画のURLの入力中はショートカット無効
+    if (document.activeElement === urlInput) {  
+        // 動画のURLクリア（Escape）
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            urlClearBtn.click();
+        }
+        return;
+    }
+    // フィルタ条件入力中はショートカット無効
+    if (document.activeElement === playlistFilterInput) { 
+        // 🔘フィルタ条件クリア（Escape）
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            filterClearBtn.click();
+        }
+        return; 
+    }
 
     // ■ヘルプ■
     if (isHelpOpen) {
