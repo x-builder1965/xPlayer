@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.08.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.09.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -116,6 +116,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.08.2';
 // 2026-06-01 Ver4.06.2 Homeキー入力時の挙動不良対応。
 // 2026-06-01 Ver4.07.2 フィルタパネルの見た目の改善。
 // 2026-06-01 Ver4.08.2 再生中動画パスを折り返し無効に変更。
+// 2026-06-01 Ver4.09.2 プレイリスト編集 追加（➕→＋）、削除（➖→ー）のアイコンを変更。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -3524,14 +3525,14 @@ document.addEventListener('keydown', async (event) => {
             }
         }
     
-        // ➕動画追加（shift+a）
+        // ＋動画追加（shift+a）
         if (event.shiftKey && event.key.toLowerCase() === 'a') {
             event.preventDefault();
             addPlaylistBtn.click();
             return;
         }
         
-        // ➖動画削除（shift+d）
+        // －動画削除（shift+d）
         if (event.shiftKey && event.key.toLowerCase() === 'd') {
             if (playlist.length > 0) {
                 event.preventDefault();
@@ -5027,7 +5028,7 @@ downMovePlaylistBtn.addEventListener('click', () => {
     downMovePlaylist();
 });
 
-// ➕追加ボタン
+// ＋追加ボタン
 addPlaylistBtn.addEventListener('click', async (e) => {
     clearPlaylistFilter();
     e.stopPropagation();
@@ -5068,7 +5069,7 @@ addPlaylistBtn.addEventListener('click', async (e) => {
     saveShuffleState();
 });
 
-// ➖削除ボタン
+// －削除ボタン
 removePlaylistBtn.addEventListener('click', () => {
     clearPlaylistFilter();
     const selectedIndex = selectedPlaylistIndex >= 0 && selectedPlaylistIndex < playlist.length ? selectedPlaylistIndex : currentVideoIndex;
