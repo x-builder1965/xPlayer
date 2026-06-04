@@ -102,8 +102,8 @@ video {
 
 #addPlaylistBtn,
 #removePlaylistBtn {
-    font-family: "Arial Black", "Impact", sans-serif;
-    font-weight: 900;
+    /* フォントファミリーに Noto Sans JP を指定 */
+    font-family: 'Noto Sans JP', sans-serif;
 }
 
 #filterModeBtn {
