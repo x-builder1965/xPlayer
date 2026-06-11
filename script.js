@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.09.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.10.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
@@ -117,6 +117,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.09.2';
 // 2026-06-01 Ver4.07.2 フィルタパネルの見た目の改善。
 // 2026-06-01 Ver4.08.2 再生中動画パスを折り返し無効に変更。
 // 2026-06-01 Ver4.09.2 プレイリスト編集 追加（➕→＋）、削除（➖→ー）のアイコンを変更。
+// 2026-06-11 Ver4.10.2 再生速度に2.5, 3.0, 5.0を追加。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -152,7 +153,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.09.2';
 const overlayTimeout = 3000;
 const seekSensitivity = 0.3;
 const volumeStep = 0.001;
-const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 5.0];
 const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
 const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
