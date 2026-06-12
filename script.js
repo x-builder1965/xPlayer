@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.11.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.12.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
@@ -16,6 +16,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.11.2';
 // 2026-06-01 Ver4.09.2 プレイリスト編集 追加（➕→＋）、削除（➖→ー）のアイコンを変更。
 // 2026-06-11 Ver4.10.2 再生速度に2.5, 3.0, 5.0を追加。
 // 2026-06-12 Ver4.11.2 プレイリスト編集 追加（＋）に「フォルダ選択」機能を追加。
+// 2026-06-12 Ver4.12.2 プレイリストの並び替え（📩）の「（なし）」クリック時の動作不良対応。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1148,6 +1149,10 @@ async function applySortFiltered(modeKey = currentSortMode) {
     let sorted = [];
 
     if (modeKey === 'none') {
+        const storedOriginalOrder = getStoredOriginalLoadOrder();
+        if (storedOriginalOrder.length > 0) {
+            originalLoadOrder = storedOriginalOrder;
+        }
         sorted = items.slice().sort((a, b) => {
             const ai = originalLoadOrder.indexOf(a.file.path);
             const bi = originalLoadOrder.indexOf(b.file.path);
@@ -2459,14 +2464,26 @@ async function sortByCreationTime(ascending = true) {
     return itemsWithTime;
 }
 
+function getStoredOriginalLoadOrder() {
+    try {
+        const savedOriginalOrder = localStorage.getItem('originalLoadOrder');
+        if (!savedOriginalOrder) return [];
+        const parsed = JSON.parse(savedOriginalOrder);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        console.warn('originalLoadOrder の復元に失敗:', e);
+        return [];
+    }
+}
+
 // 元の順番でプレイリストを再構築するヘルパー関数
 function getPlaylistInOriginalOrder() {
-    if (!originalLoadOrder || originalLoadOrder.length !== playlist.length) {
-        console.warn(
-            'originalLoadOrder が不整合です（長さ不一致）。現在のplaylistをそのまま返します',
-            { originalLength: originalLoadOrder?.length, currentLength: playlist.length }
-        );
-        return [...playlist];
+    const storedOriginalOrder = getStoredOriginalLoadOrder();
+    if (storedOriginalOrder.length > 0) {
+        originalLoadOrder = storedOriginalOrder;
+    } else if (!Array.isArray(originalLoadOrder) || originalLoadOrder.length !== playlist.length) {
+        originalLoadOrder = playlist.map(item => item.file.path);
+        localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
     }
 
     // パス → アイテムのマッピングを作成（高速検索用）
