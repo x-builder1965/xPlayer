@@ -1,112 +1,9 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025 @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.10.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.11.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
-// 2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。
-// 2025-11-10 Ver3.01 プレイリスト操作ショートカットキー追加。
-// 2025-11-10 Ver3.02 起動再開時、一時停止しない問題の対応。
-// 2025-11-11 Ver3.03 動画エラー処理を isHTML5_SUPPORTED で共通化
-// 2025-11-14 Ver3.04 updateIconOverlay()の表示／非表示判定、nextVideoBtn.Click()最終判定の見直し。
-// 2025-11-14 Ver3.05 変換モードの一時ファイル削除（ごみ箱）対応。
-// 2025-11-20 Ver3.06 videoPlayer.src、videoPreviwe.srcのクリア方法見直し。
-// 2025-11-24 Ver3.07 preload.js実装対応。
-// 2025-11-24 Ver3.08 ドラッグ＆ドロップ再生機能追加。
-// 2025-11-25 Ver3.09 アプリ名、コピーライト表記変更。
-// 2025-11-26 Ver3.10 プレイリスト編集の追加（➕）を最後に追加へ変更。
-// 2025-11-30 Ver3.11 プレイリスト保存（💾）のエラー対応。
-// 2025-12-02 Ver3.12 プレイリストの最終動画の終了処理見直し。
-// 2025-12-03 Ver3.13 再生終了時の一時ファイル削除処理見直し。
-// 2025-12-03 Ver3.14 引数再生処理見直し。
-// 2025-12-03 Ver3.15 動画ソース設定、一時ファイル削除見直し。
-// 2025-12-04 Ver3.16 動画変換中にウインドウを閉じた時、一時ファイルを削除。
-// 2025-12-05 Ver3.17 Bluetooth メディアキー対応（0xB7,0xCD,0xE2,0xE9,0xEA,0x192,0x193）
-// 2025-12-18 Ver3.18 urlInputの貼り付け不良対応。
-// 2025-12-22 Ver3.19 再生速度変更機能追加。
-// 2025-12-22 Ver3.20 起動時に発生するワーニング対応。
-// 2026-01-22 Ver3.21 サイズ変更コントロール廃止。
-// 2026-01-23 Ver3.22 YouTuneの埋め込み再生廃止。
-// 2026-01-28 Ver3.23 変換モードの実行時の進捗状況をシークバーに表示。
-// 2026-02-15 Ver3.24 カット編集機能（✂️）追加。
-// 2026-02-15 Ver3.25 カット編集機能の改善。
-// 2026-02-25 Ver3.26 ズーム機能（🔍）追加（-90%～+90%）。
-// 2026-02-25 Ver3.27 ズーム機能をドロップダウンから縦型スライダー(-100%～+100%)に変更。
-// 2026-02-25 Ver3.28 ズームモード中のショートカットキー追加（Ctrl+↑/↓/0）。
-// 2026-02-25 Ver3.29 ズームモード中の画像移動機能追加。
-// 2026-02-26 Ver3.30 ズームリセットボタン追加。
-// 2026-02-26 Ver3.31 ズームパネルをサイズ調整に対応。
-// 2026-02-26 Ver3.32 ズームパネルにズーム終了ボタン追加。
-// 2026-02-27 Ver3.33 ズームモード中の←、→の移動量を詳細化。
-// 2026-02-27 Ver3.34 スナップショット機能（📷）追加準備と微調整
-// 2026-02-27 Ver3.35 再生速度の保存と復元の追加
-// 2026-03-01 Ver3.36 カット編集の全クリア機能追加。
-// 2026-03-02 Ver3.37 ネット動画再生操作変更。
-// 2026-03-03 Ver3.38 スナップショット機能追加。
-// 2026-03-03 Ver3.39 ズームパネルの透過率調整。
-// 2026-03-03 Ver3.40 スナップショット起動時パネル非表示。
-// 2026-03-03 Ver3.41 Url入力（🌐）にクリアボタン（🆑）追加。
-// 2026-03-04 Ver3.42 クリップボード読み込み関連処理の見直し修正。
-// 2026-03-05 Ver3.43 カット編集の実装見直し修正。
-// 2026-03-06 Ver3.44 カット編集時のクラッシュ（FFmpegメモリリーク）対応（対応限界）。
-// 2026-03-07 Ver3.45 ランダム再生（🔀）（Ctrl+r）／繰り返し再生（🔁）（Ctrl+Shift+r）機能追加。
-// 2026-03-07 Ver3.46 カット編集機能（✂️）のクラッシュ対応。
-// 2026-03-07 Ver3.47 カット編集中（✂️）の疑似再生機能、カット範囲表示機能追加。
-// 2026-03-07 Ver3.48 ズームモード中（🔍）マウスホイールで拡大縮小。
-// 2026-03-08 Ver3.49 カット編集機能（✂️）のクラッシュ対応の最適化。
-// 2026-03-09 Ver3.50 シークバーの挙動改善。
-// 2026-03-10 Ver3.51 結合編集（🎞️）機能追加。
-// 2026-03-11 Ver3.52 プレイリスト並び替え（📩）（Shift+m）機能追加。
-// 2026-03-11 Ver3.53 １動画繰り返し再生（🔂）（Ctrl+Shift+r）機能追加。
-// 2026-03-12 Ver3.54 ショートカット・オーバーレイメッセージの見直し。
-// 2026-03-12 Ver3.55 結合編集のfps設定を改善。
-// 2026-03-12 Ver3.56 マウス自動非表示機能追加。
-// 2026-03-13 Ver3.57 ✂️・📚・🌐・🔍・🖥️ボタンのトグル表現を変更。
-// 2026-03-13 Ver3.58 アイコンオーバーレイのサイズ調整。
-// 2026-03-13 Ver3.59 ソースコードの誤り、不要、矛盾の調査・修正。
-// 2026-03-13 Ver3.60 FullscrrenのON／OFFで背景色を統一。
-// 2026-03-13 Ver3.61 ホイール（ズーム量）時のコントロールパネル・プレイリストパネル表示抑止。
-// 2026-03-14 Ver3.62 処理の問題点・脆弱性対応。
-// 2026-03-14 Ver3.63 css（#zoomBar）の記載警告対応。
-// 2026-03-14 Ver3.64 初期化時の空srcエラー抑止対応。
-// 2026-03-14 Ver3.65 main,jsでブラウザ起動対応。
-// 2026-03-14 Ver3.66 原因不明のツールチップ変更不良の誤認防止対応。
-// 2026-03-14 Ver3.67 ツールチップ変更不良正式対応。
-// 2026-03-14 Ver3.68 カット編集機能（✂️）のシークバードラック時ワイプ表示。
-// 2026-03-14 Ver3.69 プレイリスト最終の動画終了時の挙動改善。
-// 2026-03-14 Ver3.70 画面サイズに合わせてプレビューのサイズ調整。
-// 2026-03-17 Ver3.71.1 初期処理をDOMContentLoadedイベント内の処理に変更。
-// 2026-03-17 Ver3.72.1 プレイリスト編集で動画削除（）時の次動画再生開始位置の不良対応。
-// 2026-03-19 Ver3.73.1 コントロールパネル、プレイリストパネルの活性・非活性処理見直し。
-// 2026-03-19 Ver3.74.2 動画変換（🔄️）mp4→mp4変換、字幕切出など追加。
-// 2026-03-19 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step1完了）
-// 2026-03-22 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step2完了）
-// 2026-03-22 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step3･4完了）
-// 2026-03-24 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step5完了）
-// 2026-03-24 Ver3.76.2 字幕なし動画に前再生中の動画の字幕が表示される問題対応。
-// 2026-03-24 Ver3.77.2 字幕メニューの項目表記見直し。
-// 2026-03-19 Ver3.78.2 再生速度の復元不良、不要ロジックの見直し。（mainブランチ差分取り込み）
-// 2026-03-19 Ver3.79.2 動画結合の「結合中… xxxx%」の異常値表示対応。（mainブランチ差分取り込み）
-// 2026-03-25 Ver3.80.2 字幕メニュー選択時の字幕ファイルなし警告表示。
-// 2026-03-28 Ver3.81.2 動画変換中の進捗表示改善・一時ファイル削除不良対応。
-// 2026-03-28 Ver3.82.2 動画変換時の一時フォルダを%AppData\Local\Tempに現行。
-// 2026-03-30 Ver3.83.2 背景壁紙（🖼️）の取り込み機能追加。
-// 2026-03-30 Ver3.84.2 動画変換の一時ファイル削除処理見直し。
-// 2026-03-31 Ver3.85.2 ボタンのスタイル（色）見直し。
-// 2026-03-31 Ver3.86.2 縦ドラック時の音量調整。
-// 2026-03-31 Ver3.87.2 ZoomPanelの枠線削除。
-// 2026-05-28 Ver3.88.2 プレイリストのフィルタ機能（▼）追加。
-// 2026-05-28 Ver3.89.2 フィルタリストパネルの位置調整（編集コントロールの有無で位置を変える）。
-// 2026-05-28 Ver3.90.2 フィルタリストパネルとカット編集パネルの同時表示を抑止。
-// 2026-05-28 Ver3.91.2 プレイリストをフィルタリストに統合する。
-// 2026-05-29 Ver3.92.2 並び替えメニュー選択時の挙動不正対応。
-// 2026-05-29 Ver3.93.2 フィルタリスト内の行数に合わせてフィルタリストパネルの高さを動的に調整。
-// 2026-05-29 Ver3.94.2 フィルタ条件クリア後、再生中アイテムの位置にスクロールする。
-// 2026-05-29 Ver3.95.2 フィルタ条件の改善。（スペースで区切られた複数語句のAND条件対応、フィルタ条件の履歴管理とlocalStrage保存・復元）
-// 2026-05-30 Ver3.96.2 プレイリスト編集メニュー（📚）の廃止と各編集ボタン（📩🔼🔽➕➖🆑💾🆑）の配置変更。
-// 2026-05-30 Ver3.97.2 プレイリストの操作方法の見直し。
-// 2026-05-30 Ver3.98.2 プレイリストの並び替え実施後、選択動画の位置に現在再生中の動画行の位置を設定しスクロールするように変更。
-// 2026-05-30 Ver3.99.2 プレイリスト編集 追加（➕）の挿入位置を最終行→選択行に変更。
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
 // 2026-05-30 Ver4.01.2 動画再生中にランダム再生（🔀）をONにしたとき、現在再生中の動画がシャッフル後の先頭に来るように変更。
 // 2026-05-31 Ver4.02.2 再生停止（⏹️）クリック後の動画再生（▶️）の不良対応。
@@ -118,6 +15,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.10.2';
 // 2026-06-01 Ver4.08.2 再生中動画パスを折り返し無効に変更。
 // 2026-06-01 Ver4.09.2 プレイリスト編集 追加（➕→＋）、削除（➖→ー）のアイコンを変更。
 // 2026-06-11 Ver4.10.2 再生速度に2.5, 3.0, 5.0を追加。
+// 2026-06-12 Ver4.11.2 プレイリスト編集 追加（＋）に「フォルダ選択」機能を追加。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -402,7 +300,7 @@ let originalLoadOrder = [];  // プレイリストの「最初に読み込まれ
 let hideMouseTimeout = null;
 let editFrameRate = 30;
 let currentSortMode = '（なし）';
-let currentAddMode = 0;
+let currentAddMode = 'Add0';
 let selectedAudioLabel = '日本語';
 let selectedAudioTrack = [];
 let selectedSubtitleLabel = '（なし）';
@@ -1189,7 +1087,7 @@ function updateFilterList() {
         button.dataset.index = index;
         if (index === currentVideoIndex) button.classList.add('current');
         if (index === selectedPlaylistIndex) button.classList.add('selected');
-        const displayText = item.name || item.file?.path || '無題';
+        const displayText = item.file?.path || item.name || '無題';
         const showPlaybackIcon = index === currentVideoIndex && !isVideoStopped();
         button.textContent = (showPlaybackIcon ? '▶️ ' : '') + displayText;
         button.title = item.file?.path || '';
@@ -2081,40 +1979,61 @@ function updateEditModeButtonUI() {
     }
 }
 
+function getPlaylistInsertIndex(addPosition = 0) {
+    const selectedIndex = selectedPlaylistIndex >= 0 && selectedPlaylistIndex < playlist.length ? selectedPlaylistIndex : -1;
+    const fallbackIndex = currentVideoIndex >= 0 && currentVideoIndex < playlist.length ? currentVideoIndex : 0;
+    const baseIndex = selectedIndex >= 0 ? selectedIndex : fallbackIndex;
+    return Math.max(0, baseIndex + addPosition);
+}
+
+function getCurrentAddModePosition() {
+    return currentAddMode === 'Add1' ? 1 : 0;
+}
+
+async function insertFilesIntoPlaylist(files, addPosition = 0) {
+    if (!files || files.length === 0) return;
+
+    const normalizedFiles = files
+        .map(file => ({
+            path: file?.path || file?.file?.path || null,
+            name: file?.name || path.basename(file?.path || file?.file?.path || '')
+        }))
+        .filter(file => file.path);
+
+    if (normalizedFiles.length === 0) return;
+
+    const insertIndex = getPlaylistInsertIndex(addPosition);
+    const formattedFiles = normalizedFiles.map(f => ({ file: { path: f.path }, name: f.name }));
+    playlist.splice(insertIndex, 0, ...formattedFiles);
+    if (selectedPlaylistIndex < 0) selectedPlaylistIndex = insertIndex;
+
+    if (currentVideoIndex >= 0 && insertIndex <= currentVideoIndex) {
+        currentVideoIndex += formattedFiles.length;
+    }
+
+    // ★ 追加後も「現在のプレイリスト順」を「なし」の基準とする
+    const currentPaths = playlist.map(item => item.file.path);
+    originalLoadOrder = [...currentPaths];
+    localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
+
+    // shuffleOrder の最後に追加
+    if (shuffleOrder && shuffleOrder.length > 0) {
+        shuffleOrder.push(playlist.length - 1);
+    }
+
+    updatePlaylistDisplay();
+    savePlaylistAndPlaybackState();
+    resetShuffle();
+    saveShuffleState();
+    showControlsAndFilename();
+}
+
 // プレイリスト追加
 async function addToPlaylist(addPosition = 0) {
     try {
         const files = await openVideoDialog();
         if (!files || files.length === 0) return;
-
-        const newFiles = files.map(file => ({ path: file.path, name: file.path }));
-
-        let insertIndex = selectedPlaylistIndex + addPosition;
-        const formattedFiles = newFiles.map(f => ({ file: { path: f.path }, name: f.name }));
-        playlist.splice(insertIndex, 0, ...formattedFiles);
-        if (selectedPlaylistIndex < 0) selectedPlaylistIndex = insertIndex;
-
-        // 新しい再生中インデックスを計算
-        if (insertIndex <= currentVideoIndex) {
-            currentVideoIndex += formattedFiles.length;
-        }
-
-        // ★ 追加後も「現在のプレイリスト順」を「なし」の基準とする
-        const currentPaths = playlist.map(item => item.file.path);
-        originalLoadOrder = [...currentPaths];
-        localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
-
-        // shuffleOrder の最後に追加
-        if (shuffleOrder && shuffleOrder.length > 0) {
-            shuffleOrder.push(playlist.length - 1);
-        }
-
-        updatePlaylistDisplay();
-        savePlaylistAndPlaybackState();
-        resetShuffle();
-        saveShuffleState();
-
-        showControlsAndFilename();
+        await insertFilesIntoPlaylist(files, addPosition);
     } catch (e) {
         console.error('追加エラー:', e);
         updateOverlayDisplay('📚 動画追加に失敗', false, 5000);
@@ -2710,6 +2629,76 @@ if (isRepeatPlayMode === 'none') {
 }
 
 // プレイリスト追加ポップアップメニュー作成関数
+function buildAddMenuContent(menu) {
+    menu.innerHTML = '';
+
+    const createMenuItem = (label, isSelected = false, onClick = null) => {
+        const item = document.createElement('div');
+        item.style.padding = '8px 16px';
+        item.style.cursor = 'pointer';
+        item.style.whiteSpace = 'nowrap';
+        item.style.color = isSelected ? '#00ccff' : '#eee';
+        item.innerHTML = label;
+
+        if (onClick) {
+            item.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                await onClick();
+            });
+        }
+
+        item.addEventListener('mouseover', () => {
+            item.style.background = 'rgba(0,123,255,0.2)';
+        });
+        item.addEventListener('mouseout', () => {
+            item.style.background = 'none';
+        });
+
+        return item;
+    };
+
+    const folderItem = createMenuItem('📁 フォルダ選択', false, async () => {
+        menu.remove();
+        try {
+            const files = await openFolderDialog();
+            if (files && files.length > 0) {
+                await insertFilesIntoPlaylist(files, getCurrentAddModePosition());
+            }
+        } catch (e) {
+            console.error('フォルダ追加エラー:', e);
+            updateOverlayDisplay('📚 フォルダ追加に失敗', false, 5000);
+        }
+    });
+    menu.appendChild(folderItem);
+
+    const fileItem = createMenuItem('🗒️ ファイル選択', false, async () => {
+        menu.remove();
+        try {
+            const files = await openVideoDialog();
+            if (files && files.length > 0) {
+                await insertFilesIntoPlaylist(files, getCurrentAddModePosition());
+            }
+        } catch (e) {
+            console.error('ファイル追加エラー:', e);
+            updateOverlayDisplay('📚 ファイル追加に失敗', false, 5000);
+        }
+    });
+    menu.appendChild(fileItem);
+
+    const separator = document.createElement('div');
+    separator.style.margin = '6px 0';
+    separator.style.borderTop = '1px solid #666';
+    menu.appendChild(separator);
+
+    Object.entries(ADD_MODES).forEach(([key, {label}]) => {
+        const item = createMenuItem((currentAddMode === key ? '✅ ' : '　　') + label, currentAddMode === key, async (event) => {
+            currentAddMode = key;
+            buildAddMenuContent(menu);
+        });
+        menu.appendChild(item);
+    });
+}
+
 function createAddMenu() {
     const menu = document.createElement('div');
     menu.className = 'sort-menu';  // CSSで位置・スタイルを調整
@@ -2719,38 +2708,14 @@ function createAddMenu() {
     menu.style.borderRadius = '6px';
     menu.style.padding = '6px 0';
     menu.style.zIndex = '1001';
-    menu.style.minWidth = '160px';
+    menu.style.minWidth = '180px';
     menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
     menu.style.whiteSpace = 'pre';        // ← これが大事！タブを保持
     menu.style.fontFamily = 'monospace';  // 等幅フォントで揃えやすくする
     menu.style.lineHeight = '1.0';
     menu.style.fontSize = '16px';
 
-    Object.entries(ADD_MODES).forEach(([key, {label}]) => {
-        const item = document.createElement('div');
-        item.style.padding = '8px 16px';
-        item.style.cursor = 'pointer';
-        item.style.whiteSpace = 'nowrap';
-        item.style.color = currentAddMode === key ? '#00ccff' : '#eee';
-        item.innerHTML = label;
-
-        item.addEventListener('click', async (event) => {
-            event.stopPropagation();
-            await ADD_MODES[key].fn();
-            clearPlaylistFilter();
-            menu.remove();
-        });
-
-        item.addEventListener('mouseover', () => {
-            item.style.background = 'rgba(0,123,255,0.2)';
-        });
-        item.addEventListener('mouseout', () => {
-            item.style.background = 'none';
-        });
-
-        menu.appendChild(item);
-    });
-
+    buildAddMenuContent(menu);
     return menu;
 }
 
