@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------
-const copyright = 'Copyright © 2025 @x-builder, Japan';
+const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
 const appName = 'xPlayer -動画プレイヤー- Ver3.83.2';
 // ---------------------------------------------------------------------
