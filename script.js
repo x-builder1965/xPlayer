@@ -957,7 +957,7 @@ function updateOverlayDisplay(content, isInitial = false, autoHideAfter = 3000) 
     overlayDisplay.textContent = content;
     const overlayFontSize = parseFloat(overlayDisplay.style.fontSize) || 90;
     const charCount = content.length;
-    const charWidth = overlayFontSize * 0.6;
+    const charWidth = overlayFontSize * 0.8; // サイズ変更
     let overlayWidth = charCount * charWidth + 40;
     overlayWidth = Math.max(200, Math.min(overlayWidth, window.innerWidth * 0.8));
     overlayDisplay.style.width = `${overlayWidth}px`;
