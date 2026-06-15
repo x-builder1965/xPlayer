@@ -771,7 +771,7 @@ function hideControlsAndFilename() {
     disabledControls(true);
     disabledfilename(true);
     overlayDisplay.classList.remove('active');
-    hideMenus(); // 追加：コントロール非表示時にメニューも強制非表示
+    hideControlsAndFilenameMenus(); // 追加：コントロール非表示時にメニューも強制非表示
     clearTimeout(timeout);
     setTimeout(() => {
         overlayDisplay.style.display = 'none';
@@ -787,17 +787,18 @@ function hideControlsAndFilename() {
 }
 
 // メニュー非表示（プレイリスト並び替えメニューなど）
-function hideMenus() {
+function hideControlsAndFilenameMenus() {
     // 追加：開いている可能性のあるすべてのコンテキストメニューを強制非表示
-    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(el => {
+    document.querySelectorAll('.sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(el => {
         el.remove();  // または el.style.display = 'none';
     });
+}
 
-    // 念のためbody直下のfloat系メニューも掃除（必要に応じてクラス指定を厳しくする）
-    document.querySelectorAll('body > .menu, body > [class*="menu"]').forEach(el => {
-        if (!el.contains(sortPlaylistBtn)) {  // ボタン自身が含まれるものは除外したい場合は
-            el.remove();
-        }
+// メニュー非表示（プレイリスト並び替えメニューなど）
+function hideZoomPanelMenus() {
+    // 追加：開いている可能性のあるすべてのコンテキストメニューを強制非表示
+    document.querySelectorAll('.aspect-ratio-menu').forEach(el => {
+        el.remove();  // または el.style.display = 'none';
     });
 }
 
@@ -897,9 +898,6 @@ function applyAspectRatioSetting() {
     videoContainer.style.justifyContent = 'center';
     videoContainer.style.alignItems = 'center';
     localStorage.setItem('aspectRatio', currentAspectRatio);
-    if (aspectRatioBtn) {
-        aspectRatioBtn.setAttribute('data-tooltip', 'アスペクト比設定');
-    }
 }
 
 function createAspectRatioMenu() {
@@ -2904,7 +2902,9 @@ async function toggleTrackMenu(e, type, button) {
         existingMenu.remove();
     }
 
-    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .add-playlist-menu').forEach(m => m.remove());
+    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .add-playlist-menu').forEach(m => {
+        m.remove();
+    });
 
     // 動画音声トラック・字幕トラック取得
     const filePath = playlist[currentVideoIndex].file.path;
@@ -4296,6 +4296,13 @@ function updateFilterHistoryDatalist() {
     });
 }
 
+// ドキュメント全体のクリックでコントロールやメニューを隠す
+document.addEventListener('click', () => {
+    hideControlsAndFilenameMenus();
+    hideZoomPanelMenus();
+});
+
+// プレイリストフィルタ入力
 playlistFilterInput.addEventListener('input', () => {
     filterText = playlistFilterInput.value || '';
     updateFilterList();
@@ -4350,13 +4357,14 @@ repeatPlayBtn.addEventListener('click', () => {
 // アスペクト比設定ボタン
 aspectRatioBtn.addEventListener('click', (event) => {
     event.stopPropagation();
-    hideMenus();
     const existingMenu = document.querySelector('.aspect-ratio-menu');
     if (existingMenu) {
         existingMenu.remove();
     }
 
-    document.querySelectorAll('.sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(m => m.remove());
+    document.querySelectorAll('.sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(m => {
+        m.remove();
+    });
 
     const menu = createAspectRatioMenu();
     document.body.appendChild(menu);
@@ -4367,12 +4375,6 @@ aspectRatioBtn.addEventListener('click', (event) => {
     menu.style.top = `${Math.max(8, rect.top + 2)}px`;
     menu.style.left = `${leftPosition}px`;
     menu.style.position = 'fixed';
-});
-
-document.addEventListener('click', (event) => {
-    if (!event.target.closest('.aspect-ratio-menu') && !event.target.closest('#aspectRatioBtn')) {
-        hideMenus();
-    }
 });
 
 // ズームスライダー変更
@@ -4417,6 +4419,7 @@ snapshotBtn.addEventListener('click', async () => {
 // ❌ズーム終了（Ctrl+z）
 zoomEndBtn.addEventListener('click', () => {
     isZoomMode = false;
+    hideZoomPanelMenus();
     zoomPanel.style.display = 'none';
     zoomBtn.textContent = '🔍';
     zoomBtn.classList.remove('mode-active');
@@ -5171,7 +5174,9 @@ addPlaylistBtn.addEventListener('click', async (e) => {
         document.removeEventListener('click', closeMenu); // ← ここも後で修正必要
     }
 
-    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .track-menu').forEach(m => m.remove());
+    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .track-menu').forEach(m => {
+        m.remove();
+    });
 
     const targetContainer = document.fullscreenElement || mainContainer;
     const menu = createAddMenu();
@@ -5502,7 +5507,9 @@ sortPlaylistBtn.addEventListener('click', (e) => {
         document.removeEventListener('click', closeMenu); // ← ここも後で修正必要
     }
 
-    document.querySelectorAll('.aspect-ratio-menu, .add-playlist-menu, .track-menu').forEach(m => m.remove());
+    document.querySelectorAll('.aspect-ratio-menu, .add-playlist-menu, .track-menu').forEach(m => {
+        m.remove();
+    });
 
     const targetContainer = document.fullscreenElement || mainContainer;
     const menu = createSortMenu();
