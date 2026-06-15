@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.13.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.14.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -738,10 +738,12 @@ caption {
 #zoomBtn.mode-active,
 #fullscreenBtn.mode-active,
 button#modeChangeBtn.convert-active,
-#repeatPlayBtn.repeat-all {
+#repeatPlayBtn.repeat-all,
+#fitModeBtn.fitMode-cover {
     background: #e63946 !important;   /* 赤系：有効 */
 }
-#repeatPlayBtn.repeat-single {
+#repeatPlayBtn.repeat-single,
+#fitModeBtn.fitMode-fill {
     background: #f4d03f !important;   /* 黄系：１動画 */
 }
 .mode-active:hover,
