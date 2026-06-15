@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.14.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.15.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
@@ -19,6 +19,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.14.2';
 // 2026-06-12 Ver4.12.2 プレイリストの並び替え（📩）の「（なし）」クリック時の動作不良対応。
 // 2026-06-15 Ver4.13.2 アスペクト比設定（📺）機能追加。
 // 2026-06-15 Ver4.14.2 描画モードの切替（↔️／↕️／⏺️）の機能見直し。
+// 2026-06-15 Ver4.15.2 フルスクリーン時、アスペクト比設定（📺）のメニューが表示されない問題の対応。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -4377,24 +4378,38 @@ repeatPlayBtn.addEventListener('click', () => {
 // アスペクト比設定ボタン
 aspectRatioBtn.addEventListener('click', (event) => {
     event.stopPropagation();
+
     const existingMenu = document.querySelector('.aspect-ratio-menu');
     if (existingMenu) {
         existingMenu.remove();
+        document.removeEventListener('click', closeMenu);
     }
 
     document.querySelectorAll('.sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(m => {
         m.remove();
     });
 
+    const targetContainer = document.fullscreenElement || mainContainer;
     const menu = createAspectRatioMenu();
-    document.body.appendChild(menu);
+    const containerRect = targetContainer.getBoundingClientRect();
+    const btnRect = aspectRatioBtn.getBoundingClientRect();
 
-    const rect = aspectRatioBtn.getBoundingClientRect();
-    const menuWidth = menu.offsetWidth || 220;
-    const leftPosition = Math.max(8, rect.left - menuWidth - 2);
-    menu.style.top = `${Math.max(8, rect.top + 2)}px`;
-    menu.style.left = `${leftPosition}px`;
-    menu.style.position = 'fixed';
+    menu.style.position = 'absolute';
+    menu.style.left = `${Math.max(8, btnRect.left - containerRect.left - (menu.offsetWidth || 220) - 2)}px`;
+    menu.style.top = `${Math.max(8, btnRect.top - containerRect.top + 2)}px`;
+
+    targetContainer.appendChild(menu);
+
+    function closeMenu(ev) {
+        if (!menu.contains(ev.target) && ev.target !== aspectRatioBtn) {
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+        }
+    }
+
+    setTimeout(() => {
+        document.addEventListener('click', closeMenu, { once: true });
+    }, 0);
 });
 
 // ズームスライダー変更
