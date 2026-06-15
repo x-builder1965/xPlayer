@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.12.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.13.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
@@ -17,6 +17,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.12.2';
 // 2026-06-11 Ver4.10.2 再生速度に2.5, 3.0, 5.0を追加。
 // 2026-06-12 Ver4.11.2 プレイリスト編集 追加（＋）に「フォルダ選択」機能を追加。
 // 2026-06-12 Ver4.12.2 プレイリストの並び替え（📩）の「（なし）」クリック時の動作不良対応。
+// 2026-06-15 Ver4.13.2 アスペクト比設定（📺）機能追加。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -68,6 +69,14 @@ const SORT_MODES = {
 const ADD_MODES = {
     Add0: { label: '選択行に追加',     fn: async () => await addToPlaylist(0) },
     Add1: { label: '選択行の下に追加', fn: async () => await addToPlaylist(1) }
+};
+const ASPECT_NODES = {
+    none: { label: '（なし）', value: null },
+    '4:3': { label: '4:3 旧テレビ', value: '4 / 3' },
+    '16:9': { label: '16:9 テレビ', value: '16 / 9' },
+    '18:9': { label: '18:9 テレビ', value: '18 / 9' },
+    '21:9': { label: '21:9 シネマ', value: '21 / 9' },
+    '9:16': { label: '9:16 スマホ', value: '9 / 16' }
 };
 const languageMap = {
     'jpn': '日本語',
@@ -175,6 +184,7 @@ const zoomBar = document.getElementById('zoomBar');
 const zoomDisplay = document.getElementById('zoomDisplay');
 const zoomResetBtn = document.getElementById('zoomResetBtn');
 const snapshotBtn = document.getElementById('snapshotBtn');
+const aspectRatioBtn = document.getElementById('aspectRatioBtn');
 const zoomEndBtn = document.getElementById('zoomEndBtn');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 const fitModeBtn = document.getElementById('fitModeBtn');
@@ -241,6 +251,7 @@ const savedIsRandomPlayMode = localStorage.getItem('isRandomPlayMode');
 const savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode');
 const savedShuffleOrder = localStorage.getItem('shuffleOrder');
 const savedShufflePosition = localStorage.getItem('shufflePosition');
+const savedAspectRatio = localStorage.getItem('aspectRatio');
 const cutTimelineContainer = document.getElementById('cutTimelineContainer');
 const cutTimelineBar = document.getElementById('cutTimelineBar');
 const savedCurrentSortMode = localStorage.getItem('playlistSortMode');
@@ -314,6 +325,7 @@ let currentAudioTrack = null;
 let currentSubtitleTrack = null;
 let delConvertFile = null;
 let playlistPathArea = null;
+let currentAspectRatio = 'none';
 
 //🔲初期処理🔲
 document.addEventListener('DOMContentLoaded', () => {
@@ -402,6 +414,14 @@ document.addEventListener('DOMContentLoaded', () => {
         fitModeBtn.textContent = '↔️';
         fitModeBtn.setAttribute('data-tooltip', '横に合わせる（Ctrl+x）');
     }
+
+    // アスペクト比復元
+    if (savedAspectRatio && ASPECT_NODES[savedAspectRatio]) {
+        currentAspectRatio = savedAspectRatio;
+    } else {
+        currentAspectRatio = 'none';
+    }
+    applyAspectRatioSetting();
 
     // ズーム値復元
     if (savedZoom && !isNaN(savedZoom)) {
@@ -769,7 +789,7 @@ function hideControlsAndFilename() {
 // メニュー非表示（プレイリスト並び替えメニューなど）
 function hideMenus() {
     // 追加：開いている可能性のあるすべてのコンテキストメニューを強制非表示
-    document.querySelectorAll('.sort-menu, .context-menu, .dropdown-menu').forEach(el => {
+    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(el => {
         el.remove();  // または el.style.display = 'none';
     });
 
@@ -836,6 +856,95 @@ function applyZoom(zoomPercent) {
     if (isZoomMode) {
         updateOverlayDisplay(`🔍 ${zoomValue > 0 ? '+' : ''}${zoomValue}%`);
     }
+}
+
+function applyAspectRatioSetting() {
+    const selectedOption = ASPECT_NODES[currentAspectRatio];
+
+    if (!selectedOption || currentAspectRatio === 'none') {
+        videoPlayer.style.aspectRatio = '';
+        videoPlayer.style.width = '100%';
+        videoPlayer.style.height = '100%';
+        videoPlayer.style.maxWidth = '100%';
+        videoPlayer.style.maxHeight = '100%';
+        videoPlayer.style.objectFit = fitMode;
+        videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${(100 + zoomValue) / 100})`;
+    } else {
+        const [width, height] = selectedOption.value.split(' / ').map(Number);
+        const ratio = width / height;
+        const containerWidth = videoContainer.clientWidth || window.innerWidth;
+        const containerHeight = videoContainer.clientHeight || window.innerHeight;
+        const maxWidth = containerWidth * 1.0;
+        const maxHeight = containerHeight * 1.0;
+        let targetWidth = maxWidth;
+        let targetHeight = targetWidth / ratio;
+
+        if (targetHeight > maxHeight) {
+            targetHeight = maxHeight;
+            targetWidth = targetHeight * ratio;
+        }
+
+        videoPlayer.style.aspectRatio = `${width} / ${height}`;
+        videoPlayer.style.width = `${Math.round(targetWidth)}px`;
+        videoPlayer.style.height = `${Math.round(targetHeight)}px`;
+        videoPlayer.style.maxWidth = '100vw';
+        videoPlayer.style.maxHeight = '100vh';
+        videoPlayer.style.objectFit = 'fill';
+        videoPlayer.style.margin = '0 auto';
+        videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${(100 + zoomValue) / 100})`;
+    }
+
+    videoContainer.style.justifyContent = 'center';
+    videoContainer.style.alignItems = 'center';
+    localStorage.setItem('aspectRatio', currentAspectRatio);
+    if (aspectRatioBtn) {
+        aspectRatioBtn.setAttribute('data-tooltip', 'アスペクト比設定');
+    }
+}
+
+function createAspectRatioMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'aspect-ratio-menu';
+    menu.style.position = 'fixed';
+    menu.style.background = 'rgba(30,30,30,0.95)';
+    menu.style.border = '1px solid #444';
+    menu.style.borderRadius = '6px';
+    menu.style.padding = '6px 0';
+    menu.style.zIndex = '1001';
+    menu.style.minWidth = '220px';
+    menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
+    menu.style.whiteSpace = 'pre';
+    menu.style.fontFamily = 'monospace';
+    menu.style.lineHeight = '1.0';
+    menu.style.fontSize = '16px';
+
+    Object.entries(ASPECT_NODES).forEach(([key, { label }]) => {
+        const item = document.createElement('div');
+        item.style.padding = '8px 16px';
+        item.style.cursor = 'pointer';
+        item.style.whiteSpace = 'nowrap';
+        item.style.color = currentAspectRatio === key ? '#00ccff' : '#eee';
+        item.innerHTML = (currentAspectRatio === key ? '✅ ' : '　　') + label;
+
+        item.addEventListener('click', (event) => {
+            event.stopPropagation();
+            currentAspectRatio = key;
+            applyAspectRatioSetting();
+            menu.remove();
+            updateOverlayDisplay(`📺 ${label}`, false, 1500);
+        });
+
+        item.addEventListener('mouseover', () => {
+            item.style.background = 'rgba(0,123,255,0.2)';
+        });
+        item.addEventListener('mouseout', () => {
+            item.style.background = 'none';
+        });
+
+        menu.appendChild(item);
+    });
+
+    return menu;
 }
 
 // オーバーレイ表示
@@ -2570,7 +2679,7 @@ async function applySort(modeKey = currentSortMode) {
 // 並び替えポップアップメニュー作成関数
 function createSortMenu() {
     const menu = document.createElement('div');
-    menu.className = 'sort-menu';  // CSSで位置・スタイルを調整
+    menu.className = 'sort-playlist-menu';  // CSSで位置・スタイルを調整
     menu.style.position = 'absolute';
     menu.style.background = 'rgba(30,30,30,0.95)';
     menu.style.border = '1px solid #444';
@@ -2718,7 +2827,7 @@ function buildAddMenuContent(menu) {
 
 function createAddMenu() {
     const menu = document.createElement('div');
-    menu.className = 'sort-menu';  // CSSで位置・スタイルを調整
+    menu.className = 'add-playlist-menu';  // CSSで位置・スタイルを調整
     menu.style.position = 'absolute';
     menu.style.background = 'rgba(30,30,30,0.95)';
     menu.style.border = '1px solid #444';
@@ -2790,10 +2899,12 @@ async function toggleTrackMenu(e, type, button) {
     }
 
     // メニュー非表示
-    const existingMenu = document.querySelector('.sort-menu');
+    const existingMenu = document.querySelector('.track-menu');
     if (existingMenu) {
         existingMenu.remove();
     }
+
+    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .add-playlist-menu').forEach(m => m.remove());
 
     // 動画音声トラック・字幕トラック取得
     const filePath = playlist[currentVideoIndex].file.path;
@@ -2857,7 +2968,7 @@ async function toggleTrackMenu(e, type, button) {
 // 字幕メニュー・音声メニュー作成
 function createTrackMenu(type) {  // 'audio' or 'subtitle'
     const menu = document.createElement('div');
-    menu.className = 'sort-menu';
+    menu.className = 'track-menu';
     menu.style.background = 'rgba(30,30,30,0.95)';
     menu.style.border = '1px solid #444';
     menu.style.borderRadius = '6px';
@@ -3430,6 +3541,13 @@ document.addEventListener('keydown', async (event) => {
         if (event.ctrlKey && event.key === '0') {
             event.preventDefault();
             zoomResetBtn.click();
+            return;
+        }
+
+        // 📺アスペクト比設定（Ctrl+u）
+        if (event.ctrlKey && event.key === 'u') {
+            event.preventDefault();
+            aspectRatioBtn.click();
             return;
         }
 
@@ -4094,6 +4212,7 @@ fitModeBtn.addEventListener('click', () => {
     fitModeBtn.textContent = fitMode === 'contain' ? '↔️' : '↕️';
     fitModeBtn.setAttribute('data-tooltip', fitMode === 'contain' ? '横に合わせる（Ctrl+x）' : '縦に合わせる（Ctrl+x）');
     localStorage.setItem('fitMode', fitMode);
+    applyAspectRatioSetting();
     showControlsAndFilename();
     updateIconOverlay();
 });
@@ -4228,6 +4347,34 @@ repeatPlayBtn.addEventListener('click', () => {
     toggleRepeatPlay();
 });
 
+// アスペクト比設定ボタン
+aspectRatioBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    hideMenus();
+    const existingMenu = document.querySelector('.aspect-ratio-menu');
+    if (existingMenu) {
+        existingMenu.remove();
+    }
+
+    document.querySelectorAll('.sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(m => m.remove());
+
+    const menu = createAspectRatioMenu();
+    document.body.appendChild(menu);
+
+    const rect = aspectRatioBtn.getBoundingClientRect();
+    const menuWidth = menu.offsetWidth || 220;
+    const leftPosition = Math.max(8, rect.left - menuWidth - 2);
+    menu.style.top = `${Math.max(8, rect.top + 2)}px`;
+    menu.style.left = `${leftPosition}px`;
+    menu.style.position = 'fixed';
+});
+
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('.aspect-ratio-menu') && !event.target.closest('#aspectRatioBtn')) {
+        hideMenus();
+    }
+});
+
 // ズームスライダー変更
 zoomBar.addEventListener('input', () => {
     const zoomPercent = parseInt(zoomBar.value);
@@ -4240,6 +4387,8 @@ zoomResetBtn.addEventListener('click', () => {
     zoomBar.value = '0';
     translateX = 0;
     translateY = 0;
+    currentAspectRatio = 'none';
+    applyAspectRatioSetting();
     applyZoom(0);
 });
 
@@ -5016,13 +5165,13 @@ addPlaylistBtn.addEventListener('click', async (e) => {
     clearPlaylistFilter();
     e.stopPropagation();
 
-    const existingMenu = document.querySelector('.sort-menu');
+    const existingMenu = document.querySelector('.add-playlist-menu');
     if (existingMenu) {
         existingMenu.remove();
         document.removeEventListener('click', closeMenu); // ← ここも後で修正必要
     }
 
-    document.querySelectorAll('.sort-menu').forEach(m => m.remove());
+    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .track-menu').forEach(m => m.remove());
 
     const targetContainer = document.fullscreenElement || mainContainer;
     const menu = createAddMenu();
@@ -5347,13 +5496,13 @@ sortPlaylistBtn.addEventListener('click', (e) => {
     clearPlaylistFilter();
     e.stopPropagation();
 
-    const existingMenu = document.querySelector('.sort-menu');
+    const existingMenu = document.querySelector('.sort-playlist-menu');
     if (existingMenu) {
         existingMenu.remove();
         document.removeEventListener('click', closeMenu); // ← ここも後で修正必要
     }
 
-    document.querySelectorAll('.sort-menu').forEach(m => m.remove());
+    document.querySelectorAll('.aspect-ratio-menu, .add-playlist-menu, .track-menu').forEach(m => m.remove());
 
     const targetContainer = document.fullscreenElement || mainContainer;
     const menu = createSortMenu();

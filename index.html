@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.10.2'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.13.2'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -126,6 +126,7 @@
             </div>
             <div id="zoomPanel" style="display:none;">
                 <button id="zoomResetBtn" data-tooltip="ズームリセット（Ctrl+0）">🔘</button>
+                <button id="aspectRatioBtn" data-tooltip="アスペクト比設定">📺</button>
                 <button id="snapshotBtn" data-tooltip="スナップショット（Ctrl+s）">📷</button>
                 <input type="range" id="zoomBar" value="0" min="-100" max="500" step="5" data-tooltip="ズーム調整">
                 <span id="zoomDisplay">0%</span>
@@ -190,7 +191,7 @@
                             <tr>
                                 <td>　・再生中動画パス</td>
                                 <td class="icon">Text Box</td>
-                                <td class="key no-data">なし</td>
+                                <td class="key">Ctrl+g</td>
                                 <td class="mouse">Click</td>
                                 <td class="note">・フィルタリストパネルの表示／非表示を切り替えます。</td>
                             </tr>
@@ -445,6 +446,13 @@
                                 <td class="key">Ctrl+0</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・画像のサイズと移動位置をリセット。</td>
+                            </tr>
+                            <tr>
+                                <td>　・アスペクト比設定</td>
+                                <td class="icon">📺</td>
+                                <td class="key">Ctrl+u</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・アスペクト比を「 4:3 旧テレビ」「16:9 テレビ」「21:9 シネマ」「9:16 スマホ」設定。</td>
                             </tr>
                             <tr>
                                 <td>　・スナップショット</td>
