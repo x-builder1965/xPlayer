@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.19.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.20.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
@@ -24,6 +24,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.19.2';
 // 2026-06-15 Ver4.17.2 フィルタリスト表示とズームパネル表示の同時表示を抑止。
 // 2026-06-15 Ver4.18.2 アスペクト比設定（📺）の背景色を変更。
 // 2026-06-15 Ver4.19.2 ズームパネル内のツールチップの位置調整。
+// 2026-06-15 Ver4.20.2 プレイリストのフィルタ指定方法の改善。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -233,7 +234,6 @@ const repeatPlayBtn  = document.getElementById('repeatPlayBtn');
 const joinPlaylistBtn = document.getElementById('joinPlaylistBtn');
 const sortPlaylistBtn = document.getElementById('sortPlaylistBtn');
 const filterPanel = document.getElementById('filterPanel');
-const filterModeBtn = document.getElementById('filterModeBtn');
 const playlistFilterInput = document.getElementById('playlistFilterInput');
 const filterClearBtn = document.getElementById('filterClearBtn');
 const filterList = document.getElementById('filterList');
@@ -300,7 +300,6 @@ let isEditMode = false;
 let isFilterPanelVisible = false;
 let filterText = '';
 let filterHistory = []; // フィルタ履歴
-let filterMode = 'AND'; // フィルタモード：'AND' または 'OR'
 let editInMark = -1;  // インマーク（秒）
 let editOutMark = -1; // アウトマーク（秒）
 let cutRanges = []; // 配列 of { in: seconds, out: seconds }
@@ -345,12 +344,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // フィルタ履歴をlocalStorageから復元
     loadFilterHistory();
-
-    // フィルタモードボタンを初期化（AND状態）
-    if (filterModeBtn) {
-        filterModeBtn.textContent = filterMode;
-        filterModeBtn.classList.remove('mode-or');
-    }
 
     // 再生中動画パス表示用のテキストエリアを取得し、クリックでフィルタリストパネルを開閉
     playlistPathArea = document.getElementById('playlistPathArea');
@@ -1188,25 +1181,31 @@ function updateFilterList() {
         return;
     }
 
-    const query = filterText.trim().toLowerCase();
-    const keywords = query === '' ? [] : query.split(/\s+/).filter(k => k.length > 0);
+    const query = (filterText || '').trim().toLowerCase();
+    
+    // 全角スペースを半角スペースに変換
+    const normalizedQuery = query.replace(/\u3000/g, ' ');
     
     const results = playlist
         .map((item, index) => ({ item, index }))
         .filter(({ item }) => {
-            if (keywords.length === 0) return true;
+            if (normalizedQuery === '') return true;
             
             const name = (item.name || '').toLowerCase();
             const pathText = (item.file?.path || '').toLowerCase();
             const fullText = name + ' ' + pathText;
             
-            if (filterMode === 'AND') {
-                // すべてのキーワードを含む
-                return keywords.every(keyword => fullText.includes(keyword));
-            } else { // 'OR'
-                // いずれかのキーワードを含む
-                return keywords.some(keyword => fullText.includes(keyword));
-            }
+            // カンマで分割してOR条件グループを取得
+            const orGroups = normalizedQuery.split(',').map(g => g.trim());
+            
+            // いずれかのORグループにマッチするかチェック
+            return orGroups.some(group => {
+                if (group === '') return false;
+                // スペースで分割してAND条件を取得
+                const andKeywords = group.split(/\s+/).filter(k => k.length > 0);
+                // すべてのANDキーワードを含むかチェック
+                return andKeywords.every(keyword => fullText.includes(keyword));
+            });
         });
 
     // 件数表示を更新（ここがメイン）
@@ -1252,7 +1251,8 @@ function getFilteredIndices() {
     const q = (filterText || '').trim().toLowerCase();
     if (!q) return playlist.map((_, idx) => idx);
     
-    const keywords = q.split(/\s+/).filter(k => k.length > 0);
+    // 全角スペースを半角スペースに変換
+    const normalizedQuery = q.replace(/\u3000/g, ' ');
     
     return playlist
         .map((item, idx) => ({ item, idx }))
@@ -1261,11 +1261,17 @@ function getFilteredIndices() {
             const pathText = (item.file?.path || '').toLowerCase();
             const fullText = name + ' ' + pathText;
             
-            if (filterMode === 'AND') {
-                return keywords.every(keyword => fullText.includes(keyword));
-            } else { // 'OR'
-                return keywords.some(keyword => fullText.includes(keyword));
-            }
+            // カンマで分割してOR条件グループを取得
+            const orGroups = normalizedQuery.split(',').map(g => g.trim());
+            
+            // いずれかのORグループにマッチするかチェック
+            return orGroups.some(group => {
+                if (group === '') return false;
+                // スペースで分割してAND条件を取得
+                const andKeywords = group.split(/\s+/).filter(k => k.length > 0);
+                // すべてのANDキーワードを含むかチェック
+                return andKeywords.every(keyword => fullText.includes(keyword));
+            });
         })
         .map(({ idx }) => idx);
 }
@@ -3618,12 +3624,6 @@ document.addEventListener('keydown', async (event) => {
 
     // ■フィルタリストパネル■
     if (filterPanel.style.display === 'flex') {
-        // AND/OR切替（shift+a）
-        if (event.shiftKey && event.key.toLowerCase() === 'a') {
-            event.preventDefault();
-            filterModeBtn.click();
-            return;
-        }
         // 🆑フィルタ条件クリア（shift+0）
         if (event.shiftKey && event.key === '0') {
             event.preventDefault();
@@ -4354,24 +4354,6 @@ playlistFilterInput.addEventListener('keydown', (e) => {
         if (text.trim() !== '') {
             addToFilterHistory(text);
         }
-    }
-});
-
-// AND/ORボタンをクリックして切り替え
-filterModeBtn.addEventListener('click', () => {
-    filterMode = filterMode === 'AND' ? 'OR' : 'AND';
-    filterModeBtn.textContent = filterMode;
-    
-    // ボタンのクラスを更新
-    if (filterMode === 'OR') {
-        filterModeBtn.classList.add('mode-or');
-    } else {
-        filterModeBtn.classList.remove('mode-or');
-    }
-    
-    // フィルタリストを更新
-    if (isFilterPanelVisible) {
-        updateFilterList();
     }
 });
 

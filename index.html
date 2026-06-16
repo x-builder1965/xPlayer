@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.17.2'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.20.2'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -62,8 +62,7 @@
             <div id="filterPanel" class="filter-panel" style="display:none;">
                 <div class="filter-panel-header">
                     <span id="itemCount" data-tooltip="絞込動画数/総動画数）">00,000 / 00,000</span>
-                    <button id="filterModeBtn" data-tooltip="AND/ORを切り替え（Shift+a）">AND</button>
-                    <input id="playlistFilterInput" type="text" placeholder="フィルタ条件（スペース区切りで複数条件）" data-tooltip="プレイリストを絞り込み（スペースで複数条件）" list="filterHistoryList">
+                    <input id="playlistFilterInput" type="text" placeholder="フィルタ条件（AND:スペース区切り、OR:カンマ区切り）" data-tooltip="プレイリストを絞り込み（例：aaaa bbbb, cccc dddd）" list="filterHistoryList">
                     <datalist id="filterHistoryList"></datalist>
                     <button id="filterClearBtn" data-tooltip="フィルタ条件クリア（Shift+0）">🔘</button>
                     <span class="spacer"></span>
@@ -217,18 +216,11 @@
                                 <td class="note sub-title"></td>
                             </tr>
                             <tr>
-                                <td>　・AND/OR条件</td>
-                                <td class="icon">AND/OR</td>
-                                <td class="key">Shift+a</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・複数語句のAND/OR条件を指定。AND（青）：すべてを満たす／OR（赤）：いずれかを満たす。</td>
-                            </tr>
-                            <tr>
                                 <td>　・フィルタ条件入力</td>
                                 <td class="icon">Text Box</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・フィルタ条件にスペース区切り複数語句を入力。</td>
+                                <td class="note">・フィルタ条件にスペース区切り（AND）、カンマ区切り（OR）で複数語句を入力。</td>
                             </tr>
                             <tr>
                                 <td>　・フィルタ条件クリア</td>
