@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.20.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.21.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
@@ -21,10 +21,11 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.20.2';
 // 2026-06-15 Ver4.14.2 描画モードの切替（↔️／↕️／⏺️）の機能見直し。
 // 2026-06-15 Ver4.15.2 フルスクリーン時、アスペクト比設定（📺）のメニューが表示されない問題の対応。
 // 2026-06-15 Ver4.16.2 ズームパネルのリセット対象に描画モードを追加。
-// 2026-06-15 Ver4.17.2 フィルタリスト表示とズームパネル表示の同時表示を抑止。
-// 2026-06-15 Ver4.18.2 アスペクト比設定（📺）の背景色を変更。
-// 2026-06-15 Ver4.19.2 ズームパネル内のツールチップの位置調整。
-// 2026-06-15 Ver4.20.2 プレイリストのフィルタ指定方法の改善。
+// 2026-06-16 Ver4.17.2 フィルタリスト表示とズームパネル表示の同時表示を抑止。
+// 2026-06-16 Ver4.18.2 アスペクト比設定（📺）の背景色を変更。
+// 2026-06-16 Ver4.19.2 ズームパネル内のツールチップの位置調整。
+// 2026-06-16 Ver4.20.2 プレイリストのフィルタ指定方法の改善。
+// 2026-06-16 Ver4.21.2 ポップアップメニュー表示中のボタンクリックでメニューを閉じるように変更。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -2936,6 +2937,7 @@ async function toggleTrackMenu(e, type, button) {
     const existingMenu = document.querySelector('.track-menu');
     if (existingMenu) {
         existingMenu.remove();
+        return;
     }
 
     document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .add-playlist-menu').forEach(m => {
@@ -4386,6 +4388,7 @@ aspectRatioBtn.addEventListener('click', (event) => {
     if (existingMenu) {
         existingMenu.remove();
         document.removeEventListener('click', closeMenu);
+        return;
     }
 
     document.querySelectorAll('.sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(m => {
@@ -5214,6 +5217,7 @@ addPlaylistBtn.addEventListener('click', async (e) => {
     if (existingMenu) {
         existingMenu.remove();
         document.removeEventListener('click', closeMenu); // ← ここも後で修正必要
+        return;
     }
 
     document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .track-menu').forEach(m => {
@@ -5547,6 +5551,7 @@ sortPlaylistBtn.addEventListener('click', (e) => {
     if (existingMenu) {
         existingMenu.remove();
         document.removeEventListener('click', closeMenu); // ← ここも後で修正必要
+        return;
     }
 
     document.querySelectorAll('.aspect-ratio-menu, .add-playlist-menu, .track-menu').forEach(m => {
