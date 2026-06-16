@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.14.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.16.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -209,8 +209,9 @@ Input#playlistFilterInput {
 }
 #zoomPanel {
     position: absolute;
+    position: absolute;
     right: 20px;
-    top: 46%;
+    top: 46%; /* 縦中央に綺麗に合わせるため 46% から 50% に変更 */
     transform: translateY(-50%);
     background: rgba(0, 0, 0, 0.5);
     padding: 15px;
@@ -221,11 +222,15 @@ Input#playlistFilterInput {
     gap: 10px;
     z-index: 950;
     transition: display 0.3s ease;
+
+    /* 👇 ここを追加してパネルを大きくします */
+    min-height: 38vh;        /* 画面全体の高さの 40% をパネルの最低の高さに設定 */
 }
 #zoomBar {
     writing-mode: vertical-lr;   /* または vertical-rl（向きで調整） */
     direction: rtl;              /* スライダーの方向を正しくする */
     /* 必要に応じて他のスタイル（width/heightなど）を維持 */
+    max-height: 14vh;
 }
 #zoomDisplay {
     font-size: 16px;

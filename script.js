@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.15.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.16.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
@@ -20,6 +20,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.15.2';
 // 2026-06-15 Ver4.13.2 アスペクト比設定（📺）機能追加。
 // 2026-06-15 Ver4.14.2 描画モードの切替（↔️／↕️／⏺️）の機能見直し。
 // 2026-06-15 Ver4.15.2 フルスクリーン時、アスペクト比設定（📺）のメニューが表示されない問題の対応。
+// 2026-06-15 Ver4.16.2 ズームパネルのリセッや衣装に描画モードを追加。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -405,24 +406,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (speedSelect) speedSelect.value = currentPlaybackRate.toFixed(2);
 
     // 描画モード復元
-    fitModeBtn.classList.remove('fitMode-cover', 'fitMode-fill');
-    if (savedFitMode === 'cover') {
-        fitMode = 'cover';
-        fitModeBtn.classList.add('fitMode-cover');
-        fitModeBtn.textContent = '↕️';
-        fitModeBtn.setAttribute('data-tooltip', '画像を覆う（Ctrl+x）');
-    } else if (savedFitMode === 'fill') {
-        fitMode = 'fill';
-        fitModeBtn.classList.add('fitMode-fill');
-        fitModeBtn.textContent = '⏺️';
-        fitModeBtn.setAttribute('data-tooltip', '画像を満たす（Ctrl+x）');
+    if (savedFitMode) {
+        fitMode = savedFitMode;
     } else {
         fitMode = 'contain';
-        fitModeBtn.textContent = '↔️';
-        fitModeBtn.setAttribute('data-tooltip', '画像を含む（Ctrl+x）');
     }
-    videoPlayer.style.objectFit = fitMode;
-
+    applyFitModeSetting(fitMode);
+    
     // アスペクト比復元
     if (savedAspectRatio && ASPECT_NODES[savedAspectRatio]) {
         currentAspectRatio = savedAspectRatio;
@@ -865,6 +855,29 @@ function applyZoom(zoomPercent) {
     if (isZoomMode) {
         updateOverlayDisplay(`🔍 ${zoomValue > 0 ? '+' : ''}${zoomValue}%`);
     }
+}
+
+// 描画モード適用
+function applyFitModeSetting(setFitMode) {
+    fitModeBtn.classList.remove('fitMode-cover', 'fitMode-fill');
+    if (setFitMode === 'cover') {
+        fitMode = 'cover';
+        fitModeBtn.classList.add('fitMode-cover');
+        fitModeBtn.textContent = '↕️';
+        fitModeBtn.setAttribute('data-tooltip', '画像を覆う（Ctrl+x）');
+    } else if (setFitMode === 'fill') {
+        fitMode = 'fill';
+        fitModeBtn.classList.add('fitMode-fill');
+        fitModeBtn.textContent = '⏺️';
+        fitModeBtn.setAttribute('data-tooltip', '画像を満たす（Ctrl+x）');
+    } else {
+        fitMode = 'contain';
+        fitModeBtn.textContent = '↔️';
+        fitModeBtn.setAttribute('data-tooltip', '画像を含む（Ctrl+x）');
+    }
+    videoPlayer.style.objectFit = fitMode;
+    localStorage.setItem('fitMode', fitMode);
+    applyAspectRatioSetting();
 }
 
 function applyAspectRatioSetting() {
@@ -4215,25 +4228,15 @@ fullscreenBtn.addEventListener('click', () => {
 
 // ↔️／↕️／⏺️描画モード切替
 fitModeBtn.addEventListener('click', () => {
-    fitModeBtn.classList.remove('fitMode-cover', 'fitMode-fill');
     if (videoPlayer.style.objectFit === 'contain') {
         fitMode = 'cover';
-        fitModeBtn.classList.add('fitMode-cover');
-        fitModeBtn.textContent = '↕️';
-        fitModeBtn.setAttribute('data-tooltip', '画像を覆う（Ctrl+x）');
     } else if (videoPlayer.style.objectFit === 'cover') {
         fitMode = 'fill';
-        fitModeBtn.classList.add('fitMode-fill');
-        fitModeBtn.textContent = '⏺️';
-        fitModeBtn.setAttribute('data-tooltip', '画像を満たす（Ctrl+x）');
     } else {
         fitMode = 'contain';
-        fitModeBtn.textContent = '↔️';
         fitModeBtn.setAttribute('data-tooltip', '画像を含む（Ctrl+x）');
     }
-    videoPlayer.style.objectFit = fitMode;
-    localStorage.setItem('fitMode', fitMode);
-    applyAspectRatioSetting();
+    applyFitModeSetting(fitMode);
     showControlsAndFilename();
     updateIconOverlay();
 });
@@ -4424,9 +4427,13 @@ zoomResetBtn.addEventListener('click', () => {
     zoomBar.value = '0';
     translateX = 0;
     translateY = 0;
+    applyZoom(0);
+
+    fitMode = 'contain';
+    applyFitModeSetting(fitMode);
+
     currentAspectRatio = 'none';
     applyAspectRatioSetting();
-    applyZoom(0);
 });
 
 // 📷スナップショット
