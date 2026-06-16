@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.16.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.17.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
@@ -20,7 +20,8 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.16.2';
 // 2026-06-15 Ver4.13.2 アスペクト比設定（📺）機能追加。
 // 2026-06-15 Ver4.14.2 描画モードの切替（↔️／↕️／⏺️）の機能見直し。
 // 2026-06-15 Ver4.15.2 フルスクリーン時、アスペクト比設定（📺）のメニューが表示されない問題の対応。
-// 2026-06-15 Ver4.16.2 ズームパネルのリセッや衣装に描画モードを追加。
+// 2026-06-15 Ver4.16.2 ズームパネルのリセット対象に描画モードを追加。
+// 2026-06-15 Ver4.17.2 フィルタリスト表示とズームパネル表示の同時表示を抑止。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -360,6 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateFilterButtonUI();
             if (isFilterPanelVisible) {
                 updateFilterList();
+                zoomEndBtn.click(); // リセット＆終了
                 try { playlistFilterInput?.focus(); } catch (e) {}
                 setTimeout(() => {
                     try {
@@ -4257,6 +4259,12 @@ zoomBtn.addEventListener('click', () => {
         zoomBtn.textContent = '🔍';
         zoomBtn.classList.add('mode-active');
         zoomBtn.setAttribute('data-tooltip', 'ズームモード終了（Ctrl+z）');
+        // 編集モード開始時はフィルタリストパネルを閉じる（同時表示抑止）
+        if (isFilterPanelVisible) {
+            isFilterPanelVisible = false;
+            if (filterPanel) filterPanel.style.display = 'none';
+            updateFilterButtonUI();
+        }
     } else {
         zoomEndBtn.click(); // リセット＆終了
     }
