@@ -26,7 +26,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.22.2';
 // 2026-06-16 Ver4.19.2 ズームパネル内のツールチップの位置調整。
 // 2026-06-16 Ver4.20.2 プレイリストのフィルタ指定方法の改善。
 // 2026-06-16 Ver4.21.2 ポップアップメニュー表示中のボタンクリックでメニューを閉じるように変更。
-// 2026-06-16 Ver4.22.2 一時停止（⏸️）の背景色を（赤）に変更。
+// 2026-06-16 Ver4.22.2 一時停止（⏸️）、ミュート（🔇）の背景色を（赤）に変更。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -383,13 +383,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
         volumeBar.value = savedVolume;
         lastVolume = savedVolume;
-        volumeMuteBtn.textContent = savedVolume == 0 ? '🔇' : '🔊';
-        volumeMuteBtn.setAttribute('data-tooltip', savedVolume == 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
+        volumeMuteBtn.textContent = savedVolume === 0 ? '🔇' : '🔊';
+        volumeMuteBtn.classList.toggle('muted-active', savedVolume === 0);
+        volumeMuteBtn.setAttribute('data-tooltip', savedVolume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
     } else {
         volumeBar.value = 0.2;
         lastVolume = 0.2;
         volumeMuteBtn.textContent = '🔊';
+        volumeMuteBtn.classList.remove('muted-active');
         volumeMuteBtn.setAttribute('data-tooltip', 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
     }
@@ -4213,16 +4215,19 @@ volumeMuteBtn.addEventListener('click', () => {
         videoPlayer.volume = lastVolume || 0.2;
         volumeBar.value = videoPlayer.volume;
         volumeMuteBtn.textContent = '🔊';
+        volumeMuteBtn.classList.remove('muted-active');
         volumeMuteBtn.setAttribute('data-tooltip', 'ミュート（Ctrl+m）');
     } else {
         lastVolume = videoPlayer.volume;
         videoPlayer.volume = 0;
         volumeBar.value = 0;
         volumeMuteBtn.textContent = '🔇';
+        volumeMuteBtn.classList.add('muted-active');
         volumeMuteBtn.setAttribute('data-tooltip', 'ミュート解除（Ctrl+m）');
     }
     updateVolumeDisplay();
     updateOverlayDisplay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+    volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
     localStorage.setItem('volume', videoPlayer.volume);
     updateIconOverlay();
 });
@@ -4808,6 +4813,7 @@ videoPlayer.addEventListener('mousemove', (event) => {
             volumeBar.value = videoPlayer.volume;
             lastVolume = videoPlayer.volume;
             volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
+            volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
             volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
             updateVolumeDisplay();
             updateOverlayDisplay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
@@ -4906,6 +4912,7 @@ videoPlayer.addEventListener('wheel', (event) => {
     volumeBar.value = videoPlayer.volume;
     lastVolume = videoPlayer.volume;
     volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
+    volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
     volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
     updateVolumeDisplay();
     updateOverlayDisplay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
@@ -5104,6 +5111,7 @@ volumeBar.addEventListener('input', () => {
     videoPlayer.volume = volumeBar.value;
     lastVolume = videoPlayer.volume;
     volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
+    volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
     volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
     updateVolumeDisplay();
     updateOverlayDisplay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);

@@ -726,7 +726,8 @@ button#modeChangeBtn.convert-active,
 #repeatPlayBtn.repeat-all,
 #fitModeBtn.fitMode-cover,
 #aspectRatioBtn.aspectRatio-active,
-#playPauseBtn.paused-active {
+#playPauseBtn.paused-active,
+#volumeMuteBtn.muted-active {
     background: #e63946 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single,
@@ -744,7 +745,8 @@ button#modeChangeBtn.convert-active:hover,
 #repeatPlayBtn.repeat-all:hover,
 #fitModeBtn.fitMode-cover:hover,
 #aspectRatioBtn.aspectRatio-active:hover,
-#playPauseBtn.paused-active:hover {
+#playPauseBtn.paused-active:hover,
+#volumeMuteBtn.muted-active:hover {
     background: #e6394785 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single:hover,
