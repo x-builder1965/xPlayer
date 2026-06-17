@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.21.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.22.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
@@ -26,6 +26,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.21.2';
 // 2026-06-16 Ver4.19.2 ズームパネル内のツールチップの位置調整。
 // 2026-06-16 Ver4.20.2 プレイリストのフィルタ指定方法の改善。
 // 2026-06-16 Ver4.21.2 ポップアップメニュー表示中のボタンクリックでメニューを閉じるように変更。
+// 2026-06-16 Ver4.22.2 一時停止（⏸️）の背景色を（赤）に変更。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -593,8 +594,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             videoPlayer.play().then(() => videoPlayer.pause()).catch(() => {});
                         }
                     }, 250);
-                    playPauseBtn.textContent = '▶️';
-                    playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+                    playPauseBtn.textContent = '⏸️';
+                    playPauseBtn.classList.add('paused-active');
+                    playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
                     localStorage.setItem('currentTime', videoPlayer.currentTime);
                     stopPeriodicSave();
                     showControlsAndFilename();
@@ -1686,11 +1688,13 @@ async function playVideo(file, currentTime) {
     }
 
     // 再生開始
-    playPauseBtn.textContent = '⏸️';
-    playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+    playPauseBtn.textContent = '▶️';
+    playPauseBtn.classList.remove('paused-active');
+    playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
     videoPlayer.play().catch(() => {
-        playPauseBtn.textContent = '▶️';
-        playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+        playPauseBtn.textContent = '⏸️';
+        playPauseBtn.classList.add('paused-active');
+        playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
     });
 
     // フィルタ条件をクリアし、再生動画の行位置にスクロール
@@ -1783,17 +1787,20 @@ async function togglePlayPause() {
             }
         }
         
-        playPauseBtn.textContent = '⏸️';
-        playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+        playPauseBtn.textContent = '▶️';
+        playPauseBtn.classList.remove('paused-active');
+        playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
         startPeriodicSave();
         videoPlayer.play().catch(() => {
-            playPauseBtn.textContent = '▶️';
-            playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            playPauseBtn.textContent = '⏸️';
+            playPauseBtn.classList.add('paused-active');
+            playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
         });
     } else {
         videoPlayer.pause();
-        playPauseBtn.textContent = '▶️';
-        playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+        playPauseBtn.textContent = '⏸️';
+        playPauseBtn.classList.add('paused-active');
+        playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
         localStorage.setItem('currentTime', videoPlayer.currentTime);
         stopPeriodicSave();
     }
@@ -2115,8 +2122,9 @@ function updateEditModeButtonUI() {
 
         if (videoPlayer.play) {
             videoPlayer.pause();
-            playPauseBtn.textContent = '▶️';
-            playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            playPauseBtn.textContent = '⏸️';
+            playPauseBtn.classList.add('paused-active');
+            playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
             localStorage.setItem('currentTime', videoPlayer.currentTime);
             stopPeriodicSave();
         }
@@ -4118,8 +4126,9 @@ playStopBtn.addEventListener('click', async () => {
     localStorage.setItem('currentTime', 0);
 
     // 4. UI更新（停止状態を強制）
-    playPauseBtn.textContent = '▶️';
-    playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+    playPauseBtn.textContent = '⏸️';
+    playPauseBtn.classList.add('paused-active');
+    playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
     stopPeriodicSave();
     showControlsAndFilename();
     
@@ -4611,8 +4620,9 @@ videoPlayer.addEventListener('error', (e) => {
     // 共通関数で判定
     if (isHTML5_SUPPORTED(ext)) {
         stopPeriodicSave();
-        playPauseBtn.textContent = '▶️';
-        playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+        playPauseBtn.textContent = '⏸️';
+        playPauseBtn.classList.add('paused-active');
+        playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
         updateIconOverlay();
 
         // エラー内容に応じてメッセージを細かく分ける（任意）
@@ -4671,7 +4681,9 @@ videoPlayer.addEventListener('ended', async () => {
     if (isRepeatPlayMode === 'single') {
         // 1動画ループ → 即座に同じ動画を再生
         videoPlayer.play().catch(() => {});
-        playPauseBtn.textContent = '⏸️';
+        playPauseBtn.textContent = '▶️';
+        playPauseBtn.classList.remove('paused-active');
+        playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
         return;
     }
 
@@ -4696,8 +4708,9 @@ videoPlayer.addEventListener('ended', async () => {
         videoPreview.load();
 
         // UI更新
-        playPauseBtn.textContent = '▶️';
-        playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+        playPauseBtn.textContent = '⏸️';
+        playPauseBtn.classList.add('paused-active');
+        playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
         stopPeriodicSave();
         
         // 再生中アイコンを非表示にする
