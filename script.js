@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.22.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.23.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
@@ -27,6 +27,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.22.2';
 // 2026-06-16 Ver4.20.2 プレイリストのフィルタ指定方法の改善。
 // 2026-06-16 Ver4.21.2 ポップアップメニュー表示中のボタンクリックでメニューを閉じるように変更。
 // 2026-06-16 Ver4.22.2 一時停止（⏸️）、ミュート（🔇）、並び替え（📩）、字幕選択（🔠）の背景色を（赤・黄）に変更。
+// 2026-06-16 Ver4.23.2 変換処理（🔄️）でプレイリストの管理不良により変換処理が終了しなくなる不具合を修正。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1801,15 +1802,15 @@ async function togglePlayPause() {
         if (modeChange === 'convert') {
             // 再生即終了 → 最後尾へ
             setVideoDurationTime(); // duration が NaN でも安全に処理
-        }
+        } else {
+            // カット編集モードで、かつカット範囲がある場合 → 次の有効な位置へジャンプ
+            const isInEditMode = isEditMode || (editControls && editControls.style.display !== 'none');
+            if (isInEditMode && cutRanges.length > 0) {
+                const nextPos = findNextValidPosition(videoPlayer.currentTime);
 
-        // カット編集モードで、かつカット範囲がある場合 → 次の有効な位置へジャンプ
-        const isInEditMode = isEditMode || (editControls && editControls.style.display !== 'none');
-        if (isInEditMode && cutRanges.length > 0) {
-            const nextPos = findNextValidPosition(videoPlayer.currentTime);
-
-            if (nextPos >= 0 && nextPos < videoPlayer.duration) {
-                videoPlayer.currentTime = nextPos;
+                if (nextPos >= 0 && nextPos < videoPlayer.duration) {
+                    videoPlayer.currentTime = nextPos;
+                }
             }
         }
         
@@ -1862,8 +1863,6 @@ async function setVideoSrc(file) {
             await deleteTempVideo();
 
             const wasIsPlaying = isPlaying;
-            playStopBtn.click();
-
             isConverting = true;
             updatePlaylistDisplay();
             // シークバーを赤色に変更
@@ -4722,7 +4721,6 @@ videoPlayer.addEventListener('ended', async () => {
     // 常にgetNextVideoIndex()を呼び、次があれば再生
     // （ランダムOFF・repeat 'none' でも次動画に進む）
     const nextIndex = getNextVideoIndex();
-
     if (nextIndex >= 0) {
         currentVideoIndex = nextIndex;
         await playVideo(playlist[currentVideoIndex].file, 0);
