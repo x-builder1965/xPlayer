@@ -26,7 +26,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.22.2';
 // 2026-06-16 Ver4.19.2 ズームパネル内のツールチップの位置調整。
 // 2026-06-16 Ver4.20.2 プレイリストのフィルタ指定方法の改善。
 // 2026-06-16 Ver4.21.2 ポップアップメニュー表示中のボタンクリックでメニューを閉じるように変更。
-// 2026-06-16 Ver4.22.2 一時停止（⏸️）、ミュート（🔇）の背景色を（赤）に変更。
+// 2026-06-16 Ver4.22.2 一時停止（⏸️）、ミュート（🔇）、並び替え（📩）、字幕選択（🔠）の背景色を（赤・黄）に変更。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -518,11 +518,22 @@ document.addEventListener('DOMContentLoaded', () => {
         editFrameRate = savedEditFrameRate;
     }
 
-    // 並ぶ替えメニューの復元
+    // 並び替えメニューの復元
+    sortPlaylistBtn.classList.remove('sorted-active', 'random-sorted-active');
     if (!savedCurrentSortMode) {
         currentSortMode = 'none';
     } else {
         currentSortMode = savedCurrentSortMode;
+        if (currentSortMode === 'none') {
+        } else if (currentSortMode === 'path_asc' || currentSortMode === 'path_desc') {
+            sortPlaylistBtn.classList.add('sorted-active');
+        } else if (currentSortMode === 'random') {
+            sortPlaylistBtn.classList.add('random-sorted-active');
+        } else if (currentSortMode === 'ctime_asc' || currentSortMode === 'ctime_desc') {
+            sortPlaylistBtn.classList.add('sorted-active');
+        } else {
+            sortPlaylistBtn.classList.add('sorted-active');
+        }
     }
 
     // 音声言語の復元
@@ -1288,6 +1299,19 @@ async function applySortFiltered(modeKey = currentSortMode) {
 
     const indices = getFilteredIndices();
     if (indices.length === 0) return;
+
+    sortPlaylistBtn.classList.remove('sorted-active', 'random-sorted-active');
+    if (modeKey === 'none') {
+    } else if (modeKey === 'path_asc' || modeKey === 'path_desc') {
+        sortPlaylistBtn.classList.add('sorted-active');
+    } else if (modeKey === 'random') {
+        sortPlaylistBtn.classList.add('random-sorted-active');
+    } else if (modeKey === 'ctime_asc' || modeKey === 'ctime_desc') {
+        sortPlaylistBtn.classList.add('sorted-active');
+    } else {
+        sortPlaylistBtn.classList.add('sorted-active');
+    }
+
     if (indices.length === playlist.length) {
         await applySort(modeKey);
         return;
@@ -2911,10 +2935,15 @@ function resetCursorTimer() {
 
 // 音声/字幕ボタンの表示をモードに応じて切り替え
 function updateTrackButtonsVisibility() {
+    subtitleSelectBtn.classList.remove('subtitles-active');
     if (modeChange === 'video') {
         // 再生モード → 字幕選択のみ表示
         if (voiceSelectBtn) voiceSelectBtn.style.display = 'none';
         if (subtitleSelectBtn) subtitleSelectBtn.style.display = 'inline-block';
+
+        if (selectedSubtitleLabel !== '（なし）') {
+            subtitleSelectBtn.classList.add('subtitles-active');
+        }
     } else {
         // 変換モード → 音声選択のみ表示
         if (voiceSelectBtn) voiceSelectBtn.style.display = 'inline-block';
@@ -2957,7 +2986,10 @@ async function toggleTrackMenu(e, type, button) {
     // 動画音声トラック・字幕トラック取得
     const filePath = playlist[currentVideoIndex].file.path;
     await getVideoTraks(filePath);
-    if (currentSubtitleTracks.length === 0) return;
+    if (currentSubtitleTracks.length === 0) {
+        subtitleSelectBtn.classList.remove('subtitles-active');
+        return;
+    }
 
     // 音声メニュー・字幕メニュー作成
     const menu = createTrackMenu(type);
@@ -3043,13 +3075,6 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
         label: getMenuItem(track),
         track                     // ← トラックオブジェクトを保持
     }));
-
-    // 必要に応じてソート（音声は元の順序を維持したい場合もある）
-    // labeledTracks.sort((a, b) => {
-    //     const cleanA = a.label.trim();
-    //     const cleanB = b.label.trim();
-    //     return cleanA.localeCompare(cleanB);
-    // });
 
     // selectedTrackObj（選択項目）の判定・再設定
     // 現在選択中の「言語名」（クリーン版）を取得
@@ -3213,6 +3238,7 @@ async function selectTrackMenu(type, menu, fullLabel, trackObj = null) {
         found = selectedIndex !== -1;
     }
     if (trackObj && !found) {
+        subtitleSelectBtn.classList.remove('subtitles-active');
         console.warn("選択しようとしたトラックはもう存在しません");
         if (type === 'subtitle') {
             currentSubtitleTrack = null;
@@ -3223,6 +3249,7 @@ async function selectTrackMenu(type, menu, fullLabel, trackObj = null) {
         return;
     }
 
+    subtitleSelectBtn.classList.remove('subtitles-active');
     if (type === 'subtitle') {
         if (trackObj && !trackObj.exists) {
             updateOverlayDisplay(`🔠 字幕ファイルが存在しません`, false, 3000);
@@ -3239,7 +3266,7 @@ async function selectTrackMenu(type, menu, fullLabel, trackObj = null) {
 
         currentSubtitleTrack = trackObj;
         selectedSubtitleLabel = trackObj ? getCleanLabel(fullLabel) : '（なし）';
-        localStorage.setItem('selectedSubtitleTrack', JSON.stringify(currentSubtitleTrack));
+        selectedSubtitleLabel !== '（なし）' ? subtitleSelectBtn.classList.add('subtitles-active') : null;        localStorage.setItem('selectedSubtitleTrack', JSON.stringify(currentSubtitleTrack));
         localStorage.setItem('selectedSubtitleLabel', selectedSubtitleLabel);
     } else {
         updateVideoAudio(trackObj, currentTracks);

@@ -727,11 +727,14 @@ button#modeChangeBtn.convert-active,
 #fitModeBtn.fitMode-cover,
 #aspectRatioBtn.aspectRatio-active,
 #playPauseBtn.paused-active,
-#volumeMuteBtn.muted-active {
+#volumeMuteBtn.muted-active,
+#sortPlaylistBtn.sorted-active,
+#subtitleSelectBtn.subtitles-active {
     background: #e63946 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single,
-#fitModeBtn.fitMode-fill {
+#fitModeBtn.fitMode-fill,
+#sortPlaylistBtn.random-sorted-active {
     background: #f4d03f !important;   /* 黄系：１動画 */
 }
 .mode-active:hover,
@@ -746,10 +749,13 @@ button#modeChangeBtn.convert-active:hover,
 #fitModeBtn.fitMode-cover:hover,
 #aspectRatioBtn.aspectRatio-active:hover,
 #playPauseBtn.paused-active:hover,
-#volumeMuteBtn.muted-active:hover {
+#volumeMuteBtn.muted-active:hover,
+#sortPlaylistBtn.sorted-active:hover,
+#subtitleSelectBtn.subtitles-active:hover {
     background: #e6394785 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single:hover,
-#fitModeBtn.fitMode-fill:hover {
+#fitModeBtn.fitMode-fill:hover,
+#sortPlaylistBtn.random-sorted-active:hover {
     background: #f4d03f7a !important;   /* 黄系：１動画 */
 }
