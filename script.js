@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.25.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.26.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
@@ -30,6 +30,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.25.2';
 // 2026-06-17 Ver4.23.2 変換処理（🔄️）でプレイリストの管理不良により変換処理が終了しなくなる不具合を修正。
 // 2026-06-17 Ver4.24.2 アスペクト比設定（📺）と描画モード（↔️／↕️／⏺️）の配置を入替。
 // 2026-06-18 Ver4.25.2 繰り返し再生（🔁／🔂）時の変換処理（🔄️）の挙動を見直し。
+// 2026-06-18 Ver4.26.2 ロジック見直しによる細かな不具合修正と安定性向上。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -246,6 +247,10 @@ const darkOverlay = document.getElementById('darkOverlay');
 const voiceSelectBtn = document.getElementById('voiceSelectBtn');
 const subtitleSelectBtn = document.getElementById('subtitleSelectBtn');
 const itemCount = document.getElementById('itemCount');
+const playlistPathArea = document.getElementById('playlistPathArea');
+const cutTimelineContainer = document.getElementById('cutTimelineContainer');
+const cutTimelineBar = document.getElementById('cutTimelineBar');
+const filterHistoryList = document.getElementById('filterHistoryList');
 
 // localStorage から復得
 const savedVolume = localStorage.getItem('volume');
@@ -263,8 +268,6 @@ const savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode');
 const savedShuffleOrder = localStorage.getItem('shuffleOrder');
 const savedShufflePosition = localStorage.getItem('shufflePosition');
 const savedAspectRatio = localStorage.getItem('aspectRatio');
-const cutTimelineContainer = document.getElementById('cutTimelineContainer');
-const cutTimelineBar = document.getElementById('cutTimelineBar');
 const savedCurrentSortMode = localStorage.getItem('playlistSortMode');
 const savedSelectedAudioLabel = localStorage.getItem('selectedAudioLabel');
 const savedSelectedAudioTrack = localStorage.getItem('selectedAudioTrack');
@@ -334,47 +337,23 @@ let currentSubtitleTracks = [];
 let currentAudioTrack = null;
 let currentSubtitleTrack = null;
 let delConvertFile = null;
-let playlistPathArea = null;
 let currentAspectRatio = 'none';
 
 //🔲初期処理🔲
 document.addEventListener('DOMContentLoaded', () => {
-    // 初期表示設定
+    // 動画初期化（未設定状態）
     videoPlayer.removeAttribute('src');
+    videoPlayer.load();
     videoPreview.removeAttribute('src');
+    videoPreview.load();
     appNameAndCopyright.textContent = appNameAndCopyrightValue;
 
-    // 初期化時にアイコンを正しく設定
+    // ネット動画選択のアイコン表示更新
     updateUrlButtonIcon();
 
     // フィルタ履歴をlocalStorageから復元
     loadFilterHistory();
 
-    // 再生中動画パス表示用のテキストエリアを取得し、クリックでフィルタリストパネルを開閉
-    playlistPathArea = document.getElementById('playlistPathArea');
-    if (playlistPathArea) {
-        playlistPathArea.readOnly = true;
-        playlistPathArea.addEventListener('click', () => {
-            if (!filterPanel) return;
-            isFilterPanelVisible = !isFilterPanelVisible;
-            filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
-            updateFilterButtonUI();
-            if (isFilterPanelVisible) {
-                updateFilterList();
-                zoomEndBtn.click(); // リセット＆終了
-                try { playlistFilterInput?.focus(); } catch (e) {}
-                setTimeout(() => {
-                    try {
-                        const targetIndex = selectedPlaylistIndex >= 0 ? selectedPlaylistIndex : currentVideoIndex;
-                        const el = filterList ? filterList.querySelector('[data-index="' + targetIndex + '"]') : null;
-                        if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    } catch (e) {}
-                }, 50);
-            }
-        });
-    }
-
-    // プレイリスト関連の初期化
     // 背景壁紙の復元
     if (savedWallpaperPath) {
         videoContainer.style.backgroundImage = savedWallpaperPath;
@@ -434,6 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
         translateY = 0;
     }
 
+    // 描画モード復元
     applyFitModeSetting(fitMode);
     
     // アスペクト比復元
@@ -554,6 +534,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         currentAudioTrack = selectedAudioTrack;
     }
+
     // 字幕言語の復元
     if (!savedSelectedSubtitleLabel) {
         selectedSubtitleLabel = '（なし）';
@@ -569,9 +550,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         currentSubtitleTrack = selectedSubtitleTrack;
     }
+
     // 音声メニューボタン・字幕メニューボタン切替（初期化）
     updateTrackButtonsVisibility();
 
+    // プレイリストと再生状態の復元
     (async () => {
         // 起動時の引数有無判定
         const args = await getCommandLineArgs();
@@ -796,7 +779,6 @@ function hideControlsAndFilename() {
 
     isFilterPanelVisible = false;
     if (filterPanel) filterPanel.style.display = 'none';
-    updateFilterButtonUI();
 
     updateIconOverlay();
 }
@@ -897,6 +879,7 @@ function applyFitModeSetting(setFitMode) {
     applyAspectRatioSetting();
 }
 
+// アスペクト比適用
 function applyAspectRatioSetting() {
     const selectedOption = ASPECT_NODES[currentAspectRatio];
 
@@ -942,6 +925,7 @@ function applyAspectRatioSetting() {
     }
 }
 
+// アスペクト比選択メニュー作成
 function createAspectRatioMenu() {
     const menu = document.createElement('div');
     menu.className = 'aspect-ratio-menu';
@@ -1124,10 +1108,7 @@ function savePlaylistAndPlaybackState() {
     }
 }
 
-function updateFilterButtonUI() {
-    // filterBtn has been removed; no UI update is required.
-}
-
+// フィルタリストパネル表示切替
 function toggleFilterPanel() {
     isFilterPanelVisible = !isFilterPanelVisible;
     if (filterPanel) {
@@ -1142,13 +1123,13 @@ function toggleFilterPanel() {
             }
         }
     }
-    updateFilterButtonUI();
     if (isFilterPanelVisible) {
         updateFilterList();
         playlistFilterInput?.focus();
     }
 }
 
+// フィルタリストの現在選択アイテムをスクロールして中央に表示
 function scrollCurrentFilterItemIntoView() {
     if (!filterList) return;
     try {
@@ -1160,6 +1141,7 @@ function scrollCurrentFilterItemIntoView() {
     } catch (e) {}
 }
 
+// プレイリストフィルタをクリア
 function clearPlaylistFilter() {
     filterText = '';
     if (playlistFilterInput) {
@@ -1171,6 +1153,7 @@ function clearPlaylistFilter() {
     }
 }
 
+// フィルタパネルの高さを調整
 function adjustFilterPanelHeight() {
     if (!filterPanel || !filterList) return;
     if (window.getComputedStyle(filterPanel).display === 'none') return;
@@ -1191,6 +1174,7 @@ function adjustFilterPanelHeight() {
     filterList.style.maxHeight = `${Math.max(0, actualHeight - headerHeight - panelPadding - gapBetweenHeaderAndList)}px`;
 }
 
+// フィルタリスト更新
 function updateFilterList() {
     if (!filterList) return;
     filterList.innerHTML = '';
@@ -1259,13 +1243,13 @@ function updateFilterList() {
             savePlaylistAndPlaybackState();
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
-            updateFilterButtonUI();
         });
         filterList.appendChild(button);
     });
     adjustFilterPanelHeight();
 }
 
+// フィルタリングされたインデックスを取得
 function getFilteredIndices() {
     const q = (filterText || '').trim().toLowerCase();
     if (!q) return playlist.map((_, idx) => idx);
@@ -1295,6 +1279,7 @@ function getFilteredIndices() {
         .map(({ idx }) => idx);
 }
 
+// フィルタリングされたアイテムをソートして適用
 async function applySortFiltered(modeKey = currentSortMode) {
     if (!SORT_MODES[modeKey]) return;
     currentSortMode = modeKey;
@@ -1363,6 +1348,7 @@ async function applySortFiltered(modeKey = currentSortMode) {
     savePlaylistAndPlaybackState();
 }
 
+// フィルタリングされたアイテムをシャッフルして適用
 function shuffleFiltered() {
     const indices = getFilteredIndices();
     if (indices.length === 0) return;
@@ -1418,6 +1404,7 @@ function updatePlaylistDisplay() {
     updateIconOverlay();
 }
 
+// 現在再生中の動画のパスを取得するヘルパー関数
 function getCurrentPlaybackPath() {
     let currentPath = playlist[currentVideoIndex]?.file?.path || '';
     if (!currentPath && videoPlayer?.src) {
@@ -1452,15 +1439,12 @@ function updateUrlButtonIcon() {
 
 // ランダム再生更新
 function updateRandomButtonUI() {
-    const btn = randomPlayBtn;
-
-    btn.classList.remove('active');
-
+    randomPlayBtn.classList.remove('active');
     if (isRandomPlayMode) {
-        btn.classList.add('active');
-        btn.setAttribute('data-tooltip', 'ランダム再生中（Ctrl+r）');
+        randomPlayBtn.classList.add('active');
+        randomPlayBtn.setAttribute('data-tooltip', 'ランダム再生中（Ctrl+r）');
     } else {
-        btn.setAttribute('data-tooltip', 'ランダム再生無効（Ctrl+r）');
+        randomPlayBtn.setAttribute('data-tooltip', 'ランダム再生無効（Ctrl+r）');
     }
 }
 
@@ -1502,8 +1486,7 @@ function toggleRandomPlay() {
             savePlaylistAndPlaybackState();
             saveShuffleState();
         }
-    } 
-    else if (!isRandomPlayMode && wasRandom) {
+    } else if (!isRandomPlayMode && wasRandom) {
         // ランダム → 通常 に変更（ケース2・4）
         // playlist は現在の順序を維持する
         shuffleOrder = [];
@@ -1645,6 +1628,7 @@ function getNextVideoIndex() {
     }
 }
 
+// ランダム再生の状態を保存
 function saveShuffleState() {
     if (isRandomPlayMode) {
         localStorage.setItem('shuffleOrder', JSON.stringify(shuffleOrder));
@@ -2158,6 +2142,7 @@ function updateEditModeButtonUI() {
     }
 }
 
+// プレイリスト追加位置を計算するヘルパー関数
 function getPlaylistInsertIndex(addPosition = 0) {
     const selectedIndex = selectedPlaylistIndex >= 0 && selectedPlaylistIndex < playlist.length ? selectedPlaylistIndex : -1;
     const fallbackIndex = currentVideoIndex >= 0 && currentVideoIndex < playlist.length ? currentVideoIndex : 0;
@@ -2165,10 +2150,12 @@ function getPlaylistInsertIndex(addPosition = 0) {
     return Math.max(0, baseIndex + addPosition);
 }
 
+// 現在の追加モードに応じて、追加位置を返すヘルパー関数
 function getCurrentAddModePosition() {
     return currentAddMode === 'Add1' ? 1 : 0;
 }
 
+// プレイリストにファイルを挿入するヘルパー関数
 async function insertFilesIntoPlaylist(files, addPosition = 0) {
     if (!files || files.length === 0) return;
 
@@ -2423,6 +2410,7 @@ function setPlaybackRate(rate, showOverlay = true) {
     }
 }
 
+// 再生速度変更（増速／減速）
 function changePlaybackRate(direction) { // direction: 1 増速, -1 減速
     const current = parseFloat(videoPlayer.playbackRate || 1.0);
     let idx = playbackRates.findIndex(r => Math.abs(r - current) < 0.001);
@@ -2439,6 +2427,7 @@ function changePlaybackRate(direction) { // direction: 1 増速, -1 減速
     }
 }
 
+// 再生速度増減ボタン用の関数
 function increasePlaybackRate() { changePlaybackRate(1); }
 function decreasePlaybackRate() { changePlaybackRate(-1); }
 
@@ -2638,6 +2627,7 @@ async function sortByCreationTime(ascending = true) {
     return itemsWithTime;
 }
 
+// 元の順番を localStorage から復元するヘルパー関数
 function getStoredOriginalLoadOrder() {
     try {
         const savedOriginalOrder = localStorage.getItem('originalLoadOrder');
@@ -2889,6 +2879,7 @@ function buildAddMenuContent(menu) {
     });
 }
 
+// プレイリスト追加ポップアップメニュー作成関数
 function createAddMenu() {
     const menu = document.createElement('div');
     menu.className = 'add-playlist-menu';  // CSSで位置・スタイルを調整
@@ -3330,13 +3321,14 @@ function updateVideoSubtitle(label, trackObj) {
     videoPlayer.appendChild(track);
 }
 
+// 一時変換ファイル削除
 async function deleteTempVideo() {
     if (delConvertFile) {  // 前の loadedmetadata でセットした変数など
         // ハンドルを確実に解放
         videoPlayer.pause();
         videoPlayer.removeAttribute('src');
-        videoPreview.removeAttribute('src');
         videoPlayer.load();
+        videoPreview.removeAttribute('src');
         videoPreview.load();
 
         await deleteTempFile(delConvertFile);
@@ -4135,6 +4127,25 @@ urlConfirmBtn.addEventListener('click', () => {
     urlInputEnter();
 });
 
+// 再生中動画パス表示エリアクリック
+playlistPathArea.addEventListener('click', () => {
+    if (!filterPanel) return;
+    isFilterPanelVisible = !isFilterPanelVisible;
+    filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
+    if (isFilterPanelVisible) {
+        updateFilterList();
+        zoomEndBtn.click(); // リセット＆終了
+        try { playlistFilterInput?.focus(); } catch (e) {}
+        setTimeout(() => {
+            try {
+                const targetIndex = selectedPlaylistIndex >= 0 ? selectedPlaylistIndex : currentVideoIndex;
+                const el = filterList ? filterList.querySelector('[data-index="' + targetIndex + '"]') : null;
+                if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } catch (e) {}
+        }, 50);
+    }
+});
+
 // ▶️／⏸️再生/一時停止
 playPauseBtn.addEventListener('click', async () => {
     await togglePlayPause()
@@ -4292,7 +4303,7 @@ fitModeBtn.addEventListener('click', () => {
     updateIconOverlay();
 });
 
-// ズームマウスオーバー
+// 🔍ズームパネルマウスオーバー
 zoomPanel.addEventListener('mouseover', () => {
     if (isZoomMode) {
         zoomPanel.style.cursor = 'auto';
@@ -4312,7 +4323,6 @@ zoomBtn.addEventListener('click', () => {
         if (isFilterPanelVisible) {
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
-            updateFilterButtonUI();
         }
     } else {
         zoomEndBtn.click(); // リセット＆終了
@@ -4366,14 +4376,13 @@ function addToFilterHistory(text) {
 
 // フィルタ履歴datalistを更新
 function updateFilterHistoryDatalist() {
-    const datalist = document.getElementById('filterHistoryList');
-    if (!datalist) return;
+    if (!filterHistoryList) return;
     
-    datalist.innerHTML = '';
+    filterHistoryList.innerHTML = '';
     filterHistory.forEach((item) => {
         const option = document.createElement('option');
         option.value = item;
-        datalist.appendChild(option);
+        filterHistoryList.appendChild(option);
     });
 }
 
@@ -4399,10 +4408,12 @@ playlistFilterInput.addEventListener('keydown', (e) => {
     }
 });
 
+// 🆑フィルタ条件クリアボタン
 filterClearBtn.addEventListener('click', () => {
     clearPlaylistFilter();
 });
 
+// ウィンドウリサイズ時の処理
 window.addEventListener('resize', () => {
     if (isFilterPanelVisible) adjustFilterPanelHeight();
     if (currentAspectRatio !== 'none') {
@@ -4420,7 +4431,7 @@ repeatPlayBtn.addEventListener('click', () => {
     toggleRepeatPlay();
 });
 
-// アスペクト比設定ボタン
+// 📺アスペクト比設定ボタン
 aspectRatioBtn.addEventListener('click', (event) => {
     event.stopPropagation();
 
@@ -4547,13 +4558,13 @@ helpOpenBtn.addEventListener('click', openHelp);
 // ❌ヘルプ（閉じる）イベントリスナー
 helpCloseBtn.addEventListener('click', closeHelp);
 
-// 動画再生
+// ▶️動画再生
 videoPlayer.addEventListener('play', () => {
     // メディアナビゲータ再生中設定
     navigator.mediaSession.playbackState = 'playing';
 });
 
-// 動画一時停止
+// ⏸️動画一時停止
 videoPlayer.addEventListener('pause', () => {
     // メディアナビゲータ一時停止設定
     navigator.mediaSession.playbackState = 'paused';
@@ -4596,7 +4607,7 @@ joinPlaylistBtn.addEventListener('click', () => {
     joinPlaylistVideos();
 });
 
-// 動画エラー（共通化・安全・モード対応）
+// 🎬動画エラー（共通化・安全・モード対応）
 videoPlayer.addEventListener('error', (e) => {
     const error = videoPlayer.error;
     if (!error) return;
@@ -5351,7 +5362,6 @@ editModeBtn.addEventListener('click', () => {
         if (isFilterPanelVisible) {
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
-            updateFilterButtonUI();
         }
         editControls.style.display = 'flex';
         editModeBtn.classList.add('active');
