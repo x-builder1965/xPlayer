@@ -2768,7 +2768,6 @@ function createSortMenu() {
         item.style.cursor = 'pointer';
         item.style.whiteSpace = 'nowrap';
         item.style.color = currentSortMode === key ? '#00ccff' : '#eee';
-
         item.innerHTML = (currentSortMode === key ? '✅ ' : '　　') + label;
 
         item.addEventListener('click', async (event) => {
