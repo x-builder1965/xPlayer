@@ -1717,20 +1717,18 @@ async function playVideo(file, currentTime) {
     }
 
     // 再生開始
-    playPauseBtn.textContent = '▶️';
-    playPauseBtn.classList.remove('paused-active');
-    playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+    startPeriodicSave();
     videoPlayer.play().catch(() => {
         playPauseBtn.textContent = '⏸️';
         playPauseBtn.classList.add('paused-active');
         playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+        stopPeriodicSave();
     });
 
     // フィルタ条件をクリアし、再生動画の行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
     clearPlaylistFilter();
 
-    startPeriodicSave();
     showControlsAndFilename();
     updatePlaylistDisplay();
     updateIconOverlay();
@@ -1799,6 +1797,10 @@ async function togglePlayPause() {
             }
             const file = playlist[currentVideoIndex].file;
             await setVideoSrc(file);
+        } else {
+            playPauseBtn.textContent = '▶️';
+            playPauseBtn.classList.remove('paused-active');
+            playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
         }
 
         if (modeChange === 'convert') {
@@ -1816,14 +1818,13 @@ async function togglePlayPause() {
             }
         }
         
-        playPauseBtn.textContent = '▶️';
-        playPauseBtn.classList.remove('paused-active');
-        playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+        // 再生開始
         startPeriodicSave();
         videoPlayer.play().catch(() => {
             playPauseBtn.textContent = '⏸️';
             playPauseBtn.classList.add('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+            stopPeriodicSave();
         });
     } else {
         videoPlayer.pause();
@@ -1839,11 +1840,16 @@ async function togglePlayPause() {
     clearPlaylistFilter();
 
     showControlsAndFilename();
+    updatePlaylistDisplay();
     updateIconOverlay();
 }
 
 // 動画ソース設定
 async function setVideoSrc(file) {
+    playPauseBtn.textContent = '▶️';
+    playPauseBtn.classList.remove('paused-active');
+    playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+
     // クエリパラメータを除去して正しい拡張子を取得
     let cleanPath = file.path;
     if (cleanPath.includes('?')) {
@@ -3465,7 +3471,7 @@ ipcRenderer.on('join-progress', (event, payload) => {
                 updateOverlayDisplay(`🎞️ 結合中…`, true, 0);
                 break;
             case 'join-done':
-                updateOverlayDisplay('🎞️ 結合完了！', false, 1500);
+                updateOverlayDisplay('🎞️ 結合完了', false, 1500);
                 break;
         }
     } catch (e) {
@@ -4703,28 +4709,20 @@ videoPlayer.addEventListener('ended', async () => {
     // 一時ファイル削除
     await deleteTempVideo();
 
-    if (isRepeatPlayMode === 'single' && modeChange === 'video') {
-        // 1動画ループ → 即座に同じ動画を再生
-        videoPlayer.play().catch(() => {});
-        playPauseBtn.textContent = '▶️';
-        playPauseBtn.classList.remove('paused-active');
-        playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+    // 常にgetNextVideoIndex()を呼び、次があれば再生
+    // （ランダムOFF・repeat 'none' でも次動画に進む）
+    const nextIndex = getNextVideoIndex();
+    if (nextIndex >= 0) {
+        currentVideoIndex = nextIndex;
+        await playVideo(playlist[currentVideoIndex].file, 0);
     } else {
-        // 常にgetNextVideoIndex()を呼び、次があれば再生
-        // （ランダムOFF・repeat 'none' でも次動画に進む）
-        const nextIndex = getNextVideoIndex();
-        if (nextIndex >= 0) {
-            currentVideoIndex = nextIndex;
-            await playVideo(playlist[currentVideoIndex].file, 0);
-        } else {
-            if (modeChange === 'convert') {
-                seekBar.value = 0;
-                updateOverlayDisplay('🔄️ 変換完了', false, 3000);
-            }
-            playStopBtn.click(); // プレイリストの最後で停止
+        if (modeChange === 'convert') {
+            seekBar.value = 0;
+            updateOverlayDisplay('🔄️ 変換完了', false, 3000);
         }
-        savePlaylistAndPlaybackState();
+        playStopBtn.click(); // プレイリストの最後で停止
     }
+    savePlaylistAndPlaybackState();
 
     showControlsAndFilename();
     updateIconOverlay();
