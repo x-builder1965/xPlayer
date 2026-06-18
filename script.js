@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.24.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.25.2';
 // ---------------------------------------------------------------------
 // [変更履歴]
 // 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
@@ -29,6 +29,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.24.2';
 // 2026-06-17 Ver4.22.2 一時停止（⏸️）、ミュート（🔇）、並び替え（📩）、字幕選択（🔠）の背景色を（赤・黄）に変更。
 // 2026-06-17 Ver4.23.2 変換処理（🔄️）でプレイリストの管理不良により変換処理が終了しなくなる不具合を修正。
 // 2026-06-17 Ver4.24.2 アスペクト比設定（📺）と描画モード（↔️／↕️／⏺️）の配置を入替。
+// 2026-06-18 Ver4.25.2 繰り返し再生（🔁／🔂）時の変換処理（🔄️）の挙動を見直し。
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -771,7 +772,7 @@ function showControlsAndFilename() {
     clearTimeout(timeout);
     if (!isMouseOverControls && !isUrlControlsVisible) {
         timeout = setTimeout(() => {
-            if (!isMouseOverControls && !isFilterPanelVisible && !(isEditMode || (editControls && editControls.style.display !== 'none'))) {
+            if (!isMouseOverControls && !isFilterPanelVisible && !(isEditMode || (editControls && editControls.style.display !== 'none')) && modeChange !== 'join' && modeChange === 'video') {
                 hideControlsAndFilename(); // ここで無効化
             }
         }, overlayTimeout);
@@ -1867,7 +1868,6 @@ async function setVideoSrc(file) {
             isConverting = true;
             updatePlaylistDisplay();
             // シークバーを赤色に変更
-            seekBar.classList.add('converting');
             currentConvertPromise = convertVideo(file.path, modeChange, currentAudioIndex);
             const convertedPath = await currentConvertPromise;
 
@@ -1894,16 +1894,8 @@ async function setVideoSrc(file) {
                         delConvertFile = baseConvertFile;
                     }
                 }
-            }
-
-            // 変換完了後、シークバーをリセット・シークバーの色を元に戻す
-            seekBar.value = 0;
-            seekBar.classList.remove('converting');
+            }            
             isPlaying = wasIsPlaying;
-
-            if (modeChange === 'convert' && playlist.length === currentVideoIndex + 1) {
-                updateOverlayDisplay('🔄️ 変換終了', false, 3000);
-            }
         } catch (err) {
             console.error("変換失敗:", err);
             isConverting = false;
@@ -1912,8 +1904,6 @@ async function setVideoSrc(file) {
             updateIconOverlay();
             // 変換失敗時もシークバーをリセット
             seekBar.value = 0;
-            // 変換失敗時もシークバーの色を元に戻す
-            seekBar.classList.remove('converting');
             return;
         }
     }
@@ -3364,15 +3354,18 @@ ipcRenderer.on('convert-progress', (e, { percent, step }) => {
         playListCurrent = 0;
     }
 
-    let title = '変換中…';
     if (step === 1) {
-        if (percent === 100) {
-            title = '変換完了';
+        if (isRepeatPlayMode === 'single') {
+            updateOverlayDisplay(`🔄️ 変換中…（1/1） ${Math.round(percent)}%`, false, 0);
+        } else {
+            updateOverlayDisplay(`🔄️ 変換中…（${playListCurrent + 1}/${playListCount}） ${Math.round(percent)}%`, false, 0);
         }
-        updateOverlayDisplay(`🔄️ ${title}（${playListCurrent + 1}/${playListCount}） ${Math.round(percent)}%`, false, 0);
     }
     // シークバーに進捗を表示
-    const totalPercent = ((playListCurrent * 100) + percent) / (playListCount * 100) * 100;
+    let totalPercent = ((playListCurrent * 100) + percent) / (playListCount * 100) * 100;
+    if (isRepeatPlayMode === 'single') {
+        totalPercent = percent;
+    }
     seekBar.value = totalPercent;
 });
 
@@ -3386,9 +3379,6 @@ ipcRenderer.on('subtitle-extraction-progress', (e, data) => {
     }
 
     updateOverlayDisplay(`🔄️ 字幕作成中…（${playListCurrent + 1}/${playListCount}） 100%（${data.subtitleIndex}/${data.subtitleCount}）`, false, 0);
-    // シークバーに進捗を表示
-    const totalPercent = ((playListCurrent * 100) + 100) / (playListCount * 100) * 100;
-    seekBar.value = totalPercent;
 });
 
 // 変換エラー
@@ -3462,7 +3452,11 @@ ipcRenderer.on('join-progress', (event, payload) => {
                 break;
             case 'convert-pre':
                 const convPercent = Math.round(payload.percent);
-                updateOverlayDisplay(`🎞️ 変換中 ${payload.currentFile}/${payload.totalFiles}… ${convPercent}%`, true, 0);
+                if (isRepeatPlayMode === 'single') {
+                    updateOverlayDisplay(`🎞️ 変換中… （1/1） ${convPercent}%`, true, 0);
+                } else {
+                    updateOverlayDisplay(`🎞️ 変換中… （${payload.currentFile}/${payload.totalFiles}） ${convPercent}%`, true, 0);
+                }
                 break;
             case 'join-start':
                 updateOverlayDisplay('🎞️ 結合開始…', true, 0);
@@ -3475,7 +3469,7 @@ ipcRenderer.on('join-progress', (event, payload) => {
                 break;
         }
     } catch (e) {
-        updateOverlayDisplay('🎞️ 結合処理中…', false, 0);
+        updateOverlayDisplay('🎞️ 変換エラー', false, 0);
     }
 });
 
@@ -4108,12 +4102,12 @@ modeChangeBtn.addEventListener('click', () => {
         if (modeChange === 'convert') {
             modeChange = 'video';
             modeChangeBtn.classList.remove('convert-active');
-            // 視聴モードに戻す時、シークバーの色をリセット
             seekBar.classList.remove('converting');
             updateOverlayDisplay('🎬 再生モードを設定しました', false, 1500);
         } else {
             modeChange = 'convert';
             modeChangeBtn.classList.add('convert-active');
+            seekBar.classList.add('converting');
             updateOverlayDisplay('🔄️ 変換モードを設定しました', false, 1500);
         }
         modeChangeBtn.textContent = modeChange === 'video' ? '🎬' : '🔄️';
@@ -4709,50 +4703,26 @@ videoPlayer.addEventListener('ended', async () => {
     // 一時ファイル削除
     await deleteTempVideo();
 
-    if (isRepeatPlayMode === 'single') {
+    if (isRepeatPlayMode === 'single' && modeChange === 'video') {
         // 1動画ループ → 即座に同じ動画を再生
         videoPlayer.play().catch(() => {});
         playPauseBtn.textContent = '▶️';
         playPauseBtn.classList.remove('paused-active');
         playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
-        return;
-    }
-
-    // 常にgetNextVideoIndex()を呼び、次があれば再生
-    // （ランダムOFF・repeat 'none' でも次動画に進む）
-    const nextIndex = getNextVideoIndex();
-    if (nextIndex >= 0) {
-        currentVideoIndex = nextIndex;
-        await playVideo(playlist[currentVideoIndex].file, 0);
-        savePlaylistAndPlaybackState();
     } else {
-        // 次なし → 停止処理
-        videoPlayer.pause();
-        isPlaying = false;
-        currentVideoIndex = -1;
-
-        // srcを完全にクリア
-        videoPlayer.removeAttribute('src');
-        videoPlayer.load();
-        videoPreview.removeAttribute('src');
-        videoPreview.load();
-
-        // UI更新
-        playPauseBtn.textContent = '⏸️';
-        playPauseBtn.classList.add('paused-active');
-        playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-        stopPeriodicSave();
-        
-        // 再生中アイコンを非表示にする
-        if (playlistPathArea) {
-            const currentPath = getCurrentPlaybackPath();
-            playlistPathArea.value = currentPath || appNameAndCopyrightValueLine;
+        // 常にgetNextVideoIndex()を呼び、次があれば再生
+        // （ランダムOFF・repeat 'none' でも次動画に進む）
+        const nextIndex = getNextVideoIndex();
+        if (nextIndex >= 0) {
+            currentVideoIndex = nextIndex;
+            await playVideo(playlist[currentVideoIndex].file, 0);
+        } else {
+            if (modeChange === 'convert') {
+                seekBar.value = 0;
+                updateOverlayDisplay('🔄️ 変換完了', false, 3000);
+            }
+            playStopBtn.click(); // プレイリストの最後で停止
         }
-        
-        // フィルタリスト更新（アイコン削除）
-        if (isFilterPanelVisible) updateFilterList();
-        
-        localStorage.setItem('currentTime', 0);
         savePlaylistAndPlaybackState();
     }
 
