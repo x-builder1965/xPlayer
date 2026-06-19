@@ -576,6 +576,20 @@ table {
     overflow-y: auto;
     display: block;
 }        
+/* スクロールバーのカスタマイズ（ダークテーマ用） */
+.body-table::-webkit-scrollbar {
+    width: 8px;
+}
+.body-table::-webkit-scrollbar-track {
+    background: #121212;
+}
+.body-table::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+.body-table::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
 .body-table tr:hover {
     background-color: #404040;
     transition: background-color 0.3s ease;
@@ -808,14 +822,12 @@ button#modeChangeBtn.convert-active:hover,
     padding-left: 0;
     margin: 0;
 }
-
 .changelog-list li {
     margin-bottom: 8px;
     border-bottom: 1px solid #2a3536;
     padding-bottom: 6px;
     white-space: pre-wrap; /* 改行やインデントを維持 */
 }
-
 /* 子要素（・付きの行）のインデントを少し下げる、または装飾用 */
 .changelog-list li.sub-item {
     padding-left: 15px;
@@ -823,4 +835,8 @@ button#modeChangeBtn.convert-active:hover,
     border-bottom: none;
     padding-bottom: 2px;
     margin-bottom: 0;
+}
+.changelog-list li:hover {
+    background-color: #404040;
+    transition: background-color 0.3s ease;
 }
