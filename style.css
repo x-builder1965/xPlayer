@@ -585,13 +585,6 @@ table {
     width: 100%;
     border-collapse: collapse;
 }
-.header-table caption {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #4fc3f7;
-    text-align: left; /* 左揃えにする場合 */
-    margin-bottom: 8px; /* テーブルとの間に少し隙間を空ける場合 */
-}
 .body-table {
     flex: 1;
     overflow-y: auto;
