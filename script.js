@@ -5616,10 +5616,10 @@ changelogBtn.addEventListener('click', () => {
     if (changelogContent.style.display === 'block') {
         changelogBtn.textContent = '▶ 変更履歴';
         changelogContent.style.display = 'none';
-        tableContainer.style.height = `calc(100vh - 7em)`;
+        tableContainer.style.height = `calc(96vh - 7em)`;
     } else {
         changelogBtn.textContent = '▼ 変更履歴';
         changelogContent.style.display = 'block';
-        tableContainer.style.height = `calc(65.3vh - 7em)`;
+        tableContainer.style.height = `calc(61.3vh - 7em)`;
     }
 });

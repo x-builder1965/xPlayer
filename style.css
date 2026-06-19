@@ -569,7 +569,7 @@ h1 {
     max-width: none;
 }
 .table-container {
-    height: calc(100vh - 7em);
+    height: calc(96vh - 7em);
 }
 table {
     width: 100%;
