@@ -222,7 +222,8 @@ const cutTimelineContainer = document.getElementById('cutTimelineContainer');
 const cutTimelineBar = document.getElementById('cutTimelineBar');
 const filterHistoryList = document.getElementById('filterHistoryList');
 const changelogBtn = document.getElementById('changelogBtn');
-const content = document.getElementById('changelogContent');
+const changelogContent = document.getElementById('changelogContent');
+const tableContainer = document.getElementById('tableContainer');
 
 // localStorage から復得
 const savedVolume = localStorage.getItem('volume');
@@ -5612,11 +5613,13 @@ subtitleSelectBtn.addEventListener('click', async (e) => {
 // 変更履歴の表示／非表示トグル
 changelogBtn.addEventListener('click', () => {
     // 表示状態をトグル
-    if (content.style.display === 'block') {
-        content.style.display = 'none';
+    if (changelogContent.style.display === 'block') {
         changelogBtn.textContent = '▶ [変更履歴]';
+        changelogContent.style.display = 'none';
+        tableContainer.style.height = `calc(100vh - 7em)`;
     } else {
-        content.style.display = 'block';
         changelogBtn.textContent = '▼ [変更履歴]';
+        changelogContent.style.display = 'block';
+        tableContainer.style.height = `calc(66vh - 7em)`;
     }
 });

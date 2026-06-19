@@ -541,7 +541,6 @@ h1 {
 .table-container,
 .changelog-container {
     width: 100%;
-    height: calc(100vh - 7em);
     margin: 0 auto;
     border: 1px solid #333;
     border-radius: 1.2em;
@@ -554,6 +553,9 @@ h1 {
     flex-direction: column;
     flex: 1;
     max-width: none;
+}
+.table-container {
+    height: calc(100vh - 7em);
 }
 table {
     width: 100%;
@@ -781,7 +783,7 @@ button#modeChangeBtn.convert-active:hover,
 /* 変更履歴のコンテナ（最初は非表示） */
 .changelog-container {
     display: none;
-    max-height: calc(50vh - 7em); /* 縦長になりすぎないようスクロールを設定 */
+    height: calc(50vh - 7em); /* 縦長になりすぎないようスクロールを設定 */
     overflow-y: auto;
 }
 
