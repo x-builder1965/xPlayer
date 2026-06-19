@@ -1,39 +1,8 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.27.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.28.2';
 // ---------------------------------------------------------------------
-// [変更履歴]
-// 2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。
-// 2026-05-30 Ver4.01.2 動画再生中にランダム再生（🔀）をONにしたとき、現在再生中の動画がシャッフル後の先頭に来るように変更。
-// 2026-05-31 Ver4.02.2 再生停止（⏹️）クリック後の動画再生（▶️）の不良対応。
-// 2026-05-31 Ver4.03.2 再生停止（⏹️）クリックで再生時間を０にリセット。
-// 2026-05-31 Ver4.04.2 プレイリスト編集 追加（➕）に「選択行に追加」「選択行の下に追加」機能追加。
-// 2026-06-01 Ver4.05.2 動画のURLの入力中、フィルタ条件入力中はショートカット無効に変更。
-// 2026-06-01 Ver4.06.2 Homeキー入力時の挙動不良対応。
-// 2026-06-01 Ver4.07.2 フィルタパネルの見た目の改善。
-// 2026-06-01 Ver4.08.2 再生中動画パスを折り返し無効に変更。
-// 2026-06-01 Ver4.09.2 プレイリスト編集 追加（➕→＋）、削除（➖→ー）のアイコンを変更。
-// 2026-06-11 Ver4.10.2 再生速度に2.5, 3.0, 5.0を追加。
-// 2026-06-12 Ver4.11.2 プレイリスト編集 追加（＋）に「フォルダ選択」機能を追加。
-// 2026-06-12 Ver4.12.2 プレイリストの並び替え（📩）の「（なし）」クリック時の動作不良対応。
-// 2026-06-15 Ver4.13.2 アスペクト比設定（📺）機能追加。
-// 2026-06-15 Ver4.14.2 描画モードの切替（↔️／↕️／⏺️）の機能見直し。
-// 2026-06-15 Ver4.15.2 フルスクリーン時、アスペクト比設定（📺）のメニューが表示されない問題の対応。
-// 2026-06-15 Ver4.16.2 ズームパネルのリセット対象に描画モードを追加。
-// 2026-06-16 Ver4.17.2 フィルタリスト表示とズームパネル表示の同時表示を抑止。
-// 2026-06-16 Ver4.18.2 アスペクト比設定（📺）の背景色を変更。
-// 2026-06-16 Ver4.19.2 ズームパネル内のツールチップの位置調整。
-// 2026-06-16 Ver4.20.2 プレイリストのフィルタ指定方法の改善。
-// 2026-06-16 Ver4.21.2 ポップアップメニュー表示中のボタンクリックでメニューを閉じるように変更。
-// 2026-06-17 Ver4.22.2 一時停止（⏸️）、ミュート（🔇）、並び替え（📩）、字幕選択（🔠）の背景色を（赤・黄）に変更。
-// 2026-06-17 Ver4.23.2 変換処理（🔄️）でプレイリストの管理不良により変換処理が終了しなくなる不具合を修正。
-// 2026-06-17 Ver4.24.2 アスペクト比設定（📺）と描画モード（↔️／↕️／⏺️）の配置を入替。
-// 2026-06-18 Ver4.25.2 繰り返し再生（🔁／🔂）時の変換処理（🔄️）の挙動を見直し。
-// 2026-06-18 Ver4.26.2 ロジック見直しによる細かな不具合修正と安定性向上。
-// 2026-06-19 Ver4.27.2 イメージ字幕（字幕ファイル出力（vtt）不能）のエラー対応。
-// ---------------------------------------------------------------------
-
 // 🔲共通変数設定🔲
 // モジュールインポート
  const { 
@@ -252,6 +221,8 @@ const playlistPathArea = document.getElementById('playlistPathArea');
 const cutTimelineContainer = document.getElementById('cutTimelineContainer');
 const cutTimelineBar = document.getElementById('cutTimelineBar');
 const filterHistoryList = document.getElementById('filterHistoryList');
+const changelogBtn = document.getElementById('changelogBtn');
+const content = document.getElementById('changelogContent');
 
 // localStorage から復得
 const savedVolume = localStorage.getItem('volume');
@@ -5636,4 +5607,16 @@ subtitleSelectBtn.addEventListener('click', async (e) => {
     
     showControlsAndFilename();
     updateIconOverlay();
+});
+
+// 変更履歴の表示／非表示トグル
+changelogBtn.addEventListener('click', () => {
+    // 表示状態をトグル
+    if (content.style.display === 'block') {
+        content.style.display = 'none';
+        changelogBtn.textContent = '▶ [変更履歴]';
+    } else {
+        content.style.display = 'block';
+        changelogBtn.textContent = '▼ [変更履歴]';
+    }
 });

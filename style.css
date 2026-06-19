@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.22.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.28.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -538,7 +538,8 @@ h1 {
 #helpCloseBtn:active {
     transform: translateY(-50%) scale(0.95);
 }
-.table-container {
+.table-container,
+.changelog-container {
     width: 100%;
     height: calc(100vh - 7em);
     margin: 0 auto;
@@ -758,4 +759,66 @@ button#modeChangeBtn.convert-active:hover,
 #fitModeBtn.fitMode-fill:hover,
 #sortPlaylistBtn.random-sorted-active:hover {
     background: #f4d03f7a !important;   /* 黄系：１動画 */
+}
+
+/* トグル用のトリガーボタン（リンク風） */
+.changelog-toggle {
+    display: inline-block;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #4fc3f7;
+    cursor: pointer;
+    user-select: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.changelog-toggle:hover {
+    background-color: #1c2526;
+}
+
+/* 変更履歴のコンテナ（最初は非表示） */
+.changelog-container {
+    display: none;
+    max-height: calc(50vh - 7em); /* 縦長になりすぎないようスクロールを設定 */
+    overflow-y: auto;
+}
+
+/* スクロールバーのカスタマイズ（ダークテーマ用） */
+.changelog-container::-webkit-scrollbar {
+    width: 8px;
+}
+.changelog-container::-webkit-scrollbar-track {
+    background: #121212;
+}
+.changelog-container::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+}
+.changelog-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* 履歴リストのスタイル */
+.changelog-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.changelog-list li {
+    margin-bottom: 8px;
+    border-bottom: 1px solid #2a3536;
+    padding-bottom: 6px;
+    white-space: pre-wrap; /* 改行やインデントを維持 */
+}
+
+/* 子要素（・付きの行）のインデントを少し下げる、または装飾用 */
+.changelog-list li.sub-item {
+    padding-left: 15px;
+    color: #b0bec5;
+    border-bottom: none;
+    padding-bottom: 2px;
+    margin-bottom: 0;
 }
