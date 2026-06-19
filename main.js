@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.83.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.27.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -224,8 +224,12 @@ function escapeRegExp(string) {
 
 // 字幕抽出関数（変更なし、metadataを引数で受け取る）
 async function extractSubtitlesOnly(inputPath, baseName, outDir, metadata) {
-    const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
+    const textSubtitleCodecs = ['webvtt', 'srt', 'subrip', 'mov_text', 'ass', 'ssa'];
+    const subtitleStreams = metadata.streams.filter(s => 
+        s.codec_type === 'subtitle' && textSubtitleCodecs.includes(s.codec_name)
+    );
     if (subtitleStreams.length === 0) {
+        console.log('テキスト形式の字幕ストリームが見つからないため、処理をスキップします。');
         return;
     }
 
@@ -257,33 +261,23 @@ async function extractSubtitlesOnly(inputPath, baseName, outDir, metadata) {
         const lang = sub.tags?.language || sub.tags?.lang || 'und';
         const vttPath = path.join(outDir, `${baseName}_track${idx}_${lang}.vtt`);
 
-        mainWindow.webContents.send('subtitle-extraction-progress', {
-            filePath: inputPath,
-            subtitleCount: subtitleStreams.length,
-            subtitleIndex: idx,
-            message: `字幕抽出中...（${idx + 1}/${subtitleStreams.length}）`
-        });
+        // （中略：進捗通知など）
 
-        try {
-            await new Promise((res) => {  // エラー時も継続するため rej を使わず res で終わる
-                ffmpeg(inputPath)
-                    .outputOptions([
-                        `-map 0:s:${idx}`,
-                        '-vn', '-an',
-                        '-c:s', 'webvtt'
-                    ])
-                    .on('end', () => {
-                        res();
-                    })
-                    .on('error', (err, stdout, stderr) => {
-                        console.error(`抽出エラー (track ${idx}):`, stderr || err.message);
-                        res();  // エラーでも次へ進む
-                    })
-                    .save(vttPath);
-            });
-        } catch (e) {
-            console.warn(`トラック ${idx} 失敗（スキップ）`);
-        }
+        await new Promise((res) => {
+            ffmpeg(inputPath)
+                .outputOptions([
+                    // 【修正点】0:s:${idx} ではなく、ストリームの絶対インデックス（sub.index）を使用する
+                    `-map 0:${sub.index}`, 
+                    '-vn', '-an',
+                    '-c:s', 'webvtt'
+                ])
+                .on('end', () => res())
+                .on('error', (err, stdout, stderr) => {
+                    console.error(`抽出エラー (track ${idx}):`, stderr || err.message);
+                    res();
+                })
+                .save(vttPath);
+        });
     }
 
     mainWindow.webContents.send('subtitle-extraction-progress', {
