@@ -5614,12 +5614,12 @@ subtitleSelectBtn.addEventListener('click', async (e) => {
 changelogBtn.addEventListener('click', () => {
     // 表示状態をトグル
     if (changelogContent.style.display === 'block') {
-        changelogBtn.textContent = '▶ [変更履歴]';
+        changelogBtn.textContent = '▶ 変更履歴';
         changelogContent.style.display = 'none';
         tableContainer.style.height = `calc(100vh - 7em)`;
     } else {
-        changelogBtn.textContent = '▼ [変更履歴]';
+        changelogBtn.textContent = '▼ 変更履歴';
         changelogContent.style.display = 'block';
-        tableContainer.style.height = `calc(66vh - 7em)`;
+        tableContainer.style.height = `calc(65.3vh - 7em)`;
     }
 });
