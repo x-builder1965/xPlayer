@@ -1525,31 +1525,40 @@ ipcMain.handle('get-video-tracks', async (event, filePath) => {
         const audioTracks = [];
         const subtitleTracks = [];
 
+        // 【追加】安全に抽出できるテキスト字幕コーデックのホワイトリスト
+        const textSubtitleCodecs = ['webvtt', 'srt', 'subrip', 'mov_text', 'tx3g', 'ass', 'ssa'];
+
         streams.forEach((s, index) => {
+            // 元のストリームの index（絶対インデックス）を保持したオブジェクトを作成
             const streamWithIndex = { ...s, index };
 
             if (s.codec_type === 'audio') {
                 audioTracks.push(streamWithIndex);
-            } else if (
-                s.codec_type === 'subtitle' ||
-                s.codec_type === 'text' ||
-                s.codec_name === 'tx3g' ||
-                s.codec_name === 'mov_text'
+            } 
+            // 【修正】字幕判定ロジック
+            // codec_type が 'subtitle' または 'text' であり、かつ画像形式（dvd_subtitle等）ではないもの
+            else if (
+                (s.codec_type === 'subtitle' || s.codec_type === 'text') &&
+                textSubtitleCodecs.includes(s.codec_name?.toLowerCase())
             ) {
+                // フロントエンド側で判定に使えるよう、一応フラグも持たせる
+                streamWithIndex.isTextBased = true;
                 subtitleTracks.push(streamWithIndex);
             }
         });
 
-        // ★ ここで初めて await が安全に使える
         const outDir = path.dirname(filePath);
         const baseName = path.parse(path.basename(filePath)).name;
+        
+        // 【注意】ここでループする subtitleTracks はすでにテキスト字幕のみに絞り込まれています
         for (const [idx, sub] of subtitleTracks.entries()) {
             const lang = sub.tags?.language || sub.tags?.lang || 'und';
+            // ファイル名は「テキスト字幕の中での連番(idx)」を使用して作成
             const vttPath = path.join(outDir, `${baseName}_track${idx}_${lang}.vtt`);
 
             let exists = false;
             try {
-                await fs.stat(vttPath);   // ← ここで安全に await 可能
+                await fs.stat(vttPath);
                 exists = true;
             } catch {
                 // 存在しない → false のまま
@@ -1567,7 +1576,7 @@ ipcMain.handle('get-video-tracks', async (event, filePath) => {
         return {
             success: true,
             audio: audioTracks,
-            subtitle: subtitleTracks,
+            subtitle: subtitleTracks, // イメージ字幕が完全に排除された配列
             totalStreams: streams.length,
             debug: {
                 hasTx3g: streams.some(s => s.codec_name === 'tx3g'),

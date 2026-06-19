@@ -2939,7 +2939,7 @@ function updateTrackButtonsVisibility() {
 }
 
 // 動画音声トラック・字幕トラック取得
-async function getVideoTraks(filePath) {
+async function getVideoTracksAndFilter(filePath) {
     // 音声トラック情報・字幕トラック情報取得
     const result = await getVideoTracks(filePath);
     if (result.success) {
@@ -2972,7 +2972,7 @@ async function toggleTrackMenu(e, type, button) {
 
     // 動画音声トラック・字幕トラック取得
     const filePath = playlist[currentVideoIndex].file.path;
-    await getVideoTraks(filePath);
+    await getVideoTracksAndFilter(filePath);
     if (currentSubtitleTracks.length === 0) {
         subtitleSelectBtn.classList.remove('subtitles-active');
         return;
