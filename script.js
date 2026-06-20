@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.30.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.31.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2026,6 +2026,7 @@ async function playlistSet(videoFiles) {
         // 新規プレイリスト作成 → 並び替えを「なし」に強制リセット
         currentSortMode = 'none';
         localStorage.setItem('playlistSortMode', 'none');
+        sortPlaylistBtn.classList.remove('sorted-active', 'random-sorted-active');
 
         // ★ ここで必ず現在の順番を基準として保存（上書き）
         const currentPaths = videoFiles.map(file => file.path);
