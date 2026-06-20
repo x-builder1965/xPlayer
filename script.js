@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.28.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.29.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -5324,7 +5324,7 @@ dropzone.addEventListener('drop', async (e) => {
 
 // ✂️編集モード切替
 editModeBtn.addEventListener('click', () => {
-    if (!videoPlayer.src) {
+    if (playlist.length === 0) {
         updateOverlayDisplay('✂️ プレイリストが空です');
         return;
     }
