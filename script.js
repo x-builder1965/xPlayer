@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.29.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.30.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -592,17 +592,21 @@ document.addEventListener('DOMContentLoaded', () => {
 // 🔲共通関数🔲
 // 音声トラック・字幕トラック更新
 async function updateTrack(type) {
+    let videondex = currentVideoIndex;
+    if (isVideoStopped() || videondex === -1) {
+        videondex = selectedPlaylistIndex;
+    }
     // プレイリスト・インデックスチェック
     if (!playlist?.length || 
-        !Number.isInteger(currentVideoIndex) || 
-        currentVideoIndex < 0 || 
-        currentVideoIndex >= playlist.length) {
+        !Number.isInteger(videondex) || 
+        videondex < 0 || 
+        videondex >= playlist.length) {
         
         console.warn(`updateTrack(${type}) スキップ：有効な動画が選択されていません`);
         return;
     }
 
-    const currentItem = playlist[currentVideoIndex];
+    const currentItem = playlist[videondex];
     if (!currentItem?.file?.path) {
         console.warn('選択中のアイテムに file.path がありません');
         return;
@@ -1204,8 +1208,13 @@ function updateFilterList() {
         const showPlaybackIcon = index === currentVideoIndex && !isVideoStopped();
         button.textContent = (showPlaybackIcon ? '▶️ ' : '') + displayText;
         button.title = item.file?.path || '';
-        button.addEventListener('click', () => {
+        button.addEventListener('click', async () => {
             selectedPlaylistIndex = index;
+            if (modeChange === 'video') {
+                await updateTrack('subtitle');
+            } else {
+                await updateTrack('audio');
+            }
             updateFilterList();
         });
         button.addEventListener('dblclick', async () => {
@@ -2894,12 +2903,12 @@ function resetCursorTimer() {
 
 // 音声/字幕ボタンの表示をモードに応じて切り替え
 function updateTrackButtonsVisibility() {
-    subtitleSelectBtn.classList.remove('subtitles-active');
     if (modeChange === 'video') {
         // 再生モード → 字幕選択のみ表示
         if (voiceSelectBtn) voiceSelectBtn.style.display = 'none';
         if (subtitleSelectBtn) subtitleSelectBtn.style.display = 'inline-block';
 
+        subtitleSelectBtn.classList.remove('subtitles-active');
         if (selectedSubtitleLabel !== '（なし）') {
             subtitleSelectBtn.classList.add('subtitles-active');
         }
@@ -2907,6 +2916,8 @@ function updateTrackButtonsVisibility() {
         // 変換モード → 音声選択のみ表示
         if (voiceSelectBtn) voiceSelectBtn.style.display = 'inline-block';
         if (subtitleSelectBtn) subtitleSelectBtn.style.display = 'none';
+
+        subtitleSelectBtn.classList.remove('subtitles-active');
     }
 }
 
@@ -2943,7 +2954,11 @@ async function toggleTrackMenu(e, type, button) {
     });
 
     // 動画音声トラック・字幕トラック取得
-    const filePath = playlist[currentVideoIndex].file.path;
+    let videondex = currentVideoIndex;
+    if (isVideoStopped() || videondex === -1) {
+        videondex = selectedPlaylistIndex;
+    }
+    const filePath = playlist[videondex].file.path;
     await getVideoTracksAndFilter(filePath);
     if (currentSubtitleTracks.length === 0) {
         subtitleSelectBtn.classList.remove('subtitles-active');
