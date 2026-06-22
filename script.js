@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.32.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.33.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2238,7 +2238,7 @@ async function removeFromPlaylist() {
     showControlsAndFilename();
 }
 
-// プレイリストクリア
+// 🆑プレイリストクリア
 async function clearPlaylist() {
     if (playlist.length === 0) return;
 
@@ -3516,7 +3516,7 @@ document.addEventListener('keydown', async (event) => {
 
     // ■🌐ネット動画再生■
     if (urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
-        // 🆑ネット動画Url入力クリア（Shift+C）
+        // 🔘ネット動画Url入力クリア（Shift+C）
         if (event.shiftKey && event.key.toLowerCase() === 'c') {
             event.preventDefault();
             urlClearBtn.click();
@@ -3643,7 +3643,7 @@ document.addEventListener('keydown', async (event) => {
 
     // ■フィルタリストパネル■
     if (filterPanel.style.display === 'flex') {
-        // 🆑フィルタ条件クリア（shift+0）
+        // 🔘フィルタ条件クリア（shift+0）
         if (event.shiftKey && event.key === '0') {
             event.preventDefault();
             filterClearBtn.click();
@@ -3691,7 +3691,7 @@ document.addEventListener('keydown', async (event) => {
             }
         }
         
-        // 🆑動画クリア（shift+c）
+        // 🆑プレイリストクリア（shift+c）
         if (event.shiftKey && event.key.toLowerCase() === 'c') {
             if (playlist.length > 0) {
                 event.preventDefault();
@@ -4104,7 +4104,7 @@ modeChangeBtn.addEventListener('click', () => {
     updateTrackButtonsVisibility();
 });
 
-// 🆑URLクリア
+// 🔘URLクリア
 urlClearBtn.addEventListener('click', () => {
     hideOverlayDisplay();
     urlInput.value = '';
@@ -4397,7 +4397,7 @@ playlistFilterInput.addEventListener('keydown', (e) => {
     }
 });
 
-// 🆑フィルタ条件クリアボタン
+// 🔘フィルタ条件クリアボタン
 filterClearBtn.addEventListener('click', () => {
     clearPlaylistFilter();
 });
@@ -5290,7 +5290,7 @@ removePlaylistBtn.addEventListener('click', () => {
     saveShuffleState();
 });
 
-// 🆑クリアボタン
+// 🆑プレイリストクリアボタン
 clearPlaylistBtn.addEventListener('click', () => {
     clearPlaylistFilter();
     clearPlaylist();
@@ -5437,7 +5437,7 @@ editSeekBar.addEventListener('input', () => {
     }
 });
 
-// ❌キャンセル
+// 🆑カット編集クリアボタン
 clearEditBtn.addEventListener('click', () => {
     // カット範囲を全削除
     cutRanges = [];
