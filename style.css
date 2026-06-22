@@ -251,6 +251,9 @@ input#playlistFilterInput {
     font-size: 16px;
     flex: 1;
 }
+input#playlistPathArea:hover {
+    cursor: pointer;
+}
 #seekBar:hover,
 #volumeBar:hover {
     background: rgba(0, 123, 255, 0.2);
