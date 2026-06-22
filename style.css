@@ -213,8 +213,6 @@ Input#playlistFilterInput {
 #zoomBar {
     writing-mode: vertical-lr;   /* または vertical-rl（向きで調整） */
     direction: rtl;              /* スライダーの方向を正しくする */
-    /* 必要に応じて他のスタイル（width/heightなど）を維持 */
-    max-height: 14vh;
 }
 #zoomDisplay {
     font-size: 16px;
