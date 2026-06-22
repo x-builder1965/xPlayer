@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.32.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.34.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -66,6 +66,7 @@ video {
     display: none;
     transition: opacity 0.2s ease;
 }
+
 .filename,
 .filter-panel, 
 .controls {
@@ -79,10 +80,17 @@ video {
     border-radius: 8px;
     transition: opacity 0.3s ease;
     z-index: 900;
-    /* pointer-events は JS で動的に設定 */
 }
 .filename {
     top: 20px;
+}
+.filename-controls {
+    display: flex; 
+    gap: 6px; 
+}
+.url-controls {
+    display: none;
+    gap: 6px;
 }
 .filter-panel {
     top: 80px;
@@ -91,54 +99,14 @@ video {
     height: auto;
     min-height: 120px;
 }
-.controls {
-    bottom: 20px;
-}
 .filter-panel-header {
     display: flex;
-    gap: 8px;
+    gap: 6px;
     align-items: center;
     overflow: visible;
 }
-
-#addPlaylistBtn,
-#removePlaylistBtn {
-    /* フォントファミリーに Noto Sans JP を指定 */
-    font-family: 'Noto Sans JP', sans-serif;
-}
-
-Input#playlistFilterInput {
-    background: rgba(0, 0, 0, 0.5);
-    color: #ffffff;
-    border: 1px solid #007bff;
-    border-radius: 5px;
-    padding: 6px 12px;
-    font-size: 16px;
-    flex: 1;
-}
-
-.playlist-path-area {
-    flex: 1;
-    min-width: 240px;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid #007bff;
-    background: rgba(0, 0, 0, 0.5);
-    color: #ffffff;
-    font-size: 16px;
-    resize: vertical;
-    overflow: hidden;
-    white-space: pre-wrap;
-    word-break: break-all;
-    overflow-wrap: anywhere;
-    cursor: pointer;
-    white-space: nowrap;       /* 折り返しを完全に無効化 */
-    overflow-x: hidden;        /* 横方向にはみ出た部分をスクロール可能に（不要なら hidden に変更） */
-    overflow-y: hidden;        /* 既存の overflow: hidden を上下左右に分解 */
-}
-.playlist-path-area:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+.controls {
+    bottom: 20px;
 }
 .filter-list {
     overflow-y: auto;
@@ -191,6 +159,7 @@ Input#playlistFilterInput {
     color: rgba(255, 255, 255, 0.8);
     font-size: 16px;
 }
+
 #zoomPanel {
     position: absolute;
     position: absolute;
@@ -232,15 +201,7 @@ Input#playlistFilterInput {
     gap: 0.5vw;
     flex-wrap: wrap;
 }
-.filename-controls {
-    display: flex; 
-    gap: 6px; 
-    width: 100%;
-}
-.filename-controls button {
-    min-width: 36px;   /* または 40px など好みで */
-    flex: 0 0 auto;    /* 縮まないようにしてもOK */
-}
+
 button {
     font-size: 16px;
     cursor: pointer;
@@ -278,6 +239,17 @@ input[type="range"]#editSeekBar:hover {
 input[type="range"]#volumeBar {
     flex: none;
     width: 10%;
+}
+input#playlistPathArea,
+input#urlInput,
+input#playlistFilterInput {
+    background: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    border: 1px solid #007bff;
+    border-radius: 5px;
+    padding: 6px 12px;
+    font-size: 16px;
+    flex: 1;
 }
 #seekBar:hover,
 #volumeBar:hover {
@@ -323,20 +295,6 @@ input[type="range"]#volumeBar {
 }
 #seekBar.converting::-moz-range-thumb {
     background: #ff0000;
-}
-
-input[type="file"] {
-    display: none;
-}
-input#urlInput {
-    background: rgba(0, 0, 0, 0.5);
-    color: #ffffff;
-    border: 1px solid #007bff;
-    border-radius: 5px;
-    padding: 6px 12px;
-    font-size: 16px;
-    width: 100%;
-    display: none;
 }
 select#speedSelect {
     background: rgba(0, 0, 0, 0.5);
@@ -439,15 +397,6 @@ button#helpCloseBtn:hover .tooltip {
     left: auto;
     right: 0;
     transform: none;
-}
-.url-controls {
-    display: flex;
-    gap: 6px;
-    display: none;
-}
-.url-controls button {
-    min-width: 36px;   /* または 40px など好みで */
-    flex: 0 0 auto;    /* 縮まないようにしてもOK */
 }
 .icon-overlay {
     position: absolute;

@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.33.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.34.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -441,6 +441,8 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('controlSizeX', controlSizeX);
     localStorage.setItem('controlSizeY', controlSizeY);
     updateControlSize(controlSizeX, controlSizeY);
+    if (isFilterPanelVisible) adjustFilterPanelHeight();
+    if (currentAspectRatio !== 'none') applyAspectRatioSetting();
 
     // Bluetooth／システムメディアキー対応（Windows11対応）
     if ('mediaSession' in navigator) {
@@ -675,7 +677,7 @@ function updateControlSize(valueX, valueY) {
     const speedSelectWidth = 40 + (valueX / 120) * (154 - 40);
     const zoomPanelHeight = 100 + (valueY / 100) * (500 - 100);
     const zoomPanelWidth = 30 + (valueX / 100) * (40 - 30);
-    const controls = document.querySelectorAll('button, select#speedSelect, #timeDisplay, #volumeDisplay, #appNameAndCopyright, input#urlInput, #zoomPanel');
+    const controls = document.querySelectorAll('button, input,select#speedSelect, #timeDisplay, #volumeDisplay, #appNameAndCopyright, #zoomPanel');
     controls.forEach(control => {
         if (control.id === 'appNameAndCopyright') {
             control.style.fontSize = `${appNameAndCopyrightFontSize}px`;
@@ -3468,6 +3470,9 @@ window.addEventListener('resize', () => {
     localStorage.setItem('controlSizeX', controlSizeX);
     localStorage.setItem('controlSizeY', controlSizeY);
     updateControlSize(controlSizeX, controlSizeY);
+    if (isFilterPanelVisible) adjustFilterPanelHeight();
+    if (currentAspectRatio !== 'none') applyAspectRatioSetting();
+
     showControlsAndFilename();
     updateIconOverlay();
 });
@@ -4400,14 +4405,6 @@ playlistFilterInput.addEventListener('keydown', (e) => {
 // 🔘フィルタ条件クリアボタン
 filterClearBtn.addEventListener('click', () => {
     clearPlaylistFilter();
-});
-
-// ウィンドウリサイズ時の処理
-window.addEventListener('resize', () => {
-    if (isFilterPanelVisible) adjustFilterPanelHeight();
-    if (currentAspectRatio !== 'none') {
-        applyAspectRatioSetting();
-    }
 });
 
 // 🔀ランダム再生ボタンクリック
