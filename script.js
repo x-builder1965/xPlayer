@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.34.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.35.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -677,14 +677,16 @@ function updateControlSize(valueX, valueY) {
     const speedSelectWidth = 40 + (valueX / 120) * (154 - 40);
     const zoomPanelHeight = 100 + (valueY / 100) * (500 - 100);
     const zoomPanelWidth = 30 + (valueX / 100) * (40 - 30);
-    const controls = document.querySelectorAll('button, input,select#speedSelect, #timeDisplay, #volumeDisplay, #appNameAndCopyright, #zoomPanel');
+    const controls = document.querySelectorAll('button, input, select#speedSelect, #timeDisplay, #volumeDisplay, #appNameAndCopyright, #zoomPanel');
     controls.forEach(control => {
         if (control.id === 'appNameAndCopyright') {
             control.style.fontSize = `${appNameAndCopyrightFontSize}px`;
             control.style.padding = `${appNameAndCopyrightPadding}px ${appNameAndCopyrightPadding * 2}px`;
         } else {
-            control.style.fontSize = `${fontSize}px`;
-            control.style.padding = `${padding}px ${padding * 2}px`;
+            if (control.type !== 'range') {
+                control.style.fontSize = `${fontSize}px`;
+                control.style.padding = `${padding}px ${padding * 2}px`;
+            }
         }
         if (control.id === 'speedSelect') {
             control.style.width = `${speedSelectWidth}px`;

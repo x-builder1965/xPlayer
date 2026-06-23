@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.34.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.35.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -612,39 +612,89 @@ caption {
     font-size: 1.2em; 
 }
 
-/* 動画カット編集機能のスタイル */
+/* 編集コントロール全体 (#editControls) */
 #editControls {
-    flex-wrap: wrap;
+  display: none; /* JSで表示切り替え。表示時は flex を想定 */
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: wrap;
 }
-#editSeekBar {
-    flex: 1;
-    min-width: 200px;
-}
-
-#cutTimelineContainer {
-    background: #2a2a2a;
-    border: 1px solid #555;
-}
-.cut-range-bar {
-    position: absolute;
-    height: 100%;
-    background: rgba(220, 50, 50, 0.75);
-    border-left: 1px solid #ff4444;
-    border-right: 1px solid #ff4444;
-    pointer-events: none;  /* クリック無効化 */
-}
-.cut-range-bar:hover {
-    background: rgba(255, 80, 80, 0.9);
+/* ボタンやシークバーが並ぶ行 */
+.edit-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
+/* インマーク / アウトマーク 表示 */
 #inMarkDisplay, 
 #outMarkDisplay {
-    color: #ffff00;
-    font-weight: bold;
-    background-color: rgba(0, 0, 0, 0.3);
-    padding: 4px;
-    border-radius: 4px;
-    font-family: monospace;
+  width: 60px;
+  padding: 4px;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #ffff00;
+  font-weight: bold;
+  font-family: monospace;
+  text-align: center;
+}
+
+/* シークバーとタイムラインの縦並びグループ */
+.seekbar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 200px;
+}
+/* シークバー単体 */
+#editSeekBar {
+  width: 100%;
+  margin-bottom: 0;
+}
+/* タイムラインの土台 */
+#cutTimelineContainer {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  margin-top: 0;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #2a2a2a;
+  overflow: hidden;
+}
+/* タイムラインバー全体 */
+#cutTimelineBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #222;
+}
+
+/* カット範囲（リスト・ハイライトバー） */
+#cutRangesContainer {
+  display: block;
+  width: 100%;
+}
+#cutRangesList {
+  max-height: 400px;
+  overflow-y: auto;
+  background: rgba(18, 18, 18, 0.13);
+}
+/* タイムライン上のカット範囲ハイライト */
+.cut-range-bar {
+  position: absolute;
+  height: 100%;
+  border-inline: 1px solid #ff4444; /* border-left/right を統合 */
+  background: rgba(220, 50, 50, 0.75);
+  pointer-events: none;
+  transition: background 0.2s ease; /* ホバー時の変化を滑らかに */
+}
+.cut-range-bar:hover {
+  background: rgba(255, 80, 80, 0.9);
 }
 
 /* シークバーのカラーリング */
@@ -653,39 +703,6 @@ caption {
     background: rgba(255, 0, 0, 0.2);
 }
 
-/* タイムラインバー全体 */
-#cutTimelineBar {
-    position: relative;
-    height: 24px;          /* 好みで調整 */
-    background: #222;
-    overflow: hidden;
-}
-/* カット範囲バー（既存） */
-.cut-range-bar {
-    position: absolute;
-    top: 4px;
-    height: 16px;
-    background: #e74c3c;   /* 赤系 */
-    opacity: 0.85;
-    border: 1px solid #c0392b;
-}
-/* In / Out マーカー共通 */
-.edit-in-marker,
-.edit-out-marker {
-    position: absolute;
-    width: 3px;            /* 縦線の幅（太めにすると視認性↑） */
-    height: 100%;
-    top: 0;
-}
-.marker-line {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: #ffffff;   /* 白 */
-    opacity: 0.9;
-    /* box-shadowで目立たせるのもアリ（オプション） */
-    /* box-shadow: 0 0 4px rgba(255,255,255,0.7); */
-}
 .sort-menu div {
     transition: background-color 0.15s;
 }
