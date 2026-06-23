@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.36.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.37.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -697,7 +697,7 @@ function updateControlSize(valueX, valueY) {
         }
     });
 
-    const overlayFontSize = 20 + (valueX / 100) * (160 - 20);
+    const overlayFontSize = 20 + (valueX / 100) * (120 - 20);
     overlayDisplay.style.fontSize = `${overlayFontSize}px`;
 }
 
@@ -956,11 +956,26 @@ function createAspectRatioMenu() {
 function updateOverlayDisplay(content, isInitial = false, autoHideAfter = 3000) {
     overlayDisplay.textContent = content;
     const overlayFontSize = parseFloat(overlayDisplay.style.fontSize) || 90;
-    const charCount = content.length;
-    const charWidth = overlayFontSize * 0.8; // サイズ変更
-    let overlayWidth = charCount * charWidth + 40;
+    // 1. 実際の文字サイズ（横幅）を計算する関数
+    function getTextWidth(text, font) {
+        // メモリ上に一時的なcanvasを作成
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        context.font = font;
+        // 指定したフォントでの正確な横幅（px）を返す
+        return context.measureText(text).width;
+    }
+    // 2. 現在のフォント設定を取得（font-familyも合わせるとより正確になります）
+    const computedStyle = window.getComputedStyle(overlayDisplay);
+    const fontSetting = `${overlayFontSize}px ${computedStyle.fontFamily || 'sans-serif'}`;
+    // 3. 文字列全体の実際の横幅を測定
+    const actualTextWidth = getTextWidth(content, fontSetting);
+    // 4. 横幅の計算（文字幅に左右の余白40pxを足す）
+    let overlayWidth = actualTextWidth + 40;
+    // 5. 最小・最大幅の制限
     overlayWidth = Math.max(200, Math.min(overlayWidth, window.innerWidth * 0.8));
     overlayDisplay.style.width = `${overlayWidth}px`;
+
     overlayDisplay.style.display = 'block';
     overlayDisplay.classList.add('active');
     if (!isInitial && !isZoomMode) {
