@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.35.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.36.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -4320,6 +4320,12 @@ zoomBtn.addEventListener('click', () => {
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
         }
+        if (isEditMode) {
+            // 編集モードが開始していない状態にする
+            isEditMode = false;
+            editControls.style.display = 'none';
+            updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
+        }
     } else {
         zoomEndBtn.click(); // リセット＆終了
     }
@@ -5351,6 +5357,7 @@ editModeBtn.addEventListener('click', () => {
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
         }
+        zoomEndBtn.click(); // リセット＆終了
         editControls.style.display = 'flex';
         editModeBtn.classList.add('active');
         // 初期化
