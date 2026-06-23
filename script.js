@@ -672,7 +672,7 @@ function calculateControlSizeY() {
 function updateControlSize(valueX, valueY) {
     const fontSize = 8 + (valueX / 100) * (24 - 8);
     const padding = 1 + (valueX / 100) * (8 - 1);
-    const appNameAndCopyrightFontSize = 8 + (valueX / 100) * (17 - 8);
+    const appNameAndCopyrightFontSize = 8 + (valueX / 100) * (18 - 8);
     const appNameAndCopyrightPadding = 1 + (valueX / 100) * (8 - 1);
     const speedSelectWidth = 40 + (valueX / 120) * (154 - 40);
     const zoomPanelHeight = 100 + (valueY / 100) * (500 - 100);
@@ -697,7 +697,7 @@ function updateControlSize(valueX, valueY) {
         }
     });
 
-    const overlayFontSize = 20 + (valueX / 100) * (120 - 20);
+    const overlayFontSize = 20 + (valueX / 100) * (140 - 20);
     overlayDisplay.style.fontSize = `${overlayFontSize}px`;
 }
 
