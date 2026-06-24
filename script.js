@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.37.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.38.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -677,7 +677,7 @@ function updateControlSize(valueX, valueY) {
     const speedSelectWidth = 40 + (valueX / 120) * (154 - 40);
     const zoomPanelHeight = 100 + (valueY / 100) * (500 - 100);
     const zoomPanelWidth = 30 + (valueX / 100) * (40 - 30);
-    const controls = document.querySelectorAll('button, input, select#speedSelect, #timeDisplay, #volumeDisplay, #appNameAndCopyright, #zoomPanel');
+    const controls = document.querySelectorAll('button, input, #itemCount, #timeDisplay, #speedSelect, #volumeDisplay, #appNameAndCopyright, #zoomPanel');
     controls.forEach(control => {
         if (control.id === 'appNameAndCopyright') {
             control.style.fontSize = `${appNameAndCopyrightFontSize}px`;
@@ -1112,10 +1112,10 @@ function toggleFilterPanel() {
         if (isFilterPanelVisible) {
             // フィルタリストパネル表示時はカット編集パネルを閉じる（同時表示抑止）
             if (isEditMode) {
+                // 編集モードが開始していない状態にする
                 isEditMode = false;
-                if (editControls) editControls.style.display = 'none';
-                if (editModeBtn) editModeBtn.classList.remove('active');
-                updateEditModeButtonUI();
+                editControls.style.display = 'none';
+                updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
             }
         }
     }
@@ -4144,8 +4144,14 @@ playlistPathArea.addEventListener('click', () => {
     isFilterPanelVisible = !isFilterPanelVisible;
     filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
     if (isFilterPanelVisible) {
+        if (isEditMode) {
+            // 編集モードが開始していない状態にする
+            isEditMode = false;
+            editControls.style.display = 'none';
+            updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
+        }
+        zoomEndBtn.click();
         updateFilterList();
-        zoomEndBtn.click(); // リセット＆終了
         try { playlistFilterInput?.focus(); } catch (e) {}
         setTimeout(() => {
             try {
@@ -4342,7 +4348,7 @@ zoomBtn.addEventListener('click', () => {
             updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
         }
     } else {
-        zoomEndBtn.click(); // リセット＆終了
+        zoomEndBtn.click();
     }
     showControlsAndFilename();
     updateIconOverlay();
@@ -4600,10 +4606,12 @@ videoPlayer.addEventListener('loadedmetadata', () => {
         
         isConverting = false;
     }
-    // 編集モードが開始していない状態にする
-    isEditMode = false;
-    editControls.style.display = 'none';
-    updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
+    if (isEditMode) {
+        // 編集モードが開始していない状態にする
+        isEditMode = false;
+        editControls.style.display = 'none';
+        updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
+    }
 
     seekBar.max = 100;
     updateTimeDisplay();
@@ -5372,9 +5380,9 @@ editModeBtn.addEventListener('click', () => {
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
         }
-        zoomEndBtn.click(); // リセット＆終了
+        zoomEndBtn.click();
         editControls.style.display = 'flex';
-        editModeBtn.classList.add('active');
+        editModeBtn.classList.add('mode-active');
         // 初期化
         editInMark = -1;
         editOutMark = -1;
@@ -5384,9 +5392,9 @@ editModeBtn.addEventListener('click', () => {
         renderCutRanges();
     } else {
         editControls.style.display = 'none';
-        editModeBtn.classList.remove('active');
-        hideOverlayDisplay();
+        editModeBtn.classList.remove('mode-active');
     }
+    hideOverlayDisplay();
     // ボタン表示を更新（ここが今回のメイン変更点）
     updateEditModeButtonUI();
 });
@@ -5414,7 +5422,7 @@ cutCancelBtn.addEventListener('click', async () => {
             isCutEditing = false;
             editModeBtn.textContent = '✂️';
             editModeBtn.setAttribute('data-tooltip', '編集モード開始（Ctrl+e）');
-            editModeBtn.classList.remove('active');
+            editModeBtn.classList.remove('mode-active');
             cutCancelBtn.style.display = 'none';
         } else if (isJoinEditing) {
             isJoinEditing = false;
