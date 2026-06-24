@@ -1168,12 +1168,12 @@ function adjustFilterPanelHeight() {
     const filenameBottom = filename.offsetTop + filename.offsetHeight;
     
     // 2. プレイリストの top を計算（動画パネルの下端 + 余白 4px）
-    const playlistTop = filenameBottom + 4;
+    const playlistTop = filenameBottom + 10;
     filterPanel.style.top = `${playlistTop}px`;
     editPanel.style.top = `${playlistTop}px`;
     
     // 3. 配置可能な最大の高さを計算（コントロールパネルの top - プレイリストの top - 下の余白 24px）
-    const playlistHeight = controlsPanel.offsetTop - playlistTop - 24;
+    const playlistHeight = controlsPanel.offsetTop - playlistTop - 30;
     const maxAvailableHeight = Math.max(0, playlistHeight);
     
     // 4. 内部コンテンツ（ヘッダ + リスト）の合計高さを計算
