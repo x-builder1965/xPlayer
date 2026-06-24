@@ -1153,24 +1153,44 @@ function clearPlaylistFilter() {
 function adjustFilterPanelHeight() {
     const filename = document.querySelector('.filename');
     const controlsPanel = document.querySelector('.controls');
-    const control = document.querySelector('.filter-panel'); // プレイリスト
+    const filterPanel = document.querySelector('.filter-panel'); // プレイリスト
+    const editPanel = document.querySelector('.edit-panel'); // 編集パネル
     
-    // 1. プレイ動画パネルの下端の座標（top + height）を計算
+    // 内部の要素を取得
+    const filterHeader = document.querySelector('.filter-panel-header');
+    const filterList = document.querySelector('.filter-list');
+    
+    // 1. プレイ動画パネルの下端の座標を計算
     const filenameBottom = filename.offsetTop + filename.offsetHeight;
     
     // 2. プレイリストの top を計算（動画パネルの下端 + 余白 4px）
     const playlistTop = filenameBottom + 4;
-    control.style.top = `${playlistTop}px`;
+    filterPanel.style.top = `${playlistTop}px`;
+    editPanel.style.top = `${playlistTop}px`;
     
-    // 3. プレイリストの height (maxHeight) を計算
-    // コントロールパネルの top - プレイリストの top - 下の余白 24px
+    // 3. 配置可能な最大の高さを計算（コントロールパネルの top - プレイリストの top - 下の余白 24px）
     const playlistHeight = controlsPanel.offsetTop - playlistTop - 24;
+    const maxAvailableHeight = Math.max(0, playlistHeight);
     
-    // 安全のため、計算結果がマイナス（画面が狭すぎる場合など）なら 0 にする
-    const finalHeight = Math.max(0, playlistHeight);
+    // 4. 内部コンテンツ（ヘッダ + リスト）の合計高さを計算
+    // ※要素が存在しない場合の安全策としてオプショナルチェーニング（?.）とデフォルト値（0）を使用
+    const headerHeight = filterHeader?.offsetHeight || 0;
+    const listHeight = filterList?.offsetHeight || 0;
+    const totalContentHeight = headerHeight + listHeight;
     
-    control.style.height = `${finalHeight}px`;
-    control.style.maxHeight = `${finalHeight}px`; // 要件に合わせて max-height も設定
+    // 5. 条件分岐: 中身が最大高さより低い場合は "auto"、超える場合は計算した高さを適用
+    if (totalContentHeight < maxAvailableHeight) {
+        filterPanel.style.height = 'auto';
+        editPanel.style.height = 'auto';
+    } else {
+        filterPanel.style.height = `${maxAvailableHeight}px`;
+        editPanel.style.height = `${maxAvailableHeight}px`;
+    }
+
+    // 要件に合わせて maxHeight には常に制限（最大サイズ）を設定しておくことで、
+    // "auto" の際もコントロールパネルを突き抜けないようにガードします
+    filterPanel.style.maxHeight = `${maxAvailableHeight}px`;
+    editPanel.style.maxHeight = `${maxAvailableHeight}px`;
 }
 
 // フィルタリスト更新
