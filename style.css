@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.44.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.45.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -777,18 +777,14 @@ button#modeChangeBtn.convert-active:hover,
 /* トグル用のトリガーボタン（リンク風） */
 .changelog-toggle {
     display: inline-block;
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: #4fc3f7;
+    background-color: #0066cc;
+    color: #ffffff;
+    font-size: 0.9em;
+    line-height: 1.2;
     cursor: pointer;
     user-select: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.changelog-toggle:hover {
-    background-color: #1c2526;
+    padding: 0.4em 0.4em;
+    width: 99%;
 }
 
 /* 変更履歴のコンテナ（最初は非表示） */
