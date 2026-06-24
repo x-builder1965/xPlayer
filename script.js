@@ -764,6 +764,16 @@ function hideControlsAndFilename() {
     updateIconOverlay();
 }
 
+function hideEditPanel() {
+    const editPanel = document.querySelector('.edit-panel');
+    if (editPanel) {
+        // 編集モードが開始していない状態にする
+        isEditMode = false;
+        editPanel.style.display = 'none';
+        updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
+    }
+}
+
 // メニュー非表示（プレイリスト並び替えメニューなど）
 function hideControlsAndFilenameMenus() {
     // 追加：開いている可能性のあるすべてのコンテキストメニューを強制非表示
@@ -1110,13 +1120,7 @@ function toggleFilterPanel() {
     if (filterPanel) {
         filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
         if (isFilterPanelVisible) {
-            // フィルタリストパネル表示時はカット編集パネルを閉じる（同時表示抑止）
-            if (isEditMode) {
-                // 編集モードが開始していない状態にする
-                isEditMode = false;
-                editPanel.style.display = 'none';
-                updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
-            }
+            hideEditPanel();
         }
     }
     if (isFilterPanelVisible) {
@@ -4167,12 +4171,7 @@ playlistPathArea.addEventListener('click', () => {
     isFilterPanelVisible = !isFilterPanelVisible;
     filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
     if (isFilterPanelVisible) {
-        if (isEditMode) {
-            // 編集モードが開始していない状態にする
-            isEditMode = false;
-            editPanel.style.display = 'none';
-            updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
-        }
+        hideEditPanel();
         zoomEndBtn.click();
         updateFilterList();
         try { playlistFilterInput?.focus(); } catch (e) {}
@@ -4364,12 +4363,7 @@ zoomBtn.addEventListener('click', () => {
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
         }
-        if (isEditMode) {
-            // 編集モードが開始していない状態にする
-            isEditMode = false;
-            editPanel.style.display = 'none';
-            updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
-        }
+        hideEditPanel();
     } else {
         zoomEndBtn.click();
     }
@@ -4538,6 +4532,7 @@ snapshotBtn.addEventListener('click', async () => {
         // スナップショットに映り込まないように
         zoomEndBtn.click(); // ズームリセットして終了
         hideControlsAndFilename(); // コントロールとファイル名を隠す
+        hideEditPanel();
 
         const result = await captureScreenshot();
         if (result.success) {
@@ -4629,12 +4624,7 @@ videoPlayer.addEventListener('loadedmetadata', () => {
         
         isConverting = false;
     }
-    if (isEditMode) {
-        // 編集モードが開始していない状態にする
-        isEditMode = false;
-        editPanel.style.display = 'none';
-        updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
-    }
+    hideEditPanel();
 
     seekBar.max = 100;
     updateTimeDisplay();
@@ -4907,6 +4897,7 @@ videoPlayer.addEventListener('click', (e) => {
                 window.getComputedStyle(filename).opacity  === '1';
             if (isVisible) {
                 hideControlsAndFilename();
+                hideEditPanel();
             } else {
                 showControlsAndFilename();
             }
