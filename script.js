@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.40.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.41.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1151,23 +1151,26 @@ function clearPlaylistFilter() {
 
 // フィルタパネルの高さを調整
 function adjustFilterPanelHeight() {
-    if (!filterPanel || !filterList) return;
-    if (window.getComputedStyle(filterPanel).display === 'none') return;
-
-    const header = filterPanel.querySelector('.filter-panel-header');
-    const rows = Array.from(filterList.children);
-    const rowGap = parseFloat(getComputedStyle(filterList).rowGap) || 0;
-    const totalRowsHeight = rows.reduce((total, el) => total + el.offsetHeight, 0);
-    const listHeight = totalRowsHeight + Math.max(0, rows.length - 1) * rowGap;
-    const headerHeight = header ? header.offsetHeight : 48;
-    const panelPadding = 24; // 12px top + 12px bottom
-    const gapBetweenHeaderAndList = 8;
-    const desiredPanelHeight = headerHeight + listHeight + panelPadding + gapBetweenHeaderAndList;
-    const maxPanelHeight = window.innerHeight - 250; // control panel と余白分を確保
-    const actualHeight = Math.min(desiredPanelHeight, maxPanelHeight);
-
-    filterPanel.style.height = `${actualHeight}px`;
-    filterList.style.maxHeight = `${Math.max(0, actualHeight - headerHeight - panelPadding - gapBetweenHeaderAndList)}px`;
+    const filename = document.querySelector('.filename');
+    const controlsPanel = document.querySelector('.controls');
+    const control = document.querySelector('.filter-panel'); // プレイリスト
+    
+    // 1. プレイ動画パネルの下端の座標（top + height）を計算
+    const filenameBottom = filename.offsetTop + filename.offsetHeight;
+    
+    // 2. プレイリストの top を計算（動画パネルの下端 + 余白 4px）
+    const playlistTop = filenameBottom + 4;
+    control.style.top = `${playlistTop}px`;
+    
+    // 3. プレイリストの height (maxHeight) を計算
+    // コントロールパネルの top - プレイリストの top - 下の余白 24px
+    const playlistHeight = controlsPanel.offsetTop - playlistTop - 24;
+    
+    // 安全のため、計算結果がマイナス（画面が狭すぎる場合など）なら 0 にする
+    const finalHeight = Math.max(0, playlistHeight);
+    
+    control.style.height = `${finalHeight}px`;
+    control.style.maxHeight = `${finalHeight}px`; // 要件に合わせて max-height も設定
 }
 
 // フィルタリスト更新
