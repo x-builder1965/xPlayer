@@ -441,8 +441,8 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('controlSizeX', controlSizeX);
     localStorage.setItem('controlSizeY', controlSizeY);
     updateControlSize(controlSizeX, controlSizeY);
-    if (isFilterPanelVisible) adjustFilterPanelHeight();
-    if (currentAspectRatio !== 'none') applyAspectRatioSetting();
+    adjustFilterPanelHeight();
+    applyAspectRatioSetting();
 
     // Bluetooth／システムメディアキー対応（Windows11対応）
     if ('mediaSession' in navigator) {
@@ -3510,8 +3510,8 @@ window.addEventListener('resize', () => {
     localStorage.setItem('controlSizeX', controlSizeX);
     localStorage.setItem('controlSizeY', controlSizeY);
     updateControlSize(controlSizeX, controlSizeY);
-    if (isFilterPanelVisible) adjustFilterPanelHeight();
-    if (currentAspectRatio !== 'none') applyAspectRatioSetting();
+    adjustFilterPanelHeight();
+    applyAspectRatioSetting();
 
     showControlsAndFilename();
     updateIconOverlay();
