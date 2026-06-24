@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.41.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.43.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -736,7 +736,7 @@ function showControlsAndFilename() {
     clearTimeout(timeout);
     if (!isMouseOverControls && !isurlInputPanelVisible) {
         timeout = setTimeout(() => {
-            if (!isMouseOverControls && !isFilterPanelVisible && !(isEditMode || (editPanel && editPanel.style.display !== 'none')) && modeChange !== 'join' && modeChange === 'video') {
+            if (!isMouseOverControls && !isFilterPanelVisible && !(isEditMode || (editPanel && window.getComputedStyle(editPanel).display !== 'none')) && modeChange !== 'join' && modeChange === 'video') {
                 hideControlsAndFilename(); // ここで無効化
             }
         }, overlayTimeout);
@@ -1816,7 +1816,7 @@ async function togglePlayPause() {
             setVideoDurationTime(); // duration が NaN でも安全に処理
         } else {
             // カット編集モードで、かつカット範囲がある場合 → 次の有効な位置へジャンプ
-            const isInEditMode = isEditMode || (editPanel && editPanel.style.display !== 'none');
+            const isInEditMode = isEditMode || (editPanel && window.getComputedStyle(editPanel).display !== 'none');
             if (isInEditMode && cutRanges.length > 0) {
                 const nextPos = findNextValidPosition(videoPlayer.currentTime);
 
@@ -3985,7 +3985,7 @@ document.addEventListener('keydown', async (event) => {
         if (videoPlayer.duration) {
             // ★ ここですべてのフラグを先に定義 ★
             const editPanelExist = typeof editPanel !== 'undefined' && editPanel;
-            const editVisible = editPanelExist && editPanel.style.display !== 'none';
+            const editVisible = editPanelExist && window.getComputedStyle(editPanel).display !== 'none';
             const zoomModeActive = typeof isZoomMode !== 'undefined' && isZoomMode === true;
     
             // フレーム単位シークが必要か？
@@ -5064,7 +5064,7 @@ seekBar.addEventListener('input', (e) => {
     videoPreview.currentTime = time;
     videoPlayer.currentTime = videoPreview.currentTime;
     // 編集モード中は編集用シークバーも同期
-    if ((isEditMode || (typeof editPanel !== 'undefined' && editPanel && editPanel.style.display !== 'none')) && typeof editSeekBar !== 'undefined' && editSeekBar) {
+    if ((isEditMode || (typeof editPanel !== 'undefined' && editPanel && window.getComputedStyle(editPanel).display !== 'none')) && typeof editSeekBar !== 'undefined' && editSeekBar) {
         editSeekBar.value = (time / videoPlayer.duration) * 100;
     }
     updateTimeDisplay();
