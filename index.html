@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.38.2'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.39.2'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -38,25 +38,25 @@
                     <button id="urlClearBtn" data-tooltip="URLクリア（Shift+C）">🔘</button>
                     <button id="urlConfirmBtn" data-tooltip="URL再生（Enter）">✅</button>
                 </div>
-                <div class="control-row" id="editControls">
-                    <div class="edit-actions-row">
-                        <button id="setInMarkBtn" data-tooltip="インマークを設定（Shift+i）">📍←</button>
-                        <span id="inMarkDisplay">--:--:--</span>
-                        <div class="seekbar-group">
-                            <input type="range" id="editSeekBar" value="0" min="0" max="100" data-tooltip="カット編集位置">
-                            <div id="cutTimelineContainer">
-                                <div id="cutTimelineBar"></div>
-                            </div>
+            </div>
+            <div id="editPanel" class="edit-panel" style="display:none;">
+                <div class="edit-actions-row">
+                    <button id="setInMarkBtn" data-tooltip="インマークを設定（Shift+i）">📍←</button>
+                    <span id="inMarkDisplay">--:--:--</span>
+                    <div class="seekbar-group">
+                        <input type="range" id="editSeekBar" value="0" min="0" max="100" data-tooltip="カット編集位置">
+                        <div id="cutTimelineContainer">
+                            <div id="cutTimelineBar"></div>
                         </div>
-                        <span id="outMarkDisplay">--:--:--</span>
-                        <button id="setOutMarkBtn" data-tooltip="アウトマークを設定（Shift+o）">→📍</button>
-                        <button id="addCutRangeBtn" data-tooltip="カット設定を追加（Shift+m）">✅</button>
-                        <button id="saveVideoBtn" data-tooltip="設定したカットを適用して保存（Shift+s）">💾</button>
-                        <button id="clearEditBtn" data-tooltip="編集を全クリア（Shift+c）">🆑</button>
                     </div>
-                    <div id="cutRangesContainer">
-                        <div id="cutRangesList"></div>
-                    </div>
+                    <span id="outMarkDisplay">--:--:--</span>
+                    <button id="setOutMarkBtn" data-tooltip="アウトマークを設定（Shift+o）">→📍</button>
+                    <button id="addCutRangeBtn" data-tooltip="カット設定を追加（Shift+m）">✅</button>
+                    <button id="saveVideoBtn" data-tooltip="設定したカットを適用して保存（Shift+s）">💾</button>
+                    <button id="clearEditBtn" data-tooltip="編集を全クリア（Shift+c）">🆑</button>
+                </div>
+                <div id="cutRangesContainer">
+                    <div id="cutRangesList"></div>
                 </div>
             </div>
             <div id="filterPanel" class="filter-panel" style="display:none;">
@@ -586,6 +586,7 @@
             <div id="changelogBtn" class="changelog-toggle">▶ 変更履歴</div>
             <div id="changelogContent" class="changelog-container">
                 <ul class="changelog-list">
+                    <li>2026-06-24 Ver4.39.2 カット編集パネルをプレイリストから分離。</li>
                     <li>2026-06-24 Ver4.38.2 カット編集パネル表示とプレイリスト表示の同時表示を抑止。</li>
                     <li>2026-06-23 Ver4.37.2 OverlayDisplayのサイズ計算方法を改善。</li>
                     <li>2026-06-23 Ver4.36.2 カット編集パネル表示とズームパネル表示の同時表示を抑止。</li>

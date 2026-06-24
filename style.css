@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.38.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.39.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -68,7 +68,8 @@ video {
 }
 
 .filename,
-.filter-panel, 
+.filter-panel,
+.edit-panel, 
 .controls {
     position: absolute;
     width: 90%;
@@ -94,7 +95,8 @@ video {
     gap: 6px;
 }
 
-.filter-panel {
+.filter-panel,
+.edit-panel {
     top: 84px;
 }
 .filter-panel-header {
@@ -108,7 +110,6 @@ video {
     display: grid;
     gap: 6px;
     padding-right: 4px;
-    max-height: calc(100vh - 280px);
 }
 /* スクロールバーのカスタマイズ（ダークテーマ用） */
 .filter-list::-webkit-scrollbar {

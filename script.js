@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.38.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.39.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -193,7 +193,7 @@ const removePlaylistBtn = document.getElementById('removePlaylistBtn');
 const clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
 const savePlaylistBtn = document.getElementById('savePlaylistBtn');
 const modeChangeBtn = document.getElementById('modeChangeBtn');
-const editControls = document.getElementById('editControls');
+const editPanel = document.getElementById('editPanel');
 const editModeBtn = document.getElementById('editModeBtn');
 const setInMarkBtn = document.getElementById('setInMarkBtn');
 const setOutMarkBtn = document.getElementById('setOutMarkBtn');
@@ -736,7 +736,7 @@ function showControlsAndFilename() {
     clearTimeout(timeout);
     if (!isMouseOverControls && !isUrlControlsVisible) {
         timeout = setTimeout(() => {
-            if (!isMouseOverControls && !isFilterPanelVisible && !(isEditMode || (editControls && editControls.style.display !== 'none')) && modeChange !== 'join' && modeChange === 'video') {
+            if (!isMouseOverControls && !isFilterPanelVisible && !(isEditMode || (editPanel && editPanel.style.display !== 'none')) && modeChange !== 'join' && modeChange === 'video') {
                 hideControlsAndFilename(); // ここで無効化
             }
         }, overlayTimeout);
@@ -1114,7 +1114,7 @@ function toggleFilterPanel() {
             if (isEditMode) {
                 // 編集モードが開始していない状態にする
                 isEditMode = false;
-                editControls.style.display = 'none';
+                editPanel.style.display = 'none';
                 updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
             }
         }
@@ -1793,7 +1793,7 @@ async function togglePlayPause() {
             setVideoDurationTime(); // duration が NaN でも安全に処理
         } else {
             // カット編集モードで、かつカット範囲がある場合 → 次の有効な位置へジャンプ
-            const isInEditMode = isEditMode || (editControls && editControls.style.display !== 'none');
+            const isInEditMode = isEditMode || (editPanel && editPanel.style.display !== 'none');
             if (isInEditMode && cutRanges.length > 0) {
                 const nextPos = findNextValidPosition(videoPlayer.currentTime);
 
@@ -3554,7 +3554,7 @@ document.addEventListener('keydown', async (event) => {
     }
 
     // ■カット編集■
-    if (editControls.style.display === 'flex') {
+    if (editPanel.style.display === 'flex') {
         // 📍←INマーク設定（Shift+i）
         if (event.shiftKey && event.key.toLowerCase() === 'i') {
             event.preventDefault();
@@ -3961,8 +3961,8 @@ document.addEventListener('keydown', async (event) => {
     
         if (videoPlayer.duration) {
             // ★ ここですべてのフラグを先に定義 ★
-            const editControlsExist = typeof editControls !== 'undefined' && editControls;
-            const editVisible = editControlsExist && editControls.style.display !== 'none';
+            const editPanelExist = typeof editPanel !== 'undefined' && editPanel;
+            const editVisible = editPanelExist && editPanel.style.display !== 'none';
             const zoomModeActive = typeof isZoomMode !== 'undefined' && isZoomMode === true;
     
             // フレーム単位シークが必要か？
@@ -4147,7 +4147,7 @@ playlistPathArea.addEventListener('click', () => {
         if (isEditMode) {
             // 編集モードが開始していない状態にする
             isEditMode = false;
-            editControls.style.display = 'none';
+            editPanel.style.display = 'none';
             updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
         }
         zoomEndBtn.click();
@@ -4344,7 +4344,7 @@ zoomBtn.addEventListener('click', () => {
         if (isEditMode) {
             // 編集モードが開始していない状態にする
             isEditMode = false;
-            editControls.style.display = 'none';
+            editPanel.style.display = 'none';
             updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
         }
     } else {
@@ -4609,7 +4609,7 @@ videoPlayer.addEventListener('loadedmetadata', () => {
     if (isEditMode) {
         // 編集モードが開始していない状態にする
         isEditMode = false;
-        editControls.style.display = 'none';
+        editPanel.style.display = 'none';
         updateEditModeButtonUI();   // ← これで最初から ✂️ が表示される
     }
 
@@ -5041,7 +5041,7 @@ seekBar.addEventListener('input', (e) => {
     videoPreview.currentTime = time;
     videoPlayer.currentTime = videoPreview.currentTime;
     // 編集モード中は編集用シークバーも同期
-    if ((isEditMode || (typeof editControls !== 'undefined' && editControls && editControls.style.display !== 'none')) && typeof editSeekBar !== 'undefined' && editSeekBar) {
+    if ((isEditMode || (typeof editPanel !== 'undefined' && editPanel && editPanel.style.display !== 'none')) && typeof editSeekBar !== 'undefined' && editSeekBar) {
         editSeekBar.value = (time / videoPlayer.duration) * 100;
     }
     updateTimeDisplay();
@@ -5381,7 +5381,7 @@ editModeBtn.addEventListener('click', () => {
             if (filterPanel) filterPanel.style.display = 'none';
         }
         zoomEndBtn.click();
-        editControls.style.display = 'flex';
+        editPanel.style.display = 'flex';
         editModeBtn.classList.add('mode-active');
         // 初期化
         editInMark = -1;
@@ -5391,7 +5391,7 @@ editModeBtn.addEventListener('click', () => {
         cutRanges = [];           // ← 必要に応じてここでリセット（好みで外しても可）
         renderCutRanges();
     } else {
-        editControls.style.display = 'none';
+        editPanel.style.display = 'none';
         editModeBtn.classList.remove('mode-active');
     }
     hideOverlayDisplay();
