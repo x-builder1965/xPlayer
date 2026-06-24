@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.43.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.44.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -683,7 +683,7 @@ function updateControlSize(valueX, valueY) {
             control.style.fontSize = `${appNameAndCopyrightFontSize}px`;
             control.style.padding = `${appNameAndCopyrightPadding}px ${appNameAndCopyrightPadding * 2}px`;
         } else {
-            if (control.type !== 'range') {
+            if (control.type !== 'range' && control.id !== 'cutDeleteBtn') {
                 control.style.fontSize = `${fontSize}px`;
                 control.style.padding = `${padding}px ${padding * 2}px`;
             }
@@ -1163,6 +1163,8 @@ function adjustFilterPanelHeight() {
     // 内部の要素を取得
     const filterHeader = document.querySelector('.filter-panel-header');
     const filterList = document.querySelector('.filter-list');
+    const editHeader = document.querySelector('.edit-header');
+    const cutRangesList = document.getElementById('cutRangesList');
     
     // 1. プレイ動画パネルの下端の座標を計算
     const filenameBottom = filename.offsetTop + filename.offsetHeight;
@@ -1176,25 +1178,37 @@ function adjustFilterPanelHeight() {
     const playlistHeight = controlsPanel.offsetTop - playlistTop - 30;
     const maxAvailableHeight = Math.max(0, playlistHeight);
     
-    // 4. 内部コンテンツ（ヘッダ + リスト）の合計高さを計算
+    // 4. プレイリストパネルの内部コンテンツ（ヘッダ + リスト）の合計高さを計算
     // ※要素が存在しない場合の安全策としてオプショナルチェーニング（?.）とデフォルト値（0）を使用
     const headerHeight = filterHeader?.offsetHeight || 0;
     const listHeight = filterList?.offsetHeight || 0;
     const totalContentHeight = headerHeight + listHeight;
-    
     // 5. 条件分岐: 中身が最大高さより低い場合は "auto"、超える場合は計算した高さを適用
     if (totalContentHeight < maxAvailableHeight) {
         filterPanel.style.height = 'auto';
-        editPanel.style.height = 'auto';
     } else {
         filterPanel.style.height = `${maxAvailableHeight}px`;
-        editPanel.style.height = `${maxAvailableHeight}px`;
     }
 
-    // 要件に合わせて maxHeight には常に制限（最大サイズ）を設定しておくことで、
+    // 5. カット編集パネルの内部コンテンツ（ヘッダ + リスト）の合計高さを計算
+    // ※要素が存在しない場合の安全策としてオプショナルチェーニング（?.）とデフォルト値（0）を使用
+    const cutHeaderHeight = editHeader?.offsetHeight || 0;
+    const cutListHeight = cutRangesList?.offsetHeight || 0;
+    const cutTotalEditHeight = cutHeaderHeight + cutListHeight;
+    // 5. 条件分岐: 中身が最大高さより低い場合は "auto"、超える場合は計算した高さを適用
+    if (cutTotalEditHeight < maxAvailableHeight) {
+        editPanel.style.height = 'auto';
+        cutRangesList.style.height = 'auto';
+    } else {
+        editPanel.style.height = `${maxAvailableHeight}px`;
+        cutRangesList.style.height = `${maxAvailableHeight - cutHeaderHeight - 10}px`;
+    }
+
+    // 6. 要件に合わせて maxHeight には常に制限（最大サイズ）を設定しておくことで、
     // "auto" の際もコントロールパネルを突き抜けないようにガードします
     filterPanel.style.maxHeight = `${maxAvailableHeight}px`;
     editPanel.style.maxHeight = `${maxAvailableHeight}px`;
+    cutRangesList.style.maxHeight = `${maxAvailableHeight - cutHeaderHeight - 10}px`;
 }
 
 // フィルタリスト更新
@@ -2561,6 +2575,7 @@ function renderCutRanges() {
             `;
         
             const del = document.createElement('button');
+            del.id = 'cutDeleteBtn';
             del.textContent = '🗑️';
             del.style.marginLeft = '8px';
             del.addEventListener('click', () => {
