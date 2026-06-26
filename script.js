@@ -2449,7 +2449,7 @@ function setPlaybackRate(rate, showOverlay = true) {
     if (speedSelect) speedSelect.value = parseFloat(rate).toFixed(2);
     localStorage.setItem('playbackSpeed', rate);
     if (showOverlay) {
-        updatemessageOverlay(`🏃‍♂️‍➡️ 再生速度: ${rate}x`, false, 1000);
+        updatemessageOverlay(`🏃‍♂️‍➡️ ${rate}x`, false, 1000);
     }
 }
 
@@ -2466,7 +2466,7 @@ function changePlaybackRate(direction) { // direction: 1 増速, -1 減速
     if (newRate !== playbackRates[idx]) {
         setPlaybackRate(newRate);
     } else {
-        updatemessageOverlay(`🏃‍♂️‍➡️ 再生速度: ${playbackRates[newIdx]}x`, false, 1000);
+        updatemessageOverlay(`🏃‍♂️‍➡️ ${playbackRates[newIdx]}x`, false, 1000);
     }
 }
 
