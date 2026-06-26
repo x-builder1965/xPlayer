@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.45.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.46.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -4164,6 +4164,12 @@ modeChangeBtn.addEventListener('click', () => {
         modeChangeBtn.textContent = modeChange === 'video' ? '🎬' : '🔄️';
         modeChangeBtn.setAttribute('data-tooltip', modeChange === 'video' ? '視聴モード（Ctrl+v）' : '変換モード（Ctrl+v）');
         localStorage.setItem('modeChange', modeChange);
+    } else {
+        if (modeChange === 'convert') {
+            updatemessageOverlay('🎬 変換中は再生モード切替不可', false, 3000);
+        } else {
+            updatemessageOverlay('🔄️ 再生中は変換モード切替不可', false, 3000);
+        }
     }
     updateTrackButtonsVisibility();
 });
