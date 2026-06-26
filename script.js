@@ -1967,7 +1967,7 @@ function isVideoStopped() {
 async function urlInputEnter() {
     const inputUrl = urlInput.value.trim();
     if (!inputUrl) {
-        updatemessageOverlay('🌐 動画のURLを入力してください');
+        updatemessageOverlay('🌐 入力URL不正');
         updateIconOverlay();
         return;
     }
@@ -1980,7 +1980,7 @@ async function urlInputEnter() {
     if (platform === 'Twitch') {
         videoId = extractTwitchVideoId(inputUrl);
         if (!videoId) {
-            updatemessageOverlay('🌐 無効なTwitch URLです。');
+            updatemessageOverlay('🌐 無効なTwitch URL');
             updateIconOverlay();
             return;
         }
@@ -1989,7 +1989,7 @@ async function urlInputEnter() {
         playlistId = extractYouTubePlaylistId(inputUrl);
         videoId = extractYouTubeVideoId(inputUrl);
         if (!videoId) {
-            updatemessageOverlay('🌐 無効なYouTube URLです。');
+            updatemessageOverlay('🌐 無効なYouTube URL');
             updateIconOverlay();
             return;
         }
@@ -2001,7 +2001,7 @@ async function urlInputEnter() {
     } else if (platform === 'Other') {
         videoUrl = inputUrl;
     } else {
-        updatemessageOverlay('🌐 無効なURLです。');
+        updatemessageOverlay('🌐 無効なURL');
         updateIconOverlay();
         return;
     }
@@ -2012,7 +2012,7 @@ async function urlInputEnter() {
         if (result.success) {
             console.log("ブラウザ起動依頼成功", result.message);
         } else {
-            updatemessageOverlay(`🌐 ブラウザ起動に失敗しました（${result.messag}）。`);
+            updatemessageOverlay(`🌐 ブラウザ起動失敗（${result.messag}）。`);
         }
 
         hideURLInputControls();
@@ -2021,7 +2021,7 @@ async function urlInputEnter() {
         updateIconOverlay();
     } catch (error) {
         console.error("IPCエラー:", err);
-        updatemessageOverlay(`🌐 動画プレーヤーの設定に失敗しました（${error.message}）。別の動画を試してください。`);
+        updatemessageOverlay(`🌐 動画プレーヤーの設定失敗（${error.message}）。別の動画を試してください。`);
         updateIconOverlay();
     }
 }
