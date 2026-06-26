@@ -5211,7 +5211,7 @@ speedSelect.addEventListener('change', (e) => {
         currentPlaybackRate = rate;               // ← ここを追加
         videoPlayer.playbackRate = rate;
         localStorage.setItem('playbackSpeed', rate);
-        updatemessageOverlay(`🏃‍♂️‍➡️ 再生速度: ${rate}x`, false, 1000);
+        updatemessageOverlay(`🏃‍♂️‍➡️ ${rate}x`, false, 1000);
     }
 });
 
