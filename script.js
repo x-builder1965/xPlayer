@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.46.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.47.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -14,6 +14,7 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.46.2';
     getFilePath, 
     classifyPath, 
     captureScreenshot,
+    generateVideoThumbnail,
     openFolderDialog,
     openVideoDialog,
     savePlaylistDialog,
@@ -209,6 +210,7 @@ const randomPlayBtn = document.getElementById('randomPlayBtn');
 const repeatPlayBtn  = document.getElementById('repeatPlayBtn');
 const joinPlaylistBtn = document.getElementById('joinPlaylistBtn');
 const sortPlaylistBtn = document.getElementById('sortPlaylistBtn');
+const playlistDisplayBtn = document.getElementById('playlistDisplayBtn');
 const filterPanel = document.getElementById('filterPanel');
 const playlistFilterInput = document.getElementById('playlistFilterInput');
 const filterClearBtn = document.getElementById('filterClearBtn');
@@ -242,6 +244,7 @@ const savedShuffleOrder = localStorage.getItem('shuffleOrder');
 const savedShufflePosition = localStorage.getItem('shufflePosition');
 const savedAspectRatio = localStorage.getItem('aspectRatio');
 const savedCurrentSortMode = localStorage.getItem('playlistSortMode');
+const savedPlaylistDisplayMode = localStorage.getItem('playlistDisplayMode');
 const savedSelectedAudioLabel = localStorage.getItem('selectedAudioLabel');
 const savedSelectedAudioTrack = localStorage.getItem('selectedAudioTrack');
 const savedSelectedSubtitleLabel = localStorage.getItem('selectedSubtitleLabel');
@@ -299,6 +302,8 @@ let hideMouseTimeout = null;
 let editFrameRate = 30;
 let currentSortMode = '（なし）';
 let currentAddMode = 'Add0';
+let playlistDisplayMode = ['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].includes(savedPlaylistDisplayMode) ? savedPlaylistDisplayMode : 'list';
+let playlistThumbnailCache = new Map();
 let selectedAudioLabel = '日本語';
 let selectedAudioTrack = [];
 let selectedSubtitleLabel = '（なし）';
@@ -388,6 +393,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 描画モード復元
     applyFitModeSetting(fitMode);
+
+    // プレイリスト表示モード復元
+    if (filterList) {
+        filterList.classList.remove('playlist-grid', 'playlist-grid-small', 'playlist-grid-medium', 'playlist-grid-large');
+        if (['thumb-small', 'thumb-medium', 'thumb-large'].includes(playlistDisplayMode)) {
+            filterList.classList.add('playlist-grid');
+            if (playlistDisplayMode === 'thumb-small') {
+                filterList.classList.add('playlist-grid-small');
+            } else if (playlistDisplayMode === 'thumb-medium') {
+                filterList.classList.add('playlist-grid-medium');
+            } else if (playlistDisplayMode === 'thumb-large') {
+                filterList.classList.add('playlist-grid-large');
+            }
+        }
+    }
     
     // アスペクト比復元
     if (savedAspectRatio && ASPECT_NODES[savedAspectRatio]) {
@@ -777,7 +797,7 @@ function hideEditPanel() {
 // メニュー非表示（プレイリスト並び替えメニューなど）
 function hideControlsAndFilenameMenus() {
     // 追加：開いている可能性のあるすべてのコンテキストメニューを強制非表示
-    document.querySelectorAll('.sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(el => {
+    document.querySelectorAll('.sort-playlist-menu, .add-playlist-menu, .track-menu, .playlist-display-menu').forEach(el => {
         el.remove();  // または el.style.display = 'none';
     });
 }
@@ -1211,19 +1231,124 @@ function adjustFilterPanelHeight() {
     cutRangesList.style.maxHeight = `${maxAvailableHeight - cutHeaderHeight - 10}px`;
 }
 
-// フィルタリスト更新
-function updateFilterList() {
+function setPlaylistDisplayMode(mode) {
+    if (!['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].includes(mode)) return;
+    playlistDisplayMode = mode;
+    localStorage.setItem('playlistDisplayMode', mode);
+    if (filterList) {
+        filterList.classList.remove('playlist-grid', 'playlist-grid-small', 'playlist-grid-medium', 'playlist-grid-large');
+        if (['thumb-small', 'thumb-medium', 'thumb-large'].includes(mode)) {
+            filterList.classList.add('playlist-grid');
+            if (mode === 'thumb-small') {
+                filterList.classList.add('playlist-grid-small');
+            } else if (mode === 'thumb-medium') {
+                filterList.classList.add('playlist-grid-medium');
+            } else if (mode === 'thumb-large') {
+                filterList.classList.add('playlist-grid-large');
+            }
+        }
+    }
+    void updateFilterList();
+}
+
+function getPlaylistDisplayModeLabel(mode) {
+    switch (mode) {
+        case 'thumb-list': return 'サムネイル＋リスト';
+        case 'thumb-small': return 'サムネイル小';
+        case 'thumb-medium': return 'サムネイル中';
+        case 'thumb-large': return 'サムネイル大';
+        default: return 'リスト';
+    }
+}
+
+function getPlaylistThumbnailDimensions(mode) {
+    switch (mode) {
+        case 'thumb-list': return { width: 72, height: 40 };
+        case 'thumb-small': return { width: 96, height: 54 };
+        case 'thumb-medium': return { width: 216, height: 122 };
+        case 'thumb-large': return { width: 432, height: 244 };
+        default: return { width: 96, height: 54 };
+    }
+}
+
+function createPlaylistDisplayMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'playlist-display-menu';
+    menu.style.position = 'absolute';
+    menu.style.background = 'rgba(30,30,30,0.95)';
+    menu.style.border = '1px solid #444';
+    menu.style.borderRadius = '6px';
+    menu.style.padding = '6px 0';
+    menu.style.zIndex = '1001';
+    menu.style.minWidth = '180px';
+    menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
+    menu.style.whiteSpace = 'pre';
+    menu.style.fontFamily = 'monospace';
+    menu.style.lineHeight = '1.0';
+    menu.style.fontSize = '16px';
+
+    ['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].forEach((mode) => {
+        const item = document.createElement('div');
+        item.style.padding = '8px 16px';
+        item.style.cursor = 'pointer';
+        item.style.whiteSpace = 'nowrap';
+        item.style.color = playlistDisplayMode === mode ? '#00ccff' : '#eee';
+        item.innerHTML = (playlistDisplayMode === mode ? '✅ ' : '　　') + getPlaylistDisplayModeLabel(mode);
+
+        item.addEventListener('click', (event) => {
+            event.stopPropagation();
+            setPlaylistDisplayMode(mode);
+            menu.remove();
+        });
+
+        item.addEventListener('mouseover', () => {
+            item.style.background = 'rgba(0,123,255,0.2)';
+        });
+        item.addEventListener('mouseout', () => {
+            item.style.background = 'none';
+        });
+
+        menu.appendChild(item);
+    });
+
+    return menu;
+}
+
+function pathToFileUrl(filePath) {
+    if (!filePath) return '';
+    const normalized = filePath.replace(/\\/g, '/');
+    const encoded = encodeURI(normalized);
+    return `file://${encoded.startsWith('/') ? '' : '/'}${encoded}`;
+}
+
+async function getPlaylistThumbnailDataUrl(filePath, size = 180) {
+    if (!filePath) return '';
+    const cacheKey = `${filePath}|${size}`;
+    if (playlistThumbnailCache.has(cacheKey)) {
+        return playlistThumbnailCache.get(cacheKey);
+    }
+
+    try {
+        const dataUrl = await generateVideoThumbnail(filePath, size);
+        playlistThumbnailCache.set(cacheKey, dataUrl || '');
+        return dataUrl || '';
+    } catch (e) {
+        console.warn('[playlist-thumbnail] renderer fallback failed:', filePath, e.message);
+        playlistThumbnailCache.set(cacheKey, '');
+        return '';
+    }
+}
+
+async function updateFilterList() {
     if (!filterList) return;
     filterList.innerHTML = '';
     if (playlist.length === 0) {
         filterList.innerHTML = '<div class="filter-empty">プレイリストが空です。</div>';
-        updateItemCount(0, 0);   // ← 追加
+        updateItemCount(0, 0);
         return;
     }
 
     const query = (filterText || '').trim().toLowerCase();
-    
-    // 全角スペースを半角スペースに変換
     const normalizedQuery = query.replace(/\u3000/g, ' ');
     
     const results = playlist
@@ -1234,21 +1359,15 @@ function updateFilterList() {
             const name = (item.name || '').toLowerCase();
             const pathText = (item.file?.path || '').toLowerCase();
             const fullText = name + ' ' + pathText;
-            
-            // カンマで分割してOR条件グループを取得
             const orGroups = normalizedQuery.split(',').map(g => g.trim());
             
-            // いずれかのORグループにマッチするかチェック
             return orGroups.some(group => {
                 if (group === '') return false;
-                // スペースで分割してAND条件を取得
                 const andKeywords = group.split(/\s+/).filter(k => k.length > 0);
-                // すべてのANDキーワードを含むかチェック
                 return andKeywords.every(keyword => fullText.includes(keyword));
             });
         });
 
-    // 件数表示を更新（ここがメイン）
     updateItemCount(results.length, playlist.length);
 
     if (results.length === 0) {
@@ -1256,18 +1375,77 @@ function updateFilterList() {
         return;
     }
 
-    results.forEach(({ item, index }) => {
+    const isTileMode = ['thumb-small', 'thumb-medium', 'thumb-large'].includes(playlistDisplayMode);
+    filterList.classList.toggle('playlist-grid', isTileMode);
+
+    for (const { item, index } of results) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'filter-item';
-        // 識別用の属性と現在再生中クラス
         button.dataset.index = index;
         if (index === currentVideoIndex) button.classList.add('current');
         if (index === selectedPlaylistIndex) button.classList.add('selected');
+
         const displayText = item.file?.path || item.name || '無題';
         const showPlaybackIcon = index === currentVideoIndex && !isVideoStopped();
-        button.textContent = (showPlaybackIcon ? '▶️ ' : '') + displayText;
-        button.title = item.file?.path || '';
+        const fileName = path.basename(item.file?.path || item.name || '無題');
+
+        if (playlistDisplayMode === 'list') {
+            button.classList.add('filter-item-list');
+            button.textContent = (showPlaybackIcon ? '▶️ ' : '') + displayText;
+            button.title = displayText;
+        } else {
+            if (playlistDisplayMode === 'thumb-list') {
+                button.classList.add('filter-item-thumb-list');
+            } else {
+                button.classList.add('filter-item-tile');
+                button.classList.add(
+                    playlistDisplayMode === 'thumb-small' ? 'filter-item-size-small' :
+                    playlistDisplayMode === 'thumb-medium' ? 'filter-item-size-medium' :
+                    'filter-item-size-large'
+                );
+            }
+
+            const thumbDims = getPlaylistThumbnailDimensions(playlistDisplayMode);
+            const thumbWrap = document.createElement('div');
+            thumbWrap.className = 'filter-item-thumb-wrap';
+            thumbWrap.style.width = `${thumbDims.width}px`;
+            thumbWrap.style.height = `${thumbDims.height}px`;
+            const thumb = document.createElement('img');
+            thumb.className = 'filter-item-thumb';
+            thumb.style.width = '100%';
+            thumb.style.height = '100%';
+            thumb.alt = fileName;
+            thumb.src = '';
+            thumbWrap.appendChild(thumb);
+            button.appendChild(thumbWrap);
+
+            const textBlock = document.createElement('div');
+            textBlock.className = 'filter-item-text';
+
+            if (playlistDisplayMode === 'thumb-list') {
+                const title = document.createElement('span');
+                title.className = 'filter-item-path';
+                title.textContent = showPlaybackIcon ? `▶️ ${displayText}` : displayText;
+                textBlock.appendChild(title);
+            } else {
+                const name = document.createElement('span');
+                name.className = 'filter-item-file-name';
+                name.textContent = fileName;
+                textBlock.appendChild(name);
+            }
+            button.appendChild(textBlock);
+            button.title = displayText;
+
+            const thumbUrl = await getPlaylistThumbnailDataUrl(item.file?.path, thumbDims.width);
+            if (thumbUrl) {
+                thumb.src = thumbUrl;
+            } else {
+                thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#2a2a2a"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="18">No Thumbnail</text></svg>');
+                thumbWrap.style.background = 'rgba(0,0,0,0.2)';
+            }
+        }
+
         button.addEventListener('click', async () => {
             selectedPlaylistIndex = index;
             if (modeChange === 'video') {
@@ -1275,7 +1453,7 @@ function updateFilterList() {
             } else {
                 await updateTrack('audio');
             }
-            updateFilterList();
+            void updateFilterList();
         });
         button.addEventListener('dblclick', async () => {
             selectedPlaylistIndex = index;
@@ -1287,7 +1465,7 @@ function updateFilterList() {
             if (filterPanel) filterPanel.style.display = 'none';
         });
         filterList.appendChild(button);
-    });
+    }
     adjustFilterPanelHeight();
 }
 
@@ -3721,6 +3899,13 @@ document.addEventListener('keydown', async (event) => {
             return;
         }
 
+        // 📚プレイリスト表示形式変更（shift+l）
+        if (event.shiftKey && event.key.toLowerCase() === 'l') {
+            event.preventDefault();
+            playlistDisplayBtn.click();
+            return;
+        }
+
         // 🔼前動画再生（shift+p）
         if (event.shiftKey && event.key.toLowerCase() === 'p') {
             if (playlist.length > 1) {
@@ -5631,7 +5816,7 @@ sortPlaylistBtn.addEventListener('click', (e) => {
         return;
     }
 
-    document.querySelectorAll('.aspect-ratio-menu, .add-playlist-menu, .track-menu').forEach(m => {
+    document.querySelectorAll('.aspect-ratio-menu, .add-playlist-menu, .track-menu, .playlist-display-menu').forEach(m => {
         m.remove();
     });
 
@@ -5649,6 +5834,46 @@ sortPlaylistBtn.addEventListener('click', (e) => {
 
     function closeMenu(ev) {    // ← function宣言ならhoistingされるのでOK
         if (!menu.contains(ev.target) && ev.target !== sortPlaylistBtn) {
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+        }
+    }
+
+    setTimeout(() => {
+        document.addEventListener('click', closeMenu, { once: true });
+    }, 0);
+});
+
+// 📚表示形式ボタン
+playlistDisplayBtn.addEventListener('click', (e) => {
+    clearPlaylistFilter();
+    e.stopPropagation();
+
+    const existingMenu = document.querySelector('.playlist-display-menu');
+    if (existingMenu) {
+        existingMenu.remove();
+        document.removeEventListener('click', closeMenu);
+        return;
+    }
+
+    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(m => {
+        m.remove();
+    });
+
+    const targetContainer = document.fullscreenElement || mainContainer;
+    const menu = createPlaylistDisplayMenu();
+
+    const containerRect = targetContainer.getBoundingClientRect();
+    const btnRect = playlistDisplayBtn.getBoundingClientRect();
+
+    menu.style.position = 'absolute';
+    menu.style.left = `${btnRect.left - containerRect.left}px`;
+    menu.style.top  = `${btnRect.bottom - containerRect.top + 4}px`;
+
+    targetContainer.appendChild(menu);
+
+    function closeMenu(ev) {
+        if (!menu.contains(ev.target) && ev.target !== playlistDisplayBtn) {
             menu.remove();
             document.removeEventListener('click', closeMenu);
         }

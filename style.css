@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.45.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.47.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -108,9 +108,41 @@ video {
 }
 .filter-list {
     overflow-y: auto;
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 6px;
     padding-right: 4px;
+}
+.filter-list.playlist-grid {
+    display: grid;
+    gap: 10px;
+}
+.filter-list.playlist-grid-small {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+.filter-list.playlist-grid-medium {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.filter-list.playlist-grid-large {
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+}
+.filter-list.playlist-grid .filter-item.filter-item-size-small.filter-item-tile {
+    min-width: 0;
+}
+.filter-list.playlist-grid .filter-item.filter-item-size-medium.filter-item-tile {
+    min-width: 0;
+}
+.filter-list.playlist-grid .filter-item.filter-item-size-large.filter-item-tile {
+    min-width: 0;
+}
+.filter-list.playlist-grid .filter-item.filter-item-size-small.filter-item-tile {
+    grid-column: span 1;
+}
+.filter-list.playlist-grid .filter-item.filter-item-size-medium.filter-item-tile {
+    grid-column: span 1;
+}
+.filter-list.playlist-grid .filter-item.filter-item-size-large.filter-item-tile {
+    grid-column: span 1;
 }
 /* スクロールバーのカスタマイズ（ダークテーマ用） */
 .filter-list::-webkit-scrollbar {
@@ -151,6 +183,118 @@ video {
 .filter-item.current.selected {
     background: rgba(0, 123, 255, 0.35);
     border-color: rgba(0, 123, 255, 0.9);
+}
+.filter-item-thumb-wrap {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    overflow: hidden;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+}
+.filter-item-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    background: rgba(0, 0, 0, 0.35);
+}
+.filter-item-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+.filter-item-path {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    color: #f5f5f5;
+}
+.filter-item-file-name {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #f5f5f5;
+    white-space: normal;
+    line-height: 1.3;
+}
+.filter-item.filter-item-tile {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px;
+    min-height: 140px;
+}
+.filter-item.filter-item-size-small.filter-item-tile {
+    min-height: 170px;
+}
+.filter-item.filter-item-size-medium.filter-item-tile {
+    min-height: 280px;
+}
+.filter-item.filter-item-size-large.filter-item-tile {
+    min-height: 420px;
+}
+.filter-item.filter-item-thumb-list {
+    flex-direction: row;
+    align-items: center;
+    padding: 7px 10px;
+    min-height: 56px;
+}
+.filter-item.filter-item-tile .filter-item-thumb-wrap {
+    margin-right: 0;
+    margin-bottom: 8px;
+}
+.filter-item.filter-item-size-small.filter-item-tile .filter-item-thumb-wrap {
+    margin-bottom: 8px;
+}
+.filter-item.filter-item-size-medium.filter-item-tile .filter-item-thumb-wrap {
+    margin-bottom: 10px;
+}
+.filter-item.filter-item-size-large.filter-item-tile .filter-item-thumb-wrap {
+    margin-bottom: 12px;
+}
+.filter-item.filter-item-thumb-list .filter-item-thumb-wrap {
+    margin-right: 10px;
+    margin-bottom: 0;
+}
+.filter-item.filter-item-size-small .filter-item-thumb-wrap {
+    width: 96px;
+    height: 54px;
+}
+.filter-item.filter-item-size-medium .filter-item-thumb-wrap {
+    width: 144px;
+    height: 81px;
+}
+.filter-item.filter-item-size-large .filter-item-thumb-wrap {
+    width: 216px;
+    height: 122px;
+}
+.filter-item.filter-item-size-small.filter-item-tile .filter-item-thumb-wrap {
+    width: 100%;
+    height: 96px;
+}
+.filter-item.filter-item-size-medium.filter-item-tile .filter-item-thumb-wrap {
+    width: 100%;
+    height: 220px;
+}
+.filter-item.filter-item-size-large.filter-item-tile .filter-item-thumb-wrap {
+    width: 100%;
+    height: 360px;
+}
+.filter-item.filter-item-tile .filter-item-path {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.filter-item.filter-item-thumb-list .filter-item-path {
+    white-space: nowrap;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .filter-empty {
     color: rgba(255, 255, 255, 0.8);
@@ -727,6 +871,32 @@ caption {
 }
 .sort-menu div:active {
     background: rgba(0, 80, 180, 0.6);
+}
+.playlist-display-menu {
+    position: absolute;
+    background: rgba(30,30,30,0.95);
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 6px 0;
+    z-index: 1001;
+    min-width: 180px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    white-space: pre;
+    font-family: monospace;
+    line-height: 1.0;
+    font-size: 16px;
+}
+.playlist-display-menu div {
+    padding: 8px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #eee;
+}
+.playlist-display-menu div:hover {
+    background: rgba(0,123,255,0.2);
+}
+.playlist-display-menu div:active {
+    background: rgba(0,80,180,0.6);
 }
 /* モードアクティブ時の赤を最優先で適用 */
 .mode-active,

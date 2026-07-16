@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.83.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.47.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -73,6 +73,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     classifyPath: (fullPath) => ipcRenderer.invoke('classify-path', fullPath),
     captureScreenshot: () => ipcRenderer.invoke('capture-screenshot'),
+    generateVideoThumbnail: (filePath, size) => ipcRenderer.invoke('generate-video-thumbnail', { filePath, size }),
     openFolderDialog: () => ipcRenderer.invoke('open-folder-dialog'),
     openVideoDialog: () => ipcRenderer.invoke('open-video-dialog'),
     savePlaylistDialog: () => ipcRenderer.invoke('save-playlist-dialog'),

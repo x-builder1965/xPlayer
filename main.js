@@ -35,6 +35,7 @@ let currentTmpDir = null;
 let currentJoinTempFiles = [];      // 結合用の一時変換ファイルリスト
 let currentJoinConcatTxt = null;    // concatリストのtxtパス
 let isJoinCancelled = false;        // ファイル先頭付近（他のグローバル変数の近く）に追加
+let thumbnailCacheDir = null;
 
 // 🔲初期処理🔲
 // 開発中セキュリティオプション設定
@@ -48,8 +49,10 @@ if (process.env.NODE_ENV === 'development') {
 // - Chromium の GPU shader disk cache を無効化して関連ワーニングを抑制
 try {
     const cacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'Cache');
+    thumbnailCacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'thumbnails');
     // 非同期でディレクトリ作成（失敗しても致命的でないので catch で無視）
     fs.mkdir(cacheDir, { recursive: true }).catch(() => {});
+    fs.mkdir(thumbnailCacheDir, { recursive: true }).catch(() => {});
     // Chromium のディスクキャッシュ先をアプリ管理下のディレクトリに変更
     if (app && app.commandLine && typeof app.commandLine.appendSwitch === 'function') {
         app.commandLine.appendSwitch('disk-cache-dir', cacheDir);
@@ -757,6 +760,45 @@ ipcMain.handle('capture-screenshot', async (event) => {
     } catch (err) {
         console.error('exec 実行エラー:', err);
         return { success: false, error: err.message };
+    }
+});
+
+// 動画サムネイル生成
+ipcMain.handle('generate-video-thumbnail', async (event, { filePath, size = 180 }) => {
+    if (!filePath) return null;
+
+    try {
+        const tempDir = thumbnailCacheDir || path.join(app.getPath('userData'), 'xPlayerCache', 'thumbnails');
+        await fs.mkdir(tempDir, { recursive: true });
+        const crypto = require('crypto');
+        const safeName = crypto.createHash('sha1').update(filePath).digest('hex');
+        const outputPath = path.join(tempDir, `${safeName}_${size}.png`);
+
+        await new Promise((resolve, reject) => {
+            let stderr = '';
+            ffmpeg(filePath)
+                .inputOptions(['-ss', '00:00:01'])
+                .outputOptions(['-frames:v', '1', '-vf', `scale=${Math.max(80, size)}:-1`, '-y'])
+                .on('start', (commandLine) => {
+                    console.log('[thumbnail] ffmpeg command:', commandLine);
+                })
+                .on('stderr', (chunk) => {
+                    stderr += chunk.toString();
+                })
+                .on('end', resolve)
+                .on('error', (err) => {
+                    const detailed = stderr ? `\n${stderr.trim()}` : '';
+                    reject(new Error(`${err.message}${detailed}`));
+                })
+                .save(outputPath);
+        });
+
+        const data = await fs.readFile(outputPath);
+        await fs.unlink(outputPath).catch(() => {});
+        return `data:image/png;base64,${data.toString('base64')}`;
+    } catch (err) {
+        console.warn('[thumbnail] ffmpeg failed:', filePath, err.message);
+        return null;
     }
 });
 
