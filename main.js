@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.27.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.47.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -777,7 +777,7 @@ ipcMain.handle('generate-video-thumbnail', async (event, { filePath, size = 180 
         await new Promise((resolve, reject) => {
             let stderr = '';
             ffmpeg(filePath)
-                .inputOptions(['-ss', '00:00:01'])
+                .inputOptions(['-ss', '00:00:30'])
                 .outputOptions(['-frames:v', '1', '-vf', `scale=${Math.max(80, size)}:-1`, '-y'])
                 .on('start', (commandLine) => {
                     console.log('[thumbnail] ffmpeg command:', commandLine);
