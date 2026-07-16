@@ -231,10 +231,10 @@ video {
     min-height: 170px;
 }
 .filter-item.filter-item-size-medium.filter-item-tile {
-    min-height: 280px;
+    min-height: 190px;
 }
 .filter-item.filter-item-size-large.filter-item-tile {
-    min-height: 420px;
+    min-height: 300px;
 }
 .filter-item.filter-item-thumb-list {
     flex-direction: row;
@@ -277,16 +277,15 @@ video {
 }
 .filter-item.filter-item-size-medium.filter-item-tile .filter-item-thumb-wrap {
     width: 100%;
-    height: 220px;
+    height: 190px;
 }
 .filter-item.filter-item-size-large.filter-item-tile .filter-item-thumb-wrap {
     width: 100%;
-    height: 360px;
+    height: 300px;
 }
 .filter-item.filter-item-tile .filter-item-path {
     white-space: normal;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
