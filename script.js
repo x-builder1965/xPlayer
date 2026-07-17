@@ -42,6 +42,9 @@ const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
 const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
+const debouncedUpdateFilterList = debounce(updateFilterList, 300);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
+const debouncedUpdatePlaylistDisplay = debounce(updatePlaylistDisplay, 300);
+
 const SORT_MODES = {
     none:       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
     path_asc:   { label: '動画パス▲',   fn: () => [...playlist].sort((a, b) => a.file.path.localeCompare(b.file.path)) },
@@ -316,6 +319,7 @@ let currentAudioTrack = null;
 let currentSubtitleTrack = null;
 let delConvertFile = null;
 let currentAspectRatio = 'none';
+let currentUpdateId = 0;            // 関数の外側に、現在の実行世代を管理する変数を定義します
 
 //🔲初期処理🔲
 document.addEventListener('DOMContentLoaded', () => {
@@ -1129,9 +1133,7 @@ function savePlaylistAndPlaybackState() {
         localStorage.removeItem('currentTime');
     }
     updateIconOverlay();
-    if (isFilterPanelVisible) {
-        updateFilterList();
-    }
+    if (isFilterPanelVisible) updateFilterList();
 }
 
 // フィルタリストパネル表示切替
@@ -1155,10 +1157,18 @@ function scrollCurrentFilterItemIntoView() {
     try {
         const targetIndex = selectedPlaylistIndex >= 0 ? selectedPlaylistIndex : currentVideoIndex;
         const el = filterList.querySelector('[data-index="' + targetIndex + '"]');
+        
         if (el && typeof el.scrollIntoView === 'function') {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // オプションに inline: 'center' を追加
+            el.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',  // 縦方向の中央合わせ
+                inline: 'center'  // 横方向の中央合わせ（サムネイルが横並びの時に有効）
+            });
         }
-    } catch (e) {}
+    } catch (e) {
+        console.warn("Scroll failed:", e); // 完全に無視せず警告ログを残す
+    }
 }
 
 // プレイリストフィルタをクリア
@@ -1166,10 +1176,6 @@ function clearPlaylistFilter() {
     filterText = '';
     if (playlistFilterInput) {
         playlistFilterInput.value = '';
-    }
-    updateFilterList();
-    if (isFilterPanelVisible) {
-        scrollCurrentFilterItemIntoView();
     }
 }
 
@@ -1248,7 +1254,7 @@ function setPlaylistDisplayMode(mode) {
             }
         }
     }
-    void updateFilterList();
+    debouncedUpdateFilterList();
 }
 
 function getPlaylistDisplayModeLabel(mode) {
@@ -1339,8 +1345,24 @@ async function getPlaylistThumbnailDataUrl(filePath, size = 180) {
     }
 }
 
+/**
+ * デバウンス関数（対策1）
+ * 連続で呼び出されても、最後の呼び出しから指定ミリ秒（デフォルト300ms）経過するまで実行を遅延させます。
+ */
+function debounce(func, timeout = 300) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { func.apply(this, args); }, timeout);
+    };
+}
+
 async function updateFilterList() {
     if (!filterList) return;
+
+    // 実行ごとにIDをカウントアップし、この実行の「世代ID」を保持する（対策2）
+    const myUpdateId = ++currentUpdateId;
+
     filterList.innerHTML = '';
     if (playlist.length === 0) {
         filterList.innerHTML = '<div class="filter-empty">プレイリストが空です。</div>';
@@ -1379,6 +1401,9 @@ async function updateFilterList() {
     filterList.classList.toggle('playlist-grid', isTileMode);
 
     for (const { item, index } of results) {
+        // 【重要】ループの各ステップ開始時に、すでに次の新しい検索が始まっていないかチェック（対策2）
+        if (myUpdateId !== currentUpdateId) return;
+
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'filter-item';
@@ -1437,12 +1462,30 @@ async function updateFilterList() {
             button.appendChild(textBlock);
             button.title = displayText;
 
-            const thumbUrl = await getPlaylistThumbnailDataUrl(item.file?.path, thumbDims.width);
-            if (thumbUrl) {
-                thumb.src = thumbUrl;
-            } else {
+            // 共通フォールバック処理用のインライン関数
+            const setFallbackThumb = () => {
                 thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#2a2a2a"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="18">No Thumbnail</text></svg>');
                 thumbWrap.style.background = 'rgba(0,0,0,0.2)';
+            };
+
+            // 【重要】try-catch で囲み、エラー時に処理全体が壊れるのを防ぐ（対策2）
+            try {
+                const thumbUrl = await getPlaylistThumbnailDataUrl(item.file?.path, thumbDims.width);
+                
+                // 【重要】await 中に次の新しい処理が走った場合、古い結果は反映せずに中断する（対策2）
+                if (myUpdateId !== currentUpdateId) return;
+
+                if (thumbUrl) {
+                    thumb.src = thumbUrl;
+                } else {
+                    setFallbackThumb();
+                }
+            } catch (error) {
+                console.error(`サムネイル取得失敗 [Index: ${index}]:`, error);
+                
+                // エラー発生時も次の処理が走っていれば中断、そうでなければフォールバック画像を適用
+                if (myUpdateId !== currentUpdateId) return;
+                setFallbackThumb();
             }
         }
 
@@ -1453,7 +1496,8 @@ async function updateFilterList() {
             } else {
                 await updateTrack('audio');
             }
-            void updateFilterList();
+            // 呼び出しをデバウンス版に変更してバッティングを防ぐ
+            if (isFilterPanelVisible) debouncedUpdateFilterList();
         });
         button.addEventListener('dblclick', async () => {
             selectedPlaylistIndex = index;
@@ -1466,7 +1510,11 @@ async function updateFilterList() {
         });
         filterList.appendChild(button);
     }
-    adjustFilterPanelHeight();
+    
+    // 最後に最新の呼び出しである場合のみ、高さを調整する（対策2）
+    if (myUpdateId === currentUpdateId) {
+        adjustFilterPanelHeight();
+    }
 }
 
 // フィルタリングされたインデックスを取得
@@ -1719,6 +1767,10 @@ function toggleRandomPlay() {
     // フィルタ条件をクリアし、再生動画の行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
     clearPlaylistFilter();
+    if (isFilterPanelVisible) {
+        updateFilterList();
+        scrollCurrentFilterItemIntoView();
+    }
 }
 
 // シンプルなFisher-Yatesシャッフル
@@ -1932,9 +1984,12 @@ async function playVideo(file, currentTime) {
     // フィルタ条件をクリアし、再生動画の行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
     clearPlaylistFilter();
+    debouncedUpdatePlaylistDisplay();
+    if (isFilterPanelVisible) {
+        scrollCurrentFilterItemIntoView();
+    }
 
     showControlsAndFilename();
-    updatePlaylistDisplay();
     updateIconOverlay();
 }
 
@@ -2042,9 +2097,12 @@ async function togglePlayPause() {
     // フィルタ条件をクリアし、再生動画の行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
     clearPlaylistFilter();
+    debouncedUpdatePlaylistDisplay();
+    if (isFilterPanelVisible) {
+        scrollCurrentFilterItemIntoView();
+    }
 
     showControlsAndFilename();
-    updatePlaylistDisplay();
     updateIconOverlay();
 }
 
@@ -2982,6 +3040,10 @@ function createSortMenu() {
             event.stopPropagation();
             await applySortFiltered(key);
             clearPlaylistFilter();
+            if (isFilterPanelVisible) {
+                updateFilterList();
+                scrollCurrentFilterItemIntoView();
+            }
             menu.remove();
         });
 
@@ -4379,7 +4441,7 @@ playlistPathArea.addEventListener('click', () => {
     if (isFilterPanelVisible) {
         hideEditPanel();
         zoomEndBtn.click();
-        updateFilterList();
+        if (isFilterPanelVisible) updateFilterList();
         try { playlistFilterInput?.focus(); } catch (e) {}
         setTimeout(() => {
             try {
@@ -4424,7 +4486,6 @@ playStopBtn.addEventListener('click', async () => {
     
     // フィルタリスト更新（アイコン削除）
     if (isFilterPanelVisible) updateFilterList();
-    
     updateIconOverlay();
 
     // 5. FFmpeg変換中ならキャンセル
@@ -4641,7 +4702,7 @@ document.addEventListener('click', () => {
 // プレイリストフィルタ入力
 playlistFilterInput.addEventListener('input', () => {
     filterText = playlistFilterInput.value || '';
-    updateFilterList();
+    if (isFilterPanelVisible) updateFilterList();
 });
 
 // Enterキーで履歴に追加
@@ -4657,6 +4718,10 @@ playlistFilterInput.addEventListener('keydown', (e) => {
 // 🔘フィルタ条件クリアボタン
 filterClearBtn.addEventListener('click', () => {
     clearPlaylistFilter();
+    if (isFilterPanelVisible) {
+        updateFilterList();
+        scrollCurrentFilterItemIntoView();
+    }
 });
 
 // 🔀ランダム再生ボタンクリック
@@ -5461,12 +5526,20 @@ tooltipElements.forEach(element => {
 // 🔼上へボタン
 upMovePlaylistBtn.addEventListener('click', () => {
     clearPlaylistFilter();
+    if (isFilterPanelVisible) {
+        updateFilterList();
+        scrollCurrentFilterItemIntoView();
+    }
     upMovePlaylist();
 });
 
 // 🔽下へボタン
 downMovePlaylistBtn.addEventListener('click', () => {
     clearPlaylistFilter();
+    if (isFilterPanelVisible) {
+        updateFilterList();
+        scrollCurrentFilterItemIntoView();
+    }
     downMovePlaylist();
 });
 
@@ -5509,7 +5582,10 @@ addPlaylistBtn.addEventListener('click', async (e) => {
         document.addEventListener('click', closeMenu, { once: true });
     }, 0);
 
-    updatePlaylistDisplay();
+    debouncedUpdatePlaylistDisplay();
+    if (isFilterPanelVisible) {
+        scrollCurrentFilterItemIntoView();
+    }
     savePlaylistAndPlaybackState();
     saveShuffleState();
 });
@@ -5533,7 +5609,10 @@ removePlaylistBtn.addEventListener('click', () => {
         if (shufflePosition < 0) shufflePosition = -1;
     }
 
-    updatePlaylistDisplay();
+    debouncedUpdatePlaylistDisplay();
+    if (isFilterPanelVisible) {
+        scrollCurrentFilterItemIntoView();
+    }
     savePlaylistAndPlaybackState();
     saveShuffleState();
 });
@@ -5547,13 +5626,19 @@ clearPlaylistBtn.addEventListener('click', () => {
     shufflePosition = -1;
     saveShuffleState();
 
-    updatePlaylistDisplay();
+    debouncedUpdatePlaylistDisplay();
+    if (isFilterPanelVisible) {
+        scrollCurrentFilterItemIntoView();
+    }
     savePlaylistAndPlaybackState();
 });
 
 // 💾保存ボタン
 savePlaylistBtn.addEventListener('click', () => {
     clearPlaylistFilter();
+    if (isFilterPanelVisible) {
+        updateFilterList();
+    }
     savePlaylist();
 });
 
@@ -5807,6 +5892,10 @@ saveVideoBtn.addEventListener('click', async () => {
 // 📩並び替えボタンクリックイベント（トグル実装）
 sortPlaylistBtn.addEventListener('click', (e) => {
     clearPlaylistFilter();
+    if (isFilterPanelVisible) {
+        updateFilterList();
+        scrollCurrentFilterItemIntoView();
+    }
     e.stopPropagation();
 
     const existingMenu = document.querySelector('.sort-playlist-menu');
@@ -5847,6 +5936,10 @@ sortPlaylistBtn.addEventListener('click', (e) => {
 // 📚表示形式ボタン
 playlistDisplayBtn.addEventListener('click', (e) => {
     clearPlaylistFilter();
+    if (isFilterPanelVisible) {
+        updateFilterList();
+        scrollCurrentFilterItemIntoView();
+    }
     e.stopPropagation();
 
     const existingMenu = document.querySelector('.playlist-display-menu');

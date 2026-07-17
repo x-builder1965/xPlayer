@@ -766,6 +766,7 @@ ipcMain.handle('capture-screenshot', async (event) => {
 // 動画サムネイル生成
 ipcMain.handle('generate-video-thumbnail', async (event, { filePath, size = 180 }) => {
     if (!filePath) return null;
+    let logCommandLine = '';
 
     try {
         const tempDir = thumbnailCacheDir || path.join(app.getPath('userData'), 'xPlayerCache', 'thumbnails');
@@ -780,7 +781,7 @@ ipcMain.handle('generate-video-thumbnail', async (event, { filePath, size = 180 
                 .inputOptions(['-ss', '00:00:30'])
                 .outputOptions(['-frames:v', '1', '-vf', `scale=${Math.max(80, size)}:-1`, '-y'])
                 .on('start', (commandLine) => {
-                    console.log('[thumbnail] ffmpeg command:', commandLine);
+                    logCommandLine = commandLine;
                 })
                 .on('stderr', (chunk) => {
                     stderr += chunk.toString();
@@ -797,6 +798,7 @@ ipcMain.handle('generate-video-thumbnail', async (event, { filePath, size = 180 
         await fs.unlink(outputPath).catch(() => {});
         return `data:image/png;base64,${data.toString('base64')}`;
     } catch (err) {
+        console.log('[thumbnail] ffmpeg command:', logCommandLine);
         console.warn('[thumbnail] ffmpeg failed:', filePath, err.message);
         return null;
     }
