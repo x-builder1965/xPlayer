@@ -1404,6 +1404,8 @@ async function updateFilterList() {
         // 【重要】ループの各ステップ開始時に、すでに次の新しい検索が始まっていないかチェック（対策2）
         if (myUpdateId !== currentUpdateId) return;
 
+        updateItemCount(index, playlist.length);
+
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'filter-item';
@@ -1456,7 +1458,7 @@ async function updateFilterList() {
             } else {
                 const name = document.createElement('span');
                 name.className = 'filter-item-file-name';
-                name.textContent = fileName;
+                name.textContent = showPlaybackIcon ? `▶️ ${fileName}` : fileName;
                 textBlock.appendChild(name);
             }
             button.appendChild(textBlock);
@@ -1497,7 +1499,10 @@ async function updateFilterList() {
                 await updateTrack('audio');
             }
             // 呼び出しをデバウンス版に変更してバッティングを防ぐ
-            if (isFilterPanelVisible) debouncedUpdateFilterList();
+            if (isFilterPanelVisible) {
+                debouncedUpdateFilterList();
+                scrollCurrentFilterItemIntoView();
+            }
         });
         button.addEventListener('dblclick', async () => {
             selectedPlaylistIndex = index;
@@ -1510,6 +1515,7 @@ async function updateFilterList() {
         });
         filterList.appendChild(button);
     }
+    updateItemCount(results.length, playlist.length);
     
     // 最後に最新の呼び出しである場合のみ、高さを調整する（対策2）
     if (myUpdateId === currentUpdateId) {
