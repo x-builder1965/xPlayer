@@ -1501,7 +1501,6 @@ async function updateFilterList() {
             // 呼び出しをデバウンス版に変更してバッティングを防ぐ
             if (isFilterPanelVisible) {
                 debouncedUpdateFilterList();
-                scrollCurrentFilterItemIntoView();
             }
         });
         button.addEventListener('dblclick', async () => {
