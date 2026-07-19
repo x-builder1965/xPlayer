@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.47.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.48.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1400,14 +1400,60 @@ async function updateFilterList() {
         return;
     }
 
+    // 小・中・大のタイルモードであるかの判定
     const isTileMode = ['thumb-small', 'thumb-medium', 'thumb-large'].includes(playlistDisplayMode);
-    filterList.classList.toggle('playlist-grid', isTileMode);
+    
+    // グルーピングの追跡用変数
+    let lastFolderPath = null;
+    let currentGroupItemsContainer = null;
 
     for (const { item, index } of results) {
         // 【重要】ループの各ステップ開始時に、すでに次の新しい検索が始まっていないかチェック（対策2）
         if (myUpdateId !== currentUpdateId) return;
 
         updateItemCount(index, playlist.length);
+
+        // --- フォルダグルーピングロジックの挿入 (タイルモード時のみ) ---
+        let targetContainer = filterList;
+
+        if (isTileMode) {
+            // パスからディレクトリ名（フォルダパス）を取得
+            const fullPath = item.file?.path || item.name || '無題';
+            const currentFolderPath = path.dirname(fullPath);
+
+            // 新しいフォルダに切り替わった場合、または最初の処理の場合
+            if (currentFolderPath !== lastFolderPath) {
+                lastFolderPath = currentFolderPath;
+
+                // フォルダグループ全体の親要素を作成
+                const folderGroup = document.createElement('div');
+                folderGroup.className = 'folder-group';
+
+                // フォルダタイトル（パス表示）を作成
+                const folderTitle = document.createElement('div');
+                folderTitle.className = 'folder-group-title';
+                folderTitle.textContent = currentFolderPath === '.' ? 'ルートフォルダ' : currentFolderPath;
+                folderGroup.appendChild(folderTitle);
+
+                // 横並び（Grid）にするためのアイテムコンテナを作成
+                currentGroupItemsContainer = document.createElement('div');
+                currentGroupItemsContainer.className = 'folder-group-items';
+                
+                // サイズに応じたクラスを付与
+                currentGroupItemsContainer.classList.add(
+                    playlistDisplayMode === 'thumb-small' ? 'playlist-grid-small' :
+                    playlistDisplayMode === 'thumb-medium' ? 'playlist-grid-medium' :
+                    'playlist-grid-large'
+                );
+
+                folderGroup.appendChild(currentGroupItemsContainer);
+                filterList.appendChild(folderGroup); // 随時メインリストに追加
+            }
+            
+            // タイルモードの時は、生成したフォルダ内のコンテナへボタンを追加する
+            targetContainer = currentGroupItemsContainer;
+        }
+        // -----------------------------------------------------------
 
         const button = document.createElement('button');
         button.type = 'button';
@@ -1515,7 +1561,9 @@ async function updateFilterList() {
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
         });
-        filterList.appendChild(button);
+
+        // 対象のコンテナ（通常時: filterList / タイル時: 各フォルダのコンテナ）に随時追加
+        targetContainer.appendChild(button);
     }
     updateItemCount(results.length, playlist.length);
     

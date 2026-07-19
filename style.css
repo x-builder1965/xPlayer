@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.47.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.48.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -113,38 +113,43 @@ video {
     gap: 6px;
     padding-right: 4px;
 }
-.filter-list.playlist-grid {
+
+.folder-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+    width: 100%;
+}
+.folder-group-title {
+    font-size: 13px;
+    font-weight: bold;
+    color: #8dc6ff; /* ダークテーマに映えるライトブルー */
+    padding: 6px 4px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    word-break: break-all;
+    text-align: left;
+}
+.folder-group-items {
     display: grid;
     gap: 10px;
+    width: 100%;
 }
-.filter-list.playlist-grid-small {
+.folder-group-items.playlist-grid-small {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
 }
-.filter-list.playlist-grid-medium {
+.folder-group-items.playlist-grid-medium {
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
-.filter-list.playlist-grid-large {
+.folder-group-items.playlist-grid-large {
     grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
 }
-.filter-list.playlist-grid .filter-item.filter-item-size-small.filter-item-tile {
+.folder-group-items .filter-item.filter-item-size-small.filter-item-tile,
+.folder-group-items .filter-item.filter-item-size-medium.filter-item-tile,
+.folder-group-items .filter-item.filter-item-size-large.filter-item-tile {
     min-width: 0;
-}
-.filter-list.playlist-grid .filter-item.filter-item-size-medium.filter-item-tile {
-    min-width: 0;
-}
-.filter-list.playlist-grid .filter-item.filter-item-size-large.filter-item-tile {
-    min-width: 0;
-}
-.filter-list.playlist-grid .filter-item.filter-item-size-small.filter-item-tile {
     grid-column: span 1;
 }
-.filter-list.playlist-grid .filter-item.filter-item-size-medium.filter-item-tile {
-    grid-column: span 1;
-}
-.filter-list.playlist-grid .filter-item.filter-item-size-large.filter-item-tile {
-    grid-column: span 1;
-}
-/* スクロールバーのカスタマイズ（ダークテーマ用） */
 .filter-list::-webkit-scrollbar {
     width: 8px;
 }
