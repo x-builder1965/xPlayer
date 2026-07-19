@@ -1403,16 +1403,16 @@ async function updateFilterList() {
     // 小・中・大のタイルモードであるかの判定
     const isTileMode = ['thumb-small', 'thumb-medium', 'thumb-large'].includes(playlistDisplayMode);
     
-    // 【新規】並び替え状態の判定 ('ctime_asc', 'ctime_desc', 'random' など)
+    // 【修正】並び替え状態の判定
     const isCreationTimeSort = ['ctime_asc', 'ctime_desc'].includes(currentSortMode);
-    const isRandomSort = currentSortMode === 'random';
+    const isNoSortOrRandom = ['none', 'random'].includes(currentSortMode); // （なし）または（ランダム）
 
     // グルーピングの追跡用変数
-    let lastGroupKey = null; // フォルダパスまたは作成日を保持
+    let lastGroupKey = null;
     let currentGroupItemsContainer = null;
 
-    // 「並び替え＝ランダム」かつ「タイルモード」の場合のみ、外側に1つだけグリッドコンテナを作成
-    if (isTileMode && isRandomSort) {
+    // 【修正】「並び替え＝（なし）または（ランダム）」かつ「タイルモード」の場合のみ、外側に1つだけグリッドコンテナを作成
+    if (isTileMode && isNoSortOrRandom) {
         currentGroupItemsContainer = document.createElement('div');
         currentGroupItemsContainer.className = 'folder-group-items';
         currentGroupItemsContainer.classList.add(
@@ -1433,21 +1433,19 @@ async function updateFilterList() {
         let targetContainer = filterList;
 
         if (isTileMode) {
-            if (isRandomSort) {
-                // ランダム時はグループヘッダなしで、事前に作成した共通グリッドへ追加
+            if (isNoSortOrRandom) {
+                // 【修正】（なし）・ランダム時はグループヘッダなしで、事前に作成した共通グリッドへ追加
                 targetContainer = currentGroupItemsContainer;
             } else {
                 // グループのキー（タイトル文字列）を決定
-// グループのキー（タイトル文字列）を決定
                 let currentGroupKey = '';
 
                 if (isCreationTimeSort) {
-                    // 【修正】確実に取得できるミリ秒（ctimeMs または birthtimeMs）を利用
+                    // 作成日時▲・▼の場合：確実に取得できるミリ秒（ctimeMs または birthtimeMs）を利用
                     let dateStr = '作成日不明';
                     if (item.file?.path) {
                         try {
                             const stats = await fs.stat(item.file.path);
-                            // birthtimeMs が有効なら優先し、無ければ ctimeMs を使用
                             const timeMs = (stats.birthtimeMs && stats.birthtimeMs > 0) ? stats.birthtimeMs : stats.ctimeMs;
                             
                             if (timeMs && !isNaN(timeMs)) {
@@ -1459,9 +1457,7 @@ async function updateFilterList() {
                         }
                     }
                     
-                    // 【重要】awaitの間に次の新しい検索・処理が走っていたらここで中断
                     if (myUpdateId !== currentUpdateId) return;
-                    
                     currentGroupKey = dateStr;
                 } else {
                     // 上記以外（いままでのまま変更なし ＝ 従来のフォルダパスによるグルーピング）
@@ -1469,7 +1465,7 @@ async function updateFilterList() {
                     const currentFolderPath = path.dirname(fullPath);
                     currentGroupKey = currentFolderPath === '.' ? 'ルートフォルダ' : currentFolderPath;
                 }
-                
+
                 // 新しいグループ（日付けまたはフォルダ）に切り替わった場合
                 if (currentGroupKey !== lastGroupKey) {
                     lastGroupKey = currentGroupKey;
