@@ -1403,9 +1403,25 @@ async function updateFilterList() {
     // 小・中・大のタイルモードであるかの判定
     const isTileMode = ['thumb-small', 'thumb-medium', 'thumb-large'].includes(playlistDisplayMode);
     
+    // 【新規】並び替え状態の判定 ('ctime_asc', 'ctime_desc', 'random' など)
+    const isCreationTimeSort = ['ctime_asc', 'ctime_desc'].includes(currentSortMode);
+    const isRandomSort = currentSortMode === 'random';
+
     // グルーピングの追跡用変数
-    let lastFolderPath = null;
+    let lastGroupKey = null; // フォルダパスまたは作成日を保持
     let currentGroupItemsContainer = null;
+
+    // 「並び替え＝ランダム」かつ「タイルモード」の場合のみ、外側に1つだけグリッドコンテナを作成
+    if (isTileMode && isRandomSort) {
+        currentGroupItemsContainer = document.createElement('div');
+        currentGroupItemsContainer.className = 'folder-group-items';
+        currentGroupItemsContainer.classList.add(
+            playlistDisplayMode === 'thumb-small' ? 'playlist-grid-small' :
+            playlistDisplayMode === 'thumb-medium' ? 'playlist-grid-medium' :
+            'playlist-grid-large'
+        );
+        filterList.appendChild(currentGroupItemsContainer);
+    }
 
     for (const { item, index } of results) {
         // 【重要】ループの各ステップ開始時に、すでに次の新しい検索が始まっていないかチェック（対策2）
@@ -1413,45 +1429,76 @@ async function updateFilterList() {
 
         updateItemCount(index, playlist.length);
 
-        // --- フォルダグルーピングロジックの挿入 (タイルモード時のみ) ---
+        // --- 表示形式・並び替えに応じたコンテナの決定ロジック ---
         let targetContainer = filterList;
 
         if (isTileMode) {
-            // パスからディレクトリ名（フォルダパス）を取得
-            const fullPath = item.file?.path || item.name || '無題';
-            const currentFolderPath = path.dirname(fullPath);
+            if (isRandomSort) {
+                // ランダム時はグループヘッダなしで、事前に作成した共通グリッドへ追加
+                targetContainer = currentGroupItemsContainer;
+            } else {
+                // グループのキー（タイトル文字列）を決定
+// グループのキー（タイトル文字列）を決定
+                let currentGroupKey = '';
 
-            // 新しいフォルダに切り替わった場合、または最初の処理の場合
-            if (currentFolderPath !== lastFolderPath) {
-                lastFolderPath = currentFolderPath;
-
-                // フォルダグループ全体の親要素を作成
-                const folderGroup = document.createElement('div');
-                folderGroup.className = 'folder-group';
-
-                // フォルダタイトル（パス表示）を作成
-                const folderTitle = document.createElement('div');
-                folderTitle.className = 'folder-group-title';
-                folderTitle.textContent = currentFolderPath === '.' ? 'ルートフォルダ' : currentFolderPath;
-                folderGroup.appendChild(folderTitle);
-
-                // 横並び（Grid）にするためのアイテムコンテナを作成
-                currentGroupItemsContainer = document.createElement('div');
-                currentGroupItemsContainer.className = 'folder-group-items';
+                if (isCreationTimeSort) {
+                    // 【修正】確実に取得できるミリ秒（ctimeMs または birthtimeMs）を利用
+                    let dateStr = '作成日不明';
+                    if (item.file?.path) {
+                        try {
+                            const stats = await fs.stat(item.file.path);
+                            // birthtimeMs が有効なら優先し、無ければ ctimeMs を使用
+                            const timeMs = (stats.birthtimeMs && stats.birthtimeMs > 0) ? stats.birthtimeMs : stats.ctimeMs;
+                            
+                            if (timeMs && !isNaN(timeMs)) {
+                                const d = new Date(timeMs);
+                                dateStr = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+                            }
+                        } catch (err) {
+                            console.warn(`表示用stat失敗: ${item.file.path}`, err);
+                        }
+                    }
+                    
+                    // 【重要】awaitの間に次の新しい検索・処理が走っていたらここで中断
+                    if (myUpdateId !== currentUpdateId) return;
+                    
+                    currentGroupKey = dateStr;
+                } else {
+                    // 上記以外（いままでのまま変更なし ＝ 従来のフォルダパスによるグルーピング）
+                    const fullPath = item.file?.path || item.name || '無題';
+                    const currentFolderPath = path.dirname(fullPath);
+                    currentGroupKey = currentFolderPath === '.' ? 'ルートフォルダ' : currentFolderPath;
+                }
                 
-                // サイズに応じたクラスを付与
-                currentGroupItemsContainer.classList.add(
-                    playlistDisplayMode === 'thumb-small' ? 'playlist-grid-small' :
-                    playlistDisplayMode === 'thumb-medium' ? 'playlist-grid-medium' :
-                    'playlist-grid-large'
-                );
+                // 新しいグループ（日付けまたはフォルダ）に切り替わった場合
+                if (currentGroupKey !== lastGroupKey) {
+                    lastGroupKey = currentGroupKey;
 
-                folderGroup.appendChild(currentGroupItemsContainer);
-                filterList.appendChild(folderGroup); // 随時メインリストに追加
+                    // グループ全体の親要素を作成
+                    const folderGroup = document.createElement('div');
+                    folderGroup.className = 'folder-group';
+
+                    // グループヘッダを作成
+                    const folderTitle = document.createElement('div');
+                    folderTitle.className = 'folder-group-title';
+                    folderTitle.textContent = currentGroupKey;
+                    folderGroup.appendChild(folderTitle);
+
+                    // 横並び（Grid）にするためのアイテムコンテナを作成
+                    currentGroupItemsContainer = document.createElement('div');
+                    currentGroupItemsContainer.className = 'folder-group-items';
+                    currentGroupItemsContainer.classList.add(
+                        playlistDisplayMode === 'thumb-small' ? 'playlist-grid-small' :
+                        playlistDisplayMode === 'thumb-medium' ? 'playlist-grid-medium' :
+                        'playlist-grid-large'
+                    );
+
+                    folderGroup.appendChild(currentGroupItemsContainer);
+                    filterList.appendChild(folderGroup);
+                }
+                
+                targetContainer = currentGroupItemsContainer;
             }
-            
-            // タイルモードの時は、生成したフォルダ内のコンテナへボタンを追加する
-            targetContainer = currentGroupItemsContainer;
         }
         // -----------------------------------------------------------
 
@@ -1513,17 +1560,13 @@ async function updateFilterList() {
             button.appendChild(textBlock);
             button.title = displayText;
 
-            // 共通フォールバック処理用のインライン関数
             const setFallbackThumb = () => {
                 thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#2a2a2a"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="18">No Thumbnail</text></svg>');
                 thumbWrap.style.background = 'rgba(0,0,0,0.2)';
             };
 
-            // 【重要】try-catch で囲み、エラー時に処理全体が壊れるのを防ぐ（対策2）
             try {
                 const thumbUrl = await getPlaylistThumbnailDataUrl(item.file?.path, thumbDims.width);
-                
-                // 【重要】await 中に次の新しい処理が走った場合、古い結果は反映せずに中断する（対策2）
                 if (myUpdateId !== currentUpdateId) return;
 
                 if (thumbUrl) {
@@ -1533,8 +1576,6 @@ async function updateFilterList() {
                 }
             } catch (error) {
                 console.error(`サムネイル取得失敗 [Index: ${index}]:`, error);
-                
-                // エラー発生時も次の処理が走っていれば中断、そうでなければフォールバック画像を適用
                 if (myUpdateId !== currentUpdateId) return;
                 setFallbackThumb();
             }
@@ -1547,7 +1588,6 @@ async function updateFilterList() {
             } else {
                 await updateTrack('audio');
             }
-            // 呼び出しをデバウンス版に変更してバッティングを防ぐ
             if (isFilterPanelVisible) {
                 debouncedUpdateFilterList();
             }
@@ -1562,12 +1602,10 @@ async function updateFilterList() {
             if (filterPanel) filterPanel.style.display = 'none';
         });
 
-        // 対象のコンテナ（通常時: filterList / タイル時: 各フォルダのコンテナ）に随時追加
         targetContainer.appendChild(button);
     }
     updateItemCount(results.length, playlist.length);
     
-    // 最後に最新の呼び出しである場合のみ、高さを調整する（対策2）
     if (myUpdateId === currentUpdateId) {
         adjustFilterPanelHeight();
     }
