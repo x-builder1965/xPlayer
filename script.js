@@ -1447,10 +1447,17 @@ async function updateFilterList() {
                         try {
                             const stats = await fs.stat(item.file.path);
                             const timeMs = (stats.birthtimeMs && stats.birthtimeMs > 0) ? stats.birthtimeMs : stats.ctimeMs;
-                            
+
                             if (timeMs && !isNaN(timeMs)) {
                                 const d = new Date(timeMs);
-                                dateStr = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+                                const year = d.getFullYear();
+                                const month = String(d.getMonth() + 1).padStart(2, '0');
+                                const date = String(d.getDate()).padStart(2, '0');
+                                
+                                // 曜日を定義（0:日, 1:月, ... 6:土）
+                                const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
+                                
+                                dateStr = `${year}年${month}月${date}日（${dayOfWeek}）`;
                             }
                         } catch (err) {
                             console.warn(`表示用stat失敗: ${item.file.path}`, err);
