@@ -121,7 +121,7 @@ video {
     width: 100%;
 }
 .folder-group-title {
-    font-size: 13px;
+    font-size: 16px;
     font-weight: bold;
     color: #8dc6ff; /* ダークテーマに映えるライトブルー */
     padding: 6px 4px;
@@ -216,7 +216,7 @@ video {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 13px;
+    font-size: 16px;
     color: #f5f5f5;
 }
 .filter-item-file-name {
@@ -295,10 +295,11 @@ video {
     overflow: hidden;
 }
 .filter-item.filter-item-thumb-list .filter-item-path {
-    white-space: nowrap;
+    white-space: normal;       /* 折り返しを許可 */
+    word-break: break-all;     /* 長い英数字やパスの途中で強制折り返し */
     display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;         /* 隠れていた文字を表示 */
+    text-overflow: clip;       /* 三点リーダー（...）を解除 */
 }
 .filter-empty {
     color: rgba(255, 255, 255, 0.8);
