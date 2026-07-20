@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.52.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.53.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -43,7 +43,6 @@ const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
 const debouncedUpdateFilterList = debounce(updateFilterList, 300);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
-const debouncedUpdatePlaylistDisplay = debounce(updatePlaylistDisplay, 300);
 
 const SORT_MODES = {
     none:       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
@@ -1619,7 +1618,7 @@ async function updateFilterList() {
             selectedPlaylistIndex = index;
             currentVideoIndex = index;
             await playVideo(item.file, 0);
-            debouncedUpdatePlaylistDisplay();
+            updatePlaylistDisplay();
             savePlaylistAndPlaybackState();
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
@@ -1729,7 +1728,7 @@ async function applySortFiltered(modeKey = currentSortMode) {
         currentVideoIndex = newIndex >= 0 ? newIndex : 0;
     }
 
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
 }
 
@@ -1749,7 +1748,7 @@ function shuffleFiltered() {
         const newIndex = playlist.findIndex(item => item.file.path === prevPath);
         currentVideoIndex = newIndex >= 0 ? newIndex : 0;
     }
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
 }
 
@@ -1867,7 +1866,7 @@ function toggleRandomPlay() {
             shufflePosition = shuffleOrder.indexOf(currentVideoIndex);
             if (shufflePosition < 0) shufflePosition = 0;
 
-            debouncedUpdatePlaylistDisplay();
+            updatePlaylistDisplay();
             savePlaylistAndPlaybackState();
             saveShuffleState();
         }
@@ -2102,7 +2101,7 @@ async function playVideo(file, currentTime) {
     // フィルタ条件をクリアし、再生動画の行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
     clearPlaylistFilter();
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
     if (isFilterPanelVisible) {
         scrollCurrentFilterItemIntoView();
     }
@@ -2215,7 +2214,7 @@ async function togglePlayPause() {
     // フィルタ条件をクリアし、再生動画の行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
     clearPlaylistFilter();
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
     if (isFilterPanelVisible) {
         scrollCurrentFilterItemIntoView();
     }
@@ -2252,7 +2251,7 @@ async function setVideoSrc(file) {
 
             const wasIsPlaying = isPlaying;
             isConverting = true;
-            debouncedUpdatePlaylistDisplay();
+            updatePlaylistDisplay();
             // シークバーを赤色に変更
             currentConvertPromise = convertVideo(file.path, modeChange, currentAudioIndex);
             const convertedPath = await currentConvertPromise;
@@ -2304,7 +2303,7 @@ async function setVideoSrc(file) {
     videoPlayer.load();
     videoPreview.load();
     videoPreview.pause();
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
 
     // 再生速度復元（起動時のvideo.load前では設定ができていないため設定）
     videoPlayer.playbackRate = currentPlaybackRate;
@@ -2491,7 +2490,7 @@ function upMovePlaylist() {
     }
 
     selectedPlaylistIndex = selectedIndex - 1;
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
 }
 
@@ -2512,7 +2511,7 @@ function downMovePlaylist() {
     }
 
     selectedPlaylistIndex = selectedIndex + 1;
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
 }
 
@@ -2584,7 +2583,7 @@ async function insertFilesIntoPlaylist(files, addPosition = 0) {
         shuffleOrder.push(playlist.length - 1);
     }
 
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
     resetShuffle();
     saveShuffleState();
@@ -2636,7 +2635,7 @@ async function removeFromPlaylist() {
             currentVideoIndex -= 1;
         }
         selectedPlaylistIndex = newIndex;
-        debouncedUpdatePlaylistDisplay();
+        updatePlaylistDisplay();
         if (isCurrentlyPlaying) {
             playStopBtn.click();
         }
@@ -3124,7 +3123,7 @@ async function applySort(modeKey = currentSortMode) {
         selectedPlaylistIndex = currentVideoIndex;
     }
 
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
     saveShuffleState();
 }
@@ -4274,7 +4273,7 @@ document.addEventListener('keydown', async (event) => {
     if (event.key === 'Home') {
         if (playlist.length > 1) {
             currentVideoIndex = 0;
-            debouncedUpdatePlaylistDisplay();
+            updatePlaylistDisplay();
             await playVideo(playlist[currentVideoIndex].file, 0);
             savePlaylistAndPlaybackState();
             showControlsAndFilename();
@@ -4329,7 +4328,7 @@ document.addEventListener('keydown', async (event) => {
     if (event.key === 'End') {
         if (playlist.length > 1) {
             currentVideoIndex = playlist.length - 1;
-            debouncedUpdatePlaylistDisplay();
+            updatePlaylistDisplay();
             await playVideo(playlist[currentVideoIndex].file, 0);
             savePlaylistAndPlaybackState();
             showControlsAndFilename();
@@ -4695,7 +4694,7 @@ prevVideoBtn.addEventListener('click', async () => {
     if (prevIndex >= 0) {
         await cleanupTempFiles();
         currentVideoIndex = prevIndex;
-        debouncedUpdatePlaylistDisplay();
+        updatePlaylistDisplay();
         await playVideo(playlist[currentVideoIndex].file, 0);
         savePlaylistAndPlaybackState();
     }
@@ -4740,7 +4739,7 @@ nextVideoBtn.addEventListener('click', async () => {
     if (nextIndex >= 0) {
         await cleanupTempFiles();
         currentVideoIndex = nextIndex;
-        debouncedUpdatePlaylistDisplay();
+        updatePlaylistDisplay();
         await playVideo(playlist[currentVideoIndex].file, 0);
         savePlaylistAndPlaybackState();
     }
@@ -5024,7 +5023,7 @@ videoPlayer.addEventListener('loadedmetadata', () => {
                 };
                 resetShuffle();
                 saveShuffleState(); // 現在のシャッフル位置を保存
-                debouncedUpdatePlaylistDisplay();
+                updatePlaylistDisplay();
             }
         }
         
@@ -5717,7 +5716,7 @@ addPlaylistBtn.addEventListener('click', async (e) => {
         document.addEventListener('click', closeMenu, { once: true });
     }, 0);
 
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
     if (isFilterPanelVisible) {
         scrollCurrentFilterItemIntoView();
     }
@@ -5744,7 +5743,7 @@ removePlaylistBtn.addEventListener('click', () => {
         if (shufflePosition < 0) shufflePosition = -1;
     }
 
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
     if (isFilterPanelVisible) {
         scrollCurrentFilterItemIntoView();
     }
@@ -5761,7 +5760,7 @@ clearPlaylistBtn.addEventListener('click', () => {
     shufflePosition = -1;
     saveShuffleState();
 
-    debouncedUpdatePlaylistDisplay();
+    updatePlaylistDisplay();
     if (isFilterPanelVisible) {
         scrollCurrentFilterItemIntoView();
     }
