@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.49.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.50.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1400,10 +1400,14 @@ async function updateFilterList() {
         return;
     }
 
-    // 小・中・大のタイルモードであるかの判定
+	// 表示モードの判定
     const isTileMode = ['thumb-small', 'thumb-medium', 'thumb-large'].includes(playlistDisplayMode);
+    const isListOrThumbListMode = ['list', 'thumb-list'].includes(playlistDisplayMode);
     
-    // 【修正】並び替え状態の判定
+    // 【修正】すべてのモード（タイル・リスト・サムネイルリスト）でグルーピングを有効にする判定
+    const isGroupEnabledMode = isTileMode || isListOrThumbListMode;
+    
+    // 並び替え状態の判定
     const isCreationTimeSort = ['ctime_asc', 'ctime_desc'].includes(currentSortMode);
     const isNoSortOrRandom = ['none', 'random'].includes(currentSortMode); // （なし）または（ランダム）
 
@@ -1412,6 +1416,7 @@ async function updateFilterList() {
     let currentGroupItemsContainer = null;
 
     // 【修正】「並び替え＝（なし）または（ランダム）」かつ「タイルモード」の場合のみ、外側に1つだけグリッドコンテナを作成
+    // ※リスト系は縦並びのため、(なし/ランダム)時もそのまま filterList 直下に追加します
     if (isTileMode && isNoSortOrRandom) {
         currentGroupItemsContainer = document.createElement('div');
         currentGroupItemsContainer.className = 'folder-group-items';
@@ -1424,7 +1429,7 @@ async function updateFilterList() {
     }
 
     for (const { item, index } of results) {
-        // 【重要】ループの各ステップ開始時に、すでに次の新しい検索が始まっていないかチェック（対策2）
+        // 【重要】ループの各ステップ開始時に、すでに次の新しい検索が始まっていないかチェック
         if (myUpdateId !== currentUpdateId) return;
 
         updateItemCount(index, playlist.length);
@@ -1432,16 +1437,19 @@ async function updateFilterList() {
         // --- 表示形式・並び替えに応じたコンテナの決定ロジック ---
         let targetContainer = filterList;
 
-        if (isTileMode) {
-            if (isNoSortOrRandom) {
-                // 【修正】（なし）・ランダム時はグループヘッダなしで、事前に作成した共通グリッドへ追加
+        if (isGroupEnabledMode) {
+            if (isTileMode && isNoSortOrRandom) {
+                // タイルモードかつ（なし）・ランダム時はグループヘッダなしで、事前に作成した共通グリッドへ追加
                 targetContainer = currentGroupItemsContainer;
+            } else if (isListOrThumbListMode && isNoSortOrRandom) {
+                // 【追加】リスト系かつ（なし）・ランダム時はグループヘッダなしで、そのまま filterList 直下へ追加
+                targetContainer = filterList;
             } else {
                 // グループのキー（タイトル文字列）を決定
                 let currentGroupKey = '';
 
                 if (isCreationTimeSort) {
-                    // 作成日時▲・▼の場合：確実に取得できるミリ秒（ctimeMs または birthtimeMs）を利用
+                    // 作成日時▲・▼の場合：確実に取得できるミリ秒を利用
                     let dateStr = '作成日不明';
                     if (item.file?.path) {
                         try {
@@ -1467,13 +1475,13 @@ async function updateFilterList() {
                     if (myUpdateId !== currentUpdateId) return;
                     currentGroupKey = dateStr;
                 } else {
-                    // 上記以外（いままでのまま変更なし ＝ 従来のフォルダパスによるグルーピング）
+                    // 上記以外（従来のフォルダパスによるグルーピング）
                     const fullPath = item.file?.path || item.name || '無題';
                     const currentFolderPath = path.dirname(fullPath);
                     currentGroupKey = currentFolderPath === '.' ? 'ルートフォルダ' : currentFolderPath;
                 }
 
-                // 新しいグループ（日付けまたはフォルダ）に切り替わった場合
+                // 新しいグループ（日付またはフォルダ）に切り替わった場合
                 if (currentGroupKey !== lastGroupKey) {
                     lastGroupKey = currentGroupKey;
 
@@ -1487,14 +1495,25 @@ async function updateFilterList() {
                     folderTitle.textContent = currentGroupKey;
                     folderGroup.appendChild(folderTitle);
 
-                    // 横並び（Grid）にするためのアイテムコンテナを作成
+                    // アイテムを格納するコンテナを作成
                     currentGroupItemsContainer = document.createElement('div');
-                    currentGroupItemsContainer.className = 'folder-group-items';
-                    currentGroupItemsContainer.classList.add(
-                        playlistDisplayMode === 'thumb-small' ? 'playlist-grid-small' :
-                        playlistDisplayMode === 'thumb-medium' ? 'playlist-grid-medium' :
-                        'playlist-grid-large'
-                    );
+                    
+                    if (isTileMode) {
+                        // タイルモードの場合は横並び（Grid）にするためのクラスを付与
+                        currentGroupItemsContainer.className = 'folder-group-items';
+                        currentGroupItemsContainer.classList.add(
+                            playlistDisplayMode === 'thumb-small' ? 'playlist-grid-small' :
+                            playlistDisplayMode === 'thumb-medium' ? 'playlist-grid-medium' :
+                            'playlist-grid-large'
+                        );
+                    } else {
+                        // 【追加】リスト・サムネイルリストの場合は縦に並べるだけの単純なフレックス/ブロックコンテナにする
+                        currentGroupItemsContainer.className = 'folder-group-list-items';
+                        currentGroupItemsContainer.style.display = 'flex';
+                        currentGroupItemsContainer.style.flexDirection = 'column';
+                        currentGroupItemsContainer.style.gap = '6px';
+                        currentGroupItemsContainer.style.width = '100%';
+                    }
 
                     folderGroup.appendChild(currentGroupItemsContainer);
                     filterList.appendChild(folderGroup);
