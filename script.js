@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.50.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.51.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2041,7 +2041,8 @@ async function toggleurlInputPanel(show = null) {
             urlInput.value = clipText;
             // 有効なURL → 自動で入力して再生（従来挙動）
             await urlInputEnter();
-            // コントロールは表示しない
+            // クリップボードをクリアする（従来挙動）
+            await navigator.clipboard.writeText('');
             return;
         }
 
