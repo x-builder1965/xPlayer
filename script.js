@@ -65,6 +65,13 @@ const ASPECT_NODES = {
     '21:9': { label: '21:9 シネマ', value: '21 / 9' },
     '9:16': { label: '9:16 スマホ', value: '9 / 16' }
 };
+const PLAYLIST_NODES = {
+    'list':         { label: 'リスト', width: 96, height: 54 },
+    'thumb-list':   { label: 'サムネイル＋リスト', width: 72, height: 40 },
+    'thumb-small':  { label: 'サムネイル小', width: 96, height: 54 },
+    'thumb-medium': { label: 'サムネイル中', width: 216, height: 122 },
+    'thumb-large':  { label: 'サムネイル大', width: 432, height: 244 }
+};
 const languageMap = {
     'jpn': '日本語',
     'eng': '英語',
@@ -1238,6 +1245,7 @@ function adjustFilterPanelHeight() {
     cutRangesList.style.maxHeight = `${maxAvailableHeight - cutHeaderHeight - 10}px`;
 }
 
+// プレイリスト表示モード設定
 function setPlaylistDisplayMode(mode) {
     if (!['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].includes(mode)) return;
     playlistDisplayMode = mode;
@@ -1260,26 +1268,18 @@ function setPlaylistDisplayMode(mode) {
     }
 }
 
+// ラベルを取得する関数
 function getPlaylistDisplayModeLabel(mode) {
-    switch (mode) {
-        case 'thumb-list': return 'サムネイル＋リスト';
-        case 'thumb-small': return 'サムネイル小';
-        case 'thumb-medium': return 'サムネイル中';
-        case 'thumb-large': return 'サムネイル大';
-        default: return 'リスト';
-    }
+    return (PLAYLIST_NODES[mode] || PLAYLIST_NODES['list']).label;
 }
 
+// サイズを取得する関数
 function getPlaylistThumbnailDimensions(mode) {
-    switch (mode) {
-        case 'thumb-list': return { width: 72, height: 40 };
-        case 'thumb-small': return { width: 96, height: 54 };
-        case 'thumb-medium': return { width: 216, height: 122 };
-        case 'thumb-large': return { width: 432, height: 244 };
-        default: return { width: 96, height: 54 };
-    }
+    const node = PLAYLIST_NODES[mode] || PLAYLIST_NODES['list'];
+    return { width: node.width, height: node.height };
 }
 
+// プレイリスト表示モード選択メニュー作成
 function createPlaylistDisplayMenu() {
     const menu = document.createElement('div');
     menu.className = 'playlist-display-menu';
@@ -1323,6 +1323,7 @@ function createPlaylistDisplayMenu() {
     return menu;
 }
 
+// ファイルパスを file:// URL に変換
 function pathToFileUrl(filePath) {
     if (!filePath) return '';
     const normalized = filePath.replace(/\\/g, '/');
@@ -1330,6 +1331,7 @@ function pathToFileUrl(filePath) {
     return `file://${encoded.startsWith('/') ? '' : '/'}${encoded}`;
 }
 
+// プレイリストサムネイルのキャッシュ
 async function getPlaylistThumbnailDataUrl(filePath, size = 180) {
     if (!filePath) return '';
     const cacheKey = `${filePath}|${size}`;
@@ -1348,10 +1350,8 @@ async function getPlaylistThumbnailDataUrl(filePath, size = 180) {
     }
 }
 
-/**
- * デバウンス関数（対策1）
- * 連続で呼び出されても、最後の呼び出しから指定ミリ秒（デフォルト300ms）経過するまで実行を遅延させます。
- */
+// デバウンス関数
+// 連続で呼び出されても、最後の呼び出しから指定ミリ秒（デフォルト300ms）経過するまで実行を遅延させます。
 function debounce(func, timeout = 300) {
     let timer;
     return (...args) => {
@@ -1360,6 +1360,7 @@ function debounce(func, timeout = 300) {
     };
 }
 
+// プレイリストフィルタ更新（デバウンス版）
 async function updateFilterList() {
     if (!filterList) return;
 
@@ -2793,8 +2794,7 @@ async function joinPlaylistVideos() {
     }
 }
 
-
-// 再生速度設定ヘルパー
+// 再生速度設定
 function setPlaybackRate(rate, showOverlay = true) {
     if (isNaN(rate) || rate <= 0) return;
     currentPlaybackRate = rate;                    // ← 追加
@@ -3749,6 +3749,61 @@ async function deleteTempVideo() {
     }
 }
 
+// フィルタ履歴をlocalStorageから復元
+function loadFilterHistory() {
+    const saved = localStorage.getItem('filterHistory');
+    if (saved) {
+        try {
+            filterHistory = JSON.parse(saved);
+            if (filterHistory.length > 30) {
+                filterHistory = filterHistory.slice(-30);
+            }
+        } catch (e) {
+            filterHistory = [];
+        }
+    }
+    updateFilterHistoryDatalist();
+}
+
+// フィルタ履歴をlocalStorageに保存
+function saveFilterHistory() {
+    localStorage.setItem('filterHistory', JSON.stringify(filterHistory));
+}
+
+// フィルタ履歴に項目を追加
+function addToFilterHistory(text) {
+    if (!text || text.trim() === '') return;
+    
+    const trimmedText = text.trim();
+    // 既に存在していれば削除して末尾に追加（最新の並べを下に）
+    const index = filterHistory.indexOf(trimmedText);
+    if (index !== -1) {
+        filterHistory.splice(index, 1);
+    }
+    
+    filterHistory.push(trimmedText);
+    
+    // 最大30件に制限
+    if (filterHistory.length > 30) {
+        filterHistory = filterHistory.slice(-30);
+    }
+    
+    saveFilterHistory();
+    updateFilterHistoryDatalist();
+}
+
+// フィルタ履歴datalistを更新
+function updateFilterHistoryDatalist() {
+    if (!filterHistoryList) return;
+    
+    filterHistoryList.innerHTML = '';
+    filterHistory.forEach((item) => {
+        const option = document.createElement('option');
+        option.value = item;
+        filterHistoryList.appendChild(option);
+    });
+}
+
 // 🔲ipcRenderer ハンドラ登録🔲
 // main.js からの自動再生指示を受信
 ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
@@ -4479,6 +4534,12 @@ document.addEventListener('fullscreenchange', () => {
     updateIconOverlay();
 });
 
+// ドキュメント全体のクリックでコントロールやメニューを隠す
+document.addEventListener('click', () => {
+    hideControlsAndFilenameMenus();
+    hideZoomPanelMenus();
+});
+
 // 🔲個別イベントリスナー登録🔲
 // 🌐ネット動画選択
 urlInputBtn.addEventListener('click', async () => {
@@ -4767,67 +4828,6 @@ zoomBtn.addEventListener('click', () => {
     }
     showControlsAndFilename();
     updateIconOverlay();
-});
-
-// フィルタ履歴をlocalStorageから復元
-function loadFilterHistory() {
-    const saved = localStorage.getItem('filterHistory');
-    if (saved) {
-        try {
-            filterHistory = JSON.parse(saved);
-            if (filterHistory.length > 30) {
-                filterHistory = filterHistory.slice(-30);
-            }
-        } catch (e) {
-            filterHistory = [];
-        }
-    }
-    updateFilterHistoryDatalist();
-}
-
-// フィルタ履歴をlocalStorageに保存
-function saveFilterHistory() {
-    localStorage.setItem('filterHistory', JSON.stringify(filterHistory));
-}
-
-// フィルタ履歴に項目を追加
-function addToFilterHistory(text) {
-    if (!text || text.trim() === '') return;
-    
-    const trimmedText = text.trim();
-    // 既に存在していれば削除して末尾に追加（最新の並べを下に）
-    const index = filterHistory.indexOf(trimmedText);
-    if (index !== -1) {
-        filterHistory.splice(index, 1);
-    }
-    
-    filterHistory.push(trimmedText);
-    
-    // 最大30件に制限
-    if (filterHistory.length > 30) {
-        filterHistory = filterHistory.slice(-30);
-    }
-    
-    saveFilterHistory();
-    updateFilterHistoryDatalist();
-}
-
-// フィルタ履歴datalistを更新
-function updateFilterHistoryDatalist() {
-    if (!filterHistoryList) return;
-    
-    filterHistoryList.innerHTML = '';
-    filterHistory.forEach((item) => {
-        const option = document.createElement('option');
-        option.value = item;
-        filterHistoryList.appendChild(option);
-    });
-}
-
-// ドキュメント全体のクリックでコントロールやメニューを隠す
-document.addEventListener('click', () => {
-    hideControlsAndFilenameMenus();
-    hideZoomPanelMenus();
 });
 
 // プレイリストフィルタ入力
