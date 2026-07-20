@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.48.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.49.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -3286,12 +3286,18 @@ function resetCursorTimer() {
     if (isPanning) {    
         videoPlayer.style.cursor = 'grabbing'; 
     } else {
-        videoPlayer.style.cursor = 'auto';  // または 'default'
+        videoPlayer.style.cursor = 'auto'; 
     }
-    videoContainer.style.cursor = 'auto';  // または 'default'
+    videoContainer.style.cursor = 'auto'; 
 
+    // 既存のタイマーがあればクリア
     if (hideMouseTimeout) {
         clearTimeout(hideMouseTimeout);
+    }
+    
+    // 【追加】プレイリスト表示中は、これ以上（非表示へのタイマー移行）の処理を行わない
+    if (isFilterPanelVisible) {
+        return;
     }
     
     hideMouseTimeout = setTimeout(() => {
@@ -4535,10 +4541,15 @@ playlistPathArea.addEventListener('click', () => {
     if (!filterPanel) return;
     isFilterPanelVisible = !isFilterPanelVisible;
     filterPanel.style.display = isFilterPanelVisible ? 'flex' : 'none';
+    
     if (isFilterPanelVisible) {
         hideEditPanel();
         zoomEndBtn.click();
-        if (isFilterPanelVisible) debouncedUpdateFilterList();
+        debouncedUpdateFilterList();
+        
+        // プレイリストが開いたので、即座にカーソルを表示状態に固定する
+        resetCursorTimer(); 
+
         try { playlistFilterInput?.focus(); } catch (e) {}
         setTimeout(() => {
             try {
@@ -4547,6 +4558,9 @@ playlistPathArea.addEventListener('click', () => {
                 if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             } catch (e) {}
         }, 50);
+    } else {
+        // 【追加】プレイリストが閉じられたので、非表示タイマーを再開する
+        resetCursorTimer();
     }
 });
 
