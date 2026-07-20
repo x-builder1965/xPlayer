@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.51.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.52.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2720,6 +2720,7 @@ async function addFilesFromPaths(fullPaths) {
 
     if (newFiles.length > 0) {
         playlistSet(newFiles);           // プレイリストUI更新
+        debouncedUpdateFilterList();
         if (playlist.length === newFiles.length) {
             // 初回追加なら先頭から再生開始
             playVideo(playlist[0].file.path, 0);
@@ -3809,6 +3810,7 @@ function updateFilterHistoryDatalist() {
 ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
     if (!videoFiles || videoFiles.length === 0) return;
     playlistSet(videoFiles);
+    debouncedUpdateFilterList();
 });
 
 // 変換進捗受信
@@ -4558,6 +4560,7 @@ folderInput.addEventListener('click', async () => {
     try {
         const videoFiles = await openFolderDialog();
         playlistSet(videoFiles);
+        debouncedUpdateFilterList();
     } catch (e) {
         updatemessageOverlay('📁 フォルダ選択エラー');
         console.error('フォルダ選択エラー:', e);
@@ -4571,6 +4574,7 @@ videoInput.addEventListener('click', async () => {
     try {
         const videoFiles = await openVideoDialog();
         playlistSet(videoFiles);
+        debouncedUpdateFilterList();
     } catch (e) {
         updatemessageOverlay('🗒️ ファイル選択エラー');
         console.error('ファイル選択エラー:', e);
