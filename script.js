@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.54.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.55.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -781,7 +781,7 @@ function hideControlsAndFilename() {
     disabledControls(true);
     disabledfilename(true);
     messageOverlay.classList.remove('active');
-    hideControlsAndFilenameMenus(); // 追加：コントロール非表示時にメニューも強制非表示
+    hideMenus(); // 追加：コントロール非表示時にメニューも強制非表示
     clearTimeout(timeout);
     setTimeout(() => {
         messageOverlay.style.display = 'none';
@@ -806,18 +806,10 @@ function hideEditPanel() {
 }
 
 // メニュー非表示（プレイリスト並び替えメニューなど）
-function hideControlsAndFilenameMenus() {
+function hideMenus() {
     // 追加：開いている可能性のあるすべてのコンテキストメニューを強制非表示
-    document.querySelectorAll('.sort-playlist-menu, .add-playlist-menu, .track-menu, .playlist-display-menu').forEach(el => {
-        el.remove();  // または el.style.display = 'none';
-    });
-}
-
-// メニュー非表示（プレイリスト並び替えメニューなど）
-function hideZoomPanelMenus() {
-    // 追加：開いている可能性のあるすべてのコンテキストメニューを強制非表示
-    document.querySelectorAll('.aspect-ratio-menu').forEach(el => {
-        el.remove();  // または el.style.display = 'none';
+    document.querySelectorAll('.sort-playlist-menu, .aspect-ratio-menu, .add-playlist-menu, .track-menu, .playlist-display-menu').forEach(m => {
+        m.remove();
     });
 }
 
@@ -3409,9 +3401,8 @@ async function toggleTrackMenu(e, type, button) {
         return;
     }
 
-    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .add-playlist-menu').forEach(m => {
-        m.remove();
-    });
+    // メニュー非表示
+    hideMenus();
 
     // 動画音声トラック・字幕トラック取得
     let videondex = currentVideoIndex;
@@ -4572,8 +4563,7 @@ document.addEventListener('fullscreenchange', () => {
 
 // ドキュメント全体のクリックでコントロールやメニューを隠す
 document.addEventListener('click', () => {
-    hideControlsAndFilenameMenus();
-    hideZoomPanelMenus();
+    hideMenus();
 });
 
 // 🔲個別イベントリスナー登録🔲
@@ -4914,9 +4904,8 @@ aspectRatioBtn.addEventListener('click', (event) => {
         return;
     }
 
-    document.querySelectorAll('.sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(m => {
-        m.remove();
-    });
+    // メニュー非表示
+    hideMenus();
 
     const targetContainer = document.fullscreenElement || mainContainer;
     const menu = createAspectRatioMenu();
@@ -4988,7 +4977,7 @@ snapshotBtn.addEventListener('click', async () => {
 // ❌ズーム終了（Ctrl+z）
 zoomEndBtn.addEventListener('click', () => {
     isZoomMode = false;
-    hideZoomPanelMenus();
+    hideMenus();
     zoomPanel.style.display = 'none';
     zoomBtn.textContent = '🔍';
     zoomBtn.classList.remove('mode-active');
@@ -5713,21 +5702,21 @@ downMovePlaylistBtn.addEventListener('click', () => {
 });
 
 // ＋追加ボタン
-addPlaylistBtn.addEventListener('click', async (e) => {
+addPlaylistBtn.addEventListener('click', (e) => {
     clearPlaylistFilter();
     e.stopPropagation();
 
+    // 1. 既に表示されていれば閉じて終了
     const existingMenu = document.querySelector('.add-playlist-menu');
     if (existingMenu) {
         existingMenu.remove();
-        document.removeEventListener('click', closeMenu); // ← ここも後で修正必要
-        return;
+        return; // イベントは AbortController 等で制御するか、外側クリックで自然に解除させる
     }
 
-    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .track-menu').forEach(m => {
-        m.remove();
-    });
+    // 2. 他のメニューを掃除
+    hideMenus();
 
+    // 3. メニュー生成と配置
     const targetContainer = document.fullscreenElement || mainContainer;
     const menu = createAddMenu();
 
@@ -5740,17 +5729,21 @@ addPlaylistBtn.addEventListener('click', async (e) => {
 
     targetContainer.appendChild(menu);
 
-    function closeMenu(ev) {    // ← function宣言ならhoistingされるのでOK
-        if (!menu.contains(ev.target) && ev.target !== sortPlaylistBtn) {
-            menu.remove();
-            document.removeEventListener('click', closeMenu);
+    // 4. 外側クリックで閉じる処理（once: true を外し、閉じた時だけリスナー解除）
+    function closeMenu(ev) {
+        // ボタン自体またはメニュー内部のクリックなら無視
+        if (menu.contains(ev.target) || addPlaylistBtn.contains(ev.target)) {
+            return;
         }
+        menu.remove();
+        document.removeEventListener('click', closeMenu);
     }
 
     setTimeout(() => {
-        document.addEventListener('click', closeMenu, { once: true });
+        document.addEventListener('click', closeMenu);
     }, 0);
 
+    // 5. 状態更新
     updatePlaylistDisplay();
     if (isFilterPanelVisible) {
         scrollCurrentFilterItemIntoView();
@@ -6078,9 +6071,8 @@ sortPlaylistBtn.addEventListener('click', (e) => {
         return;
     }
 
-    document.querySelectorAll('.aspect-ratio-menu, .add-playlist-menu, .track-menu, .playlist-display-menu').forEach(m => {
-        m.remove();
-    });
+    // メニュー非表示
+    hideMenus();
 
     const targetContainer = document.fullscreenElement || mainContainer;
     const menu = createSortMenu();
@@ -6122,9 +6114,8 @@ playlistDisplayBtn.addEventListener('click', (e) => {
         return;
     }
 
-    document.querySelectorAll('.aspect-ratio-menu, .sort-playlist-menu, .add-playlist-menu, .track-menu').forEach(m => {
-        m.remove();
-    });
+    // メニュー非表示
+    hideMenus();
 
     const targetContainer = document.fullscreenElement || mainContainer;
     const menu = createPlaylistDisplayMenu();
