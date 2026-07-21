@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.55.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.56.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2425,10 +2425,24 @@ function closeHelp() {
 
 // プレイリストのファイル追加
 async function playlistAdd(videoFiles) {
-    if (videoFiles.length === 0) return;
+    if (!videoFiles || videoFiles.length === 0) return;
 
-    // 重複を除外したい場合はここでフィルタリングを行ってください
-    const mappedNewFiles = videoFiles.map(file => ({
+    // 既存のプレイリスト内のパス一覧
+    const existingPaths = new Set(playlist.map(item => item?.file?.path));
+
+    // 重複を除外した新しいファイルのみを抽出（追加リスト内での重複も排除）
+    const uniqueVideoFiles = [];
+    for (const file of videoFiles) {
+        if (file?.path && !existingPaths.has(file.path)) {
+            existingPaths.add(file.path);
+            uniqueVideoFiles.push(file);
+        }
+    }
+
+    // すべて重複していて追加対象がない場合は中断
+    if (uniqueVideoFiles.length === 0) return;
+
+    const mappedNewFiles = uniqueVideoFiles.map(file => ({
         file: { path: file.path },
         name: file.path
     }));
@@ -2439,7 +2453,7 @@ async function playlistAdd(videoFiles) {
     playlist.push(...mappedNewFiles);
 
     // 元の読み込み順（originalLoadOrder）にも追加パスを記録
-    const newPaths = videoFiles.map(file => file.path);
+    const newPaths = uniqueVideoFiles.map(file => file.path);
     originalLoadOrder.push(...newPaths);
     localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
 
@@ -2580,17 +2594,30 @@ function getCurrentAddModePosition() {
 async function insertFilesIntoPlaylist(files, addPosition = 0) {
     if (!files || files.length === 0) return;
 
+    // 既存のプレイリスト内のパス一覧（Setで高速化）
+    const existingPaths = new Set(playlist.map(item => item?.file?.path));
+
     const normalizedFiles = files
         .map(file => ({
             path: file?.path || file?.file?.path || null,
             name: file?.name || path.basename(file?.path || file?.file?.path || '')
         }))
-        .filter(file => file.path);
+        // パスが存在し、かつ既存のプレイリストに含まれていないものだけを抽出
+        .filter(file => file.path && !existingPaths.has(file.path));
 
-    if (normalizedFiles.length === 0) return;
+    // 追加する新規ファイル内での重複も排除したい場合（必要に応じて）
+    const uniqueFiles = [];
+    for (const file of normalizedFiles) {
+        if (!existingPaths.has(file.path)) {
+            existingPaths.add(file.path);
+            uniqueFiles.push(file);
+        }
+    }
+
+    if (uniqueFiles.length === 0) return;
 
     const insertIndex = getPlaylistInsertIndex(addPosition);
-    const formattedFiles = normalizedFiles.map(f => ({ file: { path: f.path }, name: f.name }));
+    const formattedFiles = uniqueFiles.map(f => ({ file: { path: f.path }, name: f.name }));
     playlist.splice(insertIndex, 0, ...formattedFiles);
     if (selectedPlaylistIndex < 0) selectedPlaylistIndex = insertIndex;
 
