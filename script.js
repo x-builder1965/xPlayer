@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.53.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.54.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2431,7 +2431,40 @@ function closeHelp() {
     updateIconOverlay();
 }
 
-// ファイル設定
+// プレイリストのファイル追加
+async function playlistAdd(videoFiles) {
+    if (videoFiles.length === 0) return;
+
+    // 重複を除外したい場合はここでフィルタリングを行ってください
+    const mappedNewFiles = videoFiles.map(file => ({
+        file: { path: file.path },
+        name: file.path
+    }));
+
+    const isFirstTime = playlist.length === 0;
+
+    // 既存の playlist の末尾に追加
+    playlist.push(...mappedNewFiles);
+
+    // 元の読み込み順（originalLoadOrder）にも追加パスを記録
+    const newPaths = videoFiles.map(file => file.path);
+    originalLoadOrder.push(...newPaths);
+    localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
+
+    // もし元々リストが空だった場合は先頭の曲を再生
+    if (isFirstTime) {
+        currentVideoIndex = 0;
+        selectedPlaylistIndex = 0;
+        await playVideo(playlist[currentVideoIndex].file, 0);
+    }
+
+    savePlaylistAndPlaybackState();
+    // シャッフル状態の維持/更新が必要な場合はここで調整
+    saveShuffleState();
+    updateIconOverlay();
+}
+
+// プレイリストのファイル設定
 async function playlistSet(videoFiles) {
     if (videoFiles.length > 0) {
         await cleanupTempFiles();
@@ -2700,7 +2733,7 @@ async function savePlaylist() {
 }
 
 // ドラッグ＆ドロップファイルのプレイリスト設定
-async function addFilesFromPaths(fullPaths) {
+async function addFilesFromPaths(fullPaths, isAppend = false) {
     const newFiles = [];
 
     for (const fullPath of fullPaths) {
@@ -2718,12 +2751,14 @@ async function addFilesFromPaths(fullPaths) {
     }
 
     if (newFiles.length > 0) {
-        playlistSet(newFiles);           // プレイリストUI更新
-        debouncedUpdateFilterList();
-        if (playlist.length === newFiles.length) {
-            // 初回追加なら先頭から再生開始
-            playVideo(playlist[0].file.path, 0);
+        if (isAppend) {
+            // Ctrl押下時：既存リストに追加
+            await playlistAdd(newFiles);
+        } else {
+            // 通常時：新規プレイリスト作成（上書き）
+            await playlistSet(newFiles);
         }
+        debouncedUpdateFilterList();
     }
 }
 
@@ -5790,6 +5825,9 @@ dropzone.addEventListener('drop', async (e) => {
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
 
+    // Ctrlキー（MacのCmdキー含む）が押されているか判定
+    const isAppend = e.ctrlKey || e.metaKey;
+
     const fullPaths = [];
     for (const file of files) {
         try {
@@ -5801,7 +5839,8 @@ dropzone.addEventListener('drop', async (e) => {
     }
 
     if (fullPaths.length > 0) {
-        await addFilesFromPaths(fullPaths);
+        // isAppend フラグを渡す
+        await addFilesFromPaths(fullPaths, isAppend);
     }
 });
 
