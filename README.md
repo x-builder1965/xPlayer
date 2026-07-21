@@ -27,7 +27,8 @@ xPlayer は **ローカル動画の再生・編集** に特化した Electron �
   - 再生順変更・動画追加／削除・上下移動 　
   - 並び替え（パス順・作成日時順・ランダム）  
   - 表示形式（リスト・サムネイル＋リスト・サムネイル小・中・大）  
-  - フィルタ条件検索（スペース区切り（AND）、カンマ区切り（OR）条件指定対応）
+  - フィルタ条件検索（スペース区切り（AND）、カンマ区切り（OR）条件指定対応）  
+  - プレイリストのフィルタ検索結果件数表示  
 
 - **🌐 ネット動画再生**  
   - YouTube / Twitch / そのほかの URL を Chrome で外部再生  
@@ -56,11 +57,9 @@ xPlayer は **ローカル動画の再生・編集** に特化した Electron �
   - 統一フォーマットに変換してから結合
 
 - **その他**  
-  - 音声トラック選択／字幕トラック情報取得  
+  - 変換モード時の音声トラック選択／再生モード時の字幕トラック情報取得  
   - 背景壁紙切り替え  
-  - プレイリスト検索結果件数表示  
-  - 変換・編集処理のキャンセル機能  
-  - 機能・ショートカットの詳細はヘルプ（❔）を参照  
+  - 機能（ショートカット）・変更履歴の詳細はヘルプ（❔）を参照  
 
 ## 動作環境
 - Windows 10 / 11（x64 推奨）
@@ -80,8 +79,11 @@ git clone <repository-url>
 cd xPlayer-windows
 npm install
 npm start          # 開発実行
-npm run build      # Windows インストーラー生成（dist-win に出力）
 npm run dist       # x64 の最大圧縮ビルド
+```
+他のビルド方法
+```bash
+npm run build          # Windows インストーラー生成（dist-win に出力）
 npm run dist:portable  # ポータブル版生成
-npm run sign       # authenticode.pfx を使って署名（環境変数 CSC_KEY_PASSWORD が必要）
+npm run sign           # authenticode.pfx を使って署名（環境変数 CSC_KEY_PASSWORD が必要）
 ```
