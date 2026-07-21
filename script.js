@@ -57,8 +57,8 @@ const ADD_MODES = {
     Add1: { label: '選択行の下に追加', fn: async () => await addToPlaylist(1) }
 };
 const ASPECT_NODES = {
-    none: { label: '（なし）', value: null },
-    '4:3': { label: '4:3 旧テレビ', value: '4 / 3' },
+    none:   { label: '（なし）', value: null },
+    '4:3':  { label: '4:3 旧テレビ', value: '4 / 3' },
     '16:9': { label: '16:9 テレビ', value: '16 / 9' },
     '18:9': { label: '18:9 テレビ', value: '18 / 9' },
     '21:9': { label: '21:9 シネマ', value: '21 / 9' },
