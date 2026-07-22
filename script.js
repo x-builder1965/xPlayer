@@ -1135,7 +1135,7 @@ function savePlaylistAndPlaybackState() {
     if (isFilterPanelVisible) debouncedUpdateFilterList();
 }
 
-// フィルタリストパネル表示切替
+// プレイリストパネル表示切替
 function toggleFilterPanel() {
     isFilterPanelVisible = !isFilterPanelVisible;
     if (filterPanel) {
@@ -1150,7 +1150,7 @@ function toggleFilterPanel() {
     }
 }
 
-// フィルタリストの現在選択アイテムをスクロールして中央に表示
+// プレイリストの現在選択アイテムをスクロールして中央に表示
 function scrollCurrentFilterItemIntoView() {
     if (!filterList) return;
     try {
@@ -4177,7 +4177,7 @@ document.addEventListener('keydown', async (event) => {
         }
     }
 
-    // ■フィルタリストパネル■
+    // ■プレイリストパネル■
     if (filterPanel.style.display === 'flex') {
         // 🔘フィルタ条件クリア（shift+0）
         if (event.shiftKey && event.key === '0') {
@@ -4731,7 +4731,7 @@ playStopBtn.addEventListener('click', async () => {
         playlistPathArea.value = currentPath || appNameAndCopyrightValueLine;
     }
     
-    // フィルタリスト更新（アイコン削除）
+    // プレイリスト更新（アイコン削除）
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     updateIconOverlay();
 
@@ -4872,7 +4872,7 @@ zoomBtn.addEventListener('click', () => {
         zoomBtn.textContent = '🔍';
         zoomBtn.classList.add('mode-active');
         zoomBtn.setAttribute('data-tooltip', 'ズームモード終了（Ctrl+z）');
-        // 編集モード開始時はフィルタリストパネルを閉じる（同時表示抑止）
+        // 編集モード開始時はプレイリストパネルを閉じる（同時表示抑止）
         if (isFilterPanelVisible) {
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
@@ -5873,7 +5873,7 @@ editModeBtn.addEventListener('click', () => {
     
     isEditMode = !isEditMode;
     if (isEditMode) {
-        // 編集モード開始時はフィルタリストパネルを閉じる（同時表示抑止）
+        // 編集モード開始時はプレイリストパネルを閉じる（同時表示抑止）
         if (isFilterPanelVisible) {
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
