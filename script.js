@@ -1603,44 +1603,37 @@ async function updateFilterList() {
             }
         }
 
-        // クリック遅延用タイマー変数（クロージャ外または上位で管理）
-        let clickTimer = null;
-
         button.addEventListener('click', async (e) => {
-            // ダブルクリック判定用にシングルクリック処理を一時保留
-            if (clickTimer) clearTimeout(clickTimer);
+            // 選択インデックスを更新
+            selectedPlaylistIndex = index;
 
-            clickTimer = setTimeout(async () => {
-                selectedPlaylistIndex = index;
-                if (modeChange === 'video') {
-                    await updateTrack('subtitle');
-                } else {
-                    await updateTrack('audio');
-                }
-                if (isFilterPanelVisible) {
-                    debouncedUpdateFilterList();
-                }
-                clickTimer = null;
-            }, 250); // ダブルクリック判定時間（標準的な250ms〜300ms）
+            // ★修正: リスト全体の再描画(updateFilterList)を呼ばず、DOM要素のクラス変更だけで対応する
+            filterList.querySelectorAll('.filter-item.selected').forEach(el => {
+                el.classList.remove('selected');
+            });
+            button.classList.add('selected');
+
+            // トラックの更新処理のみ実行
+            if (modeChange === 'video') {
+                await updateTrack('subtitle');
+            } else {
+                await updateTrack('audio');
+            }
+            
+            // ※ debouncedUpdateFilterList() の呼び出しは削除
         });
 
         button.addEventListener('dblclick', async (e) => {
-            // ダブルクリックが発生したらシングルクリック処理（再描画）をキャンセル
-            if (clickTimer) {
-                clearTimeout(clickTimer);
-                clickTimer = null;
-            }
-
+            // 1回目のclickで処理が行われているため、連動する状態を最新化
             selectedPlaylistIndex = index;
             currentVideoIndex = index;
-            
-            // プレイリストの表示更新（スクロール等の影響を最小限にする）
-            await playVideo(item.file, 0);
-            
-            // 画面を閉じるため、描画のバッティングを気にする必要がなくなる
+
+            // パネルを非表示にする（非表示にするのでスクロール描画も発生しない）
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
 
+            // 動画再生と状態保存
+            await playVideo(item.file, 0);
             updatePlaylistDisplay();
             savePlaylistAndPlaybackState();
         });
