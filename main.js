@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.47.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.58.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -764,21 +764,30 @@ ipcMain.handle('capture-screenshot', async (event) => {
 });
 
 // 動画サムネイル生成
+// main.js
 ipcMain.handle('generate-video-thumbnail', async (event, { filePath, size = 180 }) => {
     if (!filePath) return null;
-    let logCommandLine = '';
 
-    try {
-        const tempDir = thumbnailCacheDir || path.join(app.getPath('userData'), 'xPlayerCache', 'thumbnails');
-        await fs.mkdir(tempDir, { recursive: true });
-        const crypto = require('crypto');
-        const safeName = crypto.createHash('sha1').update(filePath).digest('hex');
-        const outputPath = path.join(tempDir, `${safeName}_${size}.png`);
+    const tempDir = thumbnailCacheDir || path.join(app.getPath('userData'), 'xPlayerCache', 'thumbnails');
+    await fs.mkdir(tempDir, { recursive: true });
+    
+    const crypto = require('crypto');
+    const safeName = crypto.createHash('sha1').update(filePath).digest('hex');
+    const outputPath = path.join(tempDir, `${safeName}_${size}.png`);
 
-        await new Promise((resolve, reject) => {
+    // サムネイル生成用の内部関数
+    const captureFrame = (seekTime) => {
+        let logCommandLine = '';
+        return new Promise((resolve, reject) => {
             let stderr = '';
-            ffmpeg(filePath)
-                .inputOptions(['-ss', '00:00:30'])
+            let command = ffmpeg(filePath);
+
+            // シーク時間が指定されている場合は追加（例: 00:00:30）
+            if (seekTime) {
+                command = command.inputOptions(['-ss', seekTime]);
+            }
+
+            command
                 .outputOptions(['-frames:v', '1', '-vf', `scale=${Math.max(80, size)}:-1`, '-y'])
                 .on('start', (commandLine) => {
                     logCommandLine = commandLine;
@@ -793,13 +802,26 @@ ipcMain.handle('generate-video-thumbnail', async (event, { filePath, size = 180 
                 })
                 .save(outputPath);
         });
+    };
+
+    try {
+        // 1回目の試行: 30秒地点から取得
+        try {
+            await captureFrame('00:00:30');
+        } catch (firstErr) {
+            console.warn('[thumbnail] 30s seek failed, retrying from start (00:00:00):', filePath, firstErr.message);
+            // 2回目の試行（リトライ）: 動画の先頭から取得
+            await captureFrame('00:00:00');
+        }
 
         const data = await fs.readFile(outputPath);
         await fs.unlink(outputPath).catch(() => {});
         return `data:image/png;base64,${data.toString('base64')}`;
+
     } catch (err) {
-        console.log('[thumbnail] ffmpeg command:', logCommandLine);
-        console.warn('[thumbnail] ffmpeg failed:', filePath, err.message);
+        console.warn('[thumbnail] ffmpeg retry failed:', filePath, err.message);
+        // エラー時に一時ファイルが残っている場合は削除
+        await fs.unlink(outputPath).catch(() => {});
         return null;
     }
 });

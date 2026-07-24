@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.57.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.58.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -42,7 +42,7 @@ const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
 const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
-const debouncedUpdateFilterList = debounce(updateFilterList, 100);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
+const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
 
 const SORT_MODES = {
     none:       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
@@ -1323,20 +1323,28 @@ function pathToFileUrl(filePath) {
 }
 
 // プレイリストサムネイルのキャッシュ
+// script.js
 async function getPlaylistThumbnailDataUrl(filePath, size = 180) {
     if (!filePath) return '';
     const cacheKey = `${filePath}|${size}`;
+    
+    // キャッシュが存在しかつ空文字でない場合はキャッシュを返す
     if (playlistThumbnailCache.has(cacheKey)) {
-        return playlistThumbnailCache.get(cacheKey);
+        const cached = playlistThumbnailCache.get(cacheKey);
+        if (cached) return cached;
     }
 
     try {
         const dataUrl = await generateVideoThumbnail(filePath, size);
-        playlistThumbnailCache.set(cacheKey, dataUrl || '');
-        return dataUrl || '';
+        if (dataUrl) {
+            playlistThumbnailCache.set(cacheKey, dataUrl);
+            return dataUrl;
+        } else {
+            // 取得失敗時はキャッシュに登録せず空文字を返す（次回表示時などに再試行可能にする）
+            return '';
+        }
     } catch (e) {
         console.warn('[playlist-thumbnail] renderer fallback failed:', filePath, e.message);
-        playlistThumbnailCache.set(cacheKey, '');
         return '';
     }
 }

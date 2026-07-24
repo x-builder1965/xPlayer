@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.48.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.58.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -157,11 +157,11 @@ video {
     background: #121212;
 }
 .filter-list::-webkit-scrollbar-thumb {
-    background: #444;
+    background: #999;
     border-radius: 4px;
 }
 .filter-list::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: #777;
 }
 .filter-item {
     width: 100%;
@@ -701,11 +701,11 @@ table {
     background: #121212;
 }
 .body-table::-webkit-scrollbar-thumb {
-    background: #444;
+    background: #999;
     border-radius: 4px;
 }
 .body-table::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: #777;
 }
 .body-table tr:hover {
     background-color: #404040;
@@ -855,11 +855,11 @@ caption {
     background: #121212;
 }
 #cutRangesList::-webkit-scrollbar-thumb {
-    background: #444;
+    background: #999;
     border-radius: 4px;
 }
 #cutRangesList::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: #777;
 }
 
 /* シークバーのカラーリング */
@@ -880,7 +880,7 @@ caption {
 .playlist-display-menu {
     position: absolute;
     background: rgba(30,30,30,0.95);
-    border: 1px solid #444;
+    border: 1px solid #999;
     border-radius: 6px;
     padding: 6px 0;
     z-index: 1001;
@@ -977,11 +977,11 @@ button#modeChangeBtn.convert-active:hover,
     background: #121212;
 }
 .changelog-container::-webkit-scrollbar-thumb {
-    background: #444;
+    background: #999;
     border-radius: 4px;
 }
 .changelog-container::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: #777;
 }
 
 /* 履歴リストのスタイル */
