@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.56.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.57.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -42,7 +42,7 @@ const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
 const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
-const debouncedUpdateFilterList = debounce(updateFilterList, 300);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
+const debouncedUpdateFilterList = debounce(updateFilterList, 100);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
 
 const SORT_MODES = {
     none:       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
@@ -1661,67 +1661,17 @@ async function applySortFiltered(modeKey = currentSortMode) {
     currentSortMode = modeKey;
     localStorage.setItem('playlistSortMode', modeKey);
 
-    const indices = getFilteredIndices();
-    if (indices.length === 0) return;
-
+    // ボタンのスタイル更新
     sortPlaylistBtn.classList.remove('sorted-active', 'random-sorted-active');
     if (modeKey === 'none') {
-    } else if (modeKey === 'path_asc' || modeKey === 'path_desc') {
-        sortPlaylistBtn.classList.add('sorted-active');
     } else if (modeKey === 'random') {
         sortPlaylistBtn.classList.add('random-sorted-active');
-    } else if (modeKey === 'ctime_asc' || modeKey === 'ctime_desc') {
-        sortPlaylistBtn.classList.add('sorted-active');
     } else {
         sortPlaylistBtn.classList.add('sorted-active');
     }
 
-    if (indices.length === playlist.length) {
-        await applySort(modeKey);
-        return;
-    }
-
-    const items = indices.map(i => playlist[i]);
-    let sorted = [];
-
-    if (modeKey === 'none') {
-        const storedOriginalOrder = getStoredOriginalLoadOrder();
-        if (storedOriginalOrder.length > 0) {
-            originalLoadOrder = storedOriginalOrder;
-        }
-        sorted = items.slice().sort((a, b) => {
-            const ai = originalLoadOrder.indexOf(a.file.path);
-            const bi = originalLoadOrder.indexOf(b.file.path);
-            return (ai === -1 ? 1 : ai) - (bi === -1 ? 1 : bi);
-        });
-    } else if (modeKey === 'path_asc' || modeKey === 'path_desc') {
-        sorted = items.slice().sort((a, b) => a.file.path.localeCompare(b.file.path));
-        if (modeKey === 'path_desc') sorted.reverse();
-    } else if (modeKey === 'random') {
-        sorted = items.slice();
-        shuffle(sorted);
-    } else if (modeKey === 'ctime_asc' || modeKey === 'ctime_desc') {
-        sorted = await sortItemsByCreationTime(items, modeKey === 'ctime_asc');
-    } else {
-        const fullSorted = await SORT_MODES[modeKey].fn();
-        const fullPaths = fullSorted.map(x => x.file.path);
-        sorted = items.slice().sort((a, b) => fullPaths.indexOf(a.file.path) - fullPaths.indexOf(b.file.path));
-    }
-
-    const newPlaylist = playlist.slice();
-    indices.forEach((idx, i) => {
-        newPlaylist[idx] = sorted[i];
-    });
-
-    const prevPath = playlist[currentVideoIndex]?.file?.path;
-    playlist = newPlaylist;
-    if (prevPath) {
-        const newIndex = playlist.findIndex(item => item.file.path === prevPath);
-        currentVideoIndex = newIndex >= 0 ? newIndex : 0;
-    }
-
-    updatePlaylistDisplay();
-    savePlaylistAndPlaybackState();
+    // 常にプレイリスト全体に対してソートを実行
+    await applySort(modeKey);
 }
 
 // フィルタリングされたアイテムをシャッフルして適用
@@ -3205,12 +3155,17 @@ function createSortMenu() {
         item.style.cursor = 'pointer';
         item.style.whiteSpace = 'nowrap';
         item.style.color = currentSortMode === key ? '#00ccff' : '#eee';
-        item.innerHTML = (currentSortMode === key ? '✅ ' : '　　') + label;
+        item.innerHTML = (currentSortMode === key ? '✅ ' : '  ') + label;
 
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
-            await applySortFiltered(key);
+            
+            // 1. ソート実行前にフィルターを解除
             clearPlaylistFilter();
+            
+            // 2. ソートを実行（常に全体ソート）
+            await applySortFiltered(key);
+            
             if (isFilterPanelVisible) {
                 debouncedUpdateFilterList();
                 scrollCurrentFilterItemIntoView();
