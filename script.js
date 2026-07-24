@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.58.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.59.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1603,25 +1603,46 @@ async function updateFilterList() {
             }
         }
 
-        button.addEventListener('click', async () => {
-            selectedPlaylistIndex = index;
-            if (modeChange === 'video') {
-                await updateTrack('subtitle');
-            } else {
-                await updateTrack('audio');
-            }
-            if (isFilterPanelVisible) {
-                debouncedUpdateFilterList();
-            }
+        // クリック遅延用タイマー変数（クロージャ外または上位で管理）
+        let clickTimer = null;
+
+        button.addEventListener('click', async (e) => {
+            // ダブルクリック判定用にシングルクリック処理を一時保留
+            if (clickTimer) clearTimeout(clickTimer);
+
+            clickTimer = setTimeout(async () => {
+                selectedPlaylistIndex = index;
+                if (modeChange === 'video') {
+                    await updateTrack('subtitle');
+                } else {
+                    await updateTrack('audio');
+                }
+                if (isFilterPanelVisible) {
+                    debouncedUpdateFilterList();
+                }
+                clickTimer = null;
+            }, 250); // ダブルクリック判定時間（標準的な250ms〜300ms）
         });
-        button.addEventListener('dblclick', async () => {
+
+        button.addEventListener('dblclick', async (e) => {
+            // ダブルクリックが発生したらシングルクリック処理（再描画）をキャンセル
+            if (clickTimer) {
+                clearTimeout(clickTimer);
+                clickTimer = null;
+            }
+
             selectedPlaylistIndex = index;
             currentVideoIndex = index;
+            
+            // プレイリストの表示更新（スクロール等の影響を最小限にする）
             await playVideo(item.file, 0);
-            updatePlaylistDisplay();
-            savePlaylistAndPlaybackState();
+            
+            // 画面を閉じるため、描画のバッティングを気にする必要がなくなる
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
+
+            updatePlaylistDisplay();
+            savePlaylistAndPlaybackState();
         });
 
         targetContainer.appendChild(button);
