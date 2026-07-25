@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.59.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.60.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2447,21 +2447,19 @@ async function playlistSet(videoFiles) {
     if (videoFiles.length > 0) {
         await cleanupTempFiles();
 
-        // 新規プレイリスト作成 → 並び替えを「なし」に強制リセット
-        currentSortMode = 'none';
-        localStorage.setItem('playlistSortMode', 'none');
-        sortPlaylistBtn.classList.remove('sorted-active', 'random-sorted-active');
-
-        // ★ ここで必ず現在の順番を基準として保存（上書き）
+        // ★ 元の読み込み順（Base順）を保存
         const currentPaths = videoFiles.map(file => file.path);
         originalLoadOrder = [...currentPaths];
         localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
 
-        // playlist を生の順でセット
+        // playlist を初期状態（ファイル取得順）でセット
         playlist = videoFiles.map(file => ({
             file: { path: file.path },
             name: file.path
         }));
+
+        // ★ 現状の並び替えモード（currentSortMode）を適用
+        await applySort(currentSortMode);
 
         currentVideoIndex = 0;
         selectedPlaylistIndex = 0;
