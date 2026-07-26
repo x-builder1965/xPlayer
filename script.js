@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.60.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.61.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -4013,6 +4013,13 @@ document.addEventListener('keydown', async (event) => {
             filterClearBtn.click();
         }
         return; 
+    }
+
+    // ■リロード■
+    if (event.key === 'F5') {
+        event.preventDefault();
+        location.reload();
+        return;
     }
 
     // ■ヘルプ■
