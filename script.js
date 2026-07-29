@@ -781,7 +781,7 @@ function hideControlsAndFilename() {
     disabledControls(true);
     disabledfilename(true);
     messageOverlay.classList.remove('active');
-    hideMenus(false); // 追加：コントロール非表示時にメニューも強制非表示
+    hideMenus(); // 追加：コントロール非表示時にメニューも強制非表示
     clearTimeout(timeout);
     setTimeout(() => {
         messageOverlay.style.display = 'none';
@@ -806,13 +806,14 @@ function hideEditPanel() {
 }
 
 // メニュー非表示（プレイリスト並び替えメニューなど）
-function hideMenus(hideAspect = true) {
+function hideMenus() {
+    
     const classes = [
         '.sort-playlist-menu',
         '.add-playlist-menu',
         '.track-menu',
         '.playlist-display-menu',
-        ...(hideAspect ? ['.aspect-ratio-menu'] : [])
+        ...(!isZoomMode ? ['.aspect-ratio-menu'] : [])
     ];
 
     document.querySelectorAll(classes.join(', ')).forEach(m => m.remove());
