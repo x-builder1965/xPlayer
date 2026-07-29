@@ -3427,10 +3427,6 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
     const menu = document.createElement('div');
     menu.className = 'track-menu';
 
-    const title = document.createElement('div');
-    title.className = 'menu-title';
-    menu.appendChild(title);
-
     const tracks = type === 'audio' ? currentAudioTracks : currentSubtitleTracks;
     let selectedTrackObj = type === 'audio' ? currentAudioTrack : currentSubtitleTrack;
 
@@ -3484,7 +3480,7 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
         noneItem.className = 'menu-item';
         const isNoneSelected = !selectedTrackObj;
         if (isNoneSelected) {
-                currentSubtitleTrack = null;
+            currentSubtitleTrack = null;
         }
         noneItem.style.color = isNoneSelected ? '#00ccff' : '#eee';
         noneItem.innerHTML = isNoneSelected ? '✅ （なし）' : '　　（なし）';

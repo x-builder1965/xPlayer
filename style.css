@@ -1027,6 +1027,23 @@ button#modeChangeBtn.convert-active:hover,
   line-height: 1.0;
   min-width: 120px;
 }
+.track-menu {
+    max-height: 600px;
+    overflow-y: auto;
+}
+.track-menu::-webkit-scrollbar {
+    width: 8px;
+}
+.track-menu::-webkit-scrollbar-track {
+    background: #121212;
+}
+.track-menu::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 4px;
+}
+.track-menu::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
 .menu-item {
   padding: 8px 16px;
   cursor: pointer;
