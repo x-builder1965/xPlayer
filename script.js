@@ -781,7 +781,7 @@ function hideControlsAndFilename() {
     disabledControls(true);
     disabledfilename(true);
     messageOverlay.classList.remove('active');
-    hideMenus(); // 追加：コントロール非表示時にメニューも強制非表示
+    hideMenus(false); // 追加：コントロール非表示時にメニューも強制非表示
     clearTimeout(timeout);
     setTimeout(() => {
         messageOverlay.style.display = 'none';
@@ -806,11 +806,16 @@ function hideEditPanel() {
 }
 
 // メニュー非表示（プレイリスト並び替えメニューなど）
-function hideMenus() {
-    // 追加：開いている可能性のあるすべてのコンテキストメニューを強制非表示
-    document.querySelectorAll('.sort-playlist-menu, .aspect-ratio-menu, .add-playlist-menu, .track-menu, .playlist-display-menu').forEach(m => {
-        m.remove();
-    });
+function hideMenus(hideAspect = true) {
+    const classes = [
+        '.sort-playlist-menu',
+        '.add-playlist-menu',
+        '.track-menu',
+        '.playlist-display-menu',
+        ...(hideAspect ? ['.aspect-ratio-menu'] : [])
+    ];
+
+    document.querySelectorAll(classes.join(', ')).forEach(m => m.remove());
 }
 
 // コントロールパネル有効化／無効化
@@ -946,9 +951,7 @@ function createAspectRatioMenu() {
 
     Object.entries(ASPECT_NODES).forEach(([key, { label }]) => {
         const item = document.createElement('div');
-        item.style.padding = '8px 16px';
-        item.style.cursor = 'pointer';
-        item.style.whiteSpace = 'nowrap';
+        item.className = 'menu-item';
         item.style.color = currentAspectRatio === key ? '#00ccff' : '#eee';
         item.innerHTML = (currentAspectRatio === key ? '✅ ' : '　　') + label;
 
@@ -1265,9 +1268,7 @@ function createPlaylistDisplayMenu() {
 
     ['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].forEach((mode) => {
         const item = document.createElement('div');
-        item.style.padding = '8px 16px';
-        item.style.cursor = 'pointer';
-        item.style.whiteSpace = 'nowrap';
+        item.className = 'menu-item';
         item.style.color = playlistDisplayMode === mode ? '#00ccff' : '#eee';
         item.innerHTML = (playlistDisplayMode === mode ? '✅ ' : '　　') + getPlaylistDisplayModeLabel(mode);
 
@@ -3135,11 +3136,9 @@ function createSortMenu() {
 
     Object.entries(SORT_MODES).forEach(([key, {label}]) => {
         const item = document.createElement('div');
-        item.style.padding = '8px 16px';
-        item.style.cursor = 'pointer';
-        item.style.whiteSpace = 'nowrap';
+        item.className = 'menu-item';
         item.style.color = currentSortMode === key ? '#00ccff' : '#eee';
-        item.innerHTML = (currentSortMode === key ? '✅ ' : '  ') + label;
+        item.innerHTML = (currentSortMode === key ? '✅ ' : '　　') + label;
 
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
@@ -3208,9 +3207,7 @@ function buildAddMenuContent(menu) {
 
     const createMenuItem = (label, isSelected = false, onClick = null) => {
         const item = document.createElement('div');
-        item.style.padding = '8px 16px';
-        item.style.cursor = 'pointer';
-        item.style.whiteSpace = 'nowrap';
+        item.className = 'menu-item';
         item.style.color = isSelected ? '#00ccff' : '#eee';
         item.innerHTML = label;
 
@@ -3488,6 +3485,7 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
         if (isNoneSelected) {
                 currentSubtitleTrack = null;
         }
+        noneItem.style.color = isNoneSelected ? '#00ccff' : '#eee';
         noneItem.innerHTML = isNoneSelected ? '✅ （なし）' : '　　（なし）';
         noneItem.onclick = () => selectTrackMenu('subtitle', menu, '（なし）');
         menu.appendChild(noneItem);
@@ -3507,6 +3505,7 @@ function createTrackMenu(type) {  // 'audio' or 'subtitle'
                 }
             }
         }
+        item.style.color = isSelected ? '#00ccff' : '#eee';
         item.innerHTML = isSelected ? `✅ ${label}` : `　　${label}`;
         item.onclick = () => selectTrackMenu(type, menu, label, track);
         menu.appendChild(item);
