@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.61.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.62.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -943,18 +943,6 @@ function applyAspectRatioSetting() {
 function createAspectRatioMenu() {
     const menu = document.createElement('div');
     menu.className = 'aspect-ratio-menu';
-    menu.style.position = 'fixed';
-    menu.style.background = 'rgba(30,30,30,0.95)';
-    menu.style.border = '1px solid #444';
-    menu.style.borderRadius = '6px';
-    menu.style.padding = '6px 0';
-    menu.style.zIndex = '1001';
-    menu.style.minWidth = '220px';
-    menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
-    menu.style.whiteSpace = 'pre';
-    menu.style.fontFamily = 'monospace';
-    menu.style.lineHeight = '1.0';
-    menu.style.fontSize = '16px';
 
     Object.entries(ASPECT_NODES).forEach(([key, { label }]) => {
         const item = document.createElement('div');
@@ -1274,18 +1262,6 @@ function getPlaylistThumbnailDimensions(mode) {
 function createPlaylistDisplayMenu() {
     const menu = document.createElement('div');
     menu.className = 'playlist-display-menu';
-    menu.style.position = 'absolute';
-    menu.style.background = 'rgba(30,30,30,0.95)';
-    menu.style.border = '1px solid #444';
-    menu.style.borderRadius = '6px';
-    menu.style.padding = '6px 0';
-    menu.style.zIndex = '1001';
-    menu.style.minWidth = '180px';
-    menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
-    menu.style.whiteSpace = 'pre';
-    menu.style.fontFamily = 'monospace';
-    menu.style.lineHeight = '1.0';
-    menu.style.fontSize = '16px';
 
     ['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].forEach((mode) => {
         const item = document.createElement('div');
@@ -3156,18 +3132,6 @@ async function applySort(modeKey = currentSortMode) {
 function createSortMenu() {
     const menu = document.createElement('div');
     menu.className = 'sort-playlist-menu';  // CSSで位置・スタイルを調整
-    menu.style.position = 'absolute';
-    menu.style.background = 'rgba(30,30,30,0.95)';
-    menu.style.border = '1px solid #444';
-    menu.style.borderRadius = '6px';
-    menu.style.padding = '6px 0';
-    menu.style.zIndex = '1001';
-    menu.style.minWidth = '160px';
-    menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
-    menu.style.whiteSpace = 'pre';        // ← これが大事！タブを保持
-    menu.style.fontFamily = 'monospace';  // 等幅フォントで揃えやすくする
-    menu.style.lineHeight = '1.0';
-    menu.style.fontSize = '16px';
 
     Object.entries(SORT_MODES).forEach(([key, {label}]) => {
         const item = document.createElement('div');
@@ -3313,18 +3277,6 @@ function buildAddMenuContent(menu) {
 function createAddMenu() {
     const menu = document.createElement('div');
     menu.className = 'add-playlist-menu';  // CSSで位置・スタイルを調整
-    menu.style.position = 'absolute';
-    menu.style.background = 'rgba(30,30,30,0.95)';
-    menu.style.border = '1px solid #444';
-    menu.style.borderRadius = '6px';
-    menu.style.padding = '6px 0';
-    menu.style.zIndex = '1001';
-    menu.style.minWidth = '180px';
-    menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
-    menu.style.whiteSpace = 'pre';        // ← これが大事！タブを保持
-    menu.style.fontFamily = 'monospace';  // 等幅フォントで揃えやすくする
-    menu.style.lineHeight = '1.0';
-    menu.style.fontSize = '16px';
 
     buildAddMenuContent(menu);
     return menu;
@@ -3476,20 +3428,6 @@ async function toggleTrackMenu(e, type, button) {
 function createTrackMenu(type) {  // 'audio' or 'subtitle'
     const menu = document.createElement('div');
     menu.className = 'track-menu';
-    menu.style.background = 'rgba(30,30,30,0.95)';
-    menu.style.border = '1px solid #444';
-    menu.style.borderRadius = '6px';
-    menu.style.padding = '6px 0';
-    menu.style.zIndex = '1001';
-    menu.style.minWidth = '200px';
-    menu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.6)';
-    menu.style.maxHeight = '400px';
-    menu.style.overflowY = 'auto';
-    menu.style.cursor = 'pointer';
-    menu.style.whiteSpace = 'pre';        // ← これが大事！タブを保持
-    menu.style.fontFamily = 'monospace';  // 等幅フォントで揃えやすくする
-    menu.style.lineHeight = '2.0';
-    menu.style.fontSize = '16px';
 
     const title = document.createElement('div');
     title.className = 'menu-title';
@@ -4921,8 +4859,7 @@ aspectRatioBtn.addEventListener('click', (event) => {
     const containerRect = targetContainer.getBoundingClientRect();
     const btnRect = aspectRatioBtn.getBoundingClientRect();
 
-    menu.style.position = 'absolute';
-    menu.style.left = `${Math.max(8, btnRect.left - containerRect.left - (menu.offsetWidth || 220) - 2)}px`;
+    menu.style.left = `${Math.max(8, btnRect.left - containerRect.left - (menu.offsetWidth || 160) - 2)}px`;
     menu.style.top = `${Math.max(8, btnRect.top - containerRect.top + 2)}px`;
 
     targetContainer.appendChild(menu);
@@ -5732,7 +5669,6 @@ addPlaylistBtn.addEventListener('click', (e) => {
     const containerRect = targetContainer.getBoundingClientRect();
     const btnRect = addPlaylistBtn.getBoundingClientRect();
 
-    menu.style.position = 'absolute';
     menu.style.left = `${btnRect.left - containerRect.left}px`;
     menu.style.top  = `${btnRect.bottom - containerRect.top + 4}px`;
 
@@ -6089,7 +6025,6 @@ sortPlaylistBtn.addEventListener('click', (e) => {
     const containerRect = targetContainer.getBoundingClientRect();
     const btnRect = sortPlaylistBtn.getBoundingClientRect();
 
-    menu.style.position = 'absolute';
     menu.style.left = `${btnRect.left - containerRect.left}px`;
     menu.style.top  = `${btnRect.bottom - containerRect.top + 4}px`;
 
@@ -6132,7 +6067,6 @@ playlistDisplayBtn.addEventListener('click', (e) => {
     const containerRect = targetContainer.getBoundingClientRect();
     const btnRect = playlistDisplayBtn.getBoundingClientRect();
 
-    menu.style.position = 'absolute';
     menu.style.left = `${btnRect.left - containerRect.left}px`;
     menu.style.top  = `${btnRect.bottom - containerRect.top + 4}px`;
 

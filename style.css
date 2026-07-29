@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.58.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.62.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -1007,4 +1007,30 @@ button#modeChangeBtn.convert-active:hover,
 .changelog-list li:hover {
     background-color: #404040;
     transition: background-color 0.3s ease;
+}
+
+.track-menu,
+.aspect-ratio-menu,
+.playlist-display-menu,
+.sort-playlist-menu,
+.add-playlist-menu {
+  position: absolute;
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 6px 0;
+  z-index: 1001;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  white-space: pre;
+  font-family: monospace;
+  font-size: 16px;
+  line-height: 1.0;
+  min-width: 120px;
+}
+.track-menu {
+  line-height: 2.0;
+  min-width: 160px;
+  max-height: 400px;
+  overflow-y: auto;
+  cursor: pointer;
 }
