@@ -4865,10 +4865,10 @@ playlistFilterInput.addEventListener('input', () => {
 });
 
 // フォーカス時／入力時にリストを表示
-// playlistFilterInput.addEventListener('focus', showHistoryList);
-playlistFilterInput.addEventListener('click', showHistoryList);
+playlistFilterInput.addEventListener('dblclick', showHistoryList);
 
 // 入力欄からフォーカスが外れたら非表示
+playlistFilterInput.addEventListener('click', hideHistoryList);
 playlistFilterInput.addEventListener('blur', hideHistoryList);
 
 // Enterキーで履歴に追加して非表示にする
