@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.62.2'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.63.2'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -44,8 +44,10 @@
             <div id="filterPanel" class="filter-panel">
                 <div class="filter-panel-header">
                     <span id="itemCount" data-tooltip="絞込動画数/総動画数）">00,000 / 00,000</span>
-                    <input id="playlistFilterInput" type="text" placeholder="フィルタ条件（AND:スペース区切り、OR:カンマ区切り）" data-tooltip="プレイリストを絞り込み（例：aaaa bbbb, cccc dddd）" list="filterHistoryList">
-                    <datalist id="filterHistoryList"></datalist>
+                    <div class="filter-container">
+                        <input id="playlistFilterInput" type="text" autocomplete="off" placeholder="フィルタ条件（AND:スペース区切り、OR:カンマ区切り）" data-tooltip="プレイリストを絞り込み（例：aaaa bbbb, cccc dddd）">
+                        <ul id="filterHistoryList" class="filter-history-dropdown hidden"></ul>
+                    </div>
                     <button id="filterClearBtn" data-tooltip="フィルタ条件クリア（Shift+0）">🔘</button>
                     <span class="spacer"></span>
                     <button id="sortPlaylistBtn" data-tooltip="並び替え（Shift+m）">📩</button>
@@ -601,6 +603,7 @@
             <div id="changelogBtn" class="changelog-toggle">▶ 変更履歴</div>
             <div id="changelogContent" class="changelog-container">
                 <ul class="changelog-list">
+                    <li>2026-07-30 Ver4.63.2 フィルタ履歴の機能改善。</li>
                     <li>2026-07-29 Ver4.62.2 ポップアップメニューのスタイルをCSS共通化。</li>
                     <li>2026-07-26 Ver4.61.2 F5キー（リロード）機能追加。</li>
                     <li>2026-07-25 Ver4.60.2 新規プレイリスト設定時の並び替えの強制（なし）設定を廃止。</li>

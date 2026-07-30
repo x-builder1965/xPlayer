@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.62.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.63.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -3717,14 +3717,14 @@ function loadFilterHistory() {
     if (saved) {
         try {
             filterHistory = JSON.parse(saved);
-            if (filterHistory.length > 30) {
-                filterHistory = filterHistory.slice(-30);
+            if (filterHistory.length > 100) {
+                filterHistory = filterHistory.slice(-100);
             }
         } catch (e) {
             filterHistory = [];
         }
     }
-    updateFilterHistoryDatalist();
+    updateFilterHistoryList();
 }
 
 // フィルタ履歴をlocalStorageに保存
@@ -3737,7 +3737,6 @@ function addToFilterHistory(text) {
     if (!text || text.trim() === '') return;
     
     const trimmedText = text.trim();
-    // 既に存在していれば削除して末尾に追加（最新の並べを下に）
     const index = filterHistory.indexOf(trimmedText);
     if (index !== -1) {
         filterHistory.splice(index, 1);
@@ -3745,25 +3744,83 @@ function addToFilterHistory(text) {
     
     filterHistory.push(trimmedText);
     
-    // 最大30件に制限
     if (filterHistory.length > 30) {
         filterHistory = filterHistory.slice(-30);
     }
     
     saveFilterHistory();
-    updateFilterHistoryDatalist();
+    updateFilterHistoryList();
+}
+
+// フィルタ履歴から特定の項目を削除
+function deleteFromFilterHistory(text) {
+    filterHistory = filterHistory.filter(item => item !== text);
+    saveFilterHistory();
+    updateFilterHistoryList();
+
+    // 履歴が空になったらドロップダウンを隠す
+    if (filterHistory.length === 0) {
+        hideHistoryList();
+    }
 }
 
 // フィルタ履歴datalistを更新
-function updateFilterHistoryDatalist() {
+function updateFilterHistoryList() {
     if (!filterHistoryList) return;
     
     filterHistoryList.innerHTML = '';
+    
     filterHistory.forEach((item) => {
-        const option = document.createElement('option');
-        option.value = item;
-        filterHistoryList.appendChild(option);
+        const li = document.createElement('li');
+
+        // --- 1. テキスト部分の作成 ---
+        const textSpan = document.createElement('span');
+        textSpan.className = 'history-text';
+        textSpan.textContent = item;
+
+        // アイテム選択時のイベント（テキスト領域クリック）
+        li.addEventListener('mousedown', (e) => {
+            // 削除ボタンが押されたときは選択処理を行わない
+            if (e.target.classList.contains('delete-btn')) return;
+
+            e.preventDefault(); 
+            playlistFilterInput.value = item;
+            
+            // 手動で input / change イベントを発火させて既存のフィルタ処理を実行
+            playlistFilterInput.dispatchEvent(new Event('input', { bubbles: true }));
+            playlistFilterInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+            hideHistoryList();
+        });
+
+        // --- 2. 削除ボタン（ゴミ箱）の作成 ---
+        const deleteBtn = document.createElement('span');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.title = '履歴から削除';
+
+        // 削除ボタンクリック時のイベント
+        deleteBtn.addEventListener('mousedown', (e) => {
+            e.preventDefault();  // inputのblur（非表示化）を防止
+            e.stopPropagation(); // liへのイベント伝播をストップ
+            deleteFromFilterHistory(item);
+        });
+
+        // li要素に追加
+        li.appendChild(textSpan);
+        li.appendChild(deleteBtn);
+        filterHistoryList.appendChild(li);
     });
+}
+
+// リスト表示・非表示の制御関数
+function showHistoryList() {
+    if (filterHistory.length > 0) {
+        filterHistoryList.classList.remove('hidden');
+    }
+}
+function hideHistoryList() {
+    filterHistoryList.classList.add('hidden');
 }
 
 // 🔲ipcRenderer ハンドラ登録🔲
@@ -4807,12 +4864,20 @@ playlistFilterInput.addEventListener('input', () => {
     if (isFilterPanelVisible) debouncedUpdateFilterList();
 });
 
-// Enterキーで履歴に追加
+// フォーカス時／入力時にリストを表示
+// playlistFilterInput.addEventListener('focus', showHistoryList);
+playlistFilterInput.addEventListener('click', showHistoryList);
+
+// 入力欄からフォーカスが外れたら非表示
+playlistFilterInput.addEventListener('blur', hideHistoryList);
+
+// Enterキーで履歴に追加して非表示にする
 playlistFilterInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         const text = playlistFilterInput.value;
         if (text.trim() !== '') {
             addToFilterHistory(text);
+            hideHistoryList();
         }
     }
 });
