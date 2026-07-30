@@ -3744,8 +3744,8 @@ function addToFilterHistory(text) {
     
     filterHistory.push(trimmedText);
     
-    if (filterHistory.length > 30) {
-        filterHistory = filterHistory.slice(-30);
+    if (filterHistory.length > 100) {
+        filterHistory = filterHistory.slice(-100);
     }
     
     saveFilterHistory();
