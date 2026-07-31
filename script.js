@@ -709,13 +709,18 @@ function updateControlSize(valueX, valueY) {
     const zoomPanelHeight = 100 + (valueY / 100) * (500 - 100);
     const zoomPanelWidth = 30 + (valueX / 100) * (40 - 30);
 
-    // --- ボタンの高さ・幅の計算（必要に応じて数値を調整してください） ---
-    const buttonHeight = 18 + (valueX / 100) * (46 - 18); // 例: 24px ～ 60px
-    const buttonWidth = 30 + (valueX / 100) * (52 - 30);  // 例: 60px ～ 160px
+    // --- ボタンの高さ・幅の計算 ---
+    const buttonHeight = 18 + (valueX / 100) * (46 - 18);
+    const buttonWidth = 30 + (valueX / 100) * (52 - 30);
 
     const controls = document.querySelectorAll('button, input, #itemCount, #timeDisplay, #speedSelect, #volumeDisplay, #appNameAndCopyright, #zoomPanel');
     
     controls.forEach(control => {
+        // 【追加】 filter-item クラスを持つ要素はサイズ調整の対象外にする
+        if (control.classList.contains('filter-item')) {
+            return; // このループをスキップ
+        }
+
         // 1. フォントサイズ・パディングの設定
         if (control.id === 'appNameAndCopyright') {
             control.style.fontSize = `${appNameAndCopyrightFontSize}px`;
