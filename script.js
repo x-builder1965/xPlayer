@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.66.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.67.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2562,7 +2562,7 @@ function getCurrentAddModePosition() {
 }
 
 // プレイリストにファイルを挿入するヘルパー関数
-async function insertFilesIntoPlaylist(files, addPosition = 0) {
+function insertFilesIntoPlaylist(files, addPosition = 0) {
     if (!files || files.length === 0) return;
 
     // 既存のプレイリスト内のパス一覧（Setで高速化）
@@ -3285,7 +3285,7 @@ function buildAddMenuContent(menu) {
     menu.appendChild(separator);
 
     Object.entries(ADD_MODES).forEach(([key, {label}]) => {
-        const item = createMenuItem((currentAddMode === key ? '✅ ' : '　　') + label, currentAddMode === key, async (event) => {
+        const item = createMenuItem((currentAddMode === key ? '✅ ' : '　　') + label, currentAddMode === key, (event) => {
             currentAddMode = key;
             buildAddMenuContent(menu);
         });
@@ -3605,7 +3605,7 @@ function getMenuItem(track) {
 }
 
 // 字幕メニュー・音声メニュー選択
-async function selectTrackMenu(type, menu, fullLabel, trackObj = null) {
+function selectTrackMenu(type, menu, fullLabel, trackObj = null) {
     const currentTracks = type === 'audio' ? currentAudioTracks : currentSubtitleTracks;
     if (currentTracks.length === 0) {
         clearVideoSubtitle();
@@ -3847,7 +3847,7 @@ function hideHistoryList() {
 
 // 🔲ipcRenderer ハンドラ登録🔲
 // main.js からの自動再生指示を受信
-ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
+ipcRenderer.on('auto-play-files', (event, videoFiles) => {
     if (!videoFiles || videoFiles.length === 0) return;
     playlistSet(videoFiles);
     debouncedUpdateFilterList();
@@ -4521,7 +4521,6 @@ document.addEventListener('keydown', async (event) => {
     }
 });
 
-
 // グローバル mouseup でドラッグ終了を確実に検知
 document.addEventListener('mouseup', (e) => {
     if (isSeekDragging) {
@@ -4745,7 +4744,7 @@ playPauseBtn.addEventListener('click', async () => {
 });
 
 // ⏹️再生停止ボタン
-playStopBtn.addEventListener('click', async () => {
+playStopBtn.addEventListener('click', () => {
     videoPlayer.pause();
     isPlaying = false;
     currentVideoIndex = -1;  // 停止状態を明示
@@ -5272,7 +5271,7 @@ videoPlayer.addEventListener('ended', async () => {
 });
 
 // 動画クリック
-videoPlayer.addEventListener('contextmenu', async (event) => {
+videoPlayer.addEventListener('contextmenu', (event) => {
     event.preventDefault();
     if (event.ctrlKey) {
         playStopBtn.click();
@@ -6203,7 +6202,7 @@ videoPlayer.addEventListener('timeupdate', () => {
 });
 
 // 🎤音声選択クリック時
-voiceSelectBtn.addEventListener('click', async (e) => {
+voiceSelectBtn.addEventListener('click', (e) => {
     if (modeChange !== 'convert') return;
     if (playlist.length === 0) return;
 
@@ -6214,7 +6213,7 @@ voiceSelectBtn.addEventListener('click', async (e) => {
 });
 
 // 🔠字幕選択クリック時
-subtitleSelectBtn.addEventListener('click', async (e) => {
+subtitleSelectBtn.addEventListener('click', (e) => {
     if (modeChange !== 'video') return;
     if (playlist.length === 0) return;
 
