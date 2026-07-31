@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.63.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.64.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -708,8 +708,15 @@ function updateControlSize(valueX, valueY) {
     const speedSelectWidth = 40 + (valueX / 120) * (154 - 40);
     const zoomPanelHeight = 100 + (valueY / 100) * (500 - 100);
     const zoomPanelWidth = 30 + (valueX / 100) * (40 - 30);
+
+    // --- ボタンの高さ・幅の計算（必要に応じて数値を調整してください） ---
+    const buttonHeight = 18 + (valueX / 100) * (46 - 18); // 例: 24px ～ 60px
+    const buttonWidth = 30 + (valueX / 100) * (52 - 30);  // 例: 60px ～ 160px
+
     const controls = document.querySelectorAll('button, input, #itemCount, #timeDisplay, #speedSelect, #volumeDisplay, #appNameAndCopyright, #zoomPanel');
+    
     controls.forEach(control => {
+        // 1. フォントサイズ・パディングの設定
         if (control.id === 'appNameAndCopyright') {
             control.style.fontSize = `${appNameAndCopyrightFontSize}px`;
             control.style.padding = `${appNameAndCopyrightPadding}px ${appNameAndCopyrightPadding * 2}px`;
@@ -719,6 +726,20 @@ function updateControlSize(valueX, valueY) {
                 control.style.padding = `${padding}px ${padding * 2}px`;
             }
         }
+
+        // 2. ボタン要素（<button>）への高さ・幅の統一適用
+        if (control.tagName === 'BUTTON') {
+            control.style.height = `${buttonHeight}px`;
+            control.style.width = `${buttonWidth}px`;
+            if (control.id === 'setInMarkBtn' || control.id === 'setOutMarkBtn') {
+                control.style.width = `${buttonWidth * 1.6}px`;
+            }
+            // レイアウト崩れ防止（テキスト溢れ対応）
+            control.style.alignItems = 'center';
+            control.style.justifyContent = 'center';
+        }
+
+        // 3. 個別要素のサイズ変更
         if (control.id === 'speedSelect') {
             control.style.width = `${speedSelectWidth}px`;
         }
