@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.64.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.65.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -326,6 +326,8 @@ let currentSubtitleTrack = null;
 let delConvertFile = null;
 let currentAspectRatio = 'none';
 let currentUpdateId = 0;            // 関数の外側に、現在の実行世代を管理する変数を定義します
+let scrollInterval = null;
+let scrollTimeout = null;
 
 //🔲初期処理🔲
 document.addEventListener('DOMContentLoaded', () => {
@@ -4697,6 +4699,58 @@ playlistPathArea.addEventListener('click', () => {
         // 【追加】プレイリストが閉じられたので、非表示タイマーを再開する
         resetCursorTimer();
     }
+});
+
+// フォーカス時のイベントハンドラ
+playlistPathArea.addEventListener('focus', () => {
+    // 既存のタイマーをクリア
+    if (scrollInterval) clearInterval(scrollInterval);
+    if (scrollTimeout) clearTimeout(scrollTimeout);
+
+    // テキスト長が表示幅を超えている場合のみスクロール開始
+    if (playlistPathArea.scrollWidth > playlistPathArea.clientWidth) {
+        const speed = 1.5; // スクロール速度（ピクセル/フレーム）
+        const pauseAtEnd = 1000; // 右端に達したときの停止時間 (ms)
+
+        const startScrolling = () => {
+            scrollInterval = setInterval(() => {
+                const maxScrollLeft = playlistPathArea.scrollWidth - playlistPathArea.clientWidth;
+
+                // 右方向へスクロール
+                playlistPathArea.scrollLeft += speed;
+
+                // 右端に到達したか判定
+                if (playlistPathArea.scrollLeft >= maxScrollLeft) {
+                    clearInterval(scrollInterval);
+                    scrollInterval = null;
+
+                    // 端で少し停止してから先頭（左端）に戻して再開
+                    scrollTimeout = setTimeout(() => {
+                        playlistPathArea.scrollLeft = 0;
+                        startScrolling();
+                    }, pauseAtEnd);
+                }
+            }, 30); // 描画更新間隔 (ms)
+        };
+
+        startScrolling();
+    }
+});
+
+// ロストフォーカス時のイベントハンドラ
+playlistPathArea.addEventListener('blur', () => {
+    // 全てのスクロール用タイマーを停止
+    if (scrollInterval) {
+        clearInterval(scrollInterval);
+        scrollInterval = null;
+    }
+    if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = null;
+    }
+    
+    // ロストフォーカス時に位置を先頭に戻す
+    playlistPathArea.scrollLeft = 0;
 });
 
 // ▶️／⏸️再生/一時停止

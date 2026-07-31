@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.64.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.65.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -403,6 +403,11 @@ input#playlistFilterInput {
 }
 input#playlistPathArea:hover {
     cursor: pointer;
+}
+/* スクロール中にテキストがはみ出して崩れないよう保護 */
+input#playlistPathArea {
+    white-space: nowrap;
+    overflow: hidden;
 }
 #seekBar:hover,
 #volumeBar:hover {
