@@ -4720,7 +4720,6 @@ playlistPathArea.addEventListener('focus', () => {
                 playlistPathArea.scrollLeft += speed;
 
                 // 右端に到達したか判定
-                console.log('scrollLeft:', playlistPathArea.scrollLeft, 'maxScrollLeft:', maxScrollLeft);
                 if (playlistPathArea.scrollLeft + 1 >= maxScrollLeft) {
                     clearInterval(scrollInterval);
                     scrollInterval = null;
