@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.67.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.68.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -4952,6 +4952,7 @@ playlistFilterInput.addEventListener('keydown', (e) => {
 // 🔘フィルタ条件クリアボタン
 filterClearBtn.addEventListener('click', () => {
     clearPlaylistFilter();
+    try { playlistFilterInput?.focus(); } catch (e) {}
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     debouncedScrollCurrentFilterItem();
 });
