@@ -1735,30 +1735,40 @@ function updateItemCount(filtered, total) {
 
 // プレイリスト表示更新
 function updatePlaylistDisplay() {
+    // 1. パス表示エリアの更新
     const currentPath = getCurrentPlaybackPath();
     const showPlaybackIcon = currentPath && !isVideoStopped();
     try {
-        if (playlistPathArea) playlistPathArea.value = showPlaybackIcon ? `▶️ ${currentPath}` : currentPath || appNameAndCopyrightValueLine;
+        if (playlistPathArea) {
+            playlistPathArea.value = showPlaybackIcon 
+                ? `▶️ ${currentPath}` 
+                : (currentPath || appNameAndCopyrightValueLine);
+        }
     } catch (e) {
         console.warn('playlistPathArea update failed', e);
     }
 
+    // 2. プレイリストが空の場合の早期リターン
     if (playlist.length === 0) {
         if (isFilterPanelVisible) debouncedUpdateFilterList();
-        debouncedScrollCurrentFilterItem();
         updateIconOverlay();
-        updateItemCount(0, 0);   // ← 追加
+        updateItemCount(0, 0);
         return;
     }
 
+    // 3. インデックスの有効範囲補正
     if (selectedPlaylistIndex < 0 || selectedPlaylistIndex >= playlist.length) {
-        selectedPlaylistIndex = currentVideoIndex >= 0 && currentVideoIndex < playlist.length ? currentVideoIndex : 0;
+        const isValidCurrent = currentVideoIndex >= 0 && currentVideoIndex < playlist.length;
+        selectedPlaylistIndex = isValidCurrent ? currentVideoIndex : 0;
     }
 
+    // 4. UI・表示の同期
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     debouncedScrollCurrentFilterItem();
-    updateItemCount(playlist.length, playlist.length);   // ← 追加（フィルタ未使用時は総数/総数）
     updateIconOverlay();
+    
+    // ※フィルター絞り込み時の表示件数（filteredLengthなど）がある場合は第1引数に適用
+    updateItemCount(playlist.length, playlist.length); 
 }
 
 // 現在再生中の動画のパスを取得するヘルパー関数
