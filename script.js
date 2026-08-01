@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.69.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.70.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1865,7 +1865,7 @@ function toggleRandomPlay() {
 
     // フィルタ条件をクリアし、再生動画の行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
-    clearPlaylistFilter();
+    // clearPlaylistFilter();
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     debouncedScrollCurrentFilterItem();
 }
@@ -2081,7 +2081,7 @@ async function playVideo(file, currentTime) {
 
     // フィルタ条件をクリアし、再生動画の行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
-    clearPlaylistFilter();
+    // clearPlaylistFilter();
     updatePlaylistDisplay();
 
     showControlsAndFilename();
@@ -2191,7 +2191,7 @@ async function togglePlayPause() {
 
     // フィルタ条件をクリアし、再生動画の行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
-    clearPlaylistFilter();
+    // clearPlaylistFilter();
     updatePlaylistDisplay();
 
     showControlsAndFilename();
@@ -3179,7 +3179,7 @@ function createSortMenu() {
             event.stopPropagation();
             
             // 1. ソート実行前にフィルターを解除
-            clearPlaylistFilter();
+            // clearPlaylistFilter();
             
             // 2. ソートを実行（常に全体ソート）
             await applySortFiltered(key);
@@ -5766,7 +5766,7 @@ tooltipElements.forEach(element => {
 
 // 🔼上へボタン
 upMovePlaylistBtn.addEventListener('click', () => {
-    clearPlaylistFilter();
+    // clearPlaylistFilter();
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     debouncedScrollCurrentFilterItem();
     upMovePlaylist();
@@ -5774,7 +5774,7 @@ upMovePlaylistBtn.addEventListener('click', () => {
 
 // 🔽下へボタン
 downMovePlaylistBtn.addEventListener('click', () => {
-    clearPlaylistFilter();
+    // clearPlaylistFilter();
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     debouncedScrollCurrentFilterItem();
     downMovePlaylist();
@@ -5782,7 +5782,7 @@ downMovePlaylistBtn.addEventListener('click', () => {
 
 // ＋追加ボタン
 addPlaylistBtn.addEventListener('click', (e) => {
-    clearPlaylistFilter();
+    // clearPlaylistFilter();
     e.stopPropagation();
 
     // 1. 既に表示されていれば閉じて終了
@@ -5829,7 +5829,7 @@ addPlaylistBtn.addEventListener('click', (e) => {
 
 // －削除ボタン
 removePlaylistBtn.addEventListener('click', () => {
-    clearPlaylistFilter();
+    // clearPlaylistFilter();
     const selectedIndex = selectedPlaylistIndex >= 0 && selectedPlaylistIndex < playlist.length ? selectedPlaylistIndex : currentVideoIndex;
     if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= playlist.length) return;
 
@@ -5866,7 +5866,7 @@ clearPlaylistBtn.addEventListener('click', () => {
 
 // 💾保存ボタン
 savePlaylistBtn.addEventListener('click', () => {
-    clearPlaylistFilter();
+    // clearPlaylistFilter();
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     debouncedScrollCurrentFilterItem();
     savePlaylist();
@@ -6125,7 +6125,7 @@ saveVideoBtn.addEventListener('click', async () => {
 
 // 📩並び替えボタンクリックイベント（トグル実装）
 sortPlaylistBtn.addEventListener('click', (e) => {
-    clearPlaylistFilter();
+    // clearPlaylistFilter();
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     debouncedScrollCurrentFilterItem();
     e.stopPropagation();
@@ -6165,7 +6165,7 @@ sortPlaylistBtn.addEventListener('click', (e) => {
 
 // 📚表示形式ボタン
 playlistDisplayBtn.addEventListener('click', (e) => {
-    clearPlaylistFilter();
+    // clearPlaylistFilter();
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     debouncedScrollCurrentFilterItem();
     e.stopPropagation();
