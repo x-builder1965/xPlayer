@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.65.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.69.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -211,6 +211,7 @@ video {
     flex-direction: column;
     gap: 4px;
     min-width: 0;
+    word-break: break-all;   /* 長い英単語や記号の途中でも親要素の幅に合わせて折り返す */
 }
 .filter-item-path {
     overflow: hidden;

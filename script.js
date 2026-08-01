@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.68.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.69.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1186,7 +1186,7 @@ function scrollCurrentFilterItem() {
             el.scrollIntoView({ 
                 behavior: 'smooth', 
                 block: 'center',  // 縦方向の中央合わせ
-                inline: 'center'  // 横方向の中央合わせ（サムネイルが横並びの時に有効）
+                // inline: 'center'  // 横方向の中央合わせ（サムネイルが横並びの時に有効）
             });
         }
     } catch (e) {
