@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.71.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.72.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -348,6 +348,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // フィルタ履歴をlocalStorageから復元
     loadFilterHistory();
+
+    // ツールチップイベント設定
+    tooltipElements.forEach(element => {
+        const show = () => showTooltip(element);
+        const hide = () => hideTooltip(element);
+
+        element.addEventListener('mouseenter', show);
+        element.addEventListener('mouseleave', hide);
+        element.addEventListener('focusin', show);
+        element.addEventListener('focusout', hide);
+        element.addEventListener('mousedown', show);
+        element.addEventListener('mouseup', () => {
+            if (element.matches(':hover') || element.matches(':focus-within')) {
+                show();
+            } else {
+                hide();
+            }
+        });
+        element.addEventListener('click', show);
+    });
 
     // 背景壁紙の復元
     if (savedWallpaperPath) {
@@ -5796,12 +5816,6 @@ filename.addEventListener('mouseleave', () => {
         showControlsAndFilename();
         updateIconOverlay();
     }
-});
-
-// ツールチップイベント設定
-tooltipElements.forEach(element => {
-    element.addEventListener('mouseenter', () => showTooltip(element));
-    element.addEventListener('mouseleave', () => hideTooltip(element));
 });
 
 // 🔼上へボタン

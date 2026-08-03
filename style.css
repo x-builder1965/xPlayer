@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.71.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.72.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -557,10 +557,21 @@ select#speedSelect option {
     opacity: 1;
 }
 button:hover .tooltip,
+button:focus-visible .tooltip,
+button:focus .tooltip,
+button:active .tooltip,
 input[type="range"]:hover .tooltip,
+input[type="range"]:focus-visible .tooltip,
+input[type="range"]:focus .tooltip,
 input#urlInput:hover .tooltip,
+input#urlInput:focus-visible .tooltip,
+input#urlInput:focus .tooltip,
 input#playlistFilterInput:hover .tooltip,
-select:hover .tooltip {
+input#playlistFilterInput:focus-visible .tooltip,
+input#playlistFilterInput:focus .tooltip,
+select:hover .tooltip,
+select:focus-visible .tooltip,
+select:focus .tooltip {
     top: -30px;
     left: 50%;
     transform: translateX(-50%);
