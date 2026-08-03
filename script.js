@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.70.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.71.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -190,6 +190,9 @@ const messageOverlay = document.getElementById('messageOverlay');
 const iconOverlay = document.getElementById('iconOverlay');
 const appNameAndCopyright = document.getElementById('appNameAndCopyright');
 const wallpaperBtn = document.getElementById('wallpaperBtn');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+const settingsCloseBtn = document.getElementById('settingsCloseBtn');
 const helpOpenBtn = document.getElementById('helpOpenBtn');
 const helpCloseBtn = document.getElementById('helpCloseBtn');
 const helpContainer = document.querySelector('.help-container');
@@ -281,6 +284,7 @@ let saveInterval = null;
 let fitMode = 'contain';
 let zoomValue = 0;  // ズーム値（-100 ～ +200）
 let isZoomMode = false;  // ズームモード状態
+let isSettingsPanelOpen = false;
 let isHelpOpen = false;
 let isSeekDragging = false;
 let isMouseOverSeekBar = false;
@@ -4183,6 +4187,30 @@ document.addEventListener('keydown', async (event) => {
         }
     }
 
+    // ■設定パネル■
+    if (isSettingsPanelOpen === true) {
+        // 🖥️フルスクリーン表示（Ctrl+a）
+        if (event.ctrlKey && event.key.toLowerCase() === 'a') {
+            event.preventDefault();
+            fullscreenBtn.click();
+            return;
+        }
+
+        // 🖼️背景壁紙選択（Ctrl+p）
+        if (event.ctrlKey && event.key === 'p') {
+            event.preventDefault();
+            wallpaperBtn.click();
+            return;
+        }
+
+        // ❌設定パネル終了（Ctrl+q）
+        if (event.ctrlKey && event.key === 'q') {
+            event.preventDefault();
+            toggleSettingsPanel(false);
+            return;
+        }
+    }
+
     // ■プレイリストパネル■
     if (filterPanel.style.display === 'flex') {
         // 🔘フィルタ条件クリア（shift+0）
@@ -4410,17 +4438,10 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
-    // 🖥️フルスクリーン表示（Ctrl+a）
-    if (event.ctrlKey && event.key.toLowerCase() === 'a') {
+    // ⚙️ 設定モード切替（Ctrl+q）
+    if (event.ctrlKey && event.key === 'q') {
         event.preventDefault();
-        fullscreenBtn.click();
-        return;
-    }
-
-    // 🖼️背景壁紙選択（Ctrl+p）
-    if (event.ctrlKey && event.key === 'p') {
-        event.preventDefault();
-        wallpaperBtn.click();
+        settingsBtn.click();
         return;
     }
 
@@ -5095,6 +5116,24 @@ wallpaperBtn.addEventListener('click', async () => {
         console.error('背景壁紙選択エラー:', e);
         updateIconOverlay();
     }
+});
+
+// ⚙️設定パネル表示切替
+function toggleSettingsPanel(show) {
+    isSettingsPanelOpen = show;
+    settingsPanel.style.display = isSettingsPanelOpen ? 'flex' : 'none';
+    settingsBtn.classList.toggle('mode-active', isSettingsPanelOpen);
+    settingsBtn.setAttribute('data-tooltip', isSettingsPanelOpen ? '設定を閉じる' : '設定');
+    showControlsAndFilename();
+    updateIconOverlay();
+}
+
+settingsBtn.addEventListener('click', () => {
+    toggleSettingsPanel(!isSettingsPanelOpen);
+});
+
+settingsCloseBtn.addEventListener('click', () => {
+    toggleSettingsPanel(false);
 });
 
 // ❔ヘルプ（開く）イベントリスナー

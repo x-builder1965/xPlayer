@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.69.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.71.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -309,6 +309,22 @@ video {
 
 .controls {
     bottom: 20px;
+}
+
+.settings-panel {
+    display: none;
+    position: absolute;
+    left: 20px;
+    top: 46%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 8px;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 950;
+    min-width: 56px;
 }
 
 #zoomPanel {
@@ -916,6 +932,7 @@ caption {
 #filenameMenu.mode-active,
 #urlInputBtn.mode-active,
 #zoomBtn.mode-active,
+#settingsBtn.mode-active,
 #fullscreenBtn.mode-active,
 button#modeChangeBtn.convert-active,
 #repeatPlayBtn.repeat-all,
@@ -938,6 +955,7 @@ button#modeChangeBtn.convert-active,
 #filenameMenu.mode-active:hover,
 #urlInputBtn.mode-active:hover,
 #zoomBtn.mode-active:hover,
+#settingsBtn.mode-active:hover,
 #fullscreenBtn.mode-active:hover,
 button#modeChangeBtn.convert-active:hover,
 #repeatPlayBtn.repeat-all:hover,
