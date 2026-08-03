@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.73.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.74.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -3832,8 +3832,8 @@ function loadFilterHistory() {
     if (saved) {
         try {
             filterHistory = JSON.parse(saved);
-            if (filterHistory.length > 100) {
-                filterHistory = filterHistory.slice(-100);
+            if (filterHistory.length > 1000) {
+                filterHistory = filterHistory.slice(-1000);
             }
         } catch (e) {
             filterHistory = [];
@@ -3859,8 +3859,8 @@ function addToFilterHistory(text) {
     
     filterHistory.push(trimmedText);
     
-    if (filterHistory.length > 100) {
-        filterHistory = filterHistory.slice(-100);
+    if (filterHistory.length > 1000) {
+        filterHistory = filterHistory.slice(-1000);
     }
     
     saveFilterHistory();
