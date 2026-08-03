@@ -324,7 +324,6 @@ video {
     align-items: center;
     gap: 10px;
     z-index: 950;
-    min-width: 56px;
 }
 
 #zoomPanel {

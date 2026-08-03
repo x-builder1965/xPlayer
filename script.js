@@ -732,7 +732,7 @@ function updateControlSize(valueX, valueY) {
     const buttonHeight = 18 + (valueX / 100) * (46 - 18);
     const buttonWidth = 30 + (valueX / 100) * (52 - 30);
 
-    const controls = document.querySelectorAll('button, input, #itemCount, #timeDisplay, #speedSelect, #volumeDisplay, #appNameAndCopyright, #zoomPanel');
+    const controls = document.querySelectorAll('button, input, #itemCount, #timeDisplay, #speedSelect, #volumeDisplay, #appNameAndCopyright, #zoomPanel, #settingsPanel, #filename, #filenamePanel, #playlistPathArea, #cutTimelineContainer, #cutTimelineBar');
     
     controls.forEach(control => {
         // 【追加】 filter-item クラスを持つ要素はサイズ調整の対象外にする
@@ -769,6 +769,9 @@ function updateControlSize(valueX, valueY) {
         }
         if (control.id === 'zoomPanel') {
             control.style.height = `${zoomPanelHeight}px`;
+            control.style.width = `${zoomPanelWidth}px`;
+        }
+        if (control.id === 'settingsPanel') {
             control.style.width = `${zoomPanelWidth}px`;
         }
     });
