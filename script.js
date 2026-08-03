@@ -358,15 +358,6 @@ document.addEventListener('DOMContentLoaded', () => {
         element.addEventListener('mouseleave', hide);
         element.addEventListener('focusin', show);
         element.addEventListener('focusout', hide);
-        element.addEventListener('mousedown', show);
-        element.addEventListener('mouseup', () => {
-            if (element.matches(':hover') || element.matches(':focus-within')) {
-                show();
-            } else {
-                hide();
-            }
-        });
-        element.addEventListener('click', show);
     });
 
     // 背景壁紙の復元
@@ -4038,6 +4029,15 @@ function toggleSettingsPanel(show) {
     settingsPanel.style.display = isSettingsPanelOpen ? 'flex' : 'none';
     settingsBtn.classList.toggle('mode-active', isSettingsPanelOpen);
     settingsBtn.setAttribute('data-tooltip', isSettingsPanelOpen ? '設定モード終了（Ctrl+q）' : '設定モード開始（Ctrl+q）');
+    hideTooltip(settingsBtn);
+    if (isSettingsPanelOpen) {
+        // 編集モード開始時はプレイリストパネルを閉じる（同時表示抑止）
+        if (isFilterPanelVisible) {
+            isFilterPanelVisible = false;
+            if (filterPanel) filterPanel.style.display = 'none';
+        }
+        hideEditPanel();
+    }
     showControlsAndFilename();
     updateIconOverlay();
 }
@@ -4740,6 +4740,7 @@ playlistPathArea.addEventListener('click', () => {
     if (isFilterPanelVisible) {
         hideEditPanel();
         zoomEndBtn.click();
+        settingsCloseBtn.click();
         try { playlistFilterInput?.focus(); } catch (e) {}
         debouncedUpdateFilterList();
         debouncedScrollCurrentFilterItem();
@@ -4973,6 +4974,7 @@ zoomBtn.addEventListener('click', () => {
         zoomBtn.textContent = '🔍';
         zoomBtn.classList.add('mode-active');
         zoomBtn.setAttribute('data-tooltip', 'ズームモード終了（Ctrl+z）');
+        hideTooltip(zoomBtn);
         // 編集モード開始時はプレイリストパネルを閉じる（同時表示抑止）
         if (isFilterPanelVisible) {
             isFilterPanelVisible = false;
@@ -5117,6 +5119,7 @@ zoomEndBtn.addEventListener('click', () => {
     zoomBtn.textContent = '🔍';
     zoomBtn.classList.remove('mode-active');
     zoomBtn.setAttribute('data-tooltip', 'ズームモード開始（Ctrl+z）');
+    hideTooltip(zoomBtn);
 });
 
 // 🖼️背景壁紙選択
@@ -5974,6 +5977,7 @@ editModeBtn.addEventListener('click', () => {
             if (filterPanel) filterPanel.style.display = 'none';
         }
         zoomEndBtn.click();
+        settingsCloseBtn.click();
         editPanel.style.display = 'flex';
         editModeBtn.classList.add('mode-active');
         // 初期化
