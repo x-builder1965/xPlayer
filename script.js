@@ -4011,6 +4011,17 @@ window.addEventListener('resize', () => {
     updateIconOverlay();
 });
 
+
+// ⚙️設定パネル表示切替
+function toggleSettingsPanel(show) {
+    isSettingsPanelOpen = show;
+    settingsPanel.style.display = isSettingsPanelOpen ? 'flex' : 'none';
+    settingsBtn.classList.toggle('mode-active', isSettingsPanelOpen);
+    settingsBtn.setAttribute('data-tooltip', isSettingsPanelOpen ? '設定モード終了（Ctrl+q）' : '設定モード開始（Ctrl+q）');
+    showControlsAndFilename();
+    updateIconOverlay();
+}
+
 // ウィンドウ終了前
 window.addEventListener('beforeunload', function(e)  {
     cleanupTempFiles();
@@ -5117,16 +5128,6 @@ wallpaperBtn.addEventListener('click', async () => {
         updateIconOverlay();
     }
 });
-
-// ⚙️設定パネル表示切替
-function toggleSettingsPanel(show) {
-    isSettingsPanelOpen = show;
-    settingsPanel.style.display = isSettingsPanelOpen ? 'flex' : 'none';
-    settingsBtn.classList.toggle('mode-active', isSettingsPanelOpen);
-    settingsBtn.setAttribute('data-tooltip', isSettingsPanelOpen ? '設定モード終了（Ctrl+q）' : '設定モード開始（Ctrl+q）');
-    showControlsAndFilename();
-    updateIconOverlay();
-}
 
 settingsBtn.addEventListener('click', () => {
     toggleSettingsPanel(!isSettingsPanelOpen);
