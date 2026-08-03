@@ -1048,13 +1048,16 @@ async function exportSettingsToFile() {
         }
 
         await fs.writeFile(result.filePath, JSON.stringify(settings, null, 2), 'utf8');
-        updatemessageOverlay('⚙️ 設定をエクスポートしました', false, 3000);
+        
+        // result.filePath からファイル名を抽出
+        const fileName = result.filePath.split(/[/\\]/).pop();
+        // メッセージ内にファイル名を含める
+        updatemessageOverlay(`📤 エクスポート: ${fileName}`, false, 3000);
     } catch (error) {
         console.error('設定エクスポート失敗:', error);
-        updatemessageOverlay('⚙️ 設定のエクスポートに失敗しました', false, 3000);
+        updatemessageOverlay('📤 設定のエクスポートに失敗しました', false, 3000);
     }
 }
-
 // 設定のインポート
 async function importSettingsFromFile() {
     try {
@@ -1076,13 +1079,14 @@ async function importSettingsFromFile() {
             localStorage.setItem(key, String(value));
         });
 
-        updatemessageOverlay('⚙️ 設定をインポートしました', false, 3000);
+        const fileName = filePath.split(/[/\\]/).pop();
+        updatemessageOverlay(`📥 インポート: ${fileName}`, false, 3000);
         setTimeout(() => {
             location.reload();
         }, 300);
     } catch (error) {
         console.error('設定インポート失敗:', error);
-        updatemessageOverlay('⚙️ 設定のインポートに失敗しました', false, 3000);
+        updatemessageOverlay('📥 設定のインポートに失敗しました', false, 5000);
     }
 }
 
