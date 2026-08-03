@@ -5123,7 +5123,7 @@ function toggleSettingsPanel(show) {
     isSettingsPanelOpen = show;
     settingsPanel.style.display = isSettingsPanelOpen ? 'flex' : 'none';
     settingsBtn.classList.toggle('mode-active', isSettingsPanelOpen);
-    settingsBtn.setAttribute('data-tooltip', isSettingsPanelOpen ? 'ズームモード開始（Ctrl+z）' : 'ズームモード終了（Ctrl+z）');
+    settingsBtn.setAttribute('data-tooltip', isSettingsPanelOpen ? '設定モード終了（Ctrl+q）' : '設定モード開始（Ctrl+q）');
     showControlsAndFilename();
     updateIconOverlay();
 }
