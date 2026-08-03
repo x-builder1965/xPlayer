@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.72.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.73.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -574,6 +574,15 @@ select:focus .tooltip {
     top: -30px;
     left: 50%;
     transform: translateX(-50%);
+}
+.settings-panel button:hover .tooltip,
+.settings-panel button:focus-visible .tooltip,
+.settings-panel button:focus .tooltip,
+.settings-panel button:active .tooltip {
+    top: -30px;
+    left: 0;
+    right: auto;
+    transform: none;
 }
 #zoomPanel #zoomResetBtn:hover .tooltip,
 #zoomPanel #fitModeBtn:hover .tooltip,

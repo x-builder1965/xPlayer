@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.72.2'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.73.2'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -95,8 +95,8 @@
                         <button id="fastForwardBtn" data-tooltip="30秒進む（Ctrl+→）">⏩</button>
                         <button id="nextVideoBtn" data-tooltip="次の動画へ（PgDw）">⏭️</button>
                         <span class="spacer"></span>
-                        <button id="zoomBtn" data-tooltip="ズームモード開始（Ctrl+z）">🔍</button>
                         <button id="settingsBtn" data-tooltip="設定モード開始（Ctrl+q）">⚙️</button>
+                        <button id="zoomBtn" data-tooltip="ズームモード開始（Ctrl+z）">🔍</button>
                         <button id="helpOpenBtn" data-tooltip="ヘルプ開く（Ctrl+h）">❔</button>
                     </div>
                     <label class="app-name-and-copyright" id="appNameAndCopyright"></label>
@@ -127,6 +127,8 @@
             <div id="settingsPanel" class="settings-panel">
                 <button id="wallpaperBtn" data-tooltip="背景壁紙（Ctrl+p）">🖼️</button>
                 <button id="fullscreenBtn" data-tooltip="フルスクリーン表示（Ctrl+a／Double Click）">🖥️</button>
+                <button id="importSettingsBtn" data-tooltip="設定インポート（Ctrl+i）">📥</button>
+                <button id="exportSettingsBtn" data-tooltip="設定エクスポート（Ctrl+o）">📤</button>
                 <button id="settingsCloseBtn" data-tooltip="設定モード終了（Ctrl+q）">❌</button>
             </div>
             <div id="zoomPanel">
@@ -496,6 +498,48 @@
                                 <td class="note">・カット編集を全クリア。</td>
                             </tr>
                             <tr>
+                                <td class="sub-title">⚙️ 設定パネル</td>
+                                <td class="icon sub-title"></td>
+                                <td class="key sub-title"></td>
+                                <td class="mouse sub-title"></td>
+                                <td class="note sub-title"></td>
+                            </tr>
+                            <tr>
+                                <td>　・背景壁紙設定</td>
+                                <td class="icon">🖼️</td>
+                                <td class="key">Ctrl+p</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイヤーの背景壁紙を設定する。ダイアログのキャンセル選択で背景壁紙を解除。</td>
+                            </tr>
+                            <tr>
+                                <td>　・フルスクリーン表示／解除</td>
+                                <td class="icon">🖥️</td>
+                                <td class="key">Ctrl+a</td>
+                                <td class="mouse">Double Click</td>
+                                <td class="note">・プレイヤーのフルスクリーン表示（青）またはウィンドウ表示（赤）を切り替える。</td>
+                            </tr>
+                            <tr>
+                                <td>　・設定インポート</td>
+                                <td class="icon">📥</td>
+                                <td class="key">Ctrl+i</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイヤーの設定をインポートし画面を復元する。</td>
+                            </tr>
+                            <tr>
+                                <td>　・設定エクスポート</td>
+                                <td class="icon">📤</td>
+                                <td class="key">Ctrl+o</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイヤーの設定をエクスポートする。</td>
+                            </tr>
+                            <tr>
+                                <td>　・設定モード終了</td>
+                                <td class="icon">❌</td>
+                                <td class="key">Ctrl+q</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・設定モードの終了。</td>
+                            </tr>
+                            <tr>
                                 <td class="sub-title">🔍 ズームパネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
@@ -552,34 +596,6 @@
                                 <td class="note">・ズームモードの終了。</td>
                             </tr>
                             <tr>
-                                <td class="sub-title">⚙️ 設定パネル</td>
-                                <td class="icon sub-title"></td>
-                                <td class="key sub-title"></td>
-                                <td class="mouse sub-title"></td>
-                                <td class="note sub-title"></td>
-                            </tr>
-                            <tr>
-                                <td>　・背景壁紙設定</td>
-                                <td class="icon">🖼️</td>
-                                <td class="key">Ctrl+p</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイヤーの背景壁紙を設定する。ダイアログのキャンセル選択で背景壁紙を解除。</td>
-                            </tr>
-                            <tr>
-                                <td>　・フルスクリーン表示／解除</td>
-                                <td class="icon">🖥️</td>
-                                <td class="key">Ctrl+a</td>
-                                <td class="mouse">Double Click</td>
-                                <td class="note">・プレイヤーのフルスクリーン表示（青）またはウィンドウ表示（赤）を切り替える。</td>
-                            </tr>
-                            <tr>
-                                <td>　・設定モード終了</td>
-                                <td class="icon">❌</td>
-                                <td class="key">Ctrl+q</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・設定モードの終了。</td>
-                            </tr>
-                            <tr>
                                 <td class="sub-title">🎁 その他操作</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
@@ -628,6 +644,7 @@
             <div id="changelogBtn" class="changelog-toggle">▶ 変更履歴</div>
             <div id="changelogContent" class="changelog-container">
                 <ul class="changelog-list">
+                    <li>2026-08-03 Ver4.73.2 設定のインポート・エクスポート機能の追加。</li>
                     <li>2026-08-03 Ver4.72.2 ツールチップの表示挙動の改善。</li>
                     <li>2026-08-03 Ver4.71.2 設定パネルを追加。</li>
                     <li>2026-08-02 Ver4.70.2 フィルタ条件のクリアタイミングの見直し。</li>

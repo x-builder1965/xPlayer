@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.72.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.73.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -20,6 +20,8 @@ const appName = 'xPlayer -動画プレイヤー- Ver4.72.2';
     savePlaylistDialog,
     showSaveCutDialog,
     showSaveJoinDialog,
+    showSaveSettingsDialog,
+    showOpenSettingsDialog,
     getCommandLineArgs,
     convertVideo,
     cancelConversion,
@@ -190,6 +192,8 @@ const messageOverlay = document.getElementById('messageOverlay');
 const iconOverlay = document.getElementById('iconOverlay');
 const appNameAndCopyright = document.getElementById('appNameAndCopyright');
 const wallpaperBtn = document.getElementById('wallpaperBtn');
+const exportSettingsBtn = document.getElementById('exportSettingsBtn');
+const importSettingsBtn = document.getElementById('importSettingsBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 const settingsCloseBtn = document.getElementById('settingsCloseBtn');
@@ -1023,6 +1027,63 @@ function createAspectRatioMenu() {
     });
 
     return menu;
+}
+
+// 設定のエクスポート
+async function exportSettingsToFile() {
+    try {
+        const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+        const defaultName = `xPlayerSettings${timestamp}.json`;
+        const result = await showSaveSettingsDialog(defaultName);
+        if (result.canceled || !result.filePath) {
+            return;
+        }
+
+        const settings = {};
+        for (let i = 0; i < localStorage.length; i += 1) {
+            const key = localStorage.key(i);
+            if (key) {
+                settings[key] = localStorage.getItem(key);
+            }
+        }
+
+        await fs.writeFile(result.filePath, JSON.stringify(settings, null, 2), 'utf8');
+        updatemessageOverlay('⚙️ 設定をエクスポートしました', false, 3000);
+    } catch (error) {
+        console.error('設定エクスポート失敗:', error);
+        updatemessageOverlay('⚙️ 設定のエクスポートに失敗しました', false, 3000);
+    }
+}
+
+// 設定のインポート
+async function importSettingsFromFile() {
+    try {
+        const result = await showOpenSettingsDialog();
+        if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+            return;
+        }
+
+        const filePath = result.filePaths[0];
+        const content = await fs.readFile(filePath, 'utf8');
+        const settings = JSON.parse(content);
+
+        if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+            throw new Error('設定ファイルの形式が正しくありません');
+        }
+
+        localStorage.clear();
+        Object.entries(settings).forEach(([key, value]) => {
+            localStorage.setItem(key, String(value));
+        });
+
+        updatemessageOverlay('⚙️ 設定をインポートしました', false, 3000);
+        setTimeout(() => {
+            location.reload();
+        }, 300);
+    } catch (error) {
+        console.error('設定インポート失敗:', error);
+        updatemessageOverlay('⚙️ 設定のインポートに失敗しました', false, 3000);
+    }
 }
 
 // オーバーレイ表示
@@ -4237,6 +4298,20 @@ document.addEventListener('keydown', async (event) => {
             return;
         }
 
+        // 📥設定インポート（Ctrl+i）
+        if (event.ctrlKey && event.key === 'i') {
+            event.preventDefault();
+            importSettingsBtn.click();
+            return;
+        }
+
+        // 📤設定エクスポート（Ctrl+o）
+        if (event.ctrlKey && event.key === 'o') {
+            event.preventDefault();
+            exportSettingsBtn.click();
+            return;
+        }
+
         // ❌設定パネル終了（Ctrl+q）
         if (event.ctrlKey && event.key === 'q') {
             event.preventDefault();
@@ -5157,6 +5232,14 @@ wallpaperBtn.addEventListener('click', async () => {
 
 settingsBtn.addEventListener('click', () => {
     toggleSettingsPanel(!isSettingsPanelOpen);
+});
+
+exportSettingsBtn.addEventListener('click', async () => {
+    await exportSettingsToFile();
+});
+
+importSettingsBtn.addEventListener('click', async () => {
+    await importSettingsFromFile();
 });
 
 settingsCloseBtn.addEventListener('click', () => {

@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.58.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.73.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -386,6 +386,34 @@ ipcMain.handle('show-save-cut-dialog', async (event, { fileName }) => {
             { name: 'すべてのファイル', extensions: ['*'] }
         ],
         properties: ['createDirectory', 'showOverwriteConfirmation']
+    });
+    return result;
+});
+
+// 設定エクスポート保存ダイアログ
+ipcMain.handle('show-save-settings-dialog', async (event, { defaultPath }) => {
+    const result = await dialog.showSaveDialog({
+        title: '設定をエクスポート',
+        defaultPath: defaultPath || 'xPlayerSettings.json',
+        filters: [
+            { name: 'JSON ファイル', extensions: ['json'] },
+            { name: 'すべてのファイル', extensions: ['*'] }
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation']
+    });
+    return result;
+});
+
+// 設定インポート開くダイアログ
+ipcMain.handle('show-open-settings-dialog', async () => {
+    const result = await dialog.showOpenDialog({
+        title: '設定をインポート',
+        defaultPath: 'xPlayerSettings.json',
+        filters: [
+            { name: 'JSON ファイル', extensions: ['json'] },
+            { name: 'すべてのファイル', extensions: ['*'] }
+        ],
+        properties: ['openFile']
     });
     return result;
 });
