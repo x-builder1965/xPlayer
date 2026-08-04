@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.73.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.75.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -416,6 +416,13 @@ ipcMain.handle('show-open-settings-dialog', async () => {
         properties: ['openFile']
     });
     return result;
+});
+
+ipcMain.handle('set-always-on-top', async (event, enabled) => {
+    if (mainWindow) {
+        mainWindow.setAlwaysOnTop(Boolean(enabled));
+    }
+    return { success: true };
 });
 
 // 背景壁紙選択（単ファイル選択）

@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.74.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.75.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -194,6 +194,7 @@ const appNameAndCopyright = document.getElementById('appNameAndCopyright');
 const wallpaperBtn = document.getElementById('wallpaperBtn');
 const exportSettingsBtn = document.getElementById('exportSettingsBtn');
 const importSettingsBtn = document.getElementById('importSettingsBtn');
+const alwaysOnTopBtn = document.getElementById('alwaysOnTopBtn');
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 const settingsCloseBtn = document.getElementById('settingsCloseBtn');
@@ -267,6 +268,7 @@ const savedSelectedAudioTrack = localStorage.getItem('selectedAudioTrack');
 const savedSelectedSubtitleLabel = localStorage.getItem('selectedSubtitleLabel');
 const savedSelectedSubtitleTrack = localStorage.getItem('selectedSubtitleTrack');
 const savedWallpaperPath = localStorage.getItem('wallpaperPath');
+const savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
 
 // グローバル（共通）変数
 let playlist = [];
@@ -287,6 +289,7 @@ let isMouseOverControls = false;
 let saveInterval = null;
 let fitMode = 'contain';
 let zoomValue = 0;  // ズーム値（-100 ～ +200）
+let isAlwaysOnTop = false;
 let isZoomMode = false;  // ズームモード状態
 let isSettingsPanelOpen = false;
 let isHelpOpen = false;
@@ -404,6 +407,15 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         fitMode = 'contain';
     }
+
+    // 常に最前面復元
+    if (savedAlwaysOnTop === 'true') {
+        isAlwaysOnTop = true;
+        if (typeof window.electronAPI?.setAlwaysOnTop === 'function') {
+            window.electronAPI.setAlwaysOnTop(true);
+        }
+    }
+    updateAlwaysOnTopButtonUI();
 
     // ズーム値復元
     if (savedZoom && !isNaN(savedZoom)) {
@@ -4110,6 +4122,21 @@ function toggleSettingsPanel(show) {
     updateIconOverlay();
 }
 
+function updateAlwaysOnTopButtonUI() {
+    if (!alwaysOnTopBtn) return;
+    alwaysOnTopBtn.classList.toggle('always-on-top-active', isAlwaysOnTop);
+    alwaysOnTopBtn.setAttribute('data-tooltip', isAlwaysOnTop ? '常に最前面を解除（🔝）' : '常に最前面（🔝）');
+}
+
+async function toggleAlwaysOnTop() {
+    isAlwaysOnTop = !isAlwaysOnTop;
+    if (typeof window.electronAPI?.setAlwaysOnTop === 'function') {
+        await window.electronAPI.setAlwaysOnTop(isAlwaysOnTop);
+    }
+    localStorage.setItem('alwaysOnTop', isAlwaysOnTop ? 'true' : 'false');
+    updateAlwaysOnTopButtonUI();
+}
+
 // ウィンドウ終了前
 window.addEventListener('beforeunload', function(e)  {
     cleanupTempFiles();
@@ -4299,6 +4326,13 @@ document.addEventListener('keydown', async (event) => {
         if (event.ctrlKey && event.key === 'p') {
             event.preventDefault();
             wallpaperBtn.click();
+            return;
+        }
+
+        // 🔝常に最前面（Ctrl+1）
+        if (event.ctrlKey && event.key === '1') {
+            event.preventDefault();
+            alwaysOnTopBtn.click();
             return;
         }
 
@@ -5244,6 +5278,10 @@ exportSettingsBtn.addEventListener('click', async () => {
 
 importSettingsBtn.addEventListener('click', async () => {
     await importSettingsFromFile();
+});
+
+alwaysOnTopBtn.addEventListener('click', () => {
+    toggleAlwaysOnTop();
 });
 
 settingsCloseBtn.addEventListener('click', () => {

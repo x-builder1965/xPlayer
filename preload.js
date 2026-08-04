@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.73.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.75.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -81,6 +81,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     showSaveJoinDialog: (options) => ipcRenderer.invoke('show-save-join-dialog', options),
     showSaveSettingsDialog: (defaultPath) => ipcRenderer.invoke('show-save-settings-dialog', { defaultPath }),
     showOpenSettingsDialog: () => ipcRenderer.invoke('show-open-settings-dialog'),
+    setAlwaysOnTop: (enabled) => ipcRenderer.invoke('set-always-on-top', enabled),
     getCommandLineArgs: () => ipcRenderer.invoke('get-command-line-args'),
     convertVideo: (filePath, modeChange, preferredAudioIndex) => ipcRenderer.invoke('convert-video', filePath, modeChange, preferredAudioIndex),
     cancelConversion: () => ipcRenderer.invoke('cancel-conversion'),
