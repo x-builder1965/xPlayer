@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.75.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.76.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -365,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
         element.addEventListener('mouseleave', hide);
         element.addEventListener('focusin', show);
         element.addEventListener('focusout', hide);
+        element.addEventListener('click', hide);
     });
 
     // 背景壁紙の復元
@@ -3535,7 +3536,6 @@ async function toggleTrackMenu(e, type, button) {
     menu.style.zIndex = '9999';  // 最前面に持ってくる
 
     // ツールチップ非表示
-    hideTooltip(button);
     document.body.appendChild(menu);
 
     function closeMenu(ev) {
@@ -4109,7 +4109,6 @@ function toggleSettingsPanel(show) {
     settingsPanel.style.display = isSettingsPanelOpen ? 'flex' : 'none';
     settingsBtn.classList.toggle('mode-active', isSettingsPanelOpen);
     settingsBtn.setAttribute('data-tooltip', isSettingsPanelOpen ? '設定モード終了（Ctrl+q）' : '設定モード開始（Ctrl+q）');
-    hideTooltip(settingsBtn);
     if (isSettingsPanelOpen) {
         // 編集モード開始時はプレイリストパネルを閉じる（同時表示抑止）
         if (isFilterPanelVisible) {
@@ -5090,7 +5089,6 @@ zoomBtn.addEventListener('click', () => {
         zoomBtn.textContent = '🔍';
         zoomBtn.classList.add('mode-active');
         zoomBtn.setAttribute('data-tooltip', 'ズームモード終了（Ctrl+z）');
-        hideTooltip(zoomBtn);
         // 編集モード開始時はプレイリストパネルを閉じる（同時表示抑止）
         if (isFilterPanelVisible) {
             isFilterPanelVisible = false;
@@ -5235,7 +5233,6 @@ zoomEndBtn.addEventListener('click', () => {
     zoomBtn.textContent = '🔍';
     zoomBtn.classList.remove('mode-active');
     zoomBtn.setAttribute('data-tooltip', 'ズームモード開始（Ctrl+z）');
-    hideTooltip(zoomBtn);
 });
 
 // 🖼️背景壁紙選択
