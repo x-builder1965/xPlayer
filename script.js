@@ -4125,7 +4125,7 @@ function toggleSettingsPanel(show) {
 function updateAlwaysOnTopButtonUI() {
     if (!alwaysOnTopBtn) return;
     alwaysOnTopBtn.classList.toggle('always-on-top-active', isAlwaysOnTop);
-    alwaysOnTopBtn.setAttribute('data-tooltip', isAlwaysOnTop ? '常に最前面を解除（🔝）' : '常に最前面（🔝）');
+    alwaysOnTopBtn.setAttribute('data-tooltip', isAlwaysOnTop ? '常に最前面を解除（Ctrl+1）' : '常に最前面を設定（Ctrl+1）');
 }
 
 async function toggleAlwaysOnTop() {
