@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.75.2'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.77.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -380,12 +380,6 @@ button {
 }
 button:hover {
     background-color: #0056b3;
-}
-#alwaysOnTopBtn.always-on-top-active {
-    background-color: #e63946 !important;
-}
-#alwaysOnTopBtn {
-    background-color: #007bff;
 }
 input[type="range"] {
     flex: 1;
@@ -966,7 +960,9 @@ button#modeChangeBtn.convert-active,
 #playPauseBtn.paused-active,
 #volumeMuteBtn.muted-active,
 #sortPlaylistBtn.sorted-active,
-#subtitleSelectBtn.subtitles-active {
+#subtitleSelectBtn.subtitles-active,
+#wallpaperBtn.wallpaper-active,
+#alwaysOnTopBtn.always-on-top-active {
     background: #e63946 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single,
@@ -989,7 +985,9 @@ button#modeChangeBtn.convert-active:hover,
 #playPauseBtn.paused-active:hover,
 #volumeMuteBtn.muted-active:hover,
 #sortPlaylistBtn.sorted-active:hover,
-#subtitleSelectBtn.subtitles-active:hover {
+#subtitleSelectBtn.subtitles-active:hover,
+#wallpaperBtn.wallpaper-active:hover,
+#alwaysOnTopBtn.always-on-top-active:hover {
     background: #e6394785 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single:hover,

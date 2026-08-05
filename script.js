@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.76.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.77.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -373,6 +373,16 @@ document.addEventListener('DOMContentLoaded', () => {
         videoContainer.style.backgroundImage = savedWallpaperPath;
     } else {
         videoContainer.style.backgroundImage = 'none';
+    }
+
+    // 背景壁紙ボタンの状態反映（設定済みなら赤、未設定なら青）
+    if (wallpaperBtn) {
+        if (savedWallpaperPath && savedWallpaperPath !== 'none' && savedWallpaperPath.trim() !== '') {
+            wallpaperBtn.classList.add('wallpaper-active');
+            wallpaperBtn.style.background = '';
+        } else {
+            wallpaperBtn.classList.remove('wallpaper-active');
+        }
     }
 
     // ボリューム復元
@@ -5247,6 +5257,10 @@ wallpaperBtn.addEventListener('click', async () => {
             if (!videoContainer) return;
         
             videoContainer.style.backgroundImage = 'none';
+            // ボタンを未設定（青）に
+            if (wallpaperBtn) {
+                wallpaperBtn.classList.remove('wallpaper-active');
+            }
         } else {
             // 壁紙が選択された場合 → 設定
             if (!videoContainer) return;
@@ -5255,6 +5269,11 @@ wallpaperBtn.addEventListener('click', async () => {
             const wallpaperUrl = `url("file://${wallpaper.path.replace(/\\/g, '/')}")`;
         
             videoContainer.style.backgroundImage = wallpaperUrl;
+            // ボタンを設定済み（赤）に
+            if (wallpaperBtn) {
+                wallpaperBtn.classList.add('wallpaper-active');
+                wallpaperBtn.style.background = '';
+            }
         }
         localStorage.setItem('wallpaperPath', videoContainer.style.backgroundImage);
         updateIconOverlay();
