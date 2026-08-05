@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.77.2';
+const appName = 'xPlayer -動画プレイヤー- Ver4.78.2';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -363,7 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         element.addEventListener('mouseenter', show);
         element.addEventListener('mouseleave', hide);
-        element.addEventListener('focusin', show);
         element.addEventListener('focusout', hide);
         element.addEventListener('click', hide);
     });
