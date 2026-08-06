@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
-const copyright = 'Copyright © 2025 @x-builder, Japan';
+const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.74.1';
+const appName = 'xPlayer -動画プレイヤー- Ver4.75.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -73,13 +73,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     classifyPath: (fullPath) => ipcRenderer.invoke('classify-path', fullPath),
     captureScreenshot: () => ipcRenderer.invoke('capture-screenshot'),
+    generateVideoThumbnail: (filePath, size) => ipcRenderer.invoke('generate-video-thumbnail', { filePath, size }),
     openFolderDialog: () => ipcRenderer.invoke('open-folder-dialog'),
     openVideoDialog: () => ipcRenderer.invoke('open-video-dialog'),
     savePlaylistDialog: () => ipcRenderer.invoke('save-playlist-dialog'),
     showSaveCutDialog: (options) => ipcRenderer.invoke('show-save-cut-dialog', options),
     showSaveJoinDialog: (options) => ipcRenderer.invoke('show-save-join-dialog', options),
+    showSaveSettingsDialog: (defaultPath) => ipcRenderer.invoke('show-save-settings-dialog', { defaultPath }),
+    showOpenSettingsDialog: () => ipcRenderer.invoke('show-open-settings-dialog'),
+    setAlwaysOnTop: (enabled) => ipcRenderer.invoke('set-always-on-top', enabled),
     getCommandLineArgs: () => ipcRenderer.invoke('get-command-line-args'),
-    convertVideo: (filePath) => ipcRenderer.invoke('convert-video', filePath),
+    convertVideo: (filePath, modeChange, preferredAudioIndex) => ipcRenderer.invoke('convert-video', filePath, modeChange, preferredAudioIndex),
     cancelConversion: () => ipcRenderer.invoke('cancel-conversion'),
     cancelCut: () => ipcRenderer.invoke('cancel-cut'),
     cancelJoin: () => ipcRenderer.invoke('cancel-join'),
@@ -87,4 +91,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     savePlaylistFile: (data) => ipcRenderer.invoke('save-playlist-file', data),
     joinVideos: (data) => ipcRenderer.invoke('join-videos', data),
     cutVideoMultiple: (data) => ipcRenderer.invoke('cut-video-multiple', data),
+    getVideoTracks: (filePath) => ipcRenderer.invoke('get-video-tracks', filePath),
+    openWallpaperDialog: () => ipcRenderer.invoke('open-wallpaper-dialog'),
 });

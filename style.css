@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
-/* const copyright = 'Copyright © 2025 @x-builder, Japan'; */
+/* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver3.70'; */
+/* const appName = 'xPlayer -動画プレイヤー- Ver4.77.2'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -24,15 +24,20 @@ body {
     cursor: auto;
     display: flex;
     background-color: #1c2526 !important;
+    background-image: none;
+    background-size: cover;           /* ← これを追加 */
+    background-position: center;      /* ← 中央寄せ（おすすめ） */
+    background-repeat: no-repeat;     /* ← 繰り返し防止 */
 }
 .video-container:fullscreen {
     background-color: #1c2526 !important;
 }
 video {
-    width: 100vw;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
     border: none;
+    display: block;
 }
 /* プレビュー動画（ワイプ） */
 #videoPreview {
@@ -61,7 +66,10 @@ video {
     display: none;
     transition: opacity 0.2s ease;
 }
+
 .filename,
+.filter-panel,
+.edit-panel, 
 .controls {
     position: absolute;
     width: 90%;
@@ -73,37 +81,276 @@ video {
     border-radius: 8px;
     transition: opacity 0.3s ease;
     z-index: 900;
-    /* pointer-events は JS で動的に設定 */
 }
 .filename {
     top: 20px;
 }
+.filename-panel {
+    display: flex; 
+    gap: 6px; 
+}
+
+.url-input-panel {
+    display: none;
+    gap: 6px;
+}
+
+.filter-panel,
+.edit-panel {
+    display: none;
+    top: 84px;
+}
+.filter-panel-header {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    overflow: visible;
+}
+.filter-list {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-right: 4px;
+}
+
+.folder-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+    width: 100%;
+}
+.folder-group-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #8dc6ff; /* ダークテーマに映えるライトブルー */
+    padding: 6px 4px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    word-break: break-all;
+    text-align: left;
+}
+.folder-group-items {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+}
+.folder-group-items.playlist-grid-small {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+.folder-group-items.playlist-grid-medium {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.folder-group-items.playlist-grid-large {
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+}
+.folder-group-items .filter-item.filter-item-size-small.filter-item-tile,
+.folder-group-items .filter-item.filter-item-size-medium.filter-item-tile,
+.folder-group-items .filter-item.filter-item-size-large.filter-item-tile {
+    min-width: 0;
+    grid-column: span 1;
+}
+.filter-list::-webkit-scrollbar {
+    width: 8px;
+}
+.filter-list::-webkit-scrollbar-track {
+    background: #121212;
+}
+.filter-list::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 4px;
+}
+.filter-list::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+.filter-item {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.filter-item:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+.filter-item.selected {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+}
+.filter-item.current {
+    background: rgba(0, 123, 255, 0.25);
+    border-color: rgba(0, 123, 255, 0.7);
+}
+.filter-item.current.selected {
+    background: rgba(0, 123, 255, 0.35);
+    border-color: rgba(0, 123, 255, 0.9);
+}
+.filter-item-thumb-wrap {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    overflow: hidden;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+}
+.filter-item-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    background: rgba(0, 0, 0, 0.35);
+}
+.filter-item-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    word-break: break-all;   /* 長い英単語や記号の途中でも親要素の幅に合わせて折り返す */
+}
+.filter-item-path {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+    color: #f5f5f5;
+}
+.filter-item-file-name {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #f5f5f5;
+    white-space: normal;
+    line-height: 1.3;
+}
+.filter-item.filter-item-tile {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 8px;
+    min-height: 140px;
+}
+.filter-item.filter-item-size-small.filter-item-tile {
+    min-height: 170px;
+}
+.filter-item.filter-item-size-medium.filter-item-tile {
+    min-height: 190px;
+}
+.filter-item.filter-item-size-large.filter-item-tile {
+    min-height: 300px;
+}
+.filter-item.filter-item-thumb-list {
+    flex-direction: row;
+    align-items: center;
+    padding: 7px 10px;
+    min-height: 56px;
+}
+.filter-item.filter-item-tile .filter-item-thumb-wrap {
+    margin-right: 0;
+    margin-bottom: 8px;
+}
+.filter-item.filter-item-size-small.filter-item-tile .filter-item-thumb-wrap {
+    margin-bottom: 8px;
+}
+.filter-item.filter-item-size-medium.filter-item-tile .filter-item-thumb-wrap {
+    margin-bottom: 10px;
+}
+.filter-item.filter-item-size-large.filter-item-tile .filter-item-thumb-wrap {
+    margin-bottom: 12px;
+}
+.filter-item.filter-item-thumb-list .filter-item-thumb-wrap {
+    margin-right: 10px;
+    margin-bottom: 0;
+}
+.filter-item.filter-item-size-small .filter-item-thumb-wrap {
+    width: 96px;
+    height: 54px;
+}
+.filter-item.filter-item-size-medium .filter-item-thumb-wrap {
+    width: 144px;
+    height: 81px;
+}
+.filter-item.filter-item-size-large .filter-item-thumb-wrap {
+    width: 216px;
+    height: 122px;
+}
+.filter-item.filter-item-size-small.filter-item-tile .filter-item-thumb-wrap {
+    width: 100%;
+    height: 96px;
+}
+.filter-item.filter-item-size-medium.filter-item-tile .filter-item-thumb-wrap {
+    width: 100%;
+    height: 190px;
+}
+.filter-item.filter-item-size-large.filter-item-tile .filter-item-thumb-wrap {
+    width: 100%;
+    height: 300px;
+}
+.filter-item.filter-item-tile .filter-item-path {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.filter-item.filter-item-thumb-list .filter-item-path {
+    white-space: normal;       /* 折り返しを許可 */
+    word-break: break-all;     /* 長い英数字やパスの途中で強制折り返し */
+    display: block;
+    overflow: visible;         /* 隠れていた文字を表示 */
+    text-overflow: clip;       /* 三点リーダー（...）を解除 */
+}
+.filter-empty {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 16px;
+}
+
 .controls {
     bottom: 20px;
 }
-#zoomPanel {
+
+.settings-panel {
+    display: none;
     position: absolute;
-    right: 20px;
+    left: 20px;
     top: 46%;
     transform: translateY(-50%);
     background: rgba(0, 0, 0, 0.5);
     padding: 15px;
     border-radius: 8px;
-    border: 2px solid #007bff;
-    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 950;
+}
+
+#zoomPanel {
+    display: none;
+    position: absolute;
+    position: absolute;
+    right: 20px;
+    top: 46%; /* 縦中央に綺麗に合わせるため 46% から 50% に変更 */
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 8px;
     flex-direction: column;
     align-items: center;
     gap: 10px;
     z-index: 950;
     transition: display 0.3s ease;
+
+    /* 👇 ここを追加してパネルを大きくします */
+    min-height: 38vh;        /* 画面全体の高さの 40% をパネルの最低の高さに設定 */
 }
 #zoomBar {
     writing-mode: vertical-lr;   /* または vertical-rl（向きで調整） */
     direction: rtl;              /* スライダーの方向を正しくする */
-    /* 必要に応じて他のスタイル（width/heightなど）を維持 */
 }
 #zoomDisplay {
-    font-size: 14px;
+    font-size: 16px;
     color: #ffffff;
     text-align: center;
     min-width: 50px;
@@ -120,19 +367,7 @@ video {
     gap: 0.5vw;
     flex-wrap: wrap;
 }
-.filename-controls {
-    display: flex; 
-    gap: 6px; 
-    width: 100%;
-}
-.filename-controls button {
-    min-width: 36px;   /* または 40px など好みで */
-    flex: 0 0 auto;    /* 縮まないようにしてもOK */
-}
-.filename-menus {
-    display: none; 
-    gap: 6px; 
-}
+
 button {
     font-size: 16px;
     cursor: pointer;
@@ -170,6 +405,25 @@ input[type="range"]#editSeekBar:hover {
 input[type="range"]#volumeBar {
     flex: none;
     width: 10%;
+}
+input#playlistPathArea,
+input#urlInput,
+input#playlistFilterInput {
+    background: rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    border: 1px solid #007bff;
+    border-radius: 5px;
+    padding: 6px 12px;
+    font-size: 16px;
+    flex: 1;
+}
+input#playlistPathArea:hover {
+    cursor: pointer;
+}
+/* スクロール中にテキストがはみ出して崩れないよう保護 */
+input#playlistPathArea {
+    white-space: nowrap;
+    overflow: hidden;
 }
 #seekBar:hover,
 #volumeBar:hover {
@@ -216,21 +470,6 @@ input[type="range"]#volumeBar {
 #seekBar.converting::-moz-range-thumb {
     background: #ff0000;
 }
-
-input[type="file"] {
-    display: none;
-}
-input#urlInput {
-    background: rgba(0, 0, 0, 0.5);
-    color: #ffffff;
-    border: 1px solid #007bff;
-    border-radius: 5px;
-    padding: 6px 12px;
-    font-size: 16px;
-    width: 100%;
-    display: none;
-}
-select#filenameDisplay,
 select#speedSelect {
     background: rgba(0, 0, 0, 0.5);
     color: #ffffff;
@@ -241,32 +480,32 @@ select#speedSelect {
     box-sizing: border-box;
     cursor: pointer;
     position: relative;
-}
-select#filenameDisplay {
-    width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-select#speedSelect {
     width: 120px;
 }
-select#filenameDisplay option,
 select#speedSelect option {
     background: #1c2526;
     color: #ffffff;
 }
-#timeDisplay, #volumeDisplay {
+#timeDisplay, 
+#volumeDisplay, 
+#itemCount {
     color: #ffffff;
     font-size: 16px;
     padding: 6px 12px;
     background: rgba(0, 0, 0, 0.5);
     border-radius: 5px;
 }
+#volumeDisplay {
+    width: 2.4vw;
+    text-align: center;}
+#itemCount {
+    width: 8vw;
+    text-align: center;
+}
 .spacer {
     min-width: 10px;
 }
-#overlayDisplay {
+#messageOverlay {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -285,7 +524,7 @@ select#speedSelect option {
     word-wrap: break-word;
     max-width: 80vw;
 }
-#overlayDisplay.active {
+#messageOverlay.active {
     opacity: 1;
 }
 .app-name-and-copyright {
@@ -306,7 +545,7 @@ select#speedSelect option {
     color: #ffffff;
     padding: 5px 10px;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: 16px;
     white-space: nowrap;
     z-index: 1000;
     opacity: 0;
@@ -317,17 +556,44 @@ select#speedSelect option {
     opacity: 1;
 }
 button:hover .tooltip,
+button:focus-visible .tooltip,
+button:focus .tooltip,
+button:active .tooltip,
 input[type="range"]:hover .tooltip,
+input[type="range"]:focus-visible .tooltip,
+input[type="range"]:focus .tooltip,
 input#urlInput:hover .tooltip,
-select:hover .tooltip {
+input#urlInput:focus-visible .tooltip,
+input#urlInput:focus .tooltip,
+input#playlistFilterInput:hover .tooltip,
+input#playlistFilterInput:focus-visible .tooltip,
+input#playlistFilterInput:focus .tooltip,
+select:hover .tooltip,
+select:focus-visible .tooltip,
+select:focus .tooltip {
     top: -30px;
     left: 50%;
     transform: translateX(-50%);
 }
-.url-controls {
-    display: flex;
-    gap: 10px;
-    display: none;
+.settings-panel button:hover .tooltip,
+.settings-panel button:focus-visible .tooltip,
+.settings-panel button:focus .tooltip,
+.settings-panel button:active .tooltip {
+    top: -30px;
+    left: 0;
+    right: auto;
+    transform: none;
+}
+#zoomPanel #zoomResetBtn:hover .tooltip,
+#zoomPanel #fitModeBtn:hover .tooltip,
+#zoomPanel #aspectRatioBtn:hover .tooltip,
+#zoomPanel #snapshotBtn:hover .tooltip,
+#zoomPanel #zoomBar:hover .tooltip,
+#zoomPanel #zoomEndBtn:hover .tooltip,
+button#helpCloseBtn:hover .tooltip {
+    left: auto;
+    right: 0;
+    transform: none;
 }
 .icon-overlay {
     position: absolute;
@@ -431,12 +697,11 @@ h1 {
 #helpCloseBtn:active {
     transform: translateY(-50%) scale(0.95);
 }
-.table-container {
+.table-container,
+.changelog-container {
     width: 100%;
-    height: calc(100vh - 7em);
     margin: 0 auto;
     border: 1px solid #333;
-    border-radius: 1.2em;
     overflow: hidden;
     box-shadow: 0 0.6em 2em rgba(0, 0, 0, 0.6);
     background-color: #1a1a1a;
@@ -446,6 +711,9 @@ h1 {
     flex-direction: column;
     flex: 1;
     max-width: none;
+}
+.table-container {
+    height: calc(96vh - 7em);
 }
 table {
     width: 100%;
@@ -466,6 +734,20 @@ table {
     overflow-y: auto;
     display: block;
 }        
+/* スクロールバーのカスタマイズ（ダークテーマ用） */
+.body-table::-webkit-scrollbar {
+    width: 8px;
+}
+.body-table::-webkit-scrollbar-track {
+    background: #121212;
+}
+.body-table::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 4px;
+}
+.body-table::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
 .body-table tr:hover {
     background-color: #404040;
     transition: background-color 0.3s ease;
@@ -524,39 +806,101 @@ caption {
     font-size: 1.2em; 
 }
 
-/* 動画カット編集機能のスタイル */
+/* 編集コントロール全体 (#editControls) */
 #editControls {
-    flex-wrap: wrap;
+  display: none; /* JSで表示切り替え。表示時は flex を想定 */
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: wrap;
 }
-#editSeekBar {
-    flex: 1;
-    min-width: 200px;
-}
-
-#cutTimelineContainer {
-    background: #2a2a2a;
-    border: 1px solid #555;
-}
-.cut-range-bar {
-    position: absolute;
-    height: 100%;
-    background: rgba(220, 50, 50, 0.75);
-    border-left: 1px solid #ff4444;
-    border-right: 1px solid #ff4444;
-    pointer-events: none;  /* クリック無効化 */
-}
-.cut-range-bar:hover {
-    background: rgba(255, 80, 80, 0.9);
+/* ボタンやシークバーが並ぶ行 */
+.edit-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
+/* インマーク / アウトマーク 表示 */
 #inMarkDisplay, 
 #outMarkDisplay {
-    color: #ffff00;
-    font-weight: bold;
-    background-color: rgba(0, 0, 0, 0.3);
-    padding: 4px;
+  width: 60px;
+  padding: 4px;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #ffff00;
+  font-weight: bold;
+  font-family: monospace;
+  text-align: center;
+}
+
+/* シークバーとタイムラインの縦並びグループ */
+.seekbar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 200px;
+}
+/* シークバー単体 */
+#editSeekBar {
+  width: 100%;
+  margin-bottom: 0;
+}
+/* タイムラインの土台 */
+#cutTimelineContainer {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  margin-top: 0;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #2a2a2a;
+  overflow: hidden;
+}
+/* タイムラインバー全体 */
+#cutTimelineBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #222;
+}
+/* タイムライン上のカット範囲ハイライト */
+.cut-range-bar {
+  position: absolute;
+  height: 100%;
+  border-inline: 1px solid #ff4444; /* border-left/right を統合 */
+  background: rgba(220, 50, 50, 0.75);
+  pointer-events: none;
+  transition: background 0.2s ease; /* ホバー時の変化を滑らかに */
+}
+.cut-range-bar:hover {
+  background: rgba(255, 80, 80, 0.9);
+}
+/* カット範囲（リスト・ハイライトバー） */
+#cutRangesContainer {
+  display: block;
+  width: 100%;
+}
+#cutRangesList {
+  overflow-y: auto;
+  background: rgba(18, 18, 18, 0.13);
+}
+/* スクロールバーのカスタマイズ（ダークテーマ用） */
+#cutRangesList::-webkit-scrollbar {
+    width: 8px;
+}
+#cutRangesList::-webkit-scrollbar-track {
+    background: #121212;
+}
+#cutRangesList::-webkit-scrollbar-thumb {
+    background: #999;
     border-radius: 4px;
-    font-family: monospace;
+}
+#cutRangesList::-webkit-scrollbar-thumb:hover {
+    background: #777;
 }
 
 /* シークバーのカラーリング */
@@ -565,39 +909,6 @@ caption {
     background: rgba(255, 0, 0, 0.2);
 }
 
-/* タイムラインバー全体 */
-#cutTimelineBar {
-    position: relative;
-    height: 24px;          /* 好みで調整 */
-    background: #222;
-    overflow: hidden;
-}
-/* カット範囲バー（既存） */
-.cut-range-bar {
-    position: absolute;
-    top: 4px;
-    height: 16px;
-    background: #e74c3c;   /* 赤系 */
-    opacity: 0.85;
-    border: 1px solid #c0392b;
-}
-/* In / Out マーカー共通 */
-.edit-in-marker,
-.edit-out-marker {
-    position: absolute;
-    width: 3px;            /* 縦線の幅（太めにすると視認性↑） */
-    height: 100%;
-    top: 0;
-}
-.marker-line {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: #ffffff;   /* 白 */
-    opacity: 0.9;
-    /* box-shadowで目立たせるのもアリ（オプション） */
-    /* box-shadow: 0 0 4px rgba(255,255,255,0.7); */
-}
 .sort-menu div {
     transition: background-color 0.15s;
 }
@@ -607,14 +918,31 @@ caption {
 .sort-menu div:active {
     background: rgba(0, 80, 180, 0.6);
 }
-#repeatPlayBtn.repeat-all {
-    background: #e63946 !important;   /* 赤系：全動画 */
+.playlist-display-menu {
+    position: absolute;
+    background: rgba(30,30,30,0.95);
+    border: 1px solid #999;
+    border-radius: 6px;
+    padding: 6px 0;
+    z-index: 1001;
+    min-width: 180px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    white-space: pre;
+    font-family: monospace;
+    line-height: 1.0;
+    font-size: 16px;
 }
-#repeatPlayBtn.repeat-single {
-    background: #f4d03f !important;   /* 黄系：１動画 */
+.playlist-display-menu div {
+    padding: 8px 16px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #eee;
 }
-#repeatPlayBtn:not(.repeat-all):not(.repeat-single) {
-    background: #007bff;              /* 青系：無効 */
+.playlist-display-menu div:hover {
+    background: rgba(0,123,255,0.2);
+}
+.playlist-display-menu div:active {
+    background: rgba(0,80,180,0.6);
 }
 /* モードアクティブ時の赤を最優先で適用 */
 .mode-active,
@@ -623,19 +951,225 @@ caption {
 #filenameMenu.mode-active,
 #urlInputBtn.mode-active,
 #zoomBtn.mode-active,
+#settingsBtn.mode-active,
 #fullscreenBtn.mode-active,
-button#modeChangeBtn.convert-active {
+button#modeChangeBtn.convert-active,
+#repeatPlayBtn.repeat-all,
+#fitModeBtn.fitMode-cover,
+#aspectRatioBtn.aspectRatio-active,
+#playPauseBtn.paused-active,
+#volumeMuteBtn.muted-active,
+#sortPlaylistBtn.sorted-active,
+#subtitleSelectBtn.subtitles-active,
+#wallpaperBtn.wallpaper-active,
+#alwaysOnTopBtn.always-on-top-active {
     background: #e63946 !important;   /* 赤系：有効 */
 }
+#repeatPlayBtn.repeat-single,
+#fitModeBtn.fitMode-fill,
+#sortPlaylistBtn.random-sorted-active {
+    background: #f4d03f !important;   /* 黄系：１動画 */
+}
+.mode-active:hover,
+#randomPlayBtn.active:hover,
+#editModeBtn.mode-active:hover,
+#filenameMenu.mode-active:hover,
+#urlInputBtn.mode-active:hover,
+#zoomBtn.mode-active:hover,
+#settingsBtn.mode-active:hover,
+#fullscreenBtn.mode-active:hover,
+button#modeChangeBtn.convert-active:hover,
+#repeatPlayBtn.repeat-all:hover,
+#fitModeBtn.fitMode-cover:hover,
+#aspectRatioBtn.aspectRatio-active:hover,
+#playPauseBtn.paused-active:hover,
+#volumeMuteBtn.muted-active:hover,
+#sortPlaylistBtn.sorted-active:hover,
+#subtitleSelectBtn.subtitles-active:hover,
+#wallpaperBtn.wallpaper-active:hover,
+#alwaysOnTopBtn.always-on-top-active:hover {
+    background: #e6394785 !important;   /* 赤系：有効 */
+}
+#repeatPlayBtn.repeat-single:hover,
+#fitModeBtn.fitMode-fill:hover,
+#sortPlaylistBtn.random-sorted-active:hover {
+    background: #f4d03f7a !important;   /* 黄系：１動画 */
+}
 
-/* 青（非アクティブ）のデフォルトも明示的に */
-button:not(.mode-active),
-#randomPlayBtn:not(.active),
-#editModeBtn:not(.mode-active),
-#filenameMenu:not(.mode-active),
-#urlInputBtn:not(.mode-active),
-#zoomBtn:not(.mode-active),
-#fullscreenBtn:not(.mode-active),
-button#modeChangeBtn:not(.convert-active) {
-    background: #007bff;              /* 青系：無効 */
+/* トグル用のトリガーボタン（リンク風） */
+.changelog-toggle {
+    display: inline-block;
+    background-color: #0066cc;
+    color: #ffffff;
+    font-size: 0.9em;
+    line-height: 1.2;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.4em 0.4em;
+    width: 99%;
+}
+
+/* 変更履歴のコンテナ（最初は非表示） */
+.changelog-container {
+    display: none;
+    height: calc(50vh - 7em); /* 縦長になりすぎないようスクロールを設定 */
+    overflow-y: auto;
+}
+
+/* スクロールバーのカスタマイズ（ダークテーマ用） */
+.changelog-container::-webkit-scrollbar {
+    width: 8px;
+}
+.changelog-container::-webkit-scrollbar-track {
+    background: #121212;
+}
+.changelog-container::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 4px;
+}
+.changelog-container::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+
+/* 履歴リストのスタイル */
+.changelog-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+}
+.changelog-list li {
+    margin-bottom: 8px;
+    border-bottom: 1px solid #2a3536;
+    padding-bottom: 6px;
+    white-space: pre-wrap; /* 改行やインデントを維持 */
+}
+/* 子要素（・付きの行）のインデントを少し下げる、または装飾用 */
+.changelog-list li.sub-item {
+    padding-left: 15px;
+    color: #b0bec5;
+    border-bottom: none;
+    padding-bottom: 2px;
+    margin-bottom: 0;
+}
+.changelog-list li:hover {
+    background-color: #404040;
+    transition: background-color 0.3s ease;
+}
+
+.track-menu,
+.aspect-ratio-menu,
+.playlist-display-menu,
+.sort-playlist-menu,
+.add-playlist-menu {
+  position: absolute;
+  background: rgba(30, 30, 30, 0.95);
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 6px 0;
+  z-index: 1001;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  white-space: pre;
+  font-family: monospace;
+  font-size: 16px;
+  line-height: 1.0;
+  min-width: 120px;
+}
+.track-menu {
+    max-height: 600px;
+    overflow-y: auto;
+}
+.track-menu::-webkit-scrollbar {
+    width: 8px;
+}
+.track-menu::-webkit-scrollbar-track {
+    background: #121212;
+}
+.track-menu::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 4px;
+}
+.track-menu::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+.menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* 親コンテナの位置調整 */
+.filter-container {
+    display: flex;
+	position: relative;
+    width: 61%;
+}
+/* カスタムドロップダウンのスタイル */
+.filter-history-dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	right: 0;
+	z-index: 1000;
+	margin: 4px 0 0 0;
+	padding: 0;
+	list-style: none;
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid #444;
+	border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+	/* ご要望の高さ・スクロール指定 */
+	max-height: 60vh;
+	overflow-y: auto;
+}
+.filter-history-dropdown::-webkit-scrollbar {
+    width: 8px;
+}
+.filter-history-dropdown::-webkit-scrollbar-track {
+    background: #121212;
+}
+.filter-history-dropdown::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 4px;
+}
+.filter-history-dropdown::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+/* 各履歴アイテムをFlexbox化して左右対比にする */
+.filter-history-dropdown li {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 4px 8px;
+	cursor: pointer;
+}
+/* ホバー時の背景色 */
+.filter-history-dropdown li:hover {
+	background-color: #404040;
+	transition: background-color 0.3s ease;
+}
+/* 履歴テキストのスタイル */
+.filter-history-dropdown li .history-text {
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	flex: 1; /* テキスト領域を広げる */
+	margin-right: 8px;
+}
+/* 削除ボタン（ゴミ箱アイコン）のスタイル */
+.filter-history-dropdown li .delete-btn {
+	font-size: 0.9em;
+	opacity: 0.6;
+	padding: 2px 4px;
+	border-radius: 3px;
+	transition: opacity 0.2s, background-color 0.2s;
+	user-select: none; /* テキスト選択防止 */
+}
+.filter-history-dropdown li .delete-btn:hover {
+	opacity: 1;
+	background-color: #e0e0e050;
+	transition: background-color 0.3s ease;
+}
+/* 非表示クラス */
+.hidden {
+	display: none !important;
 }

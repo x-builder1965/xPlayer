@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
-<!-- const copyright = 'Copyright © 2025 @x-builder, Japan'; -->
+<!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -動画プレイヤー- Ver3.57'; -->
+<!-- const appName = 'xPlayer -動画プレイヤー- Ver4.78.2'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -11,6 +11,11 @@
     <title>xPlayer -動画プレイヤー-</title>
     <link rel="icon" type="image/x-icon" href="xPlayer.ico">
     <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts の接続用 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Noto Sans JP の 400(Regular) と 900(Black) を読み込み -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;900&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="main-container">
@@ -19,56 +24,63 @@
             <video id="videoPlayer" src=""></video>
             <video id="videoPreview" src="" muted></video>
             <div id="darkOverlay"></div>
+            <div id="messageOverlay"></div>
+            <div id="iconOverlay" class="icon-overlay"></div>
             <div class="filename">
-                <div class="filename-controls">
+                <div class="filename-panel">
                     <button id="modeChangeBtn" data-tooltip="視聴モード（Ctrl+v）">🎬</button>
                     <button id="editModeBtn" data-tooltip="編集モード（Ctrl+e）">✂️</button>
                     <button id="joinPlaylistBtn" data-tooltip="結合編集（Ctrl+j）">🎞️</button>
-                    <select id="filenameDisplay" data-tooltip="再生動画リスト">
-                        <option value=""></option>
-                    </select>
+                    <input id="playlistPathArea" type="text" readonly placeholder="再生中動画パス" data-tooltip="再生中動画パス">
                     <button id="randomPlayBtn" class="play-mode-btn" data-tooltip="ランダム再生 (Ctrl+r)">🔀</button>
                     <button id="repeatPlayBtn"  class="play-mode-btn" data-tooltip="繰り返し再生 (Ctrl+Shift+r)">🔁</button>
-                    <div class="filename-menus">
-                        <span class="spacer"></span>
-                        <button id="sortPlaylistBtn" data-tooltip="並び替え（Shift+m）">📩</button>
-                        <button id="upMovePlaylistBtn" data-tooltip="上へ（Shift+p／Home）">🔼</button>
-                        <button id="downMovePlaylistBtn" data-tooltip="下へ（Shift+n／End）">🔽</button>
-                        <button id="addPlaylistBtn" data-tooltip="追加（Shift+a）">➕</button>
-                        <button id="removePlaylistBtn" data-tooltip="削除（Shift+d）">➖</button>
-                        <button id="clearPlaylistBtn" data-tooltip="クリア（Shift+c）">🆑</button>
-                        <button id="savePlaylistBtn" data-tooltip="保存（Shift+s）">💾</button>
-                    </div>
-                    <button id="filenameMenu" data-tooltip="プレイリスト編集（Ctrl+l）">📚</button>
                 </div>
-                <div class="url-controls">
+                <div class="url-input-panel">
                     <input id="urlInput" type="text" placeholder="動画のURLを入力" data-tooltip="動画のURLを入力">
-                    <button id="urlClearBtn" data-tooltip="URLクリア（Shift+C）">🆑</button>
+                    <button id="urlClearBtn" data-tooltip="URLクリア（Shift+C）">🔘</button>
                     <button id="urlConfirmBtn" data-tooltip="URL再生（Enter）">✅</button>
                 </div>
-                <div class="control-row" id="editControls" style="display:none; flex-direction: column; align-items: stretch;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
-                        <button id="setInMarkBtn" data-tooltip="インマークを設定（Shift+i）">📍←</button>
-                        <span id="inMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
-                        <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 200px;">
-                            <input type="range" id="editSeekBar" value="0" min="0" max="100" data-tooltip="カット編集位置" style="width: 100%; margin-bottom: 0;">
-                            <div id="cutTimelineContainer" style="position: relative; height: 14px; background: #333; border-radius: 4px; overflow: hidden; width: 100%; margin-top: 0;">
-                                <div id="cutTimelineBar" style="position: absolute; top: 0; left: 0; height: 100%; width: 100%;"></div>
-                            </div>
+            </div>
+            <div id="filterPanel" class="filter-panel">
+                <div class="filter-panel-header">
+                    <span id="itemCount" data-tooltip="絞込動画数/総動画数）">00,000 / 00,000</span>
+                    <div class="filter-container">
+                        <input id="playlistFilterInput" type="text" autocomplete="off" placeholder="フィルタ条件（AND:スペース区切り、OR:カンマ区切り）" data-tooltip="プレイリストを絞り込み（例：aaaa bbbb, cccc dddd）">
+                        <ul id="filterHistoryList" class="filter-history-dropdown hidden"></ul>
+                    </div>
+                    <button id="filterClearBtn" data-tooltip="フィルタ条件クリア（Shift+0）">🔘</button>
+                    <span class="spacer"></span>
+                    <button id="sortPlaylistBtn" data-tooltip="並び替え（Shift+m）">📩</button>
+                    <button id="playlistDisplayBtn" data-tooltip="表示形式（Shift+l）">📚</button>
+                    <button id="upMovePlaylistBtn" data-tooltip="上へ（Shift+p／Home）">🔼</button>
+                    <button id="downMovePlaylistBtn" data-tooltip="下へ（Shift+n／End）">🔽</button>
+                    <button id="addPlaylistBtn" data-tooltip="追加（Shift+a）">＋</button>
+                    <button id="removePlaylistBtn" data-tooltip="削除（Shift+d）">－</button>
+                    <button id="clearPlaylistBtn" data-tooltip="クリア（Shift+c）">🆑</button>
+                    <button id="savePlaylistBtn" data-tooltip="保存（Shift+s）">💾</button>
+                </div>
+                <div id="filterList" class="filter-list"></div>
+            </div>
+            <div id="editPanel" class="edit-panel">
+                <div class="edit-header">
+                    <button id="setInMarkBtn" data-tooltip="インマークを設定（Shift+i）">📍←</button>
+                    <span id="inMarkDisplay">--:--:--</span>
+                    <div class="seekbar-group">
+                        <input type="range" id="editSeekBar" value="0" min="0" max="100" data-tooltip="カット編集位置">
+                        <div id="cutTimelineContainer">
+                            <div id="cutTimelineBar"></div>
                         </div>
-                        <span id="outMarkDisplay" style="width: 60px; text-align: center;">--:--:--</span>
-                        <button id="setOutMarkBtn" data-tooltip="アウトマークを設定（Shift+o）">→📍</button>
-                        <button id="addCutRangeBtn" data-tooltip="カット設定を追加（Shift+m）">✅</button>
-                        <button id="saveVideoBtn" data-tooltip="設定したカットを適用して保存（Shift+s）">💾</button>
-                        <button id="clearEditBtn" data-tooltip="編集を全クリア（Shift+c）">🆑</button>
                     </div>
-                    <div id="cutRangesContainer" style="display:block; width:100%;">
-                        <div id="cutRangesList" style="max-height:400px; overflow:auto; background:#12121222;"></div>
-                    </div>
+                    <span id="outMarkDisplay">--:--:--</span>
+                    <button id="setOutMarkBtn" data-tooltip="アウトマークを設定（Shift+o）">→📍</button>
+                    <button id="addCutRangeBtn" data-tooltip="カット設定を追加（Shift+m）">✅</button>
+                    <button id="saveVideoBtn" data-tooltip="設定したカットを適用して保存（Shift+s）">💾</button>
+                    <button id="clearEditBtn" data-tooltip="編集を全クリア（Shift+c）">🆑</button>
+                </div>
+                <div id="cutRangesContainer">
+                    <div id="cutRangesList"></div>
                 </div>
             </div>
-            <div id="overlayDisplay"></div>
-            <div id="iconOverlay" class="icon-overlay"></div>
             <div class="controls">
                 <div class="control-row">
                     <div class="left-controls">
@@ -78,19 +90,20 @@
                         <span class="spacer"></span>
                         <button id="prevVideoBtn" data-tooltip="前の動画へ（PgUp）">⏮️</button>
                         <button id="rewindBtn" data-tooltip="30秒戻る（Ctrl+←）">⏪</button>
-                        <button id="playStopBtn" data-tooltip="停止（Ctrl+Space／Ctrl+Right Click）">⏹️</button>
                         <button id="playPauseBtn" data-tooltip="再生（Space／Right Click）">▶️</button>
+                        <button id="playStopBtn" data-tooltip="停止（Ctrl+Space／Ctrl+Right Click）">⏹️</button>
                         <button id="fastForwardBtn" data-tooltip="30秒進む（Ctrl+→）">⏩</button>
                         <button id="nextVideoBtn" data-tooltip="次の動画へ（PgDw）">⏭️</button>
                         <span class="spacer"></span>
-                        <button id="fitModeBtn" data-tooltip="横に合わせる（Ctrl+x）">↔️</button>
-                        <button id="zoomBtn" data-tooltip="ズームモード（Ctrl+w）">🔍</button>
-                        <button id="fullscreenBtn" data-tooltip="フルスクリーン表示（Ctrl+a／Double Click）">🖥️</button>
+                        <button id="settingsBtn" data-tooltip="設定モード開始（Ctrl+q）">⚙️</button>
+                        <button id="zoomBtn" data-tooltip="ズームモード開始（Ctrl+z）">🔍</button>
                         <button id="helpOpenBtn" data-tooltip="ヘルプ開く（Ctrl+h）">❔</button>
                     </div>
                     <label class="app-name-and-copyright" id="appNameAndCopyright"></label>
                 </div>
                 <div class="control-row">
+                    <button id="voiceSelectBtn" data-tooltip="音声選択（Ctrl+t）">🎤</button>
+                    <button id="subtitleSelectBtn" data-tooltip="字幕選択（Ctrl+t）">🔠</button>
                     <button id="volumeMuteBtn" data-tooltip="ミュート（Ctrl+m）">🔊</button>
                     <span id="volumeDisplay" data-tooltip="音量（↑↓／Swipe Up Down／Wheel）">20%</span>
                     <input type="range" id="volumeBar" value="0.2" min="0" max="1" step="0.01" data-tooltip="音量変更（↑↓／Swipe Up Down）">
@@ -103,25 +116,38 @@
                         <option value="1.50">1.50x</option>
                         <option value="1.75">1.75x</option>
                         <option value="2.00">2.00x</option>
+                        <option value="2.50">2.50x</option>
+                        <option value="3.00">3.00x</option>
+                        <option value="5.00">5.00x</option>
                     </select>
                     <span id="timeDisplay" data-tooltip="再生時間/動画時間（←→／Swipe Left Right）">0:00:00 / 0:00:00</span>
                     <input type="range" id="seekBar" value="0" min="0" max="100" data-tooltip="再生位置変更（←→／Swipe Left Right）">
                 </div>
             </div>
-            <div id="zoomPanel" style="display:none;">
+            <div id="settingsPanel" class="settings-panel">
+                <button id="fullscreenBtn" data-tooltip="フルスクリーン表示（Ctrl+a／Double Click）">🖥️</button>
+                <button id="wallpaperBtn" data-tooltip="背景壁紙（Ctrl+p）">🖼️</button>
+                <button id="alwaysOnTopBtn" data-tooltip="常に最前面を設定（Ctrl+1）">🔝</button>
+                <button id="importSettingsBtn" data-tooltip="設定インポート（Ctrl+i）">📥</button>
+                <button id="exportSettingsBtn" data-tooltip="設定エクスポート（Ctrl+o）">📤</button>
+                <button id="settingsCloseBtn" data-tooltip="設定モード終了（Ctrl+q）">❌</button>
+            </div>
+            <div id="zoomPanel">
                 <button id="zoomResetBtn" data-tooltip="ズームリセット（Ctrl+0）">🔘</button>
+                <button id="aspectRatioBtn" data-tooltip="アスペクト比設定（Ctrl+u）">📺</button>
+                <button id="fitModeBtn" data-tooltip="画像を含む（Ctrl+x）">↔️</button>
                 <button id="snapshotBtn" data-tooltip="スナップショット（Ctrl+s）">📷</button>
                 <input type="range" id="zoomBar" value="0" min="-100" max="500" step="5" data-tooltip="ズーム調整">
                 <span id="zoomDisplay">0%</span>
-                <button id="zoomEndBtn" data-tooltip="ズーム終了（Ctrl+z）">❌</button>
+                <button id="zoomEndBtn" data-tooltip="ズームモード終了（Ctrl+z）">❌</button>
             </div>
         </div>
         <div class="help-container">
             <div class="header-row">
-                <h1>xPlayer -動画プレイヤー- Ver3.28</h1>
+                <h1>xPlayer -動画プレイヤー-</h1>
                 <button id="helpCloseBtn" data-tooltip="ヘルプ閉じる（Escape）">❌</button>
             </div>
-            <div class="table-container">
+            <div id="tableContainer" class="table-container">
                 <table class="header-table">
                     <caption>機能別コントロール・キー操作・マウス操作対応表</caption>
                     <colgroup class="colgroup">
@@ -144,7 +170,7 @@
                         </colgroup>
                         <tbody>
                             <tr>
-                                <td class="sub-title">プレイリストパネル</td>
+                                <td class="sub-title">🎬 プレイ動画パネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
                                 <td class="mouse sub-title"></td>
@@ -162,21 +188,21 @@
                                 <td class="icon">✂️</td>
                                 <td class="key">Ctrl+e</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・カット編集モードの開始（青）／終了（赤）。</td>
+                                <td class="note">・カット編集モードの開始（青）／終了（赤）。<br>※音声：１トラックのみ残します。字幕：欠損します。</td>
                             </tr>
                             <tr>
                                 <td>　・動画結合</td>
                                 <td class="icon">🎞️</td>
                                 <td class="key">Ctrl+j</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリスト内の動画を結合。</td>
+                                <td class="note">・プレイリスト内の動画を結合。<br>※音声：１トラックのみ残します。字幕：欠損します。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト</td>
-                                <td class="icon">Drop-down list</td>
-                                <td class="key no-data">なし</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリスト内の動画選択再生。</td>
+                                <td>　・再生中動画パス</td>
+                                <td class="icon">Text Box</td>
+                                <td class="key">Ctrl+g</td>
+                                <td class="mouse">Click</td>
+                                <td class="note">・フィルタリストパネルの表示／非表示を切り替えます。</td>
                             </tr>
                             <tr>
                                 <td>　・ランダム再生</td>
@@ -193,14 +219,91 @@
                                 <td class="note">・プレイリスト内の動画を繰り返し再生。🔁（青）：繰返無効／🔁（赤）：全動画繰返／🔂（黄）：１動画繰返。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト編集切替</td>
-                                <td class="icon">📚</td>
-                                <td class="key">Ctrl+l</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリスト編集を開始（青）／終了（赤）。</td>
+                                <td class="sub-title">📚 プレイリストパネル</td>
+                                <td class="icon sub-title"></td>
+                                <td class="key sub-title"></td>
+                                <td class="mouse sub-title"></td>
+                                <td class="note sub-title"></td>
                             </tr>
                             <tr>
-                                <td class="sub-title">コントロールパネル</td>
+                                <td>　・フィルタ条件入力</td>
+                                <td class="icon">Text Box</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・フィルタ条件にスペース区切り（AND）、カンマ区切り（OR）で複数語句を入力。</td>
+                            </tr>
+                            <tr>
+                                <td>　・フィルタ条件クリア</td>
+                                <td class="icon">🔘</td>
+                                <td class="key">Shift+0</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・フィルタ条件をクリア。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト並び替え</td>
+                                <td class="icon">📩</td>
+                                <td class="key">Shift+m</td>
+                                <td class="mouse">Popup Menu</td>
+                                <td class="note">・プレイリストを並び替え（（なし）／動画パス▲／動画パス▼／作成日時▲／作成日時▼／（ランダム））。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト表示形式変更</td>
+                                <td class="icon">📚</td>
+                                <td class="key">Shift+l</td>
+                                <td class="mouse">Popup Menu</td>
+                                <td class="note">・プレイリストの表示形式を変更（リスト／サムネイル＋リスト／サムネイル小・中・大）。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 上へ移動</td>
+                                <td class="icon">🔼</td>
+                                <td class="key">Shift+p</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択動画を上へ移動。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 下へ移動</td>
+                                <td class="icon">🔽</td>
+                                <td class="key">Shift+n</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択動画を下へ移動。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 動画追加</td>
+                                <td class="icon">＋</td>
+                                <td class="key">Shift+a</td>
+                                <td class="mouse">Popup Menu</td>
+                                <td class="note">・プレイリストの選択位置に選択した動画・プレイリスト内の動画を追加。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 動画削除</td>
+                                <td class="icon">－</td>
+                                <td class="key">Shift+d</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの選択位置の動画を削除。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 クリア</td>
+                                <td class="icon">🆑</td>
+                                <td class="key">Shift+c</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの全動画をクリア。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト編集 保存</td>
+                                <td class="icon">💾</td>
+                                <td class="key">Shift+s</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストを名前をつけて保存。</td>
+                            </tr>
+                            <tr>
+                                <td>　・プレイリスト</td>
+                                <td class="icon">List</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse">Click／Double Click</td>
+                                <td class="note">・クリック：プレイリスト内の動画を選択。／ダブルクリック：選択した動画を再生。</td>
+                            </tr>
+                            <tr>
+                                <td class="sub-title">🛠️ コントロールパネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
                                 <td class="mouse sub-title"></td>
@@ -242,18 +345,18 @@
                                 <td class="note">・再生中のまたは一時停止中動画を30秒前に戻す。</td>
                             </tr>
                             <tr>
+                                <td>　・再生／一時停止</td>
+                                <td class="icon">▶️／⏸️</td>
+                                <td class="key">Space</td>
+                                <td class="mouse">Right Click</td>
+                                <td class="note">・プレイリストで選択中の動画を▶️再生（再開）（青）または再生中の動画を⏸️一時停止（赤）。</td>
+                            </tr>
+                            <tr>
                                 <td>　・停止</td>
                                 <td class="icon">⏹️</td>
                                 <td class="key">Ctrl+Space</td>
                                 <td class="mouse">Ctrl+Right Click</td>
                                 <td class="note">・再生中の動画を停止。再開時は先頭から再生。</td>
-                            </tr>
-                            <tr>
-                                <td>　・再生／一時停止</td>
-                                <td class="icon">▶️／⏸️</td>
-                                <td class="key">Space</td>
-                                <td class="mouse">Right Click</td>
-                                <td class="note">・プレイリストで選択中の動画を再生（再開）または再生中の動画を一時停止。</td>
                             </tr>
                             <tr>
                                 <td>　・30秒進む</td>
@@ -270,11 +373,11 @@
                                 <td class="note">・プレイリストの再生中動画の次動画を再生。Endで最後へ移動。</td>
                             </tr>
                             <tr>
-                                <td>　・横に合わせる／縦に合わせる</td>
-                                <td class="icon">↔️／↕️</td>
-                                <td class="key">Ctrl+x</td>
+                                <td>　・設定モード切替</td>
+                                <td class="icon">⚙️</td>
+                                <td class="key">Ctrl+q</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・再生動画を画面の横幅または縦幅に合わせて拡大・縮小。</td>
+                                <td class="note">・設定モードの開始（青）／終了（赤）。</td>
                             </tr>
                             <tr>
                                 <td>　・ズームモード切替</td>
@@ -284,13 +387,6 @@
                                 <td class="note">・ズームモードの開始（青）／終了（赤）。</td>
                             </tr>
                             <tr>
-                                <td>　・フルスクリーン表示／解除</td>
-                                <td class="icon">🖥️</td>
-                                <td class="key">Ctrl+a</td>
-                                <td class="mouse">Double Click</td>
-                                <td class="note">・プレイヤーのフルスクリーン表示（青）またはウィンドウ表示（赤）を切り替える。</td>
-                            </tr>
-                            <tr>
                                 <td>　・ヘルプ開く</td>
                                 <td class="icon">❔</td>
                                 <td class="key">Ctrl+h</td>
@@ -298,11 +394,18 @@
                                 <td class="note">・プレイヤーの操作説明（当画面）を開く。</td>
                             </tr>
                             <tr>
+                                <td>　・字幕／音声選択</td>
+                                <td class="icon">🔠／🎤</td>
+                                <td class="key">Ctrl+t</td>
+                                <td class="mouse">Popup Menu</td>
+                                <td class="note">・再生モード：字幕メニュー表示、変換モード：音声メニュー表示<br>※字幕表示には事前に変換処理が必要</td>
+                            </tr>
+                            <tr>
                                 <td>　・ミュート設定／解除</td>
                                 <td class="icon">🔇／🔊</td>
                                 <td class="key">Ctrl+m</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・再生中の動画の音声をミュートまたはミュート解除を切り替える。</td>
+                                <td class="note">・再生中の動画の音声を🔇ミュート（赤）または🔊ミュート解除（青）を切り替える。</td>
                             </tr>
                             <tr>
                                 <td>　・音量変更</td>
@@ -316,7 +419,7 @@
                                 <td class="icon">Drop-down list</td>
                                 <td class="key">Ctrl+.／Ctrl+,</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・再生速度を0.25×〜2.0×の間で変更できます。</td>
+                                <td class="note">・再生速度を0.25×〜5.0×の間で変更できます。</td>
                             </tr>
                             <tr>
                                 <td>　・再生時間変更</td>
@@ -326,49 +429,7 @@
                                 <td class="note">・シークバーの操作でプレビュー表示、再生時間を変更。</td>
                             </tr>
                             <tr>
-                                <td class="sub-title">ズームパネル</td>
-                                <td class="icon sub-title"></td>
-                                <td class="key sub-title"></td>
-                                <td class="mouse sub-title"></td>
-                                <td class="note sub-title"></td>
-                            </tr>
-                            <tr>
-                                <td>　・サイズ・移動のリセット</td>
-                                <td class="icon">🔘</td>
-                                <td class="key">Ctrl+0</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・画像のサイズと移動位置をリセット。</td>
-                            </tr>
-                            <tr>
-                                <td>　・スナップショット</td>
-                                <td class="icon">📷</td>
-                                <td class="key">Ctrl+s</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・スナップショットをクリップボード登録。</td>
-                            </tr>
-                            <tr>
-                                <td>　・ズーム変更</td>
-                                <td class="icon">Slider</td>
-                                <td class="key">Ctrl+↑／Ctrl+↓</td>
-                                <td class="mouse">Wheel Up／Wheel Down</td>
-                                <td class="note">・ズームバーの操作で画像を拡大（Ctrl+↑）・縮小（Ctrl+↓）。</td>
-                            </tr>
-                            <tr>
-                                <td>　・画像移動</td>
-                                <td class="icon">Video</td>
-                                <td class="key no-data">なし</td>
-                                <td class="mouse">Drag</td>
-                                <td class="note">・画像を上下左右に移動。</td>
-                            </tr>
-                            <tr>
-                                <td>　・ズームモード終了</td>
-                                <td class="icon">❌</td>
-                                <td class="key">Ctrl+z</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・ズームモードの終了。</td>
-                            </tr>
-                            <tr>
-                                <td class="sub-title">ネット動画再生（🌐）</td>
+                                <td class="sub-title">🌐 ネット動画再生パネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
                                 <td class="mouse sub-title"></td>
@@ -383,7 +444,7 @@
                             </tr>
                             <tr>
                                 <td>　・ネット動画URLクリア</td>
-                                <td class="icon">🆑</td>
+                                <td class="icon">🔘</td>
                                 <td class="key">Shift+c</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・ネット動画URLをクリア。</td>
@@ -396,7 +457,7 @@
                                 <td class="note">・YouTube・Twichなどの動画をポップアウトで再生。</td>
                             </tr>
                             <tr>
-                                <td class="sub-title">動画カット編集（✂️）</td>
+                                <td class="sub-title">✂️ 動画カット編集パネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
                                 <td class="mouse sub-title"></td>
@@ -438,63 +499,112 @@
                                 <td class="note">・カット編集を全クリア。</td>
                             </tr>
                             <tr>
-                                <td class="sub-title">プレイリスト編集（📚）</td>
+                                <td class="sub-title">⚙️ 設定パネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
                                 <td class="mouse sub-title"></td>
                                 <td class="note sub-title"></td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト並び替え</td>
-                                <td class="icon">📩</td>
-                                <td class="key">Shift+m</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストを並び替え（（なし）／動画パス▲／動画パス▼／作成日時▲／作成日時▼／（ランダム））。</td>
+                                <td>　・フルスクリーン表示／解除</td>
+                                <td class="icon">🖥️</td>
+                                <td class="key">Ctrl+a</td>
+                                <td class="mouse">Double Click</td>
+                                <td class="note">・プレイヤーのフルスクリーン表示（青）またはウィンドウ表示（赤）を切り替える。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト編集 上へ移動</td>
-                                <td class="icon">🔼</td>
-                                <td class="key">Shift+p</td>
+                                <td>　・背景壁紙設定</td>
+                                <td class="icon">🖼️</td>
+                                <td class="key">Ctrl+p</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択動画を上へ移動。</td>
+                                <td class="note">・プレイヤーの背景壁紙を設定する。ダイアログのキャンセル選択で背景壁紙を解除。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト編集 下へ移動</td>
-                                <td class="icon">🔽</td>
-                                <td class="key">Shift+n</td>
+                                <td>　・常に最前面</td>
+                                <td class="icon">🔝</td>
+                                <td class="key">Ctrl+1</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択動画を下へ移動。</td>
+                                <td class="note">・プレイヤーを常に最前面に表示／非表示する。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト編集 動画追加</td>
-                                <td class="icon">➕</td>
-                                <td class="key">Shift+a</td>
+                                <td>　・設定インポート</td>
+                                <td class="icon">📥</td>
+                                <td class="key">Ctrl+i</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの最後に選択した動画・プレイリスト内の動画を追加。</td>
+                                <td class="note">・プレイヤーの設定をインポートし画面を復元する。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト編集 動画削除</td>
-                                <td class="icon">➖</td>
-                                <td class="key">Shift+d</td>
+                                <td>　・設定エクスポート</td>
+                                <td class="icon">📤</td>
+                                <td class="key">Ctrl+o</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択位置の動画を削除。</td>
+                                <td class="note">・プレイヤーの設定をエクスポートする。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト編集 クリア</td>
-                                <td class="icon">🆑</td>
-                                <td class="key">Shift+c</td>
+                                <td>　・設定モード終了</td>
+                                <td class="icon">❌</td>
+                                <td class="key">Ctrl+q</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの全動画をクリア。</td>
+                                <td class="note">・設定モードの終了。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト編集 保存</td>
-                                <td class="icon">💾</td>
-                                <td class="key">Shift+s</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストを名前をつけて保存。</td>
+                                <td class="sub-title">🔍 ズームパネル</td>
+                                <td class="icon sub-title"></td>
+                                <td class="key sub-title"></td>
+                                <td class="mouse sub-title"></td>
+                                <td class="note sub-title"></td>
                             </tr>
                             <tr>
-                                <td class="sub-title">その他操作</td>
+                                <td>　・サイズ・移動のリセット</td>
+                                <td class="icon">🔘</td>
+                                <td class="key">Ctrl+0</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・画像のサイズと移動位置をリセット。</td>
+                            </tr>
+                            <tr>
+                                <td>　・アスペクト比設定</td>
+                                <td class="icon">📺</td>
+                                <td class="key">Ctrl+u</td>
+                                <td class="mouse">Popup Menu</td>
+                                <td class="note">・アスペクト比を「4:3 旧テレビ、16:9 テレビ、18:9 テレビ、21:9 シネマ、9:16 スマホ」で設定。</td>
+                            </tr>
+                            <tr>
+                                <td>　・描画モード切替</td>
+                                <td class="icon">↔️/↕️/⏺️</td>
+                                <td class="key">Ctrl+x</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・再生動画の拡大・縮小。↔️：動画を含む（青）、↕️：動画を覆う（赤）、⏺️：動画を満たす（黄）</td>
+                            </tr>
+                            <tr>
+                                <td>　・スナップショット</td>
+                                <td class="icon">📷</td>
+                                <td class="key">Ctrl+s</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・スナップショットをクリップボード登録。</td>
+                            </tr>
+                            <tr>
+                                <td>　・ズーム変更</td>
+                                <td class="icon">Slider</td>
+                                <td class="key">Ctrl+↑／Ctrl+↓</td>
+                                <td class="mouse">Wheel Up／Wheel Down</td>
+                                <td class="note">・ズームバーの操作で画像を拡大（Ctrl+↑）・縮小（Ctrl+↓）。</td>
+                            </tr>
+                            <tr>
+                                <td>　・画像移動</td>
+                                <td class="icon">Video</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse">Drag</td>
+                                <td class="note">・画像を上下左右に移動。</td>
+                            </tr>
+                            <tr>
+                                <td>　・ズームモード終了</td>
+                                <td class="icon">❌</td>
+                                <td class="key">Ctrl+z</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・ズームモードの終了。</td>
+                            </tr>
+                            <tr>
+                                <td class="sub-title">🎁 その他操作</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
                                 <td class="mouse sub-title"></td>
@@ -505,25 +615,286 @@
                                 <td class="icon no-data">なし</td>
                                 <td class="key">Ctrl+c</td>
                                 <td class="mouse">Click</td>
-                                <td class="note">・プレイリストパネル・コントロールパネル表示／非表示。（3秒で自動非表示）</td>
+                                <td class="note">・プレイ動画パネル・コントロールパネル表示／非表示。（3秒で自動非表示）</td>
+                            </tr>
+                            <tr>
+                                <td>　・再描画（リロード）</td>
+                                <td class="icon no-data">なし</td>
+                                <td class="key">F5</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・画面を再描画（リロード）。</td>
                             </tr>
                             <tr>
                                 <td>　・関連付け再生</td>
                                 <td class="icon no-data">なし</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・エクスプローラで動画、プレイリストの選択で再生。</td>
+                                <td class="note">・エクスプローラで動画、プレイリストファイルのダブルクリックで再生。</td>
                             </tr>
                             <tr>
                                 <td>　・ドラッグ＆ドロップ再生</td>
                                 <td class="icon no-data">なし</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・フォルダ、動画ファイル、プレイリストのドラッグ＆ドロップで再生。</td>
+                                <td class="note">・フォルダ、動画ファイル、プレイリストファイルのドラッグ＆ドロップで再生。Ctrlキー＋でリスト追加。</td>
+                            </tr>
+                            <tr>
+                                <td>　・アプリ起動時の前回動画再生</td>
+                                <td class="icon no-data">なし</td>
+                                <td class="key no-data">なし</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・アプリ起動時に前回終了した動画を継続して再生。その他設定オプションも継続設定。</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+            </div>
+            <div id="changelogBtn" class="changelog-toggle">▶ 変更履歴</div>
+            <div id="changelogContent" class="changelog-container">
+                <ul class="changelog-list">
+                    <li>2026-08-05 Ver4.78.2 ツールチップの表示タイミングを改善。</li>
+                    <li>2026-08-04 Ver4.77.2 背景壁紙（🖼️）の設定中の背景色を変更。</li>
+                    <li>2026-08-04 Ver4.76.2 ツールチップの非表示タイミングを改善。</li>
+                    <li>2026-08-04 Ver4.75.2 画面の常に前面表示機能を追加。</li>
+                    <li>2026-08-03 Ver4.74.2 プレイリストのフィルタ履歴数上限を変更。</li>
+                    <li>2026-08-03 Ver4.73.2 設定のインポート・エクスポート機能の追加。</li>
+                    <li>2026-08-03 Ver4.72.2 ツールチップの表示挙動の改善。</li>
+                    <li>2026-08-03 Ver4.71.2 設定パネルを追加。</li>
+                    <li>2026-08-02 Ver4.70.2 フィルタ条件のクリアタイミングの見直し。</li>
+                    <li>2026-08-02 Ver4.69.2 プレイリストの描画が乱れる問題の対応。</li>
+                    <li>2026-08-01 Ver4.68.2 フィルタ条件クリア後のフォーカス設定。</li>
+                    <li>2026-08-01 Ver4.67.2 不要なasync指定の削除。</li>
+                    <li>2026-07-31 Ver4.66.2 プレイリストのスクロールタイミング調整。</li>
+                    <li>2026-07-31 Ver4.65.2 再瀬中動画パスの横スクロール機能追加。</li>
+                    <li>2026-07-31 Ver4.64.2 フォント依存しないボタンサイズの統一化。</li>
+                    <li>2026-07-30 Ver4.63.2 フィルタ履歴の機能改善。</li>
+                    <li>2026-07-29 Ver4.62.2 ポップアップメニューのスタイルをCSS共通化。</li>
+                    <li>2026-07-26 Ver4.61.2 F5キー（リロード）機能追加。</li>
+                    <li>2026-07-25 Ver4.60.2 新規プレイリスト設定時の並び替えの強制（なし）設定を廃止。</li>
+                    <li>2026-07-24 Ver4.59.2 プレイリストのダブルクリック時の誤選択防止。</li>
+                    <li>2026-07-24 Ver4.58.2 プレイリストのサムネイル取得失敗時の対応。</li>
+                    <li>2026-07-24 Ver4.57.2 並び替え（📩）の不要な処理を削除。</li>
+                    <li>2026-07-21 Ver4.56.2 プレイリスト追加（ドラック＆ドロップ時も含む）時重複動画パスを除外。</li>
+                    <li>2026-07-21 Ver4.55.2 ポッポアップメニュー非表示処理の共通化。</li>
+                    <li>2026-07-21 Ver4.54.2 Ctrlキー＋ドラック＆ドロップでプレイリスト追加の機能追加。</li>
+                    <li>2026-07-21 Ver4.53.2 プレイリスト描画のスピード改善。</li>
+                    <li>2026-07-21 Ver4.52.2 引数あり起動、ドラッグ＆ドロップ、フォルダ・ファイル選択時のプレイリスト描画。</li>
+                    <li>2026-07-20 Ver4.51.2 ネット動画入力表示（🌐）クリックで動画サイトをポップアップしたらクリップボードをクリア。</li>
+                    <li>2026-07-20 Ver4.50.2 プレイリスト表示形式がリスト・サムネイル＋リスト時のグループヘッダ表示機能追加。</li>
+                    <li>2026-07-20 Ver4.49.2 マウスカーソル非表示制御の改善。</li>
+                    <li>2026-07-19 Ver4.48.2 プレイリストの表示形式のサムネイル小・中・大の動画フォルダ別・作成日時別表示。</li>
+                    <li>2026-07-19 Ver4.47.2 プレイリストの表示形式変更機能を追加。</li>
+                    <li>2026-06-26 Ver4.46.2 再生モード／変換モード切替不可メッセージ追加。</li>
+                    <li>2026-06-24 Ver4.45.2 ヘルプの見た目を改善。</li>
+                    <li>2026-06-24 Ver4.44.2 カット編集パネルのサイズ変更対応の強化。</li>
+                    <li>2026-06-24 Ver4.43.2 プレイ動画パネル、コントロールパネルの自動非表示不良の対応。</li>
+                    <li>2026-06-24 Ver4.42.2 音量表示のサイズ固定。</li>
+                    <li>2026-06-24 Ver4.41.2 プレイリストのサイズ計算を改善。</li>
+                    <li>2026-06-24 Ver4.40.2 各パネルのコントロール名修正。</li>
+                    <li>2026-06-24 Ver4.39.2 カット編集パネルをプレイリストから分離。</li>
+                    <li>2026-06-24 Ver4.38.2 カット編集パネル表示とプレイリスト表示の同時表示を抑止。</li>
+                    <li>2026-06-23 Ver4.37.2 messageOverlayのサイズ計算方法を改善。</li>
+                    <li>2026-06-23 Ver4.36.2 カット編集パネル表示とズームパネル表示の同時表示を抑止。</li>
+                    <li>2026-06-23 Ver4.35.2 カット編集パネルのシークバーのサイズ変更不良の対応。</li>
+                    <li>2026-06-22 Ver4.34.2 プレイ動画パネルのコントロールサイズ変更不良の対応。</li>
+                    <li>2026-06-22 Ver4.33.2 ネット動画Urlクリアのアイコンを🆑→🔘に変更。</li>
+                    <li>2026-06-22 Ver4.32.2 ヘルプ見た目調整。ズームバーのサイズ調整。</li>
+                    <li>2026-06-20 Ver4.31.2 ドラッグ＆ドロップ再生・関連付け再生時の並び替えボタン初期化。</li>
+                    <li>2026-06-20 Ver4.30.2 再生停止中の動画選択で音声トラック・字幕トラックの取得処理を追加。</li>
+                    <li>2026-06-20 Ver4.29.2 編集モード切替時のプレイリスト空判定不良の対応。</li>
+                    <li>2026-06-19 Ver4.28.2 [変更履歴]をヘルプに追加。</li>
+                    <li>2026-06-19 Ver4.27.2 イメージ字幕（字幕ファイル出力（vtt）不能）のエラー対応。</li>
+                    <li>2026-06-18 Ver4.26.2 ロジック見直しによる細かな不具合修正と安定性向上。</li>
+                    <li>2026-06-18 Ver4.25.2 繰り返し再生（🔁／🔂）時の変換処理（🔄️）の挙動を見直し。</li>
+                    <li>2026-06-17 Ver4.24.2 アスペクト比設定（📺）と描画モード（↔️／↕️／⏺️）の配置を入替。</li>
+                    <li>2026-06-17 Ver4.23.2 変換処理（🔄️）でプレイリストの管理不良により変換処理が終了しなくなる不具合を修正。</li>
+                    <li>2026-06-17 Ver4.22.2 一時停止（⏸️）、ミュート（🔇）、並び替え（📩）、字幕選択（🔠）の背景色を（赤・黄）に変更。</li>
+                    <li>2026-06-16 Ver4.21.2 ポップアップメニュー表示中のボタンクリックでメニューを閉じるように変更。</li>
+                    <li>2026-06-16 Ver4.20.2 プレイリストのフィルタ指定方法の改善。</li>
+                    <li>2026-06-16 Ver4.19.2 ズームパネル内のツールチップの位置調整。</li>
+                    <li>2026-06-16 Ver4.18.2 アスペクト比設定（📺）の背景色を変更。</li>
+                    <li>2026-06-16 Ver4.17.2 フィルタリスト表示とズームパネル表示の同時表示を抑止。</li>
+                    <li>2026-06-15 Ver4.16.2 ズームパネルのリセット対象に描画モードを追加。</li>
+                    <li>2026-06-15 Ver4.15.2 フルスクリーン時、アスペクト比設定（📺）のメニューが表示されない問題の対応。</li>
+                    <li>2026-06-15 Ver4.14.2 描画モードの切替（↔️／↕️／⏺️）の機能見直し。</li>
+                    <li>2026-06-15 Ver4.13.2 アスペクト比設定（📺）機能追加。</li>
+                    <li>2026-06-12 Ver4.12.2 プレイリストの並び替え（📩）の「（なし）」クリック時の動作不良対応。</li>
+                    <li>2026-06-12 Ver4.11.2 プレイリスト編集 追加（＋）に「フォルダ選択」機能を追加。</li>
+                    <li>2026-06-11 Ver4.10.2 再生速度に2.5, 3.0, 5.0を追加。</li>
+                    <li>2026-06-01 Ver4.09.2 プレイリスト編集 追加（➕→＋）、削除（➖→ー）のアイコンを変更。</li>
+                    <li>2026-06-01 Ver4.08.2 再生中動画パスを折り返し無効に変更。</li>
+                    <li>2026-06-01 Ver4.07.2 フィルタパネルの見た目の改善。</li>
+                    <li>2026-06-01 Ver4.06.2 Homeキー入力時の挙動不良対応。</li>
+                    <li>2026-06-01 Ver4.05.2 動画のURLの入力中、フィルタ条件入力中はショートカット無効に変更。</li>
+                    <li>2026-05-31 Ver4.04.2 プレイリスト編集 追加（➕）に「選択行に追加」「選択行の下に追加」機能追加。</li>
+                    <li>2026-05-31 Ver4.03.2 再生停止（⏹️）クリックで再生時間を０にリセット。</li>
+                    <li>2026-05-31 Ver4.02.2 再生停止（⏹️）クリック後の動画再生（▶️）の不良対応。</li>
+                    <li>2026-05-30 Ver4.01.2 動画再生中にランダム再生（🔀）をONにしたとき、現在再生中の動画がシャッフル後の先頭に来るように変更。</li>
+                    <li>2026-05-30 Ver4.00.2 フィルタリストパネルに件数表示を追加。</li>
+                    <li>■■■ コンセプト変更 ■■■</li>
+                    <li>2026-05-30 Ver3.99.2 プレイリスト編集 追加（➕）の挿入位置を最終行→選択行に変更。</li>
+                    <li>2026-05-30 Ver3.98.2 プレイリストの並び替え実施後、選択動画の位置に現在再生中の動画行の位置を設定しスクロールするように変更。</li>
+                    <li>2026-05-30 Ver3.97.2 プレイリストの操作方法の見直し。</li>
+                    <li>2026-05-30 Ver3.96.2 プレイリスト編集メニュー（📚）の廃止と各編集ボタン（📩🔼🔽➕➖🆑💾🆑）の配置変更。</li>
+                    <li>2026-05-29 Ver3.95.2 フィルタ条件の改善。（スペースで区切られた複数語句のAND条件対応、フィルタ条件の履歴管理とlocalStrage保存・復元）</li>
+                    <li>2026-05-29 Ver3.94.2 フィルタ条件クリア後、再生中アイテムの位置にスクロールする。</li>
+                    <li>2026-05-29 Ver3.93.2 フィルタリスト内の行数に合わせてフィルタリストパネルの高さを動的に調整。</li>
+                    <li>2026-05-29 Ver3.92.2 並び替えメニュー選択時の挙動不正対応。</li>
+                    <li>2026-05-28 Ver3.91.2 プレイリストをフィルタリストに統合する。</li>
+                    <li>2026-05-28 Ver3.90.2 フィルタリストパネルとカット編集パネルの同時表示を抑止。</li>
+                    <li>2026-05-28 Ver3.89.2 フィルタリストパネルの位置調整（編集コントロールの有無で位置を変える）。</li>
+                    <li>2026-05-28 Ver3.88.2 プレイリストのフィルタ機能（▼）追加。</li>
+                    <li>2026-03-31 Ver3.87.2 ZoomPanelの枠線削除。</li>
+                    <li>2026-03-31 Ver3.86.2 縦ドラック時の音量調整。</li>
+                    <li>2026-03-31 Ver3.85.2 ボタンのスタイル（色）見直し。</li>
+                    <li>2026-03-30 Ver3.84.2 動画変換の一時ファイル削除処理見直し。</li>
+                    <li>2026-03-30 Ver3.83.2 背景壁紙（🖼️）の取り込み機能追加。</li>
+                    <li>2026-03-28 Ver3.82.2 動画変換時の一時フォルダを%AppData\Local\Tempに現行。</li>
+                    <li>2026-03-28 Ver3.81.2 動画変換中の進捗表示改善・一時ファイル削除不良対応。</li>
+                    <li>2025-03-25 Ver3.80.2 字幕メニュー選択時の字幕ファイルなし警告表示。</li>
+                    <li>2026-03-19 Ver3.79.2 動画結合の「結合中… xxxx%」の異常値表示対応。（mainブランチ差分取り込み）</li>
+                    <li>2026-03-19 Ver3.78.2 再生速度の復元不良、不要ロジックの見直し。（mainブランチ差分取り込み）</li>
+                    <li>2026-03-24 Ver3.77.2 字幕メニューの項目表記見直し。</li>
+                    <li>2026-03-24 Ver3.76.2 字幕なし動画に前再生中の動画の字幕が表示される問題対応。</li>
+                    <li>2026-03-24 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step5完了）</li>
+                    <li>2026-03-22 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step3･4完了）</li>
+                    <li>2026-03-22 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step2完了）</li>
+                    <li>2026-03-19 Ver3.75.2 🎤音声トラック・🔠字幕トラックの関連機能（外部音声ファイル版）追加。（Step1完了）</li>
+                    <li>2026-03-19 Ver3.74.2 動画変換（🔄️）mp4→mp4変換、字幕切出など追加。</li>
+                    <li>2026-03-19 Ver3.73.1 コントロールパネル、プレイリストパネルの活性・非活性処理見直し。</li>
+                    <li>2026-03-17 Ver3.72.1 プレイリスト編集で動画削除（）時の次動画再生開始位置の不良対応。</li>
+                    <li>2026-03-17 Ver3.71.1 初期処理をDOMContentLoadedイベント内の処理に変更。</li>
+                    <li>2026-03-14 Ver3.70 画面サイズに合わせてプレビューのサイズ調整。</li>
+                    <li>2026-03-14 Ver3.69 プレイリスト最終の動画終了時の挙動改善。</li>
+                    <li>2026-03-14 Ver3.68 カット編集機能（✂️）のシークバードラック時ワイプ表示。</li>
+                    <li>2026-03-14 Ver3.67 ツールチップ変更不良正式対応。</li>
+                    <li>2026-03-14 Ver3.66 原因不明のツールチップ変更不良の誤認防止対応。</li>
+                    <li>2026-03-14 Ver3.65 main,jsでブラウザ起動対応。</li>
+                    <li>2026-03-14 Ver3.64 初期化時の空srcエラー抑止対応。</li>
+                    <li>2026-03-14 Ver3.63 css（#zoomBar）の記載警告対応。</li>
+                    <li>2026-03-14 Ver3.62 処理の問題点・脆弱性対応。</li>
+                    <li>2026-03-13 Ver3.61 ホイール（ズーム量）時のコントロールパネル・プレイリストパネル表示抑止。</li>
+                    <li>2026-03-13 Ver3.60 FullscrrenのON／OFFで背景色を統一。</li>
+                    <li>2026-03-13 Ver3.59 ソースコードの誤り、不要、矛盾の調査・修正。</li>
+                    <li>2026-03-13 Ver3.58 アイコンオーバーレイのサイズ調整。</li>
+                    <li>2026-03-13 Ver3.57 ✂️・📚・🌐・🔍・🖥️ボタンのトグル表現を変更。</li>
+                    <li>2026-03-12 Ver3.56 マウス自動非表示機能追加。</li>
+                    <li>2026-03-12 Ver3.55 結合編集のfps設定を改善。</li>
+                    <li>2026-03-12 Ver3.54 ショートカット・オーバーレイメッセージの見直し。</li>
+                    <li>2026-03-11 Ver3.53 １動画繰り返し再生（🔂）（Ctrl+Shift+r）機能追加。</li>
+                    <li>2026-03-11 Ver3.52 プレイリスト並び替え（📩）（Shift+m）機能追加。</li>
+                    <li>2026-03-10 Ver3.51 結合編集（🎞️）機能追加。</li>
+                    <li>2026-03-09 Ver3.50 シークバーの挙動改善。</li>
+                    <li>2026-03-08 Ver3.49 カット編集機能（✂️）のクラッシュ対応の最適化。</li>
+                    <li>2026-03-07 Ver3.48 ズームモード中（🔍）マウスホイールで拡大縮小。</li>
+                    <li>2026-03-07 Ver3.47 カット編集中（✂️）の疑似再生機能、カット範囲表示機能追加。</li>
+                    <li>2026-03-07 Ver3.46 カット編集機能（✂️）のクラッシュ対応。</li>
+                    <li>2026-03-07 Ver3.45 ランダム再生（🔀）（Ctrl+r）／繰り返し再生（🔁）（Ctrl+Shift+r）機能追加。</li>
+                    <li>2026-03-06 Ver3.44 カット編集時のクラッシュ（FFmpegメモリリーク）対応（対応限界）。</li>
+                    <li>2026-03-05 Ver3.43 カット編集の実装見直し修正。</li>
+                    <li>2026-03-04 Ver3.42 クリップボード読み込み関連処理の見直し修正。</li>
+                    <li>2026-03-03 Ver3.41 Url入力（🌐）にクリアボタン（🆑）追加。</li>
+                    <li>2026-03-03 Ver3.40 スナップショット起動時パネル非表示。</li>
+                    <li>2026-03-03 Ver3.39 ズームパネルの透過率調整。</li>
+                    <li>2026-03-03 Ver3.38 スナップショット機能追加。</li>
+                    <li>2026-03-02 Ver3.37 ネット動画再生操作変更。</li>
+                    <li>2026-03-01 Ver3.36 カット編集の全クリア機能追加。</li>
+                    <li>2026-02-27 Ver3.35 再生速度の保存と復元の追加</li>
+                    <li>2026-02-27 Ver3.34 スナップショット機能（📷）追加準備と微調整</li>
+                    <li>2026-02-27 Ver3.33 ズームモード中の←、→の移動量を詳細化。</li>
+                    <li>2026-02-26 Ver3.32 ズームパネルにズーム終了ボタン追加。</li>
+                    <li>2026-02-26 Ver3.31 ズームパネルをサイズ調整に対応。</li>
+                    <li>2026-02-26 Ver3.30 ズームリセットボタン追加。</li>
+                    <li>2026-02-25 Ver3.29 ズームモード中の画像移動機能追加。</li>
+                    <li>2026-02-25 Ver3.28 ズームモード中のショートカットキー追加（Ctrl+↑/↓/0）。</li>
+                    <li>2026-02-25 Ver3.27 ズーム機能をドロップダウンから縦型スライダー(-100%～+100%)に変更。</li>
+                    <li>2026-02-25 Ver3.26 ズーム機能（🔍）追加（-90%～+90%）。</li>
+                    <li>2026-02-15 Ver3.25 カット編集機能の改善。</li>
+                    <li>2026-02-15 Ver3.24 カット編集機能（✂️）追加。</li>
+                    <li>2026-01-28 Ver3.23 変換モードの実行時の進捗状況をシークバーに表示。</li>
+                    <li>2026-01-23 Ver3.22 YouTuneの埋め込み再生廃止。</li>
+                    <li>2026-01-22 Ver3.21 サイズ変更コントロール廃止。</li>
+                    <li>2025-12-22 Ver3.20 起動時に発生するワーニング対応。</li>
+                    <li>2025-12-22 Ver3.19 再生速度変更機能追加。</li>
+                    <li>2025-12-18 Ver3.18 urlInputの貼り付け不良対応。</li>
+                    <li>2025-12-05 Ver3.17 Bluetooth メディアキー対応（0xB7,0xCD,0xE2,0xE9,0xEA,0x192,0x193）</li>
+                    <li>2025-12-04 Ver3.16 動画変換中にウインドウを閉じた時、一時ファイルを削除。</li>
+                    <li>2025-12-03 Ver3.15 動画ソース設定、一時ファイル削除見直し。</li>
+                    <li>2025-12-03 Ver3.14 引数再生処理見直し。</li>
+                    <li>2025-12-03 Ver3.13 再生終了時の一時ファイル削除処理見直し。</li>
+                    <li>2025-12-02 Ver3.12 プレイリストの最終動画の終了処理見直し。</li>
+                    <li>2025-11-30 Ver3.11 プレイリスト保存（💾）のエラー対応。</li>
+                    <li>2025-11-26 Ver3.10 プレイリスト編集の追加（➕）を最後に追加へ変更。</li>
+                    <li>2025-11-25 Ver3.09 アプリ名、コピーライト表記変更。</li>
+                    <li>2025-11-24 Ver3.08 ドラッグ＆ドロップ再生機能追加。</li>
+                    <li>2025-11-24 Ver3.07 preload.js実装対応。</li>
+                    <li>2025-11-20 Ver3.06 videoPlayer.src、videoPreviwe.srcのクリア方法見直し。</li>
+                    <li>2025-11-14 Ver3.05 変換モードの一時ファイル削除（ごみ箱）対応。</li>
+                    <li>2025-11-14 Ver3.04 updateIconOverlay()の表示／非表示判定、nextVideoBtn.Click()最終判定の見直し。</li>
+                    <li>2025-11-11 Ver3.03 動画エラー処理を isHTML5_SUPPORTED で共通化</li>
+                    <li>2025-11-10 Ver3.02 起動再開時、一時停止しない問題の対応。</li>
+                    <li>2025-11-10 Ver3.01 プレイリスト操作ショートカットキー追加。</li>
+                    <li>2025-11-10 Ver3.00 xPlayerのコードファイルの構成見直し。</li>
+                    <li>■■■ コンセプト変更 ■■■</li>
+                    <li>2025-11-09 Ver2.39 FFmpeg変換で日本語の音声、字幕でコンバートする機能追加。</li>
+                    <li>2025-11-09 Ver2.38 動作モードを視聴（🎬）／変換（🔄️）で切り替える。一時ファイル削除制御を無効化。</li>
+                    <li>2025-11-08 Ver2.37 FFmpeg変換で作成された一時mp4ファイル削除／非削除／入替を制御。変換中の中断機能追加。</li>
+                    <li>2025-11-08 Ver2.36 実行環境が無いためタッチ機能削除、その他不要変数・処理を削除。</li>
+                    <li>2025-11-07 Ver2.35 プレイリスト編集・保存機能追加</li>
+                    <li>2025-11-04 Ver2.34 外部コーデック（FFmpeg）でHTML5非対応コーデックの動画再生</li>
+                    <li>2025-11-03 Ver2.33 非表示中プレイリスト、コントロールパネル内のオブジェクト完全無効化。</li>
+                    <li>2025-11-03 Ver2.32 コントロールのサイズ・位置調整。</li>
+                    <li>2025-11-02 Ver2.31 コマンドライン引数再生機能追加。</li>
+                    <li>2025-11-01 Ver2.30 初期処理、関数、グローバルイベント、イベントリスナーの整理。</li>
+                    <li>2025-11-01 Ver2.29 ControlSize計算の閾値の見直し。</li>
+                    <li>2025-11-01 Ver2.27 seekBarホバー時のプレビュー（ワイプ）表示の実装見直し。</li>
+                    <li>2025-11-01 Ver2.26 プレビュー（ワイプ）機能完全削除</li>
+                    <li>2025-10-31 Ver2.25 YouTube動画再生アドレス切替機能追加。</li>
+                    <li>2025-10-30 Ver2.24 filename、controlsの表示／非表示タイミング見直し</li>
+                    <li>2025-10-30 Ver2.23 シークバーのドラック中にシークバービュー（ワイプ表示）機能追加。</li>
+                    <li>2025-10-29 Ver2.22 ヘルプ表示機能の追加</li>
+                    <li>2025-10-28 Ver2.21 再生停止中のロゴをGIFアニメーションに変更</li>
+                    <li>2025-10-28 Ver2.20 マウスの左クリックでfilename、messageOverlay、controlsの表示／非表示をトグル。</li>
+                    <li>2025-10-28 Ver2.19 ホイールの増減量の見直し、マウス移動時のfilename、controlsの表示を見直し。</li>
+                    <li>2025-10-27 Ver2.18 アイコン操作とキー操作の処理共通化、キー割当、マウス操作割当の見直し。</li>
+                    <li>2025-10-27 Ver2.17 右クリックの再生／一時停止機能を左クリックに変更。ネット動画の自動再生機能追加。</li>
+                    <li>2025-10-27 Ver2.16 ネット動画URL入力時、ENTERでURK再生（✅）、CANCELでキャンセル（❌）を実行。</li>
+                    <li>2025-10-26 Ver2.15 起動時、再生終了時にiconOverlayを表示。
+        ・起動時に復元するプレイリスト（動画ファイル）存在しない場合、iconOverlayを表示。
+        ・プレイリストの動画を全て再生した場合、iconOverlayを表示。</li>
+                    <li>2025-10-26 Ver2.14 再生停止中、画面中央にアイコン（特大）を表示。動画再生中、一時停止中は非表示。</li>
+                    <li>2025-10-26 Ver2.13 Twitchライブの動画再生機能追加。</li>
+                    <li>2025-10-26 Ver2.12 YouTubeAPI使用の廃止に伴う見直し。</li>
+                    <li>2025-10-26 Ver2.11 フォルダ選択、ファイル選択の機能見直し。
+        ・起動（リロード）後のフォルダ選択、ファイル選択の再生再開機能の削除。
+        ・起動（リロード）後のフォルダ選択、ファイル選択の赤色の削除。
+        ・起動（リロード）後のフォルダ選択、ファイル選択のマウスオーバー時の再開メッセージの削除。</li>
+                    <li>2025-10-26 Ver2.10 再生途中の動画の再生タイミングに起動直後に一時停止を追加
+        ・起動（リロード）時にlocalStorageに保存されている情報を取得
+        ・ボリューム量、ミュート状態、描画モードを設定
+        ・プレイリストを前回の状態に復元
+        ・再生動画のマーク（▶️）を設定
+        ・再生途中の時間で再生
+        ・再生直後に一時停止</li>
+                    <li>2025-10-25 Ver2.09 再生停止ボタン（⏹️）の追加。</li>
+                    <li>2025-10-25 Ver2.08 Twitch、YouTubeショートの動画再生機能追加。（不要な起動時リスナー削除）</li>
+                    <li>2025-10-25 Ver2.07 YouTube動画の再生方法を外部（Chrome）起動に変更。🌐クリック時のURL自動貼り付け機能追加。</li>
+                    <li>2025-10-25 Ver2.06 コントロールサイズ変更時のmessageOverlay表示を削除。</li>
+                    <li>2025-10-24 Ver2.05 YouTube動画再生時に発生する1エラーに対応。</li>
+                    <li>2025-10-24 Ver2.04 ネット動画再生中、messageOverlayを非表示。</li>
+                    <li>2025-10-24 Ver2.03 ネット動画再生時、volumeBar、volumeMuteBtnの状態を反映。</li>
+                    <li>2025-10-24 Ver2.02 再開対象ボタンの判定方法の変更
+        ・変更前：プレイリスト内の件数が1件の場合videoInput、2件以上の場合folderInput
+        ・変更後：選択ボタンのクリック時にlocalStorageに選択ボタン（videoInput、folderInput）を保存、判定時にlocalStorageから選択ボタンを取得</li>
+                    <li>2025-10-24 Ver2.01 起動（リロード）時、前回の動画ファイル、時間で再開されない。</li>
+                    <li>2025-10-24 Ver2.00 （Windows版）の開発
+        ・folderInput、videoInputのWindows APIダイアログ対応（node.js使用）
+        ・folderInputクリック時の階層フォルダ読込対応（node.js使用）
+        ・folderInput、videoInputクリック時のプレイリストファイル（.amppl）の読込対応（node.js使用）
+        ・filenameDisplayに動画ファイルのフルパスを表示</li>
+                    <li>■■■ コンセプト変更 ■■■</li>
+                    <li>2025-10-01 Ver1.00 （HTML版）の開発</li>
+                </ul>
             </div>
         </div>
     </div>

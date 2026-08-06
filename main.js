@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
-const copyright = 'Copyright © 2025 @x-builder, Japan';
+const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver3.74.1';
+const appName = 'xPlayer -動画プレイヤー- Ver4.75.2';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -35,6 +35,7 @@ let currentTmpDir = null;
 let currentJoinTempFiles = [];      // 結合用の一時変換ファイルリスト
 let currentJoinConcatTxt = null;    // concatリストのtxtパス
 let isJoinCancelled = false;        // ファイル先頭付近（他のグローバル変数の近く）に追加
+let thumbnailCacheDir = null;
 
 // 🔲初期処理🔲
 // 開発中セキュリティオプション設定
@@ -48,8 +49,10 @@ if (process.env.NODE_ENV === 'development') {
 // - Chromium の GPU shader disk cache を無効化して関連ワーニングを抑制
 try {
     const cacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'Cache');
+    thumbnailCacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'thumbnails');
     // 非同期でディレクトリ作成（失敗しても致命的でないので catch で無視）
     fs.mkdir(cacheDir, { recursive: true }).catch(() => {});
+    fs.mkdir(thumbnailCacheDir, { recursive: true }).catch(() => {});
     // Chromium のディスクキャッシュ先をアプリ管理下のディレクトリに変更
     if (app && app.commandLine && typeof app.commandLine.appendSwitch === 'function') {
         app.commandLine.appendSwitch('disk-cache-dir', cacheDir);
@@ -216,6 +219,77 @@ function cleanupJoinTempFiles() {
     currentJoinTempFiles = [];
 }
 
+// 正規表現の特殊文字をエスケープする関数（baseName に . などが入る場合対策）
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// 字幕抽出関数（変更なし、metadataを引数で受け取る）
+async function extractSubtitlesOnly(inputPath, baseName, outDir, metadata) {
+    const textSubtitleCodecs = ['webvtt', 'srt', 'subrip', 'mov_text', 'ass', 'ssa'];
+    const subtitleStreams = metadata.streams.filter(s => 
+        s.codec_type === 'subtitle' && textSubtitleCodecs.includes(s.codec_name)
+    );
+    if (subtitleStreams.length === 0) {
+        console.log('テキスト形式の字幕ストリームが見つからないため、処理をスキップします。');
+        return;
+    }
+
+    // 字幕抽出準備中
+    mainWindow.webContents.send('subtitle-extraction-progress', {
+        filePath: inputPath,
+        subtitleCount: subtitleStreams.length,
+        subtitleIndex: 0,
+        message: `字幕抽出準備中...（0/${subtitleStreams.length}）`
+    });
+    // 既存の対象動画の全vttファイル削除
+    try {
+        const files = await fs.readdir(outDir);
+        const targetPattern = new RegExp(`^${escapeRegExp(baseName)}_.*\\.vtt$`, 'i');
+
+        for (const file of files) {
+            if (targetPattern.test(file)) {
+                const fullPath = path.join(outDir, file);
+                await trash(fullPath);
+            }
+        }
+    } catch (err) {
+        console.warn('古い .vtt ファイル削除中にエラー（続行）:', err.message);
+        // 削除失敗しても字幕抽出は続行（致命的でない）
+    }
+
+    // 字幕抽出中
+    for (const [idx, sub] of subtitleStreams.entries()) {
+        const lang = sub.tags?.language || sub.tags?.lang || 'und';
+        const vttPath = path.join(outDir, `${baseName}_track${idx}_${lang}.vtt`);
+
+        // （中略：進捗通知など）
+
+        await new Promise((res) => {
+            ffmpeg(inputPath)
+                .outputOptions([
+                    // 【修正点】0:s:${idx} ではなく、ストリームの絶対インデックス（sub.index）を使用する
+                    `-map 0:${sub.index}`, 
+                    '-vn', '-an',
+                    '-c:s', 'webvtt'
+                ])
+                .on('end', () => res())
+                .on('error', (err, stdout, stderr) => {
+                    console.error(`抽出エラー (track ${idx}):`, stderr || err.message);
+                    res();
+                })
+                .save(vttPath);
+        });
+    }
+
+    mainWindow.webContents.send('subtitle-extraction-progress', {
+        filePath: inputPath,
+        subtitleCount: subtitleStreams.length,
+        subtitleIndex: subtitleStreams.length,
+        message: `字幕抽出完了（${subtitleStreams.length}/${subtitleStreams.length}）`
+    });
+}
+
 // 🔲app ハンドラ登録🔲
 // アプリ起動処理
 app.whenReady().then(() => {
@@ -315,6 +389,69 @@ ipcMain.handle('show-save-cut-dialog', async (event, { fileName }) => {
     return result;
 });
 
+// 設定エクスポート保存ダイアログ
+ipcMain.handle('show-save-settings-dialog', async (event, { defaultPath }) => {
+    const result = await dialog.showSaveDialog({
+        title: '設定をエクスポート',
+        defaultPath: defaultPath || 'xPlayerSettings.json',
+        filters: [
+            { name: 'JSON ファイル', extensions: ['json'] },
+            { name: 'すべてのファイル', extensions: ['*'] }
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation']
+    });
+    return result;
+});
+
+// 設定インポート開くダイアログ
+ipcMain.handle('show-open-settings-dialog', async () => {
+    const result = await dialog.showOpenDialog({
+        title: '設定をインポート',
+        defaultPath: 'xPlayerSettings.json',
+        filters: [
+            { name: 'JSON ファイル', extensions: ['json'] },
+            { name: 'すべてのファイル', extensions: ['*'] }
+        ],
+        properties: ['openFile']
+    });
+    return result;
+});
+
+ipcMain.handle('set-always-on-top', async (event, enabled) => {
+    if (mainWindow) {
+        mainWindow.setAlwaysOnTop(Boolean(enabled));
+    }
+    return { success: true };
+});
+
+// 背景壁紙選択（単ファイル選択）
+ipcMain.handle('open-wallpaper-dialog', async () => {
+    const result = await dialog.showOpenDialog({
+        title: '背景壁紙を選択',
+        properties: ['openFile'],           // 単ファイル選択
+        filters: [
+            { 
+                name: '画像ファイル', 
+                extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg']
+            },
+            { 
+                name: 'すべてのファイル', 
+                extensions: ['*'] 
+            }
+        ]
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return null;   // キャンセル時は null を返す
+    }
+
+    const filePath = result.filePaths[0];
+    return {
+        name: path.basename(filePath),
+        path: filePath
+    };
+});
+
 // コマンドライン引数取得
 ipcMain.handle('get-command-line-args', () => {
     const args = process.argv.slice(app.isPackaged ? 1 : 2);
@@ -327,98 +464,162 @@ ipcMain.handle('process-command-line-file', async (event, filePath) => {
 });
 
 // FFmpeg 変換ハンドラ（ファイルパス返却）＋ 日本語音声優先 + 日本語字幕優先（なければ無視）
-ipcMain.handle('convert-video', async (event, filePath) => {
-    return new Promise((resolve, reject) => {
+ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAudioIndex = 0) => {
+    return new Promise(async (resolve, reject) => {
         const fileName = path.basename(filePath);
-        const outName = `${path.parse(fileName).name}.mp4`;
-        const outPath = path.join(path.dirname(filePath), outName);
-        currentOutputPath = outPath;
+        const baseName = path.parse(fileName).name;
+        const ext = path.extname(filePath).toLowerCase();
+        const outDir = path.dirname(filePath);
+        const outName = `${baseName}.mp4`;
+        const outPath = path.join(outDir, outName);
 
-        mainWindow.webContents.send('convert-progress', { percent: 0 });
+        const isMp4Input = ext === '.mp4';
 
-        // ffprobe でメタデータ取得
-        ffmpeg.ffprobe(filePath, (err, metadata) => {
-            if (err) {
-                mainWindow.webContents.send('convert-error', 'メタデータ取得失敗: ' + err.message);
-                reject(err);
+        currentOutputPath = null;
+
+        // ffprobe でメタデータ取得（省略・変更なし）
+        let metadata;
+        try {
+            metadata = await new Promise((res, rej) => {
+                ffmpeg.ffprobe(filePath, (err, data) => {
+                    if (err) rej(err);
+                    else res(data);
+                });
+            });
+        } catch (probeErr) {
+            mainWindow.webContents.send('convert-error', 'メタデータ取得失敗: ' + probeErr.message);
+            return reject(probeErr);
+        }
+
+        // 音声・字幕処理部分（変更なし）
+        const audioStreams = metadata.streams.filter(s => s.codec_type === 'audio');
+        const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
+
+        const targetAudioIdx = Math.max(0, Math.min(preferredAudioIndex, audioStreams.length - 1));
+
+        const videoStreamIndex = metadata.streams.findIndex(s => 
+            s.codec_type === 'video' && !s.disposition?.attached_pic
+        ) !== -1 ? metadata.streams.findIndex(s => 
+            s.codec_type === 'video' && !s.disposition?.attached_pic
+        ) : 0;
+
+        const mapOptions = [
+            '-map', `0:${videoStreamIndex}`,
+            '-map', '-0:v:m:disposition:attached_pic',
+        ];
+
+        const dispositionOptions = [];
+
+        if (audioStreams.length > 0) {
+            for (let i = 0; i < audioStreams.length; i++) {
+                mapOptions.push(`-map 0:a:${i}?`);
+            }
+            dispositionOptions.push(`-disposition:a:${targetAudioIdx}`, 'default');
+            for (let i = 0; i < audioStreams.length; i++) {
+                if (i !== targetAudioIdx) {
+                    dispositionOptions.push(`-disposition:a:${i}`, '0');
+                }
+            }
+        }
+
+        mapOptions.push('-map 0:s?');
+
+        const ff = ffmpeg(filePath)
+            .outputOptions(mapOptions)
+            .outputOptions(dispositionOptions);
+
+        // コーデック分岐（変更なし）
+        if (isMp4Input) {
+            ff.outputOptions([
+                '-c:v', 'copy',
+                '-c:a', 'copy',
+                '-c:s', 'copy',
+                '-movflags', '+faststart'
+            ]);
+        } else {
+            let videoBitrate = '1500k';
+            const videoStream = metadata.streams[videoStreamIndex];
+            if (videoStream?.bit_rate) {
+                const br = parseInt(videoStream.bit_rate, 10);
+                if (!isNaN(br) && br > 0) {
+                    videoBitrate = `${Math.round(br / 1000)}k`;
+                }
+            }
+
+            ff.outputOptions([
+                '-c:v', 'libx264',
+                '-preset', 'veryfast',
+                '-b:v', videoBitrate,
+                '-c:a', 'copy',
+                '-c:s', 'mov_text',
+                '-movflags', '+faststart'
+            ]);
+        }
+
+        // Tempフォルダをユーザーの %AppData\Local\Temp に設定
+        const tempBaseDir = path.join(os.tmpdir(), 'xPlayer');
+        try {
+            // フォルダが存在しない場合は再帰的に作成
+            await fs.mkdir(tempBaseDir, { recursive: true });
+        } catch (mkdirErr) {
+            console.error('xPlayer tempフォルダ作成失敗:', mkdirErr);
+            mainWindow.webContents.send('convert-error', '一時フォルダ作成失敗: ' + mkdirErr.message);
+            return reject(mkdirErr);
+        }
+        const tempPath = path.join(tempBaseDir, `${baseName}_temp_${Date.now()}.mp4`);
+        currentOutputPath = tempPath;
+
+        mainWindow.webContents.send('convert-progress', { 
+            percent: 0,
+            step: 1
+        });
+
+        ff.on('progress', (progress) => {
+            if (progress.percent !== undefined) {
+                mainWindow.webContents.send('convert-progress', { 
+                    percent: progress.percent,
+                    step: 1
+                });
+            }
+        })
+        .on('end', async () => {
+            currentFFmpeg = null;
+            currentOutputPath = null;
+
+            try {
+                mainWindow.webContents.send('convert-progress', { 
+                    percent: 100,
+                    step: 2
+                });
+                // Temp → 出力先へ「安全に移動」（rename → copy + unlink）
+                await fs.copyFile(tempPath, outPath);
+                await fs.unlink(tempPath);
+
+                // 字幕ファイル出力
+                if (modeChange === 'convert') {
+                    await extractSubtitlesOnly(outPath, baseName, outDir, metadata);
+                }
+
+                resolve(outPath);
+            } catch (moveErr) {
+                mainWindow.webContents.send('convert-error', '後処理エラー: ' + moveErr.message);
+                reject(moveErr);
+            }
+        })
+        .on('error', (err, stdout, stderr) => {
+            if (err.message.includes('ffmpeg was killed')) {
+                console.log('変換中断:', filePath);
                 return;
             }
+            console.error('FFmpegエラー:', stderr);
+            mainWindow.webContents.send('convert-error', err.message + '\n' + stderr);
+            currentFFmpeg = null;
+            currentOutputPath = null;
+            reject(err);
+        })
+        .save(tempPath);
 
-            // === 音声処理：日本語音声があれば優先、なければ最初の音声 ===
-            const audioStreams = metadata.streams.filter(s => s.codec_type === 'audio');
-            let audioMap = '-map 0:a'; // デフォルト：最初の音声
-            let selectedAudioBitrate = '192k'; // フォールバック
-
-            if (audioStreams.length > 0) {
-                const japaneseAudio = audioStreams.find(s => 
-                    s.tags && (s.tags.language === 'jpn' || s.tags.language === 'ja' || s.tags.language === 'japanese')
-                );
-
-                let selectedStream;
-                if (japaneseAudio) {
-                    const index = audioStreams.indexOf(japaneseAudio);
-                    audioMap = `-map 0:a:${index}`;
-                    selectedStream = japaneseAudio;
-                } else {
-                    selectedStream = audioStreams[0];
-                }
-
-                // 選択された音声のビットレートを取得（bit_rate は文字列で入る場合あり）
-                if (selectedStream.bit_rate) {
-                    const bitrate = parseInt(selectedStream.bit_rate, 10);
-                    if (!isNaN(bitrate) && bitrate > 0) {
-                        selectedAudioBitrate = `${Math.round(bitrate / 1000)}k`;
-                    }
-                }
-            }
-
-            // === 字幕処理：日本語字幕があれば優先、なければ無視 ===
-            const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
-            let subtitleOptions = [];
-
-            const japaneseSub = subtitleStreams.find(s => 
-                s.tags && (s.tags.language === 'jpn' || s.tags.language === 'ja' || s.tags.language === 'japanese')
-            );
-
-            if (japaneseSub) {
-                const idx = subtitleStreams.indexOf(japaneseSub);
-                subtitleOptions = [
-                    `-map 0:s:${idx}`,
-                    '-c:s', 'mov_text'
-                ];
-            }
-
-            // === FFmpeg コマンド構築 ===
-            const ff = ffmpeg(filePath)
-                .outputOptions('-map 0:v')
-                .outputOptions(audioMap)
-                .outputOptions(subtitleOptions)
-                .outputOptions('-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23')
-                .outputOptions('-c:a', 'aac', `-b:a`, selectedAudioBitrate)  // ← ここが動的！
-                .outputOptions('-movflags', '+faststart')
-                .on('progress', (progress) => {
-                    if (progress.percent !== undefined) {
-                        mainWindow.webContents.send('convert-progress', { percent: progress.percent });
-                    }
-                })
-                .on('end', () => {
-                    currentFFmpeg = null;
-                    currentOutputPath = null;
-                    resolve(outPath);
-                })
-                .on('error', (err, stdout, stderr) => {
-                    if (err.message.includes('ffmpeg was killed')) {
-                        return;
-                    }
-                    currentFFmpeg = null;
-                    currentOutputPath = null;
-                    mainWindow.webContents.send('convert-error', err.message);
-                    reject(err);
-                })
-                .save(outPath);
-
-            currentFFmpeg = ff;
-        });
+        currentFFmpeg = ff;
     });
 });
 
@@ -591,6 +792,69 @@ ipcMain.handle('capture-screenshot', async (event) => {
     } catch (err) {
         console.error('exec 実行エラー:', err);
         return { success: false, error: err.message };
+    }
+});
+
+// 動画サムネイル生成
+// main.js
+ipcMain.handle('generate-video-thumbnail', async (event, { filePath, size = 180 }) => {
+    if (!filePath) return null;
+
+    const tempDir = thumbnailCacheDir || path.join(app.getPath('userData'), 'xPlayerCache', 'thumbnails');
+    await fs.mkdir(tempDir, { recursive: true });
+    
+    const crypto = require('crypto');
+    const safeName = crypto.createHash('sha1').update(filePath).digest('hex');
+    const outputPath = path.join(tempDir, `${safeName}_${size}.png`);
+
+    // サムネイル生成用の内部関数
+    const captureFrame = (seekTime) => {
+        let logCommandLine = '';
+        return new Promise((resolve, reject) => {
+            let stderr = '';
+            let command = ffmpeg(filePath);
+
+            // シーク時間が指定されている場合は追加（例: 00:00:30）
+            if (seekTime) {
+                command = command.inputOptions(['-ss', seekTime]);
+            }
+
+            command
+                .outputOptions(['-frames:v', '1', '-vf', `scale=${Math.max(80, size)}:-1`, '-y'])
+                .on('start', (commandLine) => {
+                    logCommandLine = commandLine;
+                })
+                .on('stderr', (chunk) => {
+                    stderr += chunk.toString();
+                })
+                .on('end', resolve)
+                .on('error', (err) => {
+                    const detailed = stderr ? `\n${stderr.trim()}` : '';
+                    reject(new Error(`${err.message}${detailed}`));
+                })
+                .save(outputPath);
+        });
+    };
+
+    try {
+        // 1回目の試行: 30秒地点から取得
+        try {
+            await captureFrame('00:00:30');
+        } catch (firstErr) {
+            console.warn('[thumbnail] 30s seek failed, retrying from start (00:00:00):', filePath, firstErr.message);
+            // 2回目の試行（リトライ）: 動画の先頭から取得
+            await captureFrame('00:00:00');
+        }
+
+        const data = await fs.readFile(outputPath);
+        await fs.unlink(outputPath).catch(() => {});
+        return `data:image/png;base64,${data.toString('base64')}`;
+
+    } catch (err) {
+        console.warn('[thumbnail] ffmpeg retry failed:', filePath, err.message);
+        // エラー時に一時ファイルが残っている場合は削除
+        await fs.unlink(outputPath).catch(() => {});
+        return null;
     }
 });
 
@@ -1335,4 +1599,89 @@ ipcMain.handle('open-video-in-browser', async (event, videoUrl) => {
     console.error(err);
     return { success: false, message: err.message };
   }
+});
+
+// 音声トラック情報・字幕トラック情報取得
+ipcMain.handle('get-video-tracks', async (event, filePath) => {
+    try {
+        // ffprobe を Promise化
+        const metadata = await new Promise((resolve, reject) => {
+            ffmpeg.ffprobe(filePath, (err, data) => {
+                if (err) return reject(err);
+                resolve(data);
+            });
+        });
+
+        const streams = metadata.streams || [];
+        const format = metadata.format || {};
+
+        const audioTracks = [];
+        const subtitleTracks = [];
+
+        // 【追加】安全に抽出できるテキスト字幕コーデックのホワイトリスト
+        const textSubtitleCodecs = ['webvtt', 'srt', 'subrip', 'mov_text', 'tx3g', 'ass', 'ssa'];
+
+        streams.forEach((s, index) => {
+            // 元のストリームの index（絶対インデックス）を保持したオブジェクトを作成
+            const streamWithIndex = { ...s, index };
+
+            if (s.codec_type === 'audio') {
+                audioTracks.push(streamWithIndex);
+            } 
+            // 【修正】字幕判定ロジック
+            // codec_type が 'subtitle' または 'text' であり、かつ画像形式（dvd_subtitle等）ではないもの
+            else if (
+                (s.codec_type === 'subtitle' || s.codec_type === 'text') &&
+                textSubtitleCodecs.includes(s.codec_name?.toLowerCase())
+            ) {
+                // フロントエンド側で判定に使えるよう、一応フラグも持たせる
+                streamWithIndex.isTextBased = true;
+                subtitleTracks.push(streamWithIndex);
+            }
+        });
+
+        const outDir = path.dirname(filePath);
+        const baseName = path.parse(path.basename(filePath)).name;
+        
+        // 【注意】ここでループする subtitleTracks はすでにテキスト字幕のみに絞り込まれています
+        for (const [idx, sub] of subtitleTracks.entries()) {
+            const lang = sub.tags?.language || sub.tags?.lang || 'und';
+            // ファイル名は「テキスト字幕の中での連番(idx)」を使用して作成
+            const vttPath = path.join(outDir, `${baseName}_track${idx}_${lang}.vtt`);
+
+            let exists = false;
+            try {
+                await fs.stat(vttPath);
+                exists = true;
+            } catch {
+                // 存在しない → false のまま
+            }
+
+            sub.vttPath = vttPath;
+            sub.exists = exists;
+        }
+
+        // format.tags の補助チェック（省略可）
+        if (format.tags?.subtitle) {
+            console.log('format.tags に字幕情報発見:', format.tags.subtitle);
+        }
+
+        return {
+            success: true,
+            audio: audioTracks,
+            subtitle: subtitleTracks, // イメージ字幕が完全に排除された配列
+            totalStreams: streams.length,
+            debug: {
+                hasTx3g: streams.some(s => s.codec_name === 'tx3g'),
+                ffprobeVersion: metadata.format?.tags?.encoder || 'unknown'
+            }
+        };
+
+    } catch (err) {
+        console.error('ffprobe または処理中にエラー:', err);
+        return {
+            success: false,
+            error: err.message || '処理に失敗しました'
+        };
+    }
 });
