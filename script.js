@@ -3640,7 +3640,7 @@ function createAspectRatioMenu() {
 async function exportSettingsToFile() {
     try {
         const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
-        const defaultName = `xPlayerSettings${timestamp}.json`;
+        const defaultName = `xPlayerSettings_${timestamp}.json`;
         const result = await showSaveSettingsDialog(defaultName);
         if (result.canceled || !result.filePath) {
             return;
