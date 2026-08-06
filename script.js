@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver5.01.0';
+const appName = 'xPlayer -動画プレイヤー- Ver5.02.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -271,6 +271,7 @@ let savedWallpaperPath = null;
 let savedAlwaysOnTop = null;
 
 // グローバル（共通）変数
+let initializeSetting = true;
 let playlist = [];
 let currentVideoIndex = 0;
 let selectedPlaylistIndex = -1;
@@ -2345,6 +2346,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             tableContainer.style.height = `calc(61.3vh - 7em)`;
         }
     });
+
+    initializeSetting = false;
 });
 
 // 🔲document ハンドラ登録🔲
@@ -2969,6 +2972,8 @@ document.addEventListener('click', () => {
 // 🔲window ハンドラ登録🔲
 // ウィンドウリサイズ
 window.addEventListener('resize', () => {
+    if (initializeSetting) return;
+    
     const controlSizeX = calculateControlSizeX();
     const controlSizeY = calculateControlSizeY();
     localStorage.setItem('controlSizeX', controlSizeX);
