@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver5.02.0';
+const appName = 'xPlayer -動画プレイヤー- Ver5.03.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -324,7 +324,7 @@ let hideMouseTimeout = null;
 let editFrameRate = 30;
 let currentSortMode = '（なし）';
 let currentAddMode = 'Add0';
-let playlistDisplayMode = ['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].includes(savedPlaylistDisplayMode) ? savedPlaylistDisplayMode : 'list';
+let playlistDisplayMode = null;
 let playlistThumbnailCache = new Map();
 let selectedAudioLabel = '日本語';
 let selectedAudioTrack = [];
@@ -455,6 +455,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     applyFitModeSetting(fitMode);
 
     // プレイリスト表示モード復元
+    playlistDisplayMode = ['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].includes(savedPlaylistDisplayMode) ? savedPlaylistDisplayMode : 'list';
     if (filterList) {
         filterList.classList.remove('playlist-grid', 'playlist-grid-small', 'playlist-grid-medium', 'playlist-grid-large');
         if (['thumb-small', 'thumb-medium', 'thumb-large'].includes(playlistDisplayMode)) {
