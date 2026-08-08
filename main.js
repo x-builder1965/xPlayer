@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.75.2';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.04.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -21,8 +21,12 @@ const VIDEO_EXTENSIONS = [
     'mp4', 'mkv', 'webm', 'avi', 'flv', 'mov', 'wmv', 'mpg', 'mpeg',
     'ts', 'mts', 'm2ts', 'vob', 'ogv', '3gp', 'm4v', 'asf'
 ];
+const AUDIO_EXTENSIONS = [
+    'mp3', 'wav', 'flac', 'ogg', 'oga', 'm4a', 'aac', 'opus', 'wma', 'aiff', 'aif', 'alac', 'ape', 'm4b', 'mid', 'midi'
+];
 const VIDEO_PLAYLIST = ['amppl'];
-const VIDEO_EXTENSIONS_REGEX = new RegExp(`\\.(${VIDEO_EXTENSIONS.join('|')})$`, 'i');
+const SUPPORTED_MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS];
+const SUPPORTED_MEDIA_EXTENSIONS_REGEX = new RegExp(`\\.(${SUPPORTED_MEDIA_EXTENSIONS.join('|')})$`, 'i');
 const VIDEO_PLAYLIST_REGEX = new RegExp(`\\.(${VIDEO_PLAYLIST.join('|')})$`, 'i');
 
 // グローバル（共通）変数
@@ -138,8 +142,8 @@ async function processListFile(filePath) {
             // 正規化（重複スラッシュなど除去）
             fullPath = path.normalize(fullPath);
 
-            // 動画ファイルかチェック
-            if (VIDEO_EXTENSIONS_REGEX.test(fullPath)) {
+            // 音声・動画ファイルかチェック
+            if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(fullPath)) {
                 try {
                     await fs.access(fullPath);
                     videoFiles.push({ name: path.basename(fullPath), path: fullPath });
@@ -162,7 +166,7 @@ async function getVideoFilesRecursively(folderPath) {
             if (file.isDirectory()) {
                 const subFiles = await getVideoFilesRecursively(fullPath);
                 videoFiles.push(...subFiles);
-            } else if (VIDEO_EXTENSIONS_REGEX.test(file.name)) {
+            } else if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(file.name)) {
                 videoFiles.push({ name: file.name, path: fullPath });
             } else if (VIDEO_PLAYLIST_REGEX.test(file.name)) {
                 const listFiles = await processListFile(fullPath);
@@ -183,7 +187,7 @@ async function processCommandLineFile(filePath) {
             return await getVideoFilesRecursively(filePath);
         } else if (VIDEO_PLAYLIST_REGEX.test(filePath)) {
             return await processListFile(filePath);
-        } else if (VIDEO_EXTENSIONS_REGEX.test(filePath)) {
+        } else if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(filePath)) {
             return [{ name: path.basename(filePath), path: filePath }];
         }
     } catch (e) {
@@ -340,11 +344,11 @@ ipcMain.handle('open-video-dialog', async () => {
     const result = await dialog.showOpenDialog({
         properties: ['openFile', 'multiSelections'],  // 複数選択可能
         filters: [
-            { 
-                name: 'すべての動画ファイルとプレイリスト', 
-                extensions: [...VIDEO_EXTENSIONS, ...VIDEO_PLAYLIST] 
+            {
+                name: '音声・動画ファイルとプレイリスト',
+                extensions: [...SUPPORTED_MEDIA_EXTENSIONS, ...VIDEO_PLAYLIST]
             },
-            { name: 'すべての動画ファイル', extensions: VIDEO_EXTENSIONS },
+            { name: '音声・動画ファイル', extensions: SUPPORTED_MEDIA_EXTENSIONS },
             { name: 'xPlayer プレイリスト', extensions: VIDEO_PLAYLIST }
         ]
     });
@@ -355,7 +359,7 @@ ipcMain.handle('open-video-dialog', async () => {
         if (VIDEO_PLAYLIST_REGEX.test(filePath)) {
             const listFiles = await processListFile(filePath);
             selectedFiles.push(...listFiles);
-        } else if (VIDEO_EXTENSIONS_REGEX.test(filePath)) {
+        } else if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(filePath)) {
             selectedFiles.push({ name: path.basename(filePath), path: filePath });
         }
     }
@@ -875,10 +879,10 @@ ipcMain.handle('classify-path', async (event, fullPath) => {
             return { type: 'playlist', files };
         }
 
-        if (VIDEO_EXTENSIONS_REGEX.test(fullPath)) {
-            // 単体動画ファイル
+        if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(fullPath)) {
+            // 単体音声・動画ファイル
             return {
-                type: 'video',
+                type: 'media',
                 files: [{ name: path.basename(fullPath), path: fullPath }]
             };
         }

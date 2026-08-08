@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver5.03.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.04.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -43,6 +43,7 @@ const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 5.0
 const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
 const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
+const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.opus', '.wma', '.aiff', '.aif', '.alac', '.ape'];
 const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
 const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
@@ -151,6 +152,8 @@ const languageMap = {
 };
 
 // DOM要素取得
+let videoPlayerElement = null;
+let audioPlayer = null;
 let videoPlayer = null;
 let videoPreview = null;
 let mainContainer = null;
@@ -244,6 +247,7 @@ let filterHistoryList = null;
 let changelogBtn = null;
 let changelogContent = null;
 let tableContainer = null;
+let mediaContainer = null;
 
 // localStorage から復得
 let savedVolume = null;
@@ -271,7 +275,7 @@ let savedWallpaperPath = null;
 let savedAlwaysOnTop = null;
 
 // グローバル（共通）変数
-let initializeSetting = true;
+let Initializing = true;
 let playlist = [];
 let currentVideoIndex = 0;
 let selectedPlaylistIndex = -1;
@@ -341,19 +345,24 @@ let currentAspectRatio = 'none';
 let currentUpdateId = 0;            // 関数の外側に、現在の実行世代を管理する変数を定義します
 let scrollInterval = null;
 let scrollTimeout = null;
+let currentMediaType = 'video';
 
-//🔲初期処理🔲
-document.addEventListener('DOMContentLoaded', async () => {
-    // allDOMsetting() を呼び出して、DOM要素を取得
-    await allDOMsetting();
-    // allLocalStorageSetting() を呼び出して、localStorageからの復元
-    await allLocalStorageSetting();
+// 🔲document ハンドラ登録🔲
+// DOMContentロード完了（初期処理）
+document.addEventListener('DOMContentLoaded', () => {
+    // DOM要素を取得
+    allDOMsetting();
+    // localStorageからの復元
+    allLocalStorageSetting();
 
     // 動画初期化（未設定状態）
     videoPlayer.removeAttribute('src');
     videoPlayer.load();
+    audioPlayer.removeAttribute('src');
+    audioPlayer.load();
     videoPreview.removeAttribute('src');
     videoPreview.load();
+    updateMediaPlayerDisplay();
     appNameAndCopyright.textContent = appNameAndCopyrightValue;
 
     // ネット動画選択のアイコン表示更新
@@ -672,6 +681,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateIconOverlay();
         }
     })();
+
 
     // 🔲個別イベントリスナー登録🔲
     // 🌐ネット動画選択
@@ -1387,7 +1397,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 動画クリック
-    videoPlayer.addEventListener('contextmenu', (event) => {
+    mediaContainer.addEventListener('contextmenu', (event) => {
         event.preventDefault();
         if (event.ctrlKey) {
             playStopBtn.click();
@@ -1397,13 +1407,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 動画ダブルクリック
-    videoPlayer.addEventListener('dblclick', (event) => {
+    mediaContainer.addEventListener('dblclick', (event) => {
         event.preventDefault();
         fullscreenBtn.click();
     });
 
     // マウス押下
-    videoPlayer.addEventListener('mousedown', (event) => {
+    mediaContainer.addEventListener('mousedown', (event) => {
         if (event.button === 0) {
             if (isZoomMode) {
                 // ズーム時はパン（画像移動）開始
@@ -1421,7 +1431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // マウス移動
-    videoPlayer.addEventListener('mousemove', (event) => {
+    mediaContainer.addEventListener('mousemove', (event) => {
         // ズームモード時のパン（画像移動）
         if (isPanning) {
             const deltaX = event.clientX - panStartX;
@@ -1480,7 +1490,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // マウス解放
-    videoPlayer.addEventListener('mouseup', (e) => {
+    mediaContainer.addEventListener('mouseup', (e) => {
         if (e.button === 0) {
             const wasDragging = isDragging;
             const wasVolumeDragging = isVolumeDragging;
@@ -1499,14 +1509,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // マウスリーブ
-    videoPlayer.addEventListener('mouseleave', () => {
+    mediaContainer.addEventListener('mouseleave', () => {
         isDragging = false;
         isVolumeDragging = false;
         updateIconOverlay();
     });
 
     // マウス左クリックで表示/非表示をトグル
-    videoPlayer.addEventListener('click', (e) => {
+    mediaContainer.addEventListener('click', (e) => {
         if (e.button === 0) {
             if (!isDragging && !isVolumeDragging) {
                 const isVisible = 
@@ -1524,7 +1534,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // マウスホイール
-    videoPlayer.addEventListener('wheel', (event) => {
+    mediaContainer.addEventListener('wheel', (event) => {
         event.preventDefault();
 
         // ズームモードが有効 → ホイールでズーム調整
@@ -2348,10 +2358,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    initializeSetting = false;
+    Initializing = false;
 });
 
-// 🔲document ハンドラ登録🔲
 // ショートカットキー（イベントリスナー）
 document.addEventListener('keydown', async (event) => {
     // 動画のURLの入力中はショートカット無効
@@ -2973,7 +2982,7 @@ document.addEventListener('click', () => {
 // 🔲window ハンドラ登録🔲
 // ウィンドウリサイズ
 window.addEventListener('resize', () => {
-    if (initializeSetting) return;
+    if (Initializing) return;
     
     const controlSizeX = calculateControlSizeX();
     const controlSizeY = calculateControlSizeY();
@@ -2998,37 +3007,6 @@ window.addEventListener('unload', () => {
 });
 
 // 🔲ipcRenderer ハンドラ登録🔲
-// 結合進捗受信（詳細ペイロード対応）
-ipcRenderer.on('join-progress', (event, payload) => {
-    try {
-        const stage = payload && payload.stage ? payload.stage : 'progress';
-        switch (stage) {
-            case 'join-prepare':
-                updatemessageOverlay(`🎞️ 変換中…`, true, 0);
-                break;
-            case 'convert-pre':
-                const convPercent = Math.round(payload.percent);
-                if (isRepeatPlayMode === 'single') {
-                    updatemessageOverlay(`🎞️ 変換中… （1/1） ${convPercent}%`, true, 0);
-                } else {
-                    updatemessageOverlay(`🎞️ 変換中… （${payload.currentFile}/${payload.totalFiles}） ${convPercent}%`, true, 0);
-                }
-                break;
-            case 'join-start':
-                updatemessageOverlay('🎞️ 結合開始…', true, 0);
-                break;
-            case 'join':
-                updatemessageOverlay(`🎞️ 結合中…`, true, 0);
-                break;
-            case 'join-done':
-                updatemessageOverlay('🎞️ 結合完了', false, 1500);
-                break;
-        }
-    } catch (e) {
-        updatemessageOverlay('🎞️ 変換エラー', false, 0);
-    }
-});
-
 // main.js からの自動再生指示を受信
 ipcRenderer.on('auto-play-files', (event, videoFiles) => {
     if (!videoFiles || videoFiles.length === 0) return;
@@ -3134,129 +3112,164 @@ ipcRenderer.on('cut-progress', (event, payload) => {
     }
 });
 
+// 結合進捗受信（詳細ペイロード対応）
+ipcRenderer.on('join-progress', (event, payload) => {
+    try {
+        const stage = payload && payload.stage ? payload.stage : 'progress';
+        switch (stage) {
+            case 'join-prepare':
+                updatemessageOverlay(`🎞️ 変換中…`, true, 0);
+                break;
+            case 'convert-pre':
+                const convPercent = Math.round(payload.percent);
+                if (isRepeatPlayMode === 'single') {
+                    updatemessageOverlay(`🎞️ 変換中… （1/1） ${convPercent}%`, true, 0);
+                } else {
+                    updatemessageOverlay(`🎞️ 変換中… （${payload.currentFile}/${payload.totalFiles}） ${convPercent}%`, true, 0);
+                }
+                break;
+            case 'join-start':
+                updatemessageOverlay('🎞️ 結合開始…', true, 0);
+                break;
+            case 'join':
+                updatemessageOverlay(`🎞️ 結合中…`, true, 0);
+                break;
+            case 'join-done':
+                updatemessageOverlay('🎞️ 結合完了', false, 1500);
+                break;
+        }
+    } catch (e) {
+        updatemessageOverlay('🎞️ 変換エラー', false, 0);
+    }
+});
+
+
 // 🔲共通関数🔲
 // DOM要素取得
 function allDOMsetting() {
-	videoPlayer = document.getElementById('videoPlayer');
-	videoPreview = document.getElementById('videoPreview');
-	mainContainer = document.querySelector('.main-container');
-	videoContainer = document.querySelector('.video-container');
-	dropzone = document.querySelector('.video-container');
-	controls = document.querySelector('.controls');
-	folderInput = document.getElementById('folderInput');
-	videoInput = document.getElementById('videoInput');
-	urlInputBtn = document.getElementById('urlInputBtn');
-	urlInput = document.getElementById('urlInput');
-	urlClearBtn = document.getElementById('urlClearBtn');
-	urlConfirmBtn = document.getElementById('urlConfirmBtn');
-	urlInputPanel = document.querySelector('.url-input-panel');
-	prevVideoBtn = document.getElementById('prevVideoBtn');
-	rewindBtn = document.getElementById('rewindBtn');
-	playPauseBtn = document.getElementById('playPauseBtn');
-	playStopBtn = document.getElementById('playStopBtn');
-	fastForwardBtn = document.getElementById('fastForwardBtn');
-	nextVideoBtn = document.getElementById('nextVideoBtn');
-	seekBar = document.getElementById('seekBar');
-	volumeMuteBtn = document.getElementById('volumeMuteBtn');
-	volumeBar = document.getElementById('volumeBar');
-	speedSelect = document.getElementById('speedSelect');
-	zoomBtn = document.getElementById('zoomBtn');
-	zoomPanel = document.getElementById('zoomPanel');
-	zoomBar = document.getElementById('zoomBar');
-	zoomDisplay = document.getElementById('zoomDisplay');
-	zoomResetBtn = document.getElementById('zoomResetBtn');
-	snapshotBtn = document.getElementById('snapshotBtn');
-	aspectRatioBtn = document.getElementById('aspectRatioBtn');
-	zoomEndBtn = document.getElementById('zoomEndBtn');
-	fullscreenBtn = document.getElementById('fullscreenBtn');
-	fitModeBtn = document.getElementById('fitModeBtn');
-	filename = document.querySelector('.filename');
-	filenamePanel = document.querySelector('.filename-panel');
-	timeDisplay = document.getElementById('timeDisplay');
-	volumeDisplay = document.getElementById('volumeDisplay');
-	messageOverlay = document.getElementById('messageOverlay');
-	iconOverlay = document.getElementById('iconOverlay');
-	appNameAndCopyright = document.getElementById('appNameAndCopyright');
-	wallpaperBtn = document.getElementById('wallpaperBtn');
-	exportSettingsBtn = document.getElementById('exportSettingsBtn');
-	importSettingsBtn = document.getElementById('importSettingsBtn');
-	alwaysOnTopBtn = document.getElementById('alwaysOnTopBtn');
-	settingsBtn = document.getElementById('settingsBtn');
-	settingsPanel = document.getElementById('settingsPanel');
-	settingsCloseBtn = document.getElementById('settingsCloseBtn');
-	helpOpenBtn = document.getElementById('helpOpenBtn');
-	helpCloseBtn = document.getElementById('helpCloseBtn');
-	helpContainer = document.querySelector('.help-container');
-	helpTitle = helpContainer.querySelector('h1');
-	tooltipElements = document.querySelectorAll('[data-tooltip]');
-	filenameMenus = document.querySelector('.filename-menus');
-	filenameMenu = document.getElementById('filenameMenu');
-	upMovePlaylistBtn = document.getElementById('upMovePlaylistBtn');
-	downMovePlaylistBtn = document.getElementById('downMovePlaylistBtn');
-	addPlaylistBtn = document.getElementById('addPlaylistBtn');
-	removePlaylistBtn = document.getElementById('removePlaylistBtn');
-	clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
-	savePlaylistBtn = document.getElementById('savePlaylistBtn');
-	modeChangeBtn = document.getElementById('modeChangeBtn');
-	editPanel = document.getElementById('editPanel');
-	editModeBtn = document.getElementById('editModeBtn');
-	setInMarkBtn = document.getElementById('setInMarkBtn');
-	setOutMarkBtn = document.getElementById('setOutMarkBtn');
-	addCutRangeBtn = document.getElementById('addCutRangeBtn');
-	saveVideoBtn = document.getElementById('saveVideoBtn');
-	cutRangesList = document.getElementById('cutRangesList');
-	clearEditBtn = document.getElementById('clearEditBtn');
-	inMarkDisplay = document.getElementById('inMarkDisplay');
-	outMarkDisplay = document.getElementById('outMarkDisplay');
-	editSeekBar = document.getElementById('editSeekBar');
-	cutCancelBtn = document.getElementById('cutCancelBtn');
-	randomPlayBtn = document.getElementById('randomPlayBtn');
-	repeatPlayBtn  = document.getElementById('repeatPlayBtn');
-	joinPlaylistBtn = document.getElementById('joinPlaylistBtn');
-	sortPlaylistBtn = document.getElementById('sortPlaylistBtn');
-	playlistDisplayBtn = document.getElementById('playlistDisplayBtn');
-	filterPanel = document.getElementById('filterPanel');
-	playlistFilterInput = document.getElementById('playlistFilterInput');
-	filterClearBtn = document.getElementById('filterClearBtn');
-	filterList = document.getElementById('filterList');
-	darkOverlay = document.getElementById('darkOverlay');
-	voiceSelectBtn = document.getElementById('voiceSelectBtn');
-	subtitleSelectBtn = document.getElementById('subtitleSelectBtn');
-	itemCount = document.getElementById('itemCount');
-	playlistPathArea = document.getElementById('playlistPathArea');
-	cutTimelineContainer = document.getElementById('cutTimelineContainer');
-	cutTimelineBar = document.getElementById('cutTimelineBar');
-	filterHistoryList = document.getElementById('filterHistoryList');
-	changelogBtn = document.getElementById('changelogBtn');
-	changelogContent = document.getElementById('changelogContent');
-	tableContainer = document.getElementById('tableContainer');
+    videoPlayerElement = document.getElementById('videoPlayer');
+    audioPlayer = document.getElementById('audioPlayer');
+    videoPlayer = createMediaPlayerProxy(videoPlayerElement, audioPlayer);
+    videoPreview = document.getElementById('videoPreview');
+    mainContainer = document.querySelector('.main-container');
+    videoContainer = document.querySelector('.video-container');
+    dropzone = document.querySelector('.video-container');
+    controls = document.querySelector('.controls');
+    folderInput = document.getElementById('folderInput');
+    videoInput = document.getElementById('videoInput');
+    urlInputBtn = document.getElementById('urlInputBtn');
+    urlInput = document.getElementById('urlInput');
+    urlClearBtn = document.getElementById('urlClearBtn');
+    urlConfirmBtn = document.getElementById('urlConfirmBtn');
+    urlInputPanel = document.querySelector('.url-input-panel');
+    prevVideoBtn = document.getElementById('prevVideoBtn');
+    rewindBtn = document.getElementById('rewindBtn');
+    playPauseBtn = document.getElementById('playPauseBtn');
+    playStopBtn = document.getElementById('playStopBtn');
+    fastForwardBtn = document.getElementById('fastForwardBtn');
+    nextVideoBtn = document.getElementById('nextVideoBtn');
+    seekBar = document.getElementById('seekBar');
+    volumeMuteBtn = document.getElementById('volumeMuteBtn');
+    volumeBar = document.getElementById('volumeBar');
+    speedSelect = document.getElementById('speedSelect');
+    zoomBtn = document.getElementById('zoomBtn');
+    zoomPanel = document.getElementById('zoomPanel');
+    zoomBar = document.getElementById('zoomBar');
+    zoomDisplay = document.getElementById('zoomDisplay');
+    zoomResetBtn = document.getElementById('zoomResetBtn');
+    snapshotBtn = document.getElementById('snapshotBtn');
+    aspectRatioBtn = document.getElementById('aspectRatioBtn');
+    zoomEndBtn = document.getElementById('zoomEndBtn');
+    fullscreenBtn = document.getElementById('fullscreenBtn');
+    fitModeBtn = document.getElementById('fitModeBtn');
+    filename = document.querySelector('.filename');
+    filenamePanel = document.querySelector('.filename-panel');
+    timeDisplay = document.getElementById('timeDisplay');
+    volumeDisplay = document.getElementById('volumeDisplay');
+    messageOverlay = document.getElementById('messageOverlay');
+    iconOverlay = document.getElementById('iconOverlay');
+    appNameAndCopyright = document.getElementById('appNameAndCopyright');
+    wallpaperBtn = document.getElementById('wallpaperBtn');
+    exportSettingsBtn = document.getElementById('exportSettingsBtn');
+    importSettingsBtn = document.getElementById('importSettingsBtn');
+    alwaysOnTopBtn = document.getElementById('alwaysOnTopBtn');
+    settingsBtn = document.getElementById('settingsBtn');
+    settingsPanel = document.getElementById('settingsPanel');
+    settingsCloseBtn = document.getElementById('settingsCloseBtn');
+    helpOpenBtn = document.getElementById('helpOpenBtn');
+    helpCloseBtn = document.getElementById('helpCloseBtn');
+    helpContainer = document.querySelector('.help-container');
+    helpTitle = helpContainer.querySelector('h1');
+    tooltipElements = document.querySelectorAll('[data-tooltip]');
+    filenameMenus = document.querySelector('.filename-menus');
+    filenameMenu = document.getElementById('filenameMenu');
+    upMovePlaylistBtn = document.getElementById('upMovePlaylistBtn');
+    downMovePlaylistBtn = document.getElementById('downMovePlaylistBtn');
+    addPlaylistBtn = document.getElementById('addPlaylistBtn');
+    removePlaylistBtn = document.getElementById('removePlaylistBtn');
+    clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
+    savePlaylistBtn = document.getElementById('savePlaylistBtn');
+    modeChangeBtn = document.getElementById('modeChangeBtn');
+    editPanel = document.getElementById('editPanel');
+    editModeBtn = document.getElementById('editModeBtn');
+    setInMarkBtn = document.getElementById('setInMarkBtn');
+    setOutMarkBtn = document.getElementById('setOutMarkBtn');
+    addCutRangeBtn = document.getElementById('addCutRangeBtn');
+    saveVideoBtn = document.getElementById('saveVideoBtn');
+    cutRangesList = document.getElementById('cutRangesList');
+    clearEditBtn = document.getElementById('clearEditBtn');
+    inMarkDisplay = document.getElementById('inMarkDisplay');
+    outMarkDisplay = document.getElementById('outMarkDisplay');
+    editSeekBar = document.getElementById('editSeekBar');
+    cutCancelBtn = document.getElementById('cutCancelBtn');
+    randomPlayBtn = document.getElementById('randomPlayBtn');
+    repeatPlayBtn  = document.getElementById('repeatPlayBtn');
+    joinPlaylistBtn = document.getElementById('joinPlaylistBtn');
+    sortPlaylistBtn = document.getElementById('sortPlaylistBtn');
+    playlistDisplayBtn = document.getElementById('playlistDisplayBtn');
+    filterPanel = document.getElementById('filterPanel');
+    playlistFilterInput = document.getElementById('playlistFilterInput');
+    filterClearBtn = document.getElementById('filterClearBtn');
+    filterList = document.getElementById('filterList');
+    darkOverlay = document.getElementById('darkOverlay');
+    voiceSelectBtn = document.getElementById('voiceSelectBtn');
+    subtitleSelectBtn = document.getElementById('subtitleSelectBtn');
+    itemCount = document.getElementById('itemCount');
+    playlistPathArea = document.getElementById('playlistPathArea');
+    cutTimelineContainer = document.getElementById('cutTimelineContainer');
+    cutTimelineBar = document.getElementById('cutTimelineBar');
+    filterHistoryList = document.getElementById('filterHistoryList');
+    changelogBtn = document.getElementById('changelogBtn');
+    changelogContent = document.getElementById('changelogContent');
+    tableContainer = document.getElementById('tableContainer');
+    mediaContainer = document.getElementById('mediaContainer');
 }
 
 // localStorage から復得
 function allLocalStorageSetting() {
-	savedVolume = localStorage.getItem('volume');
-	savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
-	savedPlaylist = localStorage.getItem('playlist');
-	savedCurrentVideoIndex = localStorage.getItem('currentVideoIndex');
-	savedCurrentTime = localStorage.getItem('currentTime');
-	savedFitMode = localStorage.getItem('fitMode');
-	savedZoom = localStorage.getItem('zoom');
-	savedTranslateX = localStorage.getItem('translateX');
-	savedTranslateY = localStorage.getItem('translateY');
-	savedEditFrameRate = localStorage.getItem('editFrameRate');
-	savedIsRandomPlayMode = localStorage.getItem('isRandomPlayMode');
-	savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode');
-	savedShuffleOrder = localStorage.getItem('shuffleOrder');
-	savedShufflePosition = localStorage.getItem('shufflePosition');
-	savedAspectRatio = localStorage.getItem('aspectRatio');
-	savedCurrentSortMode = localStorage.getItem('playlistSortMode');
-	savedPlaylistDisplayMode = localStorage.getItem('playlistDisplayMode');
-	savedSelectedAudioLabel = localStorage.getItem('selectedAudioLabel');
-	savedSelectedAudioTrack = localStorage.getItem('selectedAudioTrack');
-	savedSelectedSubtitleLabel = localStorage.getItem('selectedSubtitleLabel');
-	savedSelectedSubtitleTrack = localStorage.getItem('selectedSubtitleTrack');
-	savedWallpaperPath = localStorage.getItem('wallpaperPath');
-	savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
+    savedVolume = localStorage.getItem('volume');
+    savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
+    savedPlaylist = localStorage.getItem('playlist');
+    savedCurrentVideoIndex = localStorage.getItem('currentVideoIndex');
+    savedCurrentTime = localStorage.getItem('currentTime');
+    savedFitMode = localStorage.getItem('fitMode');
+    savedZoom = localStorage.getItem('zoom');
+    savedTranslateX = localStorage.getItem('translateX');
+    savedTranslateY = localStorage.getItem('translateY');
+    savedEditFrameRate = localStorage.getItem('editFrameRate');
+    savedIsRandomPlayMode = localStorage.getItem('isRandomPlayMode');
+    savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode');
+    savedShuffleOrder = localStorage.getItem('shuffleOrder');
+    savedShufflePosition = localStorage.getItem('shufflePosition');
+    savedAspectRatio = localStorage.getItem('aspectRatio');
+    savedCurrentSortMode = localStorage.getItem('playlistSortMode');
+    savedPlaylistDisplayMode = localStorage.getItem('playlistDisplayMode');
+    savedSelectedAudioLabel = localStorage.getItem('selectedAudioLabel');
+    savedSelectedAudioTrack = localStorage.getItem('selectedAudioTrack');
+    savedSelectedSubtitleLabel = localStorage.getItem('selectedSubtitleLabel');
+    savedSelectedSubtitleTrack = localStorage.getItem('selectedSubtitleTrack');
+    savedWallpaperPath = localStorage.getItem('wallpaperPath');
+    savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
 }
 
 // 音声トラック・字幕トラック更新
@@ -4105,7 +4118,7 @@ async function updateFilterList() {
         return;
     }
 
-	// 表示モードの判定
+    // 表示モードの判定
     const isTileMode = ['thumb-small', 'thumb-medium', 'thumb-large'].includes(playlistDisplayMode);
     const isListOrThumbListMode = ['list', 'thumb-list'].includes(playlistDisplayMode);
     
@@ -4906,12 +4919,25 @@ async function setVideoSrc(file) {
         cleanPath = cleanPath.split('?')[0];
     }
     const ext = path.extname(cleanPath).toLowerCase();
+    const isAudio = isAudioFilePath(file.path);
+    currentMediaType = isAudio ? 'audio' : 'video';
+    updateMediaPlayerDisplay();
 
-    // video.src設定
-    if (isHTML5_SUPPORTED(ext)) {
+    // media.src設定
+    if (isAudio) {
+        isConverting = false;
+        const mediaUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
+        videoPlayerElement.src = mediaUrl;
+        audioPlayer.src = mediaUrl;
+        videoPreview.removeAttribute('src');
+        videoPreview.load();
+        baseConvertFile = null;
+        tempConvertFile = null;
+    } else if (isHTML5_SUPPORTED(ext)) {
         isConverting = false;
         const videoUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
-        videoPlayer.src = videoUrl;
+        videoPlayerElement.src = videoUrl;
+        audioPlayer.src = videoUrl;
         videoPreview.src = videoUrl;
         baseConvertFile = null;
         tempConvertFile = null;
@@ -4928,7 +4954,8 @@ async function setVideoSrc(file) {
             const convertedPath = await currentConvertPromise;
 
             const videoUrl = `file://${convertedPath}`;
-            videoPlayer.src = videoUrl;
+            videoPlayerElement.src = videoUrl;
+            audioPlayer.src = videoUrl;
             videoPreview.src = videoUrl;
             baseConvertFile = file.path;
             tempConvertFile = convertedPath;
@@ -4964,7 +4991,9 @@ async function setVideoSrc(file) {
         }
     }
     
-    if (modeChange === 'video') {
+    if (currentMediaType === 'audio') {
+        updateTrackButtonsVisibility();
+    } else if (modeChange === 'video') {
         await updateTrack('subtitle');
     } else {
         await updateTrack('audio');
@@ -5183,7 +5212,7 @@ async function playlistSet(videoFiles) {
 function isHTML5_SUPPORTED(ext) {
     const cleanExt = ext.split('?')[0].toLowerCase();
     if (modeChange === 'video') {
-        return HTML5_SUPPORTED.includes(cleanExt);
+        return HTML5_SUPPORTED.includes(cleanExt) || AUDIO_EXTENSIONS.includes(cleanExt);
     } else {
         return HTML5_SUPPORTED_CONVERT.includes(cleanExt);
     }
@@ -6035,6 +6064,13 @@ function resetCursorTimer() {
 
 // 音声/字幕ボタンの表示をモードに応じて切り替え
 function updateTrackButtonsVisibility() {
+    if (currentMediaType === 'audio') {
+        if (voiceSelectBtn) voiceSelectBtn.style.display = 'none';
+        if (subtitleSelectBtn) subtitleSelectBtn.style.display = 'none';
+        subtitleSelectBtn.classList.remove('subtitles-active');
+        return;
+    }
+
     if (modeChange === 'video') {
         // 再生モード → 字幕選択のみ表示
         if (voiceSelectBtn) voiceSelectBtn.style.display = 'none';
@@ -6581,4 +6617,108 @@ async function toggleAlwaysOnTop() {
     }
     localStorage.setItem('alwaysOnTop', isAlwaysOnTop ? 'true' : 'false');
     updateAlwaysOnTopButtonUI();
+}
+
+function getMediaFileExtension(filePath) {
+    if (!filePath) return '';
+    const cleanPath = filePath.split('?')[0];
+    return path.extname(cleanPath).toLowerCase();
+}
+
+function isAudioFilePath(filePath) {
+    const ext = getMediaFileExtension(filePath);
+    return AUDIO_EXTENSIONS.includes(ext);
+}
+
+function updateMediaPlayerDisplay() {
+    const isAudio = currentMediaType === 'audio';
+    if (videoPlayerElement) {
+        videoPlayerElement.style.display = isAudio ? 'none' : 'block';
+    }
+    if (audioPlayer) {
+        audioPlayer.style.display = isAudio ? 'block' : 'none';
+    }
+    if (videoPreview) {
+        videoPreview.style.display = 'none';
+    }
+}
+
+function createMediaPlayerProxy(videoElement, audioElement) {
+    return new Proxy(videoElement, {
+        get(target, prop) {
+            const activeElement = currentMediaType === 'audio' ? audioElement : videoElement;
+            if (prop === 'src') return activeElement.src;
+            if (prop === 'currentSrc') return activeElement.currentSrc;
+            if (prop === 'paused') return activeElement.paused;
+            if (prop === 'duration') return activeElement.duration;
+            if (prop === 'currentTime') return activeElement.currentTime;
+            if (prop === 'playbackRate') return activeElement.playbackRate;
+            if (prop === 'volume') return activeElement.volume;
+            if (prop === 'readyState') return activeElement.readyState;
+            if (prop === 'error') return activeElement.error;
+            if (prop === 'play') return activeElement.play.bind(activeElement);
+            if (prop === 'pause') return activeElement.pause.bind(activeElement);
+            if (prop === 'load') return activeElement.load.bind(activeElement);
+            if (prop === 'addEventListener') {
+                return (...args) => {
+                    videoElement.addEventListener(...args);
+                    audioElement.addEventListener(...args);
+                };
+            }
+            if (prop === 'removeEventListener') {
+                return (...args) => {
+                    videoElement.removeEventListener(...args);
+                    audioElement.removeEventListener(...args);
+                };
+            }
+            if (prop === 'removeAttribute') {
+                return (...args) => activeElement.removeAttribute(...args);
+            }
+            if (prop === 'setAttribute') {
+                return (...args) => activeElement.setAttribute(...args);
+            }
+            if (prop === 'click') {
+                return () => activeElement.click();
+            }
+            if (prop === 'dispatchEvent') {
+                return (event) => activeElement.dispatchEvent(event);
+            }
+            if (prop === 'getBoundingClientRect') {
+                return () => activeElement.getBoundingClientRect();
+            }
+            if (prop === 'matches') {
+                return (...args) => activeElement.matches(...args);
+            }
+            if (prop === 'textTracks') return activeElement.textTracks;
+            if (prop === 'firstElementChild') return activeElement.firstElementChild;
+            if (prop === 'appendChild') return (...args) => activeElement.appendChild(...args);
+            if (prop === 'removeChild') return (...args) => activeElement.removeChild(...args);
+            return Reflect.get(activeElement, prop);
+        },
+        set(target, prop, value) {
+            const activeElement = currentMediaType === 'audio' ? audioElement : videoElement;
+            if (prop === 'src') {
+                videoElement.src = value;
+                audioElement.src = value;
+                return true;
+            }
+            if (prop === 'currentTime') {
+                activeElement.currentTime = value;
+                return true;
+            }
+            if (prop === 'playbackRate') {
+                activeElement.playbackRate = value;
+                return true;
+            }
+            if (prop === 'volume') {
+                activeElement.volume = value;
+                return true;
+            }
+            if (prop === 'muted') {
+                activeElement.muted = value;
+                return true;
+            }
+            return Reflect.set(activeElement, prop, value);
+        }
+    });
 }
