@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.04.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.05.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -4300,25 +4300,40 @@ async function updateFilterList() {
             button.appendChild(textBlock);
             button.title = displayText;
 
-            const setFallbackThumb = () => {
-                thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#2a2a2a"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="18">No Thumbnail</text></svg>');
-                thumbWrap.style.background = 'rgba(0,0,0,0.2)';
-            };
-
-            try {
-                const thumbUrl = await getPlaylistThumbnailDataUrl(item.file?.path, thumbDims.width);
-                if (myUpdateId !== currentUpdateId) return;
-
-                if (thumbUrl) {
-                    thumb.src = thumbUrl;
-                } else {
-                    setFallbackThumb();
-                }
-            } catch (error) {
-                console.error(`サムネイル取得失敗 [Index: ${index}]:`, error);
-                if (myUpdateId !== currentUpdateId) return;
-                setFallbackThumb();
-            }
+			const setFallbackThumb = () => {
+			    thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#2a2a2a"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="18">No Thumbnail</text></svg>');
+			    thumbWrap.style.background = 'rgba(0,0,0,0.2)';
+			};
+			const setMusicThumb = () => {
+			    thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#5672f1"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="62">♬</text></svg>');
+			    thumbWrap.style.background = 'rgba(0,0,0,0.2)';
+			};
+			// 音声ファイルの判定関数（拡張子チェック）
+			const isAudioFile = (filePath) => {
+			    if (!filePath) return false;
+			    const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
+			    return AUDIO_EXTENSIONS.includes(ext);
+			};
+			
+			try {
+			    // 音声ファイルの場合はサムネイル取得を行わずに Music 用サムネイルを設定
+			    if (isAudioFile(item.file?.path)) {
+			        setMusicThumb();
+			    } else {
+			        const thumbUrl = await getPlaylistThumbnailDataUrl(item.file?.path, thumbDims.width);
+			        if (myUpdateId !== currentUpdateId) return;
+			
+			        if (thumbUrl) {
+			            thumb.src = thumbUrl;
+			        } else {
+			            setFallbackThumb();
+			        }
+			    }
+			} catch (error) {
+			    console.error(`サムネイル取得失敗 [Index: ${index}]:`, error);
+			    if (myUpdateId !== currentUpdateId) return;
+			    setFallbackThumb();
+			}
         }
 
         button.addEventListener('click', async (e) => {
