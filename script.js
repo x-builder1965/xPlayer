@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.05.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.06.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1622,6 +1622,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filename.style.opacity !== '1') return;
         if (!videoPlayer.duration || playlist.length === 0) return;
         isMouseOverEditSeekBar = true;
+        // ★ 動画以外（音声ファイル等）の場合はプレビューを表示しない
+        const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
+        const ext = path.extname(currentSrc).toLowerCase();
+        if (!isVideoFile(ext)) return;
         videoPreview.style.display = 'block';
         // プレビュー位置更新
         updatePreviewPosition(e);
@@ -1715,6 +1719,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (controls.style.opacity !== '1') return;
         if (!videoPlayer.duration || playlist.length === 0) return;
         isMouseOverSeekBar = true;
+        // ★ 動画以外（音声ファイル等）の場合はプレビューを表示しない
+        const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
+        const ext = path.extname(currentSrc).toLowerCase();
+        if (!isVideoFile(ext)) return;
         videoPreview.style.display = 'block';
         // プレビュー位置更新
         updatePreviewPosition(e);
@@ -2920,15 +2928,10 @@ document.addEventListener('mouseup', (e) => {
         isDragging = false;
         darkOverlay.style.display = 'none';
         hidemessageOverlay();
-        
-        if (videoPlayer.duration) {
-            seekBar.value = (videoPreview.currentTime / videoPreview.duration) * 100;
-            videoPlayer.currentTime = videoPreview.currentTime;
-            updateTimeDisplay();
-            localStorage.setItem('currentTime', videoPlayer.currentTime);
-        }
-
-        if (isMouseOverSeekBar) {
+        // ★ 動画以外（音声ファイル等）の場合はプレビューを表示しない
+        const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
+        const ext = path.extname(currentSrc).toLowerCase();
+        if (isMouseOverSeekBar && isVideoFile(ext)) {
             videoPreview.style.display = 'block';
         }
     }
@@ -2939,18 +2942,12 @@ document.addEventListener('mouseup', (e) => {
         isDragging = false;
         darkOverlay.style.display = 'none';
         hidemessageOverlay();
-        
-        if (videoPlayer.duration) {
-            editSeekBar.value = (videoPreview.currentTime / videoPreview.duration) * 100;
-            videoPlayer.currentTime = videoPreview.currentTime;
-            updateTimeDisplay();
-            localStorage.setItem('currentTime', videoPlayer.currentTime);
-        }
-
-        if (isMouseOverEditSeekBar) {
+        const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
+        const ext = path.extname(currentSrc).toLowerCase();
+        if (isMouseOverEditSeekBar && isVideoFile(ext)) {
             videoPreview.style.display = 'block';
         }
-    }
+    }   
 
     if (isPanning) {
         // ドキュメントレベルでのマウスアップ時にもパン終了処理
@@ -6736,4 +6733,19 @@ function createMediaPlayerProxy(videoElement, audioElement) {
             return Reflect.set(activeElement, prop, value);
         }
     });
+}
+
+// 動画ファイルかどうかを判定する関数
+function isVideoFile(ext) {
+    const cleanExt = ext.split('?')[0].toLowerCase();
+    // 音声拡張子（AUDIO_EXTENSIONS）に含まれている場合は false
+    if (typeof AUDIO_EXTENSIONS !== 'undefined' && AUDIO_EXTENSIONS.includes(cleanExt)) {
+        return false;
+    }
+    // modeChange に合わせた動画サポート判定
+    if (modeChange === 'video') {
+        return HTML5_SUPPORTED.includes(cleanExt);
+    } else {
+        return HTML5_SUPPORTED_CONVERT.includes(cleanExt);
+    }
 }
