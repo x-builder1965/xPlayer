@@ -5003,13 +5003,15 @@ async function setVideoSrc(file) {
         }
     }
     
-    if (currentMediaType === 'audio') {
-        updateTrackButtonsVisibility();
-    } else if (modeChange === 'video') {
-        await updateTrack('subtitle');
-    } else {
-        await updateTrack('audio');
+    // 音声トラック・字幕トラックボタン表示
+    if (currentMediaType !== 'audio') {
+        if (modeChange === 'video') {
+            await updateTrack('subtitle');
+        } else {
+            await updateTrack('audio');
+        }
     }
+    updateTrackButtonsVisibility();
 
     // 共通再生処理
     videoPlayer.load();
@@ -6078,26 +6080,23 @@ function resetCursorTimer() {
 function updateTrackButtonsVisibility() {
     if (currentMediaType === 'audio') {
         if (voiceSelectBtn) voiceSelectBtn.style.display = 'none';
-        if (subtitleSelectBtn) subtitleSelectBtn.style.display = 'none';
-        subtitleSelectBtn.classList.remove('subtitles-active');
-        return;
-    }
-
-    if (modeChange === 'video') {
-        // 再生モード → 字幕選択のみ表示
-        if (voiceSelectBtn) voiceSelectBtn.style.display = 'none';
         if (subtitleSelectBtn) subtitleSelectBtn.style.display = 'inline-block';
-
         subtitleSelectBtn.classList.remove('subtitles-active');
-        if (selectedSubtitleLabel !== '（なし）') {
-            subtitleSelectBtn.classList.add('subtitles-active');
-        }
     } else {
-        // 変換モード → 音声選択のみ表示
-        if (voiceSelectBtn) voiceSelectBtn.style.display = 'inline-block';
-        if (subtitleSelectBtn) subtitleSelectBtn.style.display = 'none';
-
-        subtitleSelectBtn.classList.remove('subtitles-active');
+        if (modeChange === 'video') {
+            // 再生モード → 字幕選択のみ表示
+            if (voiceSelectBtn) voiceSelectBtn.style.display = 'none';
+            if (subtitleSelectBtn) subtitleSelectBtn.style.display = 'inline-block';
+            subtitleSelectBtn.classList.remove('subtitles-active');
+            if (selectedSubtitleLabel !== '（なし）') {
+                subtitleSelectBtn.classList.add('subtitles-active');
+            }
+        } else {
+            // 変換モード → 音声選択のみ表示
+            if (voiceSelectBtn) voiceSelectBtn.style.display = 'inline-block';
+            if (subtitleSelectBtn) subtitleSelectBtn.style.display = 'none';
+            subtitleSelectBtn.classList.remove('subtitles-active');
+        }
     }
 }
 
