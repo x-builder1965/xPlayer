@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.75.2';
+const appName = 'xPlayer -動画プレイヤー- Ver5.08.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -11,6 +11,9 @@ const { promises: fs } = require('fs');
 const os = require('os');
 const path = require('path');
 const { exec } = require('child_process');
+// 【追加】audioMotion-analyzer の読み込み
+const AudioMotionModule = require('audiomotion-analyzer');
+const AudioMotionAnalyzer = AudioMotionModule.default || AudioMotionModule;
 
 // 🔲初期処理🔲
 // 🔧 起動時対応: キャッシュディレクトリを事前に作成し、
@@ -52,6 +55,13 @@ const { exec } = require('child_process');
         // 抑制処理に失敗してもアプリは継続
     }
 })();
+
+// クラス直接ではなく、preload側で new する関数を定義して晒す
+contextBridge.exposeInMainWorld('AudioMotionAPI', {
+    create: (containerElement, options) => {
+        return new AudioMotionAnalyzer(containerElement, options);
+    }
+});
 
 // 🔲基本API🔲
 contextBridge.exposeInMainWorld('electronAPI', {

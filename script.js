@@ -1,11 +1,11 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.07.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.08.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
- const { 
+const { 
     ipcRenderer, 
     fs, 
     os, 
@@ -346,6 +346,7 @@ let currentUpdateId = 0;            // 関数の外側に、現在の実行世�
 let scrollInterval = null;
 let scrollTimeout = null;
 let currentMediaType = 'video';
+let audioMotion = null;
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -4942,6 +4943,13 @@ async function setVideoSrc(file) {
     currentMediaType = isAudio ? 'audio' : 'video';
     updateMediaPlayerDisplay();
 
+    // === 【追加】audioMotionの初期化と表示切り替え ===
+    if (!audioMotion) {
+        initAudioMotion();
+    }
+    toggleVisualizer(isAudio);
+    // ===============================================
+
     // media.src設定
     if (isAudio) {
         isConverting = false;
@@ -6761,5 +6769,43 @@ function isVideoFile(ext) {
         return HTML5_SUPPORTED.includes(cleanExt);
     } else {
         return HTML5_SUPPORTED_CONVERT.includes(cleanExt);
+    }
+}
+
+// ビジュアライザーの初期化関数
+function initAudioMotion() {
+    if (audioMotion) return;
+
+    const visualizerContainer = document.getElementById('visualizerContainer');
+    const audioPlayer = document.getElementById('audioPlayer');
+
+    try {
+        // new window.AudioMotion ではなく API 経由で生成
+        audioMotion = window.AudioMotionAPI.create(visualizerContainer, {
+            source: audioPlayer,       // 音声プレイヤー要素を接続
+            mode: 3,                   // 描画モード (1〜10)
+            barSpace: .1,
+            ledBars: true,
+            showBgColor: false,
+            showScaleX: false,
+            bgAlpha: 0,
+            // 好みに応じた設定オプション（カラーグラデーション、波形など）
+        });
+    } catch (err) {
+        console.error('AudioMotion の初期化に失敗しました:', err);
+    }
+}
+
+// ビジュアライザーの表示切替
+function toggleVisualizer(show) {
+    const visualizerContainer = document.getElementById('visualizerContainer');
+    const videoPlayer = document.getElementById('videoPlayer');
+
+    if (show) {
+        visualizerContainer.style.display = 'block';
+        videoPlayer.style.display = 'none'; // 音声時は動画エリアを非表示に
+    } else {
+        visualizerContainer.style.display = 'none';
+        videoPlayer.style.display = 'block'; // 動画時は動画エリアを表示
     }
 }
