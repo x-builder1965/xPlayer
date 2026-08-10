@@ -6559,7 +6559,8 @@ function updateFilterHistoryList() {
         ? filterHistory.filter(item => item.toLowerCase().includes(keyword))
         : filterHistory;
     
-    filteredHistory.forEach((item) => {
+    // ★変更: .slice().reverse() で最新の入力が上にくるよう逆順でループ処理
+    filteredHistory.slice().reverse().forEach((item) => {
         const li = document.createElement('li');
 
         // --- 1. テキスト部分の作成 ---
