@@ -6784,12 +6784,12 @@ function initAudioMotion() {
         audioMotion = window.AudioMotionAPI.create(visualizerContainer, {
             source: audioPlayer,       // 音声プレイヤー要素を接続
             mode: 3,                   // 描画モード (1〜10)
-            barSpace: .1,
-            ledBars: true,
-            showBgColor: false,
-            showScaleX: false,
-            bgAlpha: 0,
-            // 好みに応じた設定オプション（カラーグラデーション、波形など）
+            barSpace: 0.1,             // バー同士の間隔
+            ledBars: true,             // LEDドット風描画
+            bgAlpha: 0,                // Canvas背景の透明度 (0: 完全透明)
+            showBgColor: false,        // テーマ背景色の描画をオフ
+            overlay: true,             // 背景透過時の重ね合わせ表示最適化
+            showScaleX: false,         // 周波数(Hz)目盛りの非表示
         });
     } catch (err) {
         console.error('AudioMotion の初期化に失敗しました:', err);
