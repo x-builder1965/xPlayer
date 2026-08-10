@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.06.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.07.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1025,6 +1025,10 @@ document.addEventListener('DOMContentLoaded', () => {
         filterText = playlistFilterInput.value || '';
         if (isFilterPanelVisible) debouncedUpdateFilterList();
         debouncedScrollCurrentFilterItem();
+        
+        // ★追加: フィルタ条件入力時、履歴リストを更新して表示する
+        updateFilterHistoryList();
+        showHistoryList();
     });
 
     // フォーカス時／入力時にリストを表示
@@ -1051,6 +1055,9 @@ document.addEventListener('DOMContentLoaded', () => {
         try { playlistFilterInput?.focus(); } catch (e) {}
         if (isFilterPanelVisible) debouncedUpdateFilterList();
         debouncedScrollCurrentFilterItem();
+        
+        // ★追加: フィルタ条件入力時、履歴リストを更新して表示する
+        updateFilterHistoryList();
     });
 
     // 🔀ランダム再生ボタンクリック
@@ -6533,7 +6540,7 @@ function deleteFromFilterHistory(text) {
     updateFilterHistoryList();
 
     // 履歴が空になったらドロップダウンを隠す
-    if (filterHistory.length === 0) {
+    if (filterHistoryList.children.length === 0) {
         hideHistoryList();
     }
 }
@@ -6544,7 +6551,15 @@ function updateFilterHistoryList() {
     
     filterHistoryList.innerHTML = '';
     
-    filterHistory.forEach((item) => {
+    // 入力値を取得（大文字小文字を区別せず比較）
+    const keyword = (playlistFilterInput.value || '').toLowerCase();
+
+    // keywordが空文字の場合は filterHistory 全件をそのまま使用する
+    const filteredHistory = keyword
+        ? filterHistory.filter(item => item.toLowerCase().includes(keyword))
+        : filterHistory;
+    
+    filteredHistory.forEach((item) => {
         const li = document.createElement('li');
 
         // --- 1. テキスト部分の作成 ---
@@ -6554,13 +6569,11 @@ function updateFilterHistoryList() {
 
         // アイテム選択時のイベント（テキスト領域クリック）
         li.addEventListener('mousedown', (e) => {
-            // 削除ボタンが押されたときは選択処理を行わない
             if (e.target.classList.contains('delete-btn')) return;
 
             e.preventDefault(); 
             playlistFilterInput.value = item;
             
-            // 手動で input / change イベントを発火させて既存のフィルタ処理を実行
             playlistFilterInput.dispatchEvent(new Event('input', { bubbles: true }));
             playlistFilterInput.dispatchEvent(new Event('change', { bubbles: true }));
 
@@ -6575,8 +6588,8 @@ function updateFilterHistoryList() {
 
         // 削除ボタンクリック時のイベント
         deleteBtn.addEventListener('mousedown', (e) => {
-            e.preventDefault();  // inputのblur（非表示化）を防止
-            e.stopPropagation(); // liへのイベント伝播をストップ
+            e.preventDefault(); 
+            e.stopPropagation();
             deleteFromFilterHistory(item);
         });
 
@@ -6589,7 +6602,8 @@ function updateFilterHistoryList() {
 
 // リスト表示・非表示の制御関数
 function showHistoryList() {
-    if (filterHistory.length > 0) {
+    // ★変更: 絞り込み後のリスト要素が存在する場合のみ表示する
+    if (filterHistoryList.children.length > 0) {
         filterHistoryList.classList.remove('hidden');
     }
 }
