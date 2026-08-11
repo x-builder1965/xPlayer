@@ -75,14 +75,97 @@ const PLAYLIST_NODES = {
     'thumb-medium': { label: 'サムネイル中', width: 216, height: 122 },
     'thumb-large':  { label: 'サムネイル大', width: 432, height: 244 }
 };
+// オーディオモーション設定のデフォルトオプション定義
+const DEFAULT_AUDIO_MOTION_OPTIONS = {
+    mode: 3,               // 周波数帯域の分割解像度 (0: 離散バー, 1: 1/1オクターブ ~ 10: 1/10オクターブ等)
+    radial: false,          // 円形（ラジアル）表示を無効化（通常の水平表示）
+    barSpace: 0.1,          // バー同士の隙間の比率 (0: 隙間なし ~ 1: バー幅と同等)
+    ledBars: false,         // バーをLEDブロック状に区切る表示をオフ（通常のソリッド描画）
+    showPeaks: true,        // ピーク（頂点）ホールドラインの表示を有効化
+    fillAlpha: 1,           // スペクトラム内部の塗りつぶし不透明度 (0: 完全透明 ~ 1: 完全不透明)
+    lineWidth: 0,           // バー/波形の外枠線の太さpx (0: 枠線なし)
+    gradient: 'classic',    // 使用するグラデーションテーマ ('classic', 'neon', 'gem' 等)
+    lumaBars: false,        // 輝度（明るさ）に基づいたカラー調整をオフ
+    reflexRatio: 0.02,      // 下部への反射（ミラー）描画の高さ比率 (0: なし ~ 1: 完全同サイズ)
+    reflexAlpha: 0,         // 反射部分の不透明度 (0: 完全透明/非表示 ~ 1: 完全不透明)
+    reflexBright: false,    // 反射部分の減衰（減光処理）をオフ
+    spin: 0,                // 円形表示時の回転速度 (0: 回転なし, 正の値で時計回り)
+    radius: 0.3,            // 円形表示時の内径半径の比率 (0: 中心から ~ 1: 外枠いっぱい)
+    bgAlpha: 0,             // Canvas背景の透明度 (0: 完全透明 ~ 1: 完全不透明)
+    showBgColor: false,     // テーマ固有の背景色描画をオフ
+    overlay: true,          // 背景透過時や複数描画時の重ね合わせ表示最適化
+    reflexFit: false,       // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
+    outlineBars: true,      // バーの外枠（輪郭線）描画
+    spinSpeed: 0,           // 回転速度 (正の値で時計回り、大きいほど高速)
+    channelLayout: 'single' // 音声チャンネル表示 (L/Rを合成したシングル描画)
+};
+// オーディオモーション設定のNODE定義
 const AUDIOMOTION_NODES = {
-    'none':  { label: '（なし）' },
-    'mode1': { label: 'LEDオーディオコンポ' },
-    'mode2': { label: 'レインボウ・サイバーパンク' },
-    'mode3': { label: 'ミニマル・クラシック' },
-    'mode4': { label: 'レトロ・LED ヴァイブ' },
-    'mode5': { label: 'センタースプリット・バー' },
-    'mode6': { label: '円形ビジュアライザー' }
+    'none': {    label: '（なし）',
+        options: {}
+    },
+    'preset1': { label: 'LEDオーディオコンポ',
+        options: {
+            mode: 3,         // 周波数帯域の分割解像度 (1/3オクターブ表示)
+            barSpace: 0.2,   // バー同士の隙間の比率 (バー幅の20%分空ける)
+            ledBars: true    // バーをLEDブロック状（点灯セグメント風）に区切って表示
+        }
+    },
+    'preset2': { label: 'レインボウ・サイバーパンク',
+        options: {
+            mode: 2,           // 周波数帯域の分割解像度 (1/2 オクターブ表示)
+            gradient: 'rainbow', // グラデーションテーマ (レインボーカラー)
+            showPeaks: true,   // ピーク（頂点）ホールドラインの表示を有効化
+            linearBar: true,   // バーの振幅変化を線形（リニア）スケールで計算
+            bgAlpha: 0.7,      // Canvas背景の不透明度 (描画更新時の残像感を調整)
+            fillAlpha: 0.6,    // スペクトラム内部の塗りつぶし不透明度 (0: 完全透明 ~ 1: 完全不透明)
+            reflexRatio: 0.3,  // 下部への反射（ミラー）描画の高さ比率 (本体の30%の高さ)
+            reflexAlpha: 0.2   // 反射部分の不透明度 (ほんのり透ける20%表示)
+        }
+    },
+    'preset3': { label: 'ミニマル・クラシック',
+        options: {
+            mode: 1,           // 周波数帯域の分割解像度 (1/1 オクターブ：シンプルな10本前後のバー)
+            barSpace: 0.25,    // バー同士の隙間の比率 (バー幅の25%分を空ける)
+            gradient: 'prism', // グラデーションテーマ (プリズムカラー)
+            showBgColor: false,// テーマ固有の背景色描画をオフ (背景透過)
+            showScaleX: false, // X軸（周波数Hz）目盛りの表示をオフ
+            showScaleY: false, // Y軸（音圧dB）目盛りの表示をオフ
+            showPeaks: false,  // ピーク（頂点）ラインの表示をオフ
+            outlineBars: false // バーの外枠（輪郭線）描画をオフ
+        }
+    },
+    'preset4': { label: 'レトロ・LED ヴァイブ',
+        options: {
+            mode: 0,           // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
+            gradient: 'classic',// グラデーションテーマ (グリーン〜イエロー〜レッドの王道イコライザー風)
+            ledBars: true,     // バーをLEDブロック状（点灯セグメント風）に分割表示
+            showPeaks: true    // ピーク（頂点）表示を有効化
+        }
+    },
+    'preset5': { label: 'センタースプリット・バー',
+        options: {
+            mode: 2,           // 周波数帯域の分割解像度 (1/2 オクターブ表示)
+            barSpace: 0.2,     // バー同士の隙間の比率 (バー幅の20%分を空ける)
+            gradient: 'rainbow',// グラデーションテーマ (レインボーカラー)
+            fillAlpha: 0.85,   // スペクトラム内部の塗りつぶし不透明度 (85%表示)
+            showPeaks: true,   // ピーク（頂点）ラインの表示を有効化
+            reflexRatio: 0.5,  // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
+            reflexAlpha: 1,    // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
+            reflexBright: false,// 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
+            reflexFit: true    // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
+        }
+    },
+    'preset6': { label: '円形ビジュアライザー',
+        options: {
+            mode: 3,           // 周波数帯域の分割解像度 (1/3 オクターブ表示)
+            radial: true,      // 円形（ラジアル）表示を有効化
+            spin: true,        // 円形ビジュアライザーの自動回転を有効化
+            spinSpeed: 1,      // 回転速度 (正の値で時計回り、大きいほど高速)
+            gradient: 'prism', // グラデーションテーマ (プリズムカラー)
+            channelLayout: 'single' // 音声チャンネル表示 (L/Rを合成したシングル描画)
+        }
+    }
 };
 const languageMap = {
     'jpn': '日本語',
@@ -459,7 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedAudioMotionMode && AUDIOMOTION_NODES[savedAudioMotionMode]) {
         audioMotionMode = savedAudioMotionMode;
     } else {
-        audioMotionMode = 'mode1';
+        audioMotionMode = 'preset1';
     }
 
     // ズーム値復元
@@ -6882,95 +6965,17 @@ function updateAudioMotion() {
     const visualizerContainer = document.getElementById('visualizerContainer');
     const audioPlayer = document.getElementById('audioPlayer');
 
-    // 「（なし）」が選択された場合
+    // 「（なし）」または未定義の場合
     if (!audioMotionMode || audioMotionMode === 'none') {
         window.AudioMotionAPI.disable();
         return;
     }
 
-    // 各モードごとの設定
-    let newOptions = {
-        mode: 3,                   // 周波数帯域の分割解像度 (0: 離散バー, 1: 1/1オクターブ ~ 10: 1/10オクターブ等)
-        radial: false,             // 円形（ラジアル）表示を無効化（通常の水平表示）
-        barSpace: 0.1,             // バー同士の隙間の比率 (0: 隙間なし ~ 1: バー幅と同等)
-        ledBars: false,            // バーをLEDブロック状に区切る表示をオフ（通常のソリッド描画）
-        showPeaks: true,           // ピーク（頂点）ホールドラインの表示を有効化
-        fillAlpha: 1,              // スペクトラム内部の塗りつぶし不透明度 (0: 完全透明 ~ 1: 完全不透明)
-        lineWidth: 0,              // バー/波形の外枠線の太さpx (0: 枠線なし)
-        gradient: 'classic',       // 使用するグラデーションテーマ ('classic', 'neon', 'gem' 等)
-        lumaBars: false,           // 輝度（明るさ）に基づいたカラー調整をオフ
-        reflexRatio: 0.02,         // 下部への反射（ミラー）描画の高さ比率 (0: なし ~ 1: 完全同サイズ)
-        reflexAlpha: 0,            // 反射部分の不透明度 (0: 完全透明/非表示 ~ 1: 完全不透明)
-        reflexBright: false,       // 反射部分の減衰（減光処理）をオフ
-        spin: 0,                   // 円形表示時の回転速度 (0: 回転なし, 正の値で時計回り)
-        radius: 0.3,               // 円形表示時の内径半径の比率 (0: 中心から ~ 1: 外枠いっぱい)
-        bgAlpha: 0,                // Canvas背景の透明度 (0: 完全透明 ~ 1: 完全不透明)
-        showBgColor: false,        // テーマ固有の背景色描画をオフ
-        overlay: true,             // 背景透過時や複数描画時の重ね合わせ表示最適化
-        reflexFit: false,          // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
-        outlineBars: true,         // バーの外枠（輪郭線）描画
-        reflexFit: false,          // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
-        spinSpeed: 0,              // 回転速度 (正の値で時計回り、大きいほど高速)
-        channelLayout: 'single',   // 音声チャンネル表示 (L/Rを合成したシングル描画)
-    };
+    // 選択されたノードを取得（存在しないキーの場合は default を参照）
+    const presetNode = AUDIOMOTION_NODES[audioMotionMode] || AUDIOMOTION_NODES['none'];
 
-    if (audioMotionMode === 'mode1') {
-        Object.assign(newOptions, { 
-            mode: 3,        // 周波数帯域の分割解像度 (1/3オクターブ表示)
-            barSpace: 0.2,  // バー同士の隙間の比率 (バー幅の20%分空ける)
-            ledBars: true   // バーをLEDブロック状（点灯セグメント風）に区切って表示
-        });
-    } else if (audioMotionMode === 'mode2') {
-        Object.assign(newOptions, { 
-            mode: 2,                  // 周波数帯域の分割解像度 (1/2 オクターブ表示)
-            gradient: 'rainbow',      // グラデーションテーマ (レインボーカラー)
-            showPeaks: true,          // ピーク（頂点）ホールドラインの表示を有効化
-            linearBar: true,          // バーの振幅変化を線形（リニア）スケールで計算
-            bgAlpha: 0.7,             // Canvas背景の不透明度 (描画更新時の残像感を調整)
-            fillAlpha: 0.6,           // スペクトラム内部の塗りつぶし不透明度 (0: 完全透明 ~ 1: 完全不透明)
-            reflexRatio: 0.3,         // 下部への反射（ミラー）描画の高さ比率 (本体の30%の高さ)
-            reflexAlpha: 0.2          // 反射部分の不透明度 (ほんのり透ける20%表示)
-        });
-    } else if (audioMotionMode === 'mode3') {
-        Object.assign(newOptions, { 
-            mode: 1,                  // 周波数帯域の分割解像度 (1/1 オクターブ：シンプルな10本前後のバー)
-            barSpace: 0.25,           // バー同士の隙間の比率 (バー幅の25%分を空ける)
-            gradient: 'prism',        // グラデーションテーマ (プリズムボーカラー)
-            showBgColor: false,       // テーマ固有の背景色描画をオフ (背景透過)
-            showScaleX: false,        // X軸（周波数Hz）目盛りの表示をオフ
-            showScaleY: false,        // Y軸（音圧dB）目盛りの表示をオフ
-            showPeaks: false,         // ピーク（頂点）ラインの表示をオフ
-            outlineBars: false        // バーの外枠（輪郭線）描画をオフ
-        });
-    } else if (audioMotionMode === 'mode4') {
-        Object.assign(newOptions, { 
-            mode: 0,                  // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
-            gradient: 'classic',      // グラデーションテーマ (グリーン〜イエロー〜レッドの王道イコライザー風)
-            ledBars: true,            // バーをLEDブロック状（点灯セグメント風）に分割表示
-            showPeaks: true,          // ピーク（頂点）表示を有効化
-        });
-    } else if (audioMotionMode === 'mode5') {
-        Object.assign(newOptions, { 
-            mode: 2,                  // 周波数帯域の分割解像度 (1/2 オクターブ表示)
-            barSpace: 0.2,            // バー同士の隙間の比率 (バー幅の20%分を空ける)
-            gradient: 'rainbow',      // グラデーションテーマ (レインボーカラー)
-            fillAlpha: 0.85,          // スペクトラム内部の塗りつぶし不透明度 (85%表示)
-            showPeaks: true,          // ピーク（頂点）ラインの表示を有効化
-            reflexRatio: 0.5,         // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
-            reflexAlpha: 1,           // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
-            reflexBright: false,      // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
-            reflexFit: true,          // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
-        });
-    } else if (audioMotionMode === 'mode6') {
-        Object.assign(newOptions, { 
-            mode: 3,                  // 周波数帯域の分割解像度 (1/3 オクターブ表示)
-            radial: true,             // 円形（ラジアル）表示を有効化
-            spin: true,               // 円形ビジュアライザーの自動回転を有効化
-            spinSpeed: 1,             // 回転速度 (正の値で時計回り、大きいほど高速)
-            gradient: 'prism',        // グラデーションテーマ (プリズムボーカラー)
-            channelLayout: 'single'   // 音声チャンネル表示 (L/Rを合成したシングル描画)
-        });
-    }
+    // デフォルトオプションに選択プリセットの固有設定をマージ
+    const newOptions = Object.assign({}, DEFAULT_AUDIO_MOTION_OPTIONS, presetNode.options);
 
     try {
         // preload 側の実体に対して処理を委託する
