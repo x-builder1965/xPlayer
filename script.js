@@ -6954,7 +6954,7 @@ function toggleVisualizer(show) {
     const visualizerContainer = document.getElementById('visualizerContainer');
     const videoPlayer = document.getElementById('videoPlayer');
 
-    if (show) {
+    if (show === 'audio') {
         if (audioMotionMode === 'none') {
             visualizerContainer.style.display = 'none';
         } else {
