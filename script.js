@@ -6907,6 +6907,11 @@ function updateAudioMotion() {
         bgAlpha: 0,                // Canvas背景の透明度 (0: 完全透明 ~ 1: 完全不透明)
         showBgColor: false,        // テーマ固有の背景色描画をオフ
         overlay: true,             // 背景透過時や複数描画時の重ね合わせ表示最適化
+        reflexFit: false,          // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
+        outlineBars: true,         // バーの外枠（輪郭線）描画
+        reflexFit: false,          // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
+        spinSpeed: 0,              // 回転速度 (正の値で時計回り、大きいほど高速)
+        channelLayout: 'single',   // 音声チャンネル表示 (L/Rを合成したシングル描画)
     };
 
     if (audioMotionMode === 'mode1') {
@@ -6930,7 +6935,7 @@ function updateAudioMotion() {
         Object.assign(newOptions, { 
             mode: 1,                  // 周波数帯域の分割解像度 (1/1 オクターブ：シンプルな10本前後のバー)
             barSpace: 0.25,           // バー同士の隙間の比率 (バー幅の25%分を空ける)
-            gradient: 'classic',      // グラデーションテーマ (グリーン〜イエロー〜レッドの王道イコライザー風)
+            gradient: 'prism',        // グラデーションテーマ (プリズムボーカラー)
             showBgColor: false,       // テーマ固有の背景色描画をオフ (背景透過)
             showScaleX: false,        // X軸（周波数Hz）目盛りの表示をオフ
             showScaleY: false,        // Y軸（音圧dB）目盛りの表示をオフ
@@ -6939,14 +6944,10 @@ function updateAudioMotion() {
         });
     } else if (audioMotionMode === 'mode4') {
         Object.assign(newOptions, { 
-            mode: 0,                        // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
-            gradient: 'rainbow',            // グラデーションテーマ (レインボーカラー)
-            ledBars: true,                  // バーをLEDブロック状（点灯セグメント風）に分割表示
-            showPeaks: true,                // ピーク（頂点）表示を有効化
-            peakHoldTime: 1.2,              // ピークが落下を始めるまでのホールド時間 (秒単位: 1.2秒間保持)
-            channelLayout: 'dual-combined', // L/R（ステレオ）音源を重ね合わせ（または同一バー内）で表示
-            minDecibels: -85,               // 描画する最小音圧感度 (-85 dBFS : 未満の音は非表示)
-            maxDecibels: -25                // 描画する最大音圧感度 (-25 dBFS : 以上の音でバー頂点に到達)
+            mode: 0,                  // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
+            gradient: 'classic',      // グラデーションテーマ (グリーン〜イエロー〜レッドの王道イコライザー風)
+            ledBars: true,            // バーをLEDブロック状（点灯セグメント風）に分割表示
+            showPeaks: true,          // ピーク（頂点）表示を有効化
         });
     } else if (audioMotionMode === 'mode5') {
         Object.assign(newOptions, { 
@@ -6966,7 +6967,7 @@ function updateAudioMotion() {
             radial: true,             // 円形（ラジアル）表示を有効化
             spin: true,               // 円形ビジュアライザーの自動回転を有効化
             spinSpeed: 1,             // 回転速度 (正の値で時計回り、大きいほど高速)
-            gradient: 'rainbow',      // グラデーションテーマ (レインボーカラー)
+            gradient: 'prism',        // グラデーションテーマ (プリズムボーカラー)
             channelLayout: 'single'   // 音声チャンネル表示 (L/Rを合成したシングル描画)
         });
     }
