@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver5.08.0';
+const appName = 'xPlayer -動画プレイヤー- Ver5.09.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -56,10 +56,39 @@ const AudioMotionAnalyzer = AudioMotionModule.default || AudioMotionModule;
     }
 })();
 
-// クラス直接ではなく、preload側で new する関数を定義して晒す
+let audioMotionInstance = null; // 実体を preload 内部で管理
 contextBridge.exposeInMainWorld('AudioMotionAPI', {
-    create: (containerElement, options) => {
-        return new AudioMotionAnalyzer(containerElement, options);
+    // 初期化またはオプションの更新を一括で行う関数
+    initOrUpdate: (containerElement, audioSource, options) => {
+        if (audioMotionInstance) {
+            // 既存インスタンスが存在する場合は表示をオンにし、設定を更新
+            audioMotionInstance.isOn = true;
+            if (audioMotionInstance.canvas) {
+                audioMotionInstance.canvas.style.display = 'block';
+            }
+            // 内部実体の setOptions を直接呼び出す
+            audioMotionInstance.setOptions(options);
+        } else {
+            // 初回のみインスタンス生成
+            audioMotionInstance = new AudioMotionAnalyzer(containerElement, {
+                source: audioSource,
+                bgAlpha: 0,
+                showBgColor: false,
+                showScaleX: false,
+                showScaleY: false,
+                ...options
+            });
+        }
+    },
+
+    // 「（なし）」が選択された場合の非表示処理
+    disable: () => {
+        if (audioMotionInstance) {
+            audioMotionInstance.isOn = false;
+            if (audioMotionInstance.canvas) {
+                audioMotionInstance.canvas.style.display = 'none';
+            }
+        }
     }
 });
 

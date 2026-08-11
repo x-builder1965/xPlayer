@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.08.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.09.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -61,7 +61,7 @@ const ADD_MODES = {
     Add1: { label: '選択行の下に追加', fn: async () => await addToPlaylist(1) }
 };
 const ASPECT_NODES = {
-    none:   { label: '（なし）', value: null },
+    'none': { label: '（なし）', value: null },
     '4:3':  { label: '4:3 旧テレビ', value: '4 / 3' },
     '16:9': { label: '16:9 テレビ', value: '16 / 9' },
     '18:9': { label: '18:9 テレビ', value: '18 / 9' },
@@ -74,6 +74,14 @@ const PLAYLIST_NODES = {
     'thumb-small':  { label: 'サムネイル小', width: 96, height: 54 },
     'thumb-medium': { label: 'サムネイル中', width: 216, height: 122 },
     'thumb-large':  { label: 'サムネイル大', width: 432, height: 244 }
+};
+const AUDIOMOTION_NODES = {
+    'none':      { label: '（なし）',              mode: -1 },
+    'component': { label: 'LEDオーディオコンポ風',  mode: 3 },
+    'Smooth':    { label: 'スムーズ・マウンテン',   mode: 7 },
+    'sharp':     { label: 'シャープライン',         mode: 6 },
+    'circle':    { label: 'ラジアル・サークル',     mode: 10 },
+    'flat':      { label: 'ハイレゾ・フラットバー', mode: 5 }
 };
 const languageMap = {
     'jpn': '日本語',
@@ -198,6 +206,7 @@ let wallpaperBtn = null;
 let exportSettingsBtn = null;
 let importSettingsBtn = null;
 let alwaysOnTopBtn = null;
+let audioMotionBtn = null;
 let settingsBtn = null;
 let settingsPanel = null;
 let settingsCloseBtn = null;
@@ -273,6 +282,7 @@ let savedSelectedSubtitleLabel = null;
 let savedSelectedSubtitleTrack = null;
 let savedWallpaperPath = null;
 let savedAlwaysOnTop = null;
+let savedAudioMotionMode = null;
 
 // グローバル（共通）変数
 let Initializing = true;
@@ -347,6 +357,7 @@ let scrollInterval = null;
 let scrollTimeout = null;
 let currentMediaType = 'video';
 let audioMotion = null;
+let audioMotionMode = null;
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -442,6 +453,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     updateAlwaysOnTopButtonUI();
+
+    // ビジュアライザーモード復元
+    if (savedAudioMotionMode && AUDIOMOTION_NODES[savedAudioMotionMode]) {
+        audioMotionMode = savedAudioMotionMode;
+    } else {
+        audioMotionMode = 'component';
+    }
 
     // ズーム値復元
     if (savedZoom && !isNaN(savedZoom)) {
@@ -1161,6 +1179,11 @@ document.addEventListener('DOMContentLoaded', () => {
         zoomBtn.setAttribute('data-tooltip', 'ズームモード開始（Ctrl+z）');
     });
 
+    // ⚙️設定パネル切替
+    settingsBtn.addEventListener('click', () => {
+        toggleSettingsPanel(!isSettingsPanelOpen);
+    });
+
     // 🖼️背景壁紙選択
     wallpaperBtn.addEventListener('click', async () => {
         hidemessageOverlay();
@@ -1200,22 +1223,58 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    settingsBtn.addEventListener('click', () => {
-        toggleSettingsPanel(!isSettingsPanelOpen);
-    });
-
-    exportSettingsBtn.addEventListener('click', async () => {
-        await exportSettingsToFile();
-    });
-
-    importSettingsBtn.addEventListener('click', async () => {
-        await importSettingsFromFile();
-    });
-
+    // 🔝常に前面設定
     alwaysOnTopBtn.addEventListener('click', () => {
         toggleAlwaysOnTop();
     });
 
+    // 🏳️‍🌈オーディオモーシュン設定ボタン
+    audioMotionBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+
+        const existingMenu = document.querySelector('.audio-motion-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+            document.removeEventListener('click', closeMenu);
+            return;
+        }
+
+        // メニュー非表示
+        hideMenus();
+
+        const targetContainer = document.fullscreenElement || mainContainer;
+        const menu = createAudioMotionMenu();
+        const containerRect = targetContainer.getBoundingClientRect();
+        const btnRect = audioMotionBtn.getBoundingClientRect();
+
+        menu.style.left = `${Math.max(8, btnRect.right - containerRect.left + 2)}px`;
+        menu.style.top = `${Math.max(8, btnRect.top - containerRect.top + 2)}px`;
+
+        targetContainer.appendChild(menu);
+
+        function closeMenu(ev) {
+            if (!menu.contains(ev.target) && ev.target !== audioMotionBtn) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        }
+
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu, { once: true });
+        }, 0);
+    });
+
+    // 📥設定インポート
+    importSettingsBtn.addEventListener('click', async () => {
+        await importSettingsFromFile();
+    });
+
+    // 📤設定エクスポート
+    exportSettingsBtn.addEventListener('click', async () => {
+        await exportSettingsToFile();
+    });
+
+    // ❌設定モード終了
     settingsCloseBtn.addEventListener('click', () => {
         toggleSettingsPanel(false);
     });
@@ -2565,6 +2624,13 @@ document.addEventListener('keydown', async (event) => {
             return;
         }
 
+        // 🏳️‍🌈オーディオモーション設定（Ctrl+m）
+        if (event.ctrlKey && event.key === 'm') {
+            event.preventDefault();
+            audioMotionBtn.click();
+            return;
+        }
+
         // 📥設定インポート（Ctrl+i）
         if (event.ctrlKey && event.key === 'i') {
             event.preventDefault();
@@ -3198,6 +3264,7 @@ function allDOMsetting() {
     exportSettingsBtn = document.getElementById('exportSettingsBtn');
     importSettingsBtn = document.getElementById('importSettingsBtn');
     alwaysOnTopBtn = document.getElementById('alwaysOnTopBtn');
+    audioMotionBtn = document.getElementById('audioMotionBtn');
     settingsBtn = document.getElementById('settingsBtn');
     settingsPanel = document.getElementById('settingsPanel');
     settingsCloseBtn = document.getElementById('settingsCloseBtn');
@@ -3275,6 +3342,7 @@ function allLocalStorageSetting() {
     savedSelectedSubtitleTrack = localStorage.getItem('selectedSubtitleTrack');
     savedWallpaperPath = localStorage.getItem('wallpaperPath');
     savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
+    savedAudioMotionMode = localStorage.getItem('audioMotionMode');
 }
 
 // 音声トラック・字幕トラック更新
@@ -3496,7 +3564,8 @@ function hideMenus() {
         '.add-playlist-menu',
         '.track-menu',
         '.playlist-display-menu',
-        ...(!isZoomMode ? ['.aspect-ratio-menu'] : [])
+        ...(!isZoomMode ? ['.aspect-ratio-menu'] : []),
+        ...(!isSettingsPanelOpen ? ['.audio-motion-menu'] : [])
     ];
 
     document.querySelectorAll(classes.join(', ')).forEach(m => m.remove());
@@ -3645,6 +3714,39 @@ function createAspectRatioMenu() {
             applyAspectRatioSetting();
             menu.remove();
             updatemessageOverlay(`📺 ${label}`, false, 1500);
+        });
+
+        item.addEventListener('mouseover', () => {
+            item.style.background = 'rgba(0,123,255,0.2)';
+        });
+        item.addEventListener('mouseout', () => {
+            item.style.background = 'none';
+        });
+
+        menu.appendChild(item);
+    });
+
+    return menu;
+}
+
+// オーディオモーシュン設定メニュー作成
+function createAudioMotionMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'audio-motion-menu';
+
+    Object.entries(AUDIOMOTION_NODES).forEach(([key, { label }]) => {
+        const item = document.createElement('div');
+        item.className = 'menu-item';
+        item.style.color = audioMotionMode === key ? '#00ccff' : '#eee';
+        item.innerHTML = (audioMotionMode === key ? '✅ ' : '　　') + label;
+
+        item.addEventListener('click', (event) => {
+            event.stopPropagation();
+            audioMotionMode = key;
+            updateAudioMotion();
+            toggleVisualizer(currentMediaType);
+            menu.remove();
+            updatemessageOverlay(`🏳️‍🌈 ${label}`, false, 1500);
         });
 
         item.addEventListener('mouseover', () => {
@@ -4943,12 +5045,9 @@ async function setVideoSrc(file) {
     currentMediaType = isAudio ? 'audio' : 'video';
     updateMediaPlayerDisplay();
 
-    // === 【追加】audioMotionの初期化と表示切り替え ===
-    if (!audioMotion) {
-        initAudioMotion();
-    }
-    toggleVisualizer(isAudio);
-    // ===============================================
+    // audioMotionの初期化と表示切り替え
+    updateAudioMotion();
+    toggleVisualizer(currentMediaType);
 
     // media.src設定
     if (isAudio) {
@@ -6773,26 +6872,80 @@ function isVideoFile(ext) {
 }
 
 // ビジュアライザーの初期化関数
-function initAudioMotion() {
-    if (audioMotion) return;
+function updateAudioMotion() {
+    if (audioMotionBtn) {
+        audioMotionBtn.classList.toggle('audio-motion-active', audioMotionMode !== 'none');
+    }
+    localStorage.setItem('audioMotionMode', audioMotionMode);
 
     const visualizerContainer = document.getElementById('visualizerContainer');
     const audioPlayer = document.getElementById('audioPlayer');
 
-    try {
-        // new window.AudioMotion ではなく API 経由で生成
-        audioMotion = window.AudioMotionAPI.create(visualizerContainer, {
-            source: audioPlayer,       // 音声プレイヤー要素を接続
-            mode: 3,                   // 描画モード (1〜10)
-            barSpace: 0.1,             // バー同士の間隔
-            ledBars: true,             // LEDドット風描画
-            bgAlpha: 0,                // Canvas背景の透明度 (0: 完全透明)
-            showBgColor: false,        // テーマ背景色の描画をオフ
-            overlay: true,             // 背景透過時の重ね合わせ表示最適化
-            showScaleX: false,         // 周波数(Hz)目盛りの非表示
+    // 「（なし）」が選択された場合
+    if (!audioMotionMode || audioMotionMode === 'none') {
+        window.AudioMotionAPI.disable();
+        return;
+    }
+
+    // 各モードごとの設定
+    let newOptions = {
+        mode: 3,
+        barSpace: 0.1,
+        ledBars: false,
+        fillAlpha: 1,
+        lineWidth: 0,
+        gradient: 'classic',
+        lumaBars: false,
+        spin: 0,
+        radius: 0.3,
+        bgAlpha: 0,                // Canvas背景の透明度 (0: 完全透明)
+        showBgColor: false,        // テーマ背景色の描画をオフ
+        overlay: true,             // 背景透過時の重ね合わせ表示最適化
+    };
+
+    if (audioMotionMode === 'component') {
+        Object.assign(newOptions, { 
+            mode: 3, 
+            barSpace: 0.2, 
+            ledBars: true 
         });
+    } else if (audioMotionMode === 'Smooth') {
+        Object.assign(newOptions, { 
+            mode: 7, 
+            ledBars: false, 
+            fillAlpha: 0.6, 
+            lineWidth: 2, 
+            gradient: 'rainbow' 
+        });
+    } else if (audioMotionMode === 'sharp') {
+        Object.assign(newOptions, { 
+            mode: 6, 
+            ledBars: false, 
+            lineWidth: 3, 
+            gradient: 'prism', 
+            lumaBars: true 
+        });
+    } else if (audioMotionMode === 'circle') {
+        Object.assign(newOptions, { 
+            mode: 10, 
+            barSpace: 0.1, 
+            ledBars: false, 
+            spin: 0.5, 
+            radius: 0.3 
+        });
+    } else if (audioMotionMode === 'flat') {
+        Object.assign(newOptions, { 
+            mode: 5, 
+            barSpace: 0.1, 
+            ledBars: false 
+        });
+    }
+
+    try {
+        // preload 側の実体に対して処理を委託する
+        window.AudioMotionAPI.initOrUpdate(visualizerContainer, audioPlayer, newOptions);
     } catch (err) {
-        console.error('AudioMotion の初期化に失敗しました:', err);
+        console.error('AudioMotion の初期化・更新に失敗しました:', err);
     }
 }
 
@@ -6802,7 +6955,11 @@ function toggleVisualizer(show) {
     const videoPlayer = document.getElementById('videoPlayer');
 
     if (show) {
-        visualizerContainer.style.display = 'block';
+        if (audioMotionMode === 'none') {
+            visualizerContainer.style.display = 'none';
+        } else {
+            visualizerContainer.style.display = 'block';
+        }
         videoPlayer.style.display = 'none'; // 音声時は動画エリアを非表示に
     } else {
         visualizerContainer.style.display = 'none';

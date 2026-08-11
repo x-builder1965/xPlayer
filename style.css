@@ -1,7 +1,7 @@
 /* --------------------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver5.04.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver5.09.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -962,7 +962,8 @@ button#modeChangeBtn.convert-active,
 #sortPlaylistBtn.sorted-active,
 #subtitleSelectBtn.subtitles-active,
 #wallpaperBtn.wallpaper-active,
-#alwaysOnTopBtn.always-on-top-active {
+#alwaysOnTopBtn.always-on-top-active,
+#audioMotionBtn.audio-motion-active {
     background: #e63946 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single,
@@ -987,7 +988,8 @@ button#modeChangeBtn.convert-active:hover,
 #sortPlaylistBtn.sorted-active:hover,
 #subtitleSelectBtn.subtitles-active:hover,
 #wallpaperBtn.wallpaper-active:hover,
-#alwaysOnTopBtn.always-on-top-active:hover {
+#alwaysOnTopBtn.always-on-top-active:hover,
+#audioMotionBtn.audio-motion-active:hover {
     background: #e6394785 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single:hover,
@@ -1060,19 +1062,20 @@ button#modeChangeBtn.convert-active:hover,
 .aspect-ratio-menu,
 .playlist-display-menu,
 .sort-playlist-menu,
-.add-playlist-menu {
-  position: absolute;
-  background: rgba(30, 30, 30, 0.95);
-  border: 1px solid #444;
-  border-radius: 6px;
-  padding: 6px 0;
-  z-index: 1001;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-  white-space: pre;
-  font-family: monospace;
-  font-size: 16px;
-  line-height: 1.0;
-  min-width: 120px;
+.add-playlist-menu,
+.audio-motion-menu {
+    position: absolute;
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 6px 0;
+    z-index: 1001;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    white-space: pre;
+    font-family: monospace;
+    font-size: 16px;
+    line-height: 1.0;
+    min-width: 120px;
 }
 .track-menu {
     max-height: 600px;
