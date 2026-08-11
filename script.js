@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.09.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.10.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1680,6 +1680,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     showControlsAndFilename();
                 }
             }
+            hideMenus();
             e.stopPropagation();
         }
     });
@@ -3129,11 +3130,6 @@ document.addEventListener('fullscreenchange', () => {
     updateIconOverlay();
 });
 
-// ドキュメント全体のクリックでコントロールやメニューを隠す
-document.addEventListener('click', () => {
-    hideMenus();
-});
-
 // 🔲window ハンドラ登録🔲
 // ウィンドウリサイズ
 window.addEventListener('resize', () => {
@@ -3616,7 +3612,7 @@ function hideControlsAndFilename() {
     disabledControls(true);
     disabledfilename(true);
     messageOverlay.classList.remove('active');
-    hideMenus(); // 追加：コントロール非表示時にメニューも強制非表示
+    hideMenus(false); // 追加：コントロール非表示時にメニューも強制非表示
     clearTimeout(timeout);
     setTimeout(() => {
         messageOverlay.style.display = 'none';
@@ -3641,15 +3637,15 @@ function hideEditPanel() {
 }
 
 // メニュー非表示（プレイリスト並び替えメニューなど）
-function hideMenus() {
+function hideMenus(hideAll = true) {
     
     const classes = [
         '.sort-playlist-menu',
         '.add-playlist-menu',
         '.track-menu',
         '.playlist-display-menu',
-        ...(!isZoomMode ? ['.aspect-ratio-menu'] : []),
-        ...(!isSettingsPanelOpen ? ['.audio-motion-menu'] : [])
+        ...(!isZoomMode || hideAll ? ['.aspect-ratio-menu'] : []),
+        ...(!isSettingsPanelOpen || hideAll ? ['.audio-motion-menu'] : [])
     ];
 
     document.querySelectorAll(classes.join(', ')).forEach(m => m.remove());
