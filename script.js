@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.11.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.12.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -121,7 +121,7 @@ const AUDIOMOTION_NODES = {
             bgAlpha: 0.7,      // Canvas背景の不透明度 (描画更新時の残像感を調整)
             fillAlpha: 0.6,    // スペクトラム内部の塗りつぶし不透明度 (0: 完全透明 ~ 1: 完全不透明)
             reflexRatio: 0.3,  // 下部への反射（ミラー）描画の高さ比率 (本体の30%の高さ)
-            reflexAlpha: 0.4   // 反射部分の不透明度 (ほんのり透ける40%表示)
+            reflexAlpha: 0.5   // 反射部分の不透明度 (ほんのり透ける40%表示)
         }
     },
     'preset3': { label: 'ミニマル・クラシック',
@@ -166,7 +166,8 @@ const AUDIOMOTION_NODES = {
             gradient: 'prism', // グラデーションテーマ (プリズムカラー)
             channelLayout: 'single' // 音声チャンネル表示 (L/Rを合成したシングル描画)
         }
-    }
+    },
+    'random': { label: '（ランダム）', options: {} }
 };
 const languageMap = {
     'jpn': '日本語',
@@ -444,6 +445,7 @@ let scrollTimeout = null;
 let currentMediaType = 'video';
 let audioMotion = null;
 let audioMotionMode = null;
+let lastRandomPreset = null;		// 直前にランダムで選ばれたプリセットを保持する変数（関数の外に定義）
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -7085,8 +7087,16 @@ function isVideoFile(ext) {
 // ビジュアライザーの初期化関数
 function updateAudioMotion() {
     if (audioMotionBtn) {
-        audioMotionBtn.classList.toggle('audio-motion-active', audioMotionMode !== 'none');
+        // 一旦クラスをクリアして状態に応じて適切なクラスを付与
+        audioMotionBtn.classList.remove('audio-motion-active', 'random-motion-active');
+
+        if (audioMotionMode === 'random') {
+            audioMotionBtn.classList.add('random-motion-active');
+        } else if (audioMotionMode && audioMotionMode !== 'none') {
+            audioMotionBtn.classList.add('audio-motion-active');
+        }
     }
+    
     localStorage.setItem('audioMotionMode', audioMotionMode);
 
     const visualizerContainer = document.getElementById('visualizerContainer');
@@ -7098,8 +7108,23 @@ function updateAudioMotion() {
         return;
     }
 
+    // 実際に適用するモードのキーを決定
+    let targetMode = audioMotionMode;
+    if (targetMode === 'random') {
+        const presets = ['preset1', 'preset2', 'preset3', 'preset4', 'preset5', 'preset6'];
+        // 前回選ばれたプリセットを除外した候補リストを作成
+        const availablePresets = presets.filter(preset => preset !== lastRandomPreset);
+        // 候補の中からランダムで選択
+        targetMode = availablePresets[Math.floor(Math.random() * availablePresets.length)];
+        // 今回選ばれたプリセットを記憶
+        lastRandomPreset = targetMode;
+    } else {
+        // ランダム以外のモード（preset1〜6やnone）が手動選択された場合は記憶をリセット
+        lastRandomPreset = null;
+    }
+
     // 選択されたノードを取得（存在しないキーの場合は default を参照）
-    const presetNode = AUDIOMOTION_NODES[audioMotionMode] || AUDIOMOTION_NODES['none'];
+    const presetNode = AUDIOMOTION_NODES[targetMode] || AUDIOMOTION_NODES['none'];
 
     // デフォルトオプションに選択プリセットの固有設定をマージ
     const newOptions = Object.assign({}, DEFAULT_AUDIO_MOTION_OPTIONS, presetNode.options);
