@@ -761,12 +761,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     debouncedUpdateFilterList();
                     debouncedScrollCurrentFilterItem();
                     await playVideo(playlist[currentVideoIndex].file, savedCurrentTime);
-                    // 常に一時停止、アプリ起動後100ms後に強制トリガー
+                    // 常に一時停止、アプリ起動後5ms後に強制トリガー
                     setTimeout(() => {
                         if (videoPlayer.src) {
                             videoPlayer.play().then(() => videoPlayer.pause()).catch(() => {});
                         }
-                    }, 100);
+                    }, 5);
                     playPauseBtn.textContent = '⏸️';
                     playPauseBtn.classList.add('paused-active');
                     playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
@@ -3169,8 +3169,6 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
     currentVideoIndex = 0;
     selectedPlaylistIndex = 0;
     await playVideo(playlist[currentVideoIndex].file, 0);
-
-    debouncedUpdateFilterList();
 });
 
 // 変換進捗受信
