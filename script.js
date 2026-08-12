@@ -121,7 +121,7 @@ const AUDIOMOTION_NODES = {
             bgAlpha: 0.7,      // Canvas背景の不透明度 (描画更新時の残像感を調整)
             fillAlpha: 0.6,    // スペクトラム内部の塗りつぶし不透明度 (0: 完全透明 ~ 1: 完全不透明)
             reflexRatio: 0.3,  // 下部への反射（ミラー）描画の高さ比率 (本体の30%の高さ)
-            reflexAlpha: 0.2   // 反射部分の不透明度 (ほんのり透ける20%表示)
+            reflexAlpha: 0.4   // 反射部分の不透明度 (ほんのり透ける40%表示)
         }
     },
     'preset3': { label: 'ミニマル・クラシック',
@@ -5702,8 +5702,20 @@ async function removeFromPlaylist() {
     // 再生中かどうかの判定
     const isCurrentlyPlaying = currentVideoIndex === selectedIndex && !videoPlayer.paused;
 
+    // 削除対象のファイルパスを取得（spliceする前に保存）
+    const removedItem = playlist[selectedIndex];
+
     // 削除実行
     playlist.splice(selectedIndex, 1);
+
+    // --- 追加: originalLoadOrder から削除対象パスを除去して localStorage に保存 ---
+    if (removedItem && Array.isArray(originalLoadOrder)) {
+        // 対象のパスを除外した配列を作成
+        originalLoadOrder = originalLoadOrder.filter(path => path !== removedItem.file.path);
+        // localStorage を更新
+        localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
+    }
+    // ---------------------------------------------------------------------------------
 
     // 新しいインデックスを計算
     let newIndex;
@@ -6117,8 +6129,8 @@ async function sortByCreationTime(ascending = true) {
 // 元の順番を localStorage から復元するヘルパー関数
 function getStoredOriginalLoadOrder() {
     try {
-        if (!savedOriginalOrder) return [];
-        const parsed = JSON.parse(savedOriginalOrder);
+        if (!originalLoadOrder) return [];
+        const parsed = JSON.parse(originalLoadOrder);
         return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
         console.warn('originalLoadOrder の復元に失敗:', e);
