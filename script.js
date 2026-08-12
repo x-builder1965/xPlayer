@@ -3164,11 +3164,18 @@ window.addEventListener('unload', () => {
 // main.js からの自動再生指示を受信
 ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
     if (!videoFiles || videoFiles.length === 0) return;
-    await playlistSet(videoFiles);
 
-    currentVideoIndex = 0;
-    selectedPlaylistIndex = 0;
-    await playVideo(playlist[currentVideoIndex].file, 0);
+    const runAutoPlay = async () => {
+        await playlistSet(videoFiles);
+    };
+
+    // DOMの構築が完了しているか確認
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runAutoPlay, { once: true });
+    } else {
+        // すでにDOM読み込み完了済みの場合は即時実行
+        await runAutoPlay();
+    }
 });
 
 // 変換進捗受信
