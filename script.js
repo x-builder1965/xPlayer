@@ -735,7 +735,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // 引数なし → 状態復元
-        const savedOriginalOrder = localStorage.getItem('originalLoadOrder');
         if (savedOriginalOrder) {
             try {
                 originalLoadOrder = JSON.parse(savedOriginalOrder);
@@ -3477,6 +3476,7 @@ async function allLocalStorageSetting() {
         savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
         savedAudioMotionMode = localStorage.getItem('audioMotionMode');
         savedFilterHistory = localStorage.getItem('filterHistory');
+        savedOriginalOrder = localStorage.getItem('originalLoadOrder');
 
         // 2. 取得情報をユーザーフォルダの xPlayerSettings.json に保存
         await exportSettingsToFile(settingsFilePath);
@@ -3514,6 +3514,7 @@ async function allLocalStorageSetting() {
             savedAlwaysOnTop = loadedSettings['alwaysOnTop'] ?? null;
             savedAudioMotionMode = loadedSettings['audioMotionMode'] ?? null;
             savedFilterHistory = loadedSettings['filterHistory'] ?? null;
+            savedOriginalOrder = loadedSettings['originalLoadOrder'] ?? null;
         }
     }
 }
@@ -6116,7 +6117,6 @@ async function sortByCreationTime(ascending = true) {
 // 元の順番を localStorage から復元するヘルパー関数
 function getStoredOriginalLoadOrder() {
     try {
-        const savedOriginalOrder = localStorage.getItem('originalLoadOrder');
         if (!savedOriginalOrder) return [];
         const parsed = JSON.parse(savedOriginalOrder);
         return Array.isArray(parsed) ? parsed : [];
