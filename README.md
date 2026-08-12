@@ -95,3 +95,11 @@ npm run build          # Windows インストーラー生成（dist-win に出�
 npm run dist:portable  # ポータブル版生成
 npm run sign           # authenticode.pfx を使って署名（環境変数 CSC_KEY_PASSWORD が必要）
 ```
+
+## 権利・商標表記
+  - Electron は OpenJS Foundation の商標または登録商標です。  
+  - FFmpeg は Fabrice Bellard 氏および FFmpeg プロジェクトの商標または登録商標です。  
+  - Windows および Snipping Tool は Microsoft Corporation の米国およびその他の国における登録商標です。  
+  - Google Chrome および YouTube は Google LLC の登録商標です。  
+  - Twitch は Twitch Interactive, Inc. の登録商標です。  
+  - その他、記載されている会社名、製品名、サービス名はそれぞれの各社の登録商標または商標です。  
