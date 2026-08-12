@@ -41,7 +41,7 @@ const overlayTimeout = 3000;
 const seekSensitivity = 0.3;
 const volumeStep = 0.001;
 const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 5.0];
-const appNameAndCopyrightValue = `${appName}\n　${copyright}`;
+const appNameAndCopyrightValue = `${appName}\n${copyright}`;
 const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.opus', '.wma', '.aiff', '.aif', '.alac', '.ape'];
@@ -463,7 +463,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     videoPreview.removeAttribute('src');
     videoPreview.load();
     updateMediaPlayerDisplay();
-    appNameAndCopyright.textContent = appNameAndCopyrightValue;
 
     // ネット動画選択のアイコン表示更新
     updateUrlButtonIcon();
@@ -3451,6 +3450,7 @@ async function allLocalStorageSetting() {
 
     if (!isSecondary) {
         // --- 初回起動時 ---
+        appNameAndCopyright.textContent = appNameAndCopyrightValue;
         // 1. localStorage から値を取得し対象変数に設定
         savedVolume = localStorage.getItem('volume');
         savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
@@ -3483,6 +3483,7 @@ async function allLocalStorageSetting() {
 
     } else {
         // --- 重複起動時 ---
+        appNameAndCopyright.textContent = `🚫${appNameAndCopyrightValue}}`;
         // 1. ユーザーフォルダの xPlayerSettings.json を読込
         const loadedSettings = await importSettingsFromFile(settingsFilePath);
 
