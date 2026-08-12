@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.12.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.13.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -3162,11 +3162,15 @@ window.addEventListener('unload', () => {
 
 // 🔲ipcRenderer ハンドラ登録🔲
 // main.js からの自動再生指示を受信
-ipcRenderer.on('auto-play-files', (event, videoFiles) => {
+ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
     if (!videoFiles || videoFiles.length === 0) return;
-    playlistSet(videoFiles);
+    await playlistSet(videoFiles);
+
+    currentVideoIndex = 0;
+    selectedPlaylistIndex = 0;
+    await playVideo(playlist[currentVideoIndex].file, 0);
+
     debouncedUpdateFilterList();
-    debouncedScrollCurrentFilterItem();
 });
 
 // 変換進捗受信
