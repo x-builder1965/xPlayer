@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver5.09.0';
+const appName = 'xPlayer -動画プレイヤー- Ver5.11.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -98,6 +98,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
         on: (channel, listener) => ipcRenderer.on(channel, listener)
     },
+    checkIsSecondaryInstance: () => ipcRenderer.invoke('check-secondary-instance'),
     fs,
     os: { homedir: os.homedir },
     path,

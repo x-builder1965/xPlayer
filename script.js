@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.10.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.11.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -32,7 +32,8 @@ const {
     joinVideos,
     cutVideoMultiple,
     getVideoTracks,
-    openWallpaperDialog
+    openWallpaperDialog,
+    checkIsSecondaryInstance
 } = window.electronAPI;
 
 // 固定値設定
@@ -367,6 +368,7 @@ let savedSelectedSubtitleTrack = null;
 let savedWallpaperPath = null;
 let savedAlwaysOnTop = null;
 let savedAudioMotionMode = null;
+let savedFilterHistory = null;
 
 // グローバル（共通）変数
 let Initializing = true;
@@ -445,11 +447,13 @@ let audioMotionMode = null;
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // DOM要素を取得
     allDOMsetting();
+    // まず重複起動時の localStorage 書き込み防止を設定
+    await setupLocalStorageProtection();
     // localStorageからの復元
-    allLocalStorageSetting();
+    await allLocalStorageSetting();
 
     // 動画初期化（未設定状態）
     videoPlayer.removeAttribute('src');
@@ -784,7 +788,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateIconOverlay();
         }
     })();
-
 
     // 🔲個別イベントリスナー登録🔲
     // 🌐ネット動画選択
@@ -3294,7 +3297,6 @@ ipcRenderer.on('join-progress', (event, payload) => {
     }
 });
 
-
 // 🔲共通関数🔲
 // DOM要素取得
 function allDOMsetting() {
@@ -3397,32 +3399,122 @@ function allDOMsetting() {
     mediaContainer = document.getElementById('mediaContainer');
 }
 
-// localStorage から復得
-function allLocalStorageSetting() {
-    savedVolume = localStorage.getItem('volume');
-    savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
-    savedPlaylist = localStorage.getItem('playlist');
-    savedCurrentVideoIndex = localStorage.getItem('currentVideoIndex');
-    savedCurrentTime = localStorage.getItem('currentTime');
-    savedFitMode = localStorage.getItem('fitMode');
-    savedZoom = localStorage.getItem('zoom');
-    savedTranslateX = localStorage.getItem('translateX');
-    savedTranslateY = localStorage.getItem('translateY');
-    savedEditFrameRate = localStorage.getItem('editFrameRate');
-    savedIsRandomPlayMode = localStorage.getItem('isRandomPlayMode');
-    savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode');
-    savedShuffleOrder = localStorage.getItem('shuffleOrder');
-    savedShufflePosition = localStorage.getItem('shufflePosition');
-    savedAspectRatio = localStorage.getItem('aspectRatio');
-    savedCurrentSortMode = localStorage.getItem('playlistSortMode');
-    savedPlaylistDisplayMode = localStorage.getItem('playlistDisplayMode');
-    savedSelectedAudioLabel = localStorage.getItem('selectedAudioLabel');
-    savedSelectedAudioTrack = localStorage.getItem('selectedAudioTrack');
-    savedSelectedSubtitleLabel = localStorage.getItem('selectedSubtitleLabel');
-    savedSelectedSubtitleTrack = localStorage.getItem('selectedSubtitleTrack');
-    savedWallpaperPath = localStorage.getItem('wallpaperPath');
-    savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
-    savedAudioMotionMode = localStorage.getItem('audioMotionMode');
+// ユーザーフォルダ内の設定ファイルパスを取得
+function getUserSettingsPath() {
+    // os.homedir() を使用してユーザーフォルダ直下のパスを生成
+    return path.join(os.homedir(), 'xPlayerSettings.json');
+}
+
+// 重複起動判定ヘルパー
+async function checkInstance() {
+    if (typeof checkIsSecondaryInstance === 'function') {
+        return await checkIsSecondaryInstance();
+    }
+    return false; // 万が一取得できない場合は初回起動扱い
+}
+
+// 重複起動時の localStorage 書き込み防止処理
+async function setupLocalStorageProtection() {
+    // メインプロセスへ重複起動かを問い合わせ
+    const isSecondary = await window.electronAPI.checkIsSecondaryInstance();
+
+    if (isSecondary) {
+        console.warn('⚠️ 重複起動を検知しました。localStorage への書き込みを無効化します。');
+
+        // 原型のメソッドを保持
+        const originalSetItem = localStorage.setItem.bind(localStorage);
+        const originalClear = localStorage.clear.bind(localStorage);
+        const originalRemoveItem = localStorage.removeItem.bind(localStorage);
+
+        // setItem をガード
+        localStorage.setItem = function (key, value) {
+            console.log(`[重複起動ガード] setItem スキップ: ${key}`);
+            // 何もせず書き込みをスキップ
+        };
+
+        // clear をガード
+        localStorage.clear = function () {
+            console.log('[重複起動ガード] clear スキップ');
+        };
+
+        // removeItem をガード
+        localStorage.removeItem = function (key) {
+            console.log(`[重複起動ガード] removeItem スキップ: ${key}`);
+        };
+    }
+}
+
+// localStorage から復元 (非同期化)
+async function allLocalStorageSetting() {
+    const isSecondary = await window.electronAPI.checkIsSecondaryInstance();
+    const settingsFilePath = getUserSettingsPath();
+
+    if (!isSecondary) {
+        // --- 初回起動時 ---
+        // 1. localStorage から値を取得し対象変数に設定
+        savedVolume = localStorage.getItem('volume');
+        savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
+        savedPlaylist = localStorage.getItem('playlist');
+        savedCurrentVideoIndex = localStorage.getItem('currentVideoIndex');
+        savedCurrentTime = localStorage.getItem('currentTime');
+        savedFitMode = localStorage.getItem('fitMode');
+        savedZoom = localStorage.getItem('zoom');
+        savedTranslateX = localStorage.getItem('translateX');
+        savedTranslateY = localStorage.getItem('translateY');
+        savedEditFrameRate = localStorage.getItem('editFrameRate');
+        savedIsRandomPlayMode = localStorage.getItem('isRandomPlayMode');
+        savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode');
+        savedShuffleOrder = localStorage.getItem('shuffleOrder');
+        savedShufflePosition = localStorage.getItem('shufflePosition');
+        savedAspectRatio = localStorage.getItem('aspectRatio');
+        savedCurrentSortMode = localStorage.getItem('playlistSortMode');
+        savedPlaylistDisplayMode = localStorage.getItem('playlistDisplayMode');
+        savedSelectedAudioLabel = localStorage.getItem('selectedAudioLabel');
+        savedSelectedAudioTrack = localStorage.getItem('selectedAudioTrack');
+        savedSelectedSubtitleLabel = localStorage.getItem('selectedSubtitleLabel');
+        savedSelectedSubtitleTrack = localStorage.getItem('selectedSubtitleTrack');
+        savedWallpaperPath = localStorage.getItem('wallpaperPath');
+        savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
+        savedAudioMotionMode = localStorage.getItem('audioMotionMode');
+        savedFilterHistory = localStorage.getItem('filterHistory');
+
+        // 2. 取得情報をユーザーフォルダの xPlayerSettings.json に保存
+        await exportSettingsToFile(settingsFilePath);
+
+    } else {
+        // --- 重複起動時 ---
+        // 1. ユーザーフォルダの xPlayerSettings.json を読込
+        const loadedSettings = await importSettingsFromFile(settingsFilePath);
+
+        if (loadedSettings) {
+            // 2. 取得情報を対象変数に設定
+            savedVolume = loadedSettings['volume'] ?? null;
+            savedPlaybackSpeed = loadedSettings['playbackSpeed'] ?? null;
+            savedPlaylist = loadedSettings['playlist'] ?? null;
+            savedCurrentVideoIndex = loadedSettings['currentVideoIndex'] ?? null;
+            savedCurrentTime = loadedSettings['currentTime'] ?? null;
+            savedFitMode = loadedSettings['fitMode'] ?? null;
+            savedZoom = loadedSettings['zoom'] ?? null;
+            savedTranslateX = loadedSettings['translateX'] ?? null;
+            savedTranslateY = loadedSettings['translateY'] ?? null;
+            savedEditFrameRate = loadedSettings['editFrameRate'] ?? null;
+            savedIsRandomPlayMode = loadedSettings['isRandomPlayMode'] ?? null;
+            savedIsRepeatPlayMode = loadedSettings['isRepeatPlayMode'] ?? null;
+            savedShuffleOrder = loadedSettings['shuffleOrder'] ?? null;
+            savedShufflePosition = loadedSettings['shufflePosition'] ?? null;
+            savedAspectRatio = loadedSettings['aspectRatio'] ?? null;
+            savedCurrentSortMode = loadedSettings['playlistSortMode'] ?? null;
+            savedPlaylistDisplayMode = loadedSettings['playlistDisplayMode'] ?? null;
+            savedSelectedAudioLabel = loadedSettings['selectedAudioLabel'] ?? null;
+            savedSelectedAudioTrack = loadedSettings['selectedAudioTrack'] ?? null;
+            savedSelectedSubtitleLabel = loadedSettings['selectedSubtitleLabel'] ?? null;
+            savedSelectedSubtitleTrack = loadedSettings['selectedSubtitleTrack'] ?? null;
+            savedWallpaperPath = loadedSettings['wallpaperPath'] ?? null;
+            savedAlwaysOnTop = loadedSettings['alwaysOnTop'] ?? null;
+            savedAudioMotionMode = loadedSettings['audioMotionMode'] ?? null;
+            savedFilterHistory = loadedSettings['filterHistory'] ?? null;
+        }
+    }
 }
 
 // 音声トラック・字幕トラック更新
@@ -3843,15 +3935,22 @@ function createAudioMotionMenu() {
 }
 
 // 設定のエクスポート
-async function exportSettingsToFile() {
+async function exportSettingsToFile(targetFilePath = null) {
     try {
-        const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
-        const defaultName = `xPlayerSettings_${timestamp}.json`;
-        const result = await showSaveSettingsDialog(defaultName);
-        if (result.canceled || !result.filePath) {
-            return;
+        let filePath = targetFilePath;
+
+        // 引数の保存先ファイルパスが Null の場合
+        if (!filePath) {
+            const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+            const defaultName = `xPlayerSettings_${timestamp}.json`;
+            const result = await showSaveSettingsDialog(defaultName);
+            if (result.canceled || !result.filePath) {
+                return;
+            }
+            filePath = result.filePath;
         }
 
+        // localStorage の内容をオブジェクトにまとめる
         const settings = {};
         for (let i = 0; i < localStorage.length; i += 1) {
             const key = localStorage.key(i);
@@ -3860,26 +3959,36 @@ async function exportSettingsToFile() {
             }
         }
 
-        await fs.writeFile(result.filePath, JSON.stringify(settings, null, 2), 'utf8');
-        
-        // result.filePath からファイル名を抽出
-        const fileName = result.filePath.split(/[/\\]/).pop();
-        // メッセージ内にファイル名を含める
-        updatemessageOverlay(`📤 エクスポート: ${fileName}`, false, 3000);
+        // 指定されたパスにエクスポート
+        await fs.writeFile(filePath, JSON.stringify(settings, null, 2), 'utf8');
+
+        // ダイアログ経由（手動エクスポート）の場合のみオーバーレイメッセージを表示
+        if (!targetFilePath) {
+            const fileName = filePath.split(/[/\\]/).pop();
+            updatemessageOverlay(`📤 エクスポート: ${fileName}`, false, 3000);
+        }
     } catch (error) {
         console.error('設定エクスポート失敗:', error);
-        updatemessageOverlay('📤 設定のエクスポートに失敗しました', false, 3000);
+        if (!targetFilePath) {
+            updatemessageOverlay('📤 設定のエクスポートに失敗しました', false, 3000);
+        }
     }
 }
+
 // 設定のインポート
-async function importSettingsFromFile() {
+async function importSettingsFromFile(targetFilePath = null) {
     try {
-        const result = await showOpenSettingsDialog();
-        if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
-            return;
+        let filePath = targetFilePath;
+
+        // 引数の取得先ファイルパスが Null の場合
+        if (!filePath) {
+            const result = await showOpenSettingsDialog();
+            if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+                return null;
+            }
+            filePath = result.filePaths[0];
         }
 
-        const filePath = result.filePaths[0];
         const content = await fs.readFile(filePath, 'utf8');
         const settings = JSON.parse(content);
 
@@ -3887,19 +3996,29 @@ async function importSettingsFromFile() {
             throw new Error('設定ファイルの形式が正しくありません');
         }
 
-        localStorage.clear();
-        Object.entries(settings).forEach(([key, value]) => {
-            localStorage.setItem(key, String(value));
-        });
+        // ダイアログ経由（手動インポート）の場合のみ localStorage を更新してリロード
+        if (!targetFilePath) {
+            localStorage.clear();
+            Object.entries(settings).forEach(([key, value]) => {
+                localStorage.setItem(key, String(value));
+            });
 
-        const fileName = filePath.split(/[/\\]/).pop();
-        updatemessageOverlay(`📥 インポート: ${fileName}`, false, 3000);
-        setTimeout(() => {
-            location.reload();
-        }, 300);
+            const fileName = filePath.split(/[/\\]/).pop();
+            updatemessageOverlay(`📥 インポート: ${fileName}`, false, 3000);
+            setTimeout(() => {
+                location.reload();
+            }, 300);
+        }
+
+        // 読み込んだ設定オブジェクトを返す
+        return settings;
+
     } catch (error) {
         console.error('設定インポート失敗:', error);
-        updatemessageOverlay('📥 設定のインポートに失敗しました', false, 5000);
+        if (!targetFilePath) {
+            updatemessageOverlay('📥 設定のインポートに失敗しました', false, 5000);
+        }
+        return null;
     }
 }
 
@@ -6681,10 +6800,9 @@ async function deleteTempVideo() {
 
 // フィルタ履歴をlocalStorageから復元
 function loadFilterHistory() {
-    const saved = localStorage.getItem('filterHistory');
-    if (saved) {
+    if (savedFilterHistory) {
         try {
-            filterHistory = JSON.parse(saved);
+            filterHistory = JSON.parse(savedFilterHistory);
             if (filterHistory.length > 1000) {
                 filterHistory = filterHistory.slice(-1000);
             }

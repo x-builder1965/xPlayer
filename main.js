@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.04.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.11.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -28,6 +28,7 @@ const VIDEO_PLAYLIST = ['amppl'];
 const SUPPORTED_MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS];
 const SUPPORTED_MEDIA_EXTENSIONS_REGEX = new RegExp(`\\.(${SUPPORTED_MEDIA_EXTENSIONS.join('|')})$`, 'i');
 const VIDEO_PLAYLIST_REGEX = new RegExp(`\\.(${VIDEO_PLAYLIST.join('|')})$`, 'i');
+const gotTheLock = app.requestSingleInstanceLock();     // 🔧 単一インスタンスロックの取得（重複起動の判定）
 
 // グローバル（共通）変数
 let trash;
@@ -40,6 +41,7 @@ let currentJoinTempFiles = [];      // 結合用の一時変換ファイルリ�
 let currentJoinConcatTxt = null;    // concatリストのtxtパス
 let isJoinCancelled = false;        // ファイル先頭付近（他のグローバル変数の近く）に追加
 let thumbnailCacheDir = null;
+let isSecondaryInstance = false; // 重複起動フラグ
 
 // 🔲初期処理🔲
 // 開発中セキュリティオプション設定
@@ -75,6 +77,22 @@ try {
 } catch (err) {
     console.error('trash モジュール読み込み失敗:', err);
     trash = null;
+}
+
+// 初回起動判定
+if (!gotTheLock) {
+    // 2つ目以降の起動（重複起動）の場合
+    isSecondaryInstance = true;
+    // 重複起動時も一時的なバックグラウンド処理や設定同期のため即時quitせずフラグのみ保持するか、
+    // あるいは後続の処理で設定を同期させます。
+} else {
+    // 初回起動（プライマリインスタンス）の場合、2つ目が起動された際のイベントをキャッチ
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
 }
 
 // 🔲共通関数🔲
@@ -330,6 +348,11 @@ app.on('window-all-closed', () => {
 });
 
 // 🔲IPC ハンドラ登録🔲
+// 初回起動判定結果返却
+ipcMain.handle('check-secondary-instance', async () => {
+    return isSecondaryInstance;
+});
+
 // フォルダ選択
 ipcMain.handle('open-folder-dialog', async () => {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
