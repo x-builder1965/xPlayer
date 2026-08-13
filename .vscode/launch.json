@@ -12,7 +12,7 @@
       },
       "args": [
         ".",                          // カレントディレクトリのアプリを起動
-        // "H:/Anime/Anime（放映中）/(3：水)_202607_★★★★☆_(TV)_クレバテスⅡ-魔獣の王と偽りの勇者伝承-",
+        // "H:/PlayList/NAS/手作り/Anime（再生履歴）.amppl",
         "--remote-debugging-port=9223" // Rendererアタッチ用ポート（必須）
       ],
       "console": "integratedTerminal",

@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.11.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.14.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -356,16 +356,22 @@ ipcMain.handle('check-secondary-instance', async () => {
 // フォルダ選択
 ipcMain.handle('open-folder-dialog', async () => {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
-    if (!result.canceled && result.filePaths.length > 0) {
-        return await getVideoFilesRecursively(result.filePaths[0]);
+    if (result.canceled || result.filePaths.length === 0) {
+        return null; // キャンセルされた場合は null を返す
     }
-    return [];
+    return result.filePaths[0]; // 選択されたフォルダパスを返す
 });
 
-// ファイル選択（動画 or .amppl）→ 追加用にも使用
+// フォルダ動画取得
+ipcMain.handle('get-folder-video-files', async (event, folderPath) => {
+    if (!folderPath) return [];
+    return await getVideoFilesRecursively(folderPath);
+});
+
+// ファイル選択
 ipcMain.handle('open-video-dialog', async () => {
     const result = await dialog.showOpenDialog({
-        properties: ['openFile', 'multiSelections'],  // 複数選択可能
+        properties: ['openFile', 'multiSelections'], // 複数選択可能
         filters: [
             {
                 name: '音声・動画ファイルとプレイリスト',
@@ -375,10 +381,22 @@ ipcMain.handle('open-video-dialog', async () => {
             { name: 'xPlayer プレイリスト', extensions: VIDEO_PLAYLIST }
         ]
     });
-    if (result.canceled || result.filePaths.length === 0) return [];
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return []; // キャンセル時または未選択時は空配列を返す
+    }
+
+    return result.filePaths; // 選択されたファイルパスの配列を返す
+});
+
+// ファイル動画取得（動画 or .amppl）→ 追加用にも使用
+ipcMain.handle('get-file-video-files', async (event, filePaths) => {
+    if (!Array.isArray(filePaths) || filePaths.length === 0) {
+        return [];
+    }
 
     const selectedFiles = [];
-    for (const filePath of result.filePaths) {
+    for (const filePath of filePaths) {
         if (VIDEO_PLAYLIST_REGEX.test(filePath)) {
             const listFiles = await processListFile(filePath);
             selectedFiles.push(...listFiles);

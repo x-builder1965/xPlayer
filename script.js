@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.13.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.14.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -16,7 +16,9 @@ const {
     captureScreenshot,
     generateVideoThumbnail,
     openFolderDialog,
+    getFolderVideoFiles,
     openVideoDialog,
+    getFileVideoFiles,
     savePlaylistDialog,
     showSaveCutDialog,
     showSaveJoinDialog,
@@ -732,6 +734,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 起動時の引数有無判定
         const args = await getCommandLineArgs();
         if (args && args.length > 0) {
+            updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
             // main.js が auto-play-files を送信するので、ここでは何もしない
             return;
         }
@@ -752,6 +755,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const parsedPlaylist = JSON.parse(savedPlaylist);
                 const parsedCurrentVideoIndex = parseInt(savedCurrentVideoIndex);
                 if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0 && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
+                    updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
                     playlist = parsedPlaylist.map(path => ({
                         file: { path },
                         name: path
@@ -773,6 +777,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     localStorage.setItem('currentTime', videoPlayer.currentTime);
                     stopPeriodicSave();
                     showControlsAndFilename();
+                    hideMessageOverlay();
                     updateIconOverlay();
                 } else {
                     playlistPathArea.value = appNameAndCopyrightValueLine;
@@ -781,6 +786,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (e) {
                 console.error('プレイリスト復元エラー:', e);
                 playlistPathArea.value = appNameAndCopyrightValueLine;
+                hideMessageOverlay();
                 updateIconOverlay();
             }
         } else {
@@ -803,14 +809,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 📁フォルダ選択
     folderInput.addEventListener('click', async () => {
-        hidemessageOverlay();
         try {
-            const videoFiles = await openFolderDialog();
+            const folderPath = await openFolderDialog();
+            if (!folderPath) return;
+            updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
+            const videoFiles = await getFolderVideoFiles(folderPath);
+
             playlistSet(videoFiles);
             debouncedUpdateFilterList();
             debouncedScrollCurrentFilterItem();
         } catch (e) {
-            updatemessageOverlay('📁 フォルダ選択エラー');
+            updateMessageOverlay('📁 フォルダ選択エラー', 6000);
             console.error('フォルダ選択エラー:', e);
             updateIconOverlay();
         }
@@ -818,14 +827,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 🗒️ファイル選択
     videoInput.addEventListener('click', async () => {
-        hidemessageOverlay();
         try {
-            const videoFiles = await openVideoDialog();
+            const filePaths = await openVideoDialog();
+            if (!filePaths || filePaths.length === 0) return;
+            updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
+            const videoFiles = await getFileVideoFiles(filePaths);
+
             playlistSet(videoFiles);
             debouncedUpdateFilterList();
             debouncedScrollCurrentFilterItem();
         } catch (e) {
-            updatemessageOverlay('🗒️ ファイル選択エラー');
+            updateMessageOverlay('🗒️ ファイル選択エラー', 6000);
             console.error('ファイル選択エラー:', e);
             updateIconOverlay();
         }
@@ -838,21 +850,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                 modeChange = 'video';
                 modeChangeBtn.classList.remove('convert-active');
                 seekBar.classList.remove('converting');
-                updatemessageOverlay('🎬 再生モードを設定しました', false, 1500);
+                updateMessageOverlay('🎬 再生モードを設定しました');
             } else {
                 modeChange = 'convert';
                 modeChangeBtn.classList.add('convert-active');
                 seekBar.classList.add('converting');
-                updatemessageOverlay('🔄️ 変換モードを設定しました', false, 1500);
+                updateMessageOverlay('🔄️ 変換モードを設定しました');
             }
             modeChangeBtn.textContent = modeChange === 'video' ? '🎬' : '🔄️';
             modeChangeBtn.setAttribute('data-tooltip', modeChange === 'video' ? '視聴モード（Ctrl+v）' : '変換モード（Ctrl+v）');
             localStorage.setItem('modeChange', modeChange);
         } else {
             if (modeChange === 'convert') {
-                updatemessageOverlay('🎬 変換中は再生モード切替不可', false, 3000);
+                updateMessageOverlay('🎬 変換中は再生モード切替不可');
             } else {
-                updatemessageOverlay('🔄️ 再生中は変換モード切替不可', false, 3000);
+                updateMessageOverlay('🔄️ 再生中は変換モード切替不可');
             }
         }
         updateTrackButtonsVisibility();
@@ -860,7 +872,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 🔘URLクリア
     urlClearBtn.addEventListener('click', () => {
-        hidemessageOverlay();
+        hideMessageOverlay();
         urlInput.value = '';
         urlInput.focus();
     });
@@ -1003,7 +1015,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             videoPlayer.currentTime = newTime;
             seekBar.value = (100 / videoPlayer.duration) * newTime;
             updateTimeDisplay();
-            updatemessageOverlay(`🕓 ${formatTime(newTime)}`);
+            updateMessageOverlay(`🕓 ${formatTime(newTime)}`);
             localStorage.setItem('currentTime', newTime);
             showControlsAndFilename();
             updateIconOverlay();
@@ -1018,7 +1030,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             videoPlayer.currentTime = newTime;
             seekBar.value = (100 / videoPlayer.duration) * newTime;
             updateTimeDisplay();
-            updatemessageOverlay(`🕓 ${formatTime(newTime)}`);
+            updateMessageOverlay(`🕓 ${formatTime(newTime)}`);
             localStorage.setItem('currentTime', newTime);
             showControlsAndFilename();
             updateIconOverlay();
@@ -1057,7 +1069,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             volumeMuteBtn.setAttribute('data-tooltip', 'ミュート解除（Ctrl+m）');
         }
         updateVolumeDisplay();
-        updatemessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+        updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
         volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
         localStorage.setItem('volume', videoPlayer.volume);
         updateIconOverlay();
@@ -1247,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const result = await captureScreenshot();
             if (result.success) {
-                console.log('スナップショット完了！');
+                console.log('スナップショット完了');
             } else {
                 console.error('スナップショット失敗:', result.error);
             }
@@ -1273,7 +1285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 🖼️背景壁紙選択
     wallpaperBtn.addEventListener('click', async () => {
-        hidemessageOverlay();
+        hideMessageOverlay();
 
         try {
             const wallpaper = await openWallpaperDialog();
@@ -1304,7 +1316,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             localStorage.setItem('wallpaperPath', videoContainer.style.backgroundImage);
             updateIconOverlay();
         } catch (e) {
-            updatemessageOverlay('🖼️ 背景壁紙選択エラー');
+            updateMessageOverlay('🖼️ 背景壁紙選択エラー', 6000);
             console.error('背景壁紙選択エラー:', e);
             updateIconOverlay();
         }
@@ -1488,11 +1500,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     case 4: errorMsg = '▶️ このファイル形式は再生できません'; break;
                 }
             }
-            updatemessageOverlay(errorMsg, true, 3000);
+            updateMessageOverlay(errorMsg, 6000);
         } else {
             // HTML5 でサポートされていない拡張子の場合も明確に伝える
             console.warn(`拡張子 ${ext} は HTML5 でサポートされていません`);
-            updatemessageOverlay(`▶️ 再生エラー: ${ext} 形式は対応していません`, false, 3000);
+            updateMessageOverlay(`▶️ 再生エラー: ${ext} 形式は対応していません`, 6000);
         }
     });
 
@@ -1540,7 +1552,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             if (modeChange === 'convert') {
                 seekBar.value = 0;
-                updatemessageOverlay('🔄️ 変換完了', false, 3000);
+                updateMessageOverlay('🔄️ 変換完了');
             }
             playStopBtn.click(); // プレイリストの最後で停止
         }
@@ -1618,7 +1630,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 videoPlayer.currentTime = newTime;
                 seekBar.value = (100 / videoPlayer.duration) * newTime;
                 updateTimeDisplay();
-                updatemessageOverlay(`🕓 ${formatTime(newTime)}`);
+                updateMessageOverlay(`🕓 ${formatTime(newTime)}`, 500);
                 localStorage.setItem('currentTime', newTime);
                 darkOverlay.style.display = 'block';
             } else if (absDeltaY > absDeltaX && absDeltaY > 5) {
@@ -1631,7 +1643,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
                 volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
                 updateVolumeDisplay();
-                updatemessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+                updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 500);
                 localStorage.setItem('volume', videoPlayer.volume);
             }
 
@@ -1684,6 +1696,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
             hideMenus();
+            hideMessageOverlay();
             e.stopPropagation();
         }
     });
@@ -1713,7 +1726,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             applyZoom(newZoom);
 
             // フィードバック表示（任意だがおすすめ）
-            updatemessageOverlay(`🔍 ${newZoom > 0 ? '+' : ''}${newZoom}%`);
+            updateMessageOverlay(`🔍 ${newZoom > 0 ? '+' : ''}${newZoom}%`, 500);
 
             return;  // ここで終了 → 音量調整には行かない
         }
@@ -1732,7 +1745,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
         volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
-        updatemessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+        updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 500);
         localStorage.setItem('volume', videoPlayer.volume);
         showControlsAndFilename();
         updateIconOverlay();
@@ -1746,7 +1759,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         videoPlayer.currentTime = time;
         seekBar.value = (time / videoPlayer.duration) * 100;
         updateTimeDisplay();
-        updatemessageOverlay(`🕓 ${formatTime(time)}`);
+        updateMessageOverlay(`🕓 ${formatTime(time)}`);
     });
 
     // カット編集シークバー スライダー変更
@@ -1845,7 +1858,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             editSeekBar.value = (time / videoPlayer.duration) * 100;
         }
         updateTimeDisplay();
-        updatemessageOverlay(`🕓 ${formatTime(time)}`);
+        updateMessageOverlay(`🕓 ${formatTime(time)}`);
     });
 
     // シークバー スライダー変更
@@ -1939,7 +1952,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
         volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
-        updatemessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+        updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
         localStorage.setItem('volume', videoPlayer.volume);
         updateIconOverlay();
     });
@@ -1954,7 +1967,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (x >= 0 && x <= rect.width) {
                 const volume = (x / rect.width);
                 const volumePercent = Math.round(volume * 100);
-                updatemessageOverlay(`${volume === 0 ? '🔇' : '🔊'} ${volumePercent}%`);
+                updateMessageOverlay(`${volume === 0 ? '🔇' : '🔊'} ${volumePercent}%`);
             }
             showControlsAndFilename();
             updateIconOverlay();
@@ -1966,7 +1979,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (controls.style.opacity !== '1') return;
         if (!isDragging && !volumeBar.matches(':active')) {
             if (!isVolumeDragging && !volumeBar.matches(':active')) {
-                hidemessageOverlay();
+                hideMessageOverlay();
             }
             updateIconOverlay();
         }
@@ -1980,7 +1993,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentPlaybackRate = rate;               // ← ここを追加
             videoPlayer.playbackRate = rate;
             localStorage.setItem('playbackSpeed', rate);
-            updatemessageOverlay(`🏃‍♂️‍➡️ ${rate}x`, false, 1000);
+            updateMessageOverlay(`🏃‍♂️‍➡️ ${rate}x`);
         }
     });
 
@@ -2160,6 +2173,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Ctrlキー（MacのCmdキー含む）が押されているか判定
         const isAppend = e.ctrlKey || e.metaKey;
+        if (isAppend) {
+            updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
+        } else {
+            updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
+        }
 
         const fullPaths = [];
         for (const file of files) {
@@ -2180,7 +2198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ✂️編集モード切替
     editModeBtn.addEventListener('click', () => {
         if (playlist.length === 0) {
-            updatemessageOverlay('✂️ プレイリストが空です');
+            updateMessageOverlay('✂️ プレイリストが空です');
             return;
         }
         
@@ -2206,7 +2224,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             editPanel.style.display = 'none';
             editModeBtn.classList.remove('mode-active');
         }
-        hidemessageOverlay();
+        hideMessageOverlay();
         // ボタン表示を更新（ここが今回のメイン変更点）
         updateEditModeButtonUI();
     });
@@ -2216,18 +2234,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             if (isCutEditing) {
                 await cancelCut();
-                updatemessageOverlay('✂️ カット中断しました');
+                updateMessageOverlay('✂️ カット中断しました');
             } else if (isJoinEditing) {
                 await cancelJoin();
-                updatemessageOverlay('🎞️ 結合中断しました');
+                updateMessageOverlay('🎞️ 結合中断しました');
             }
         } catch (e) {
             if (isCutEditing) {
                 console.error('cancel-cut failed:', e);
-                updatemessageOverlay('✂️ カット中断に失敗しました');
+                updateMessageOverlay('✂️ カット中断に失敗しました', 6000);
             } else if (isJoinEditing) {
                 console.error('cancel-join failed:', e);
-                updatemessageOverlay('🎞️ 結合中断に失敗しました');
+                updateMessageOverlay('🎞️ 結合中断に失敗しました', 6000);
             }
         } finally {
             if (isCutEditing) {
@@ -2296,7 +2314,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ✅カット範囲追加
     addCutRangeBtn.addEventListener('click', () => {
         if (editInMark < 0 || editOutMark < 0) {
-            updatemessageOverlay('✂️ INマークとOUTマークを両方設定してください');
+            updateMessageOverlay('✂️ INマークとOUTマークを両方設定してください');
             return;
         }
         let a = editInMark;
@@ -2318,11 +2336,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 💾動画保存（設定した複数範囲を削除して保存）
     saveVideoBtn.addEventListener('click', async () => {
         if (!videoPlayer.src) {
-            updatemessageOverlay('✂️ 動画が読み込まれていません');
+            updateMessageOverlay('✂️ 動画が読み込まれていません');
             return;
         }
         if (!cutRanges || cutRanges.length === 0) {
-            updatemessageOverlay('✂️ 保存するためのカット範囲が設定されていません');
+            updateMessageOverlay('✂️ 保存するためのカット範囲が設定されていません');
             return;
         }
 
@@ -2337,12 +2355,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const saveResult = await showSaveCutDialog({ fileName: defaultOutName });
             if (saveResult.canceled) {
-                setTimeout(hidemessageOverlay, 1500);
+                setTimeout(hideMessageOverlay, 1500);
                 return;
             }
 
             isCutEditing = true;
-            updatemessageOverlay('✂️ カット中… 0%', true, 0);
+            updateMessageOverlay('✂️ カット中… 0%', 0);
 
             // フレーム単位へ丸めたレンジを作成して main.js に送る
             const alignedRanges = (cutRanges || []).map(r => {
@@ -2366,26 +2384,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             if (!result || !result.outputPath) {
-                updatemessageOverlay('✂️ 中断または失敗しました', false, 3000);
+                updateMessageOverlay('✂️ 中断または失敗しました', 6000);
                 console.log('カット編集中断またはエラー');
             } else {
                 const { outputPath, mode } = result;
 
                 if (mode === 'reencode') {
-                    updatemessageOverlay('✂️ 保存完了（精細モード）', false, 1500);
+                    updateMessageOverlay('✂️ 保存完了（精細モード）');
                     console.log('カット編集完了（再エンコード）:', outputPath);
                 } else if (mode === 'copy') {
-                    updatemessageOverlay('✂️ 保存完了（高速モード）', false, 1500);
+                    updateMessageOverlay('✂️ 保存完了（高速モード）');
                     console.log('カット編集完了（ストリームコピー）:', outputPath);
                 } else {
                     // 予期せぬ mode の場合
-                    updatemessageOverlay('✂️ 保存完了', false, 1500);
+                    updateMessageOverlay('✂️ 保存完了');
                     console.log('カット編集完了（モード不明）:', outputPath);
                 }
             }
         } catch (err) {
             console.error('カット（複数）処理エラー:', err);
-            updatemessageOverlay(`✂️ カット失敗: ${err.message}`, false, 3000);
+            updateMessageOverlay(`✂️ カット失敗: ${err.message}`, 6000);
         } finally {
             isCutEditing = false;
             cutCancelBtn.style.display = 'none';
@@ -3009,7 +3027,7 @@ document.addEventListener('keydown', async (event) => {
         volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
         volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
-        updatemessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
+        updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
         localStorage.setItem('volume', videoPlayer.volume);
         showControlsAndFilename();
         updateIconOverlay();
@@ -3065,9 +3083,9 @@ document.addEventListener('keydown', async (event) => {
         
             if (needsFrameStep) {
                 const frameNum = Math.round(newTime * frameRate);
-                updatemessageOverlay(`🕓 ${formatTime(newTime)} (${frameNum}f)`);
+                updateMessageOverlay(`🕓 ${formatTime(newTime)} (${frameNum}f)`);
             } else {
-                updatemessageOverlay(`🕓 ${formatTime(newTime)}`);
+                updateMessageOverlay(`🕓 ${formatTime(newTime)}`);
             }
         }
         return;
@@ -3089,7 +3107,7 @@ document.addEventListener('mouseup', (e) => {
         isSeekDragging = false;
         isDragging = false;
         darkOverlay.style.display = 'none';
-        hidemessageOverlay();
+        hideMessageOverlay();
         // ★ 動画以外（音声ファイル等）の場合はプレビューを表示しない
         const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
         const ext = path.extname(currentSrc).toLowerCase();
@@ -3103,7 +3121,7 @@ document.addEventListener('mouseup', (e) => {
         isEditSeekDragging = false;
         isDragging = false;
         darkOverlay.style.display = 'none';
-        hidemessageOverlay();
+        hideMessageOverlay();
         const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
         const ext = path.extname(currentSrc).toLowerCase();
         if (isMouseOverEditSeekBar && isVideoFile(ext)) {
@@ -3169,13 +3187,15 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
         await playlistSet(videoFiles);
     };
 
-    // DOMの構築が完了しているか確認
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', runAutoPlay, { once: true });
-    } else {
-        // すでにDOM読み込み完了済みの場合は即時実行
-        await runAutoPlay();
-    }
+    setTimeout(async () => {
+        // DOMの構築が完了しているか確認
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', runAutoPlay, { once: true });
+        } else {
+            // すでにDOM読み込み完了済みの場合は即時実行
+            await runAutoPlay();
+        }
+    }, 100);
 });
 
 // 変換進捗受信
@@ -3189,9 +3209,9 @@ ipcRenderer.on('convert-progress', (e, { percent, step }) => {
 
     if (step === 1) {
         if (isRepeatPlayMode === 'single') {
-            updatemessageOverlay(`🔄️ 変換中…（1/1） ${Math.round(percent)}%`, false, 0);
+            updateMessageOverlay(`🔄️ 変換中…（1/1） ${Math.round(percent)}%`, 0);
         } else {
-            updatemessageOverlay(`🔄️ 変換中…（${playListCurrent + 1}/${playListCount}） ${Math.round(percent)}%`, false, 0);
+            updateMessageOverlay(`🔄️ 変換中…（${playListCurrent + 1}/${playListCount}） ${Math.round(percent)}%`, 0);
         }
     }
     // シークバーに進捗を表示
@@ -3211,14 +3231,14 @@ ipcRenderer.on('subtitle-extraction-progress', (e, data) => {
         playListCurrent = 0;
     }
 
-    updatemessageOverlay(`🔄️ 字幕作成中…（${playListCurrent + 1}/${playListCount}） 100%（${data.subtitleIndex}/${data.subtitleCount}）`, false, 0);
+    updateMessageOverlay(`🔄️ 字幕作成中…（${playListCurrent + 1}/${playListCount}） 100%（${data.subtitleIndex}/${data.subtitleCount}）`, 0);
 });
 
 // 変換エラー
 ipcRenderer.on('convert-error', (event, msg) => {
     console.error("変換失敗:", err);
     isConverting = false;
-    updatemessageOverlay(`🔄️ 変換失敗`, false, 3000);
+    updateMessageOverlay(`🔄️ 変換失敗`, 6000);
     playlistPathArea.value = appNameAndCopyrightValueLine;
     updateIconOverlay();
 });
@@ -3229,49 +3249,49 @@ ipcRenderer.on('cut-progress', (event, payload) => {
         const stage = payload && payload.stage ? payload.stage : 'progress';
         switch (stage) {
             case 'start':
-                updatemessageOverlay(`✂️ カット準備中…` , true, 0);
+                updateMessageOverlay(`✂️ カット準備中…`, 0);
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'extract-start':
-                updatemessageOverlay(`✂️ カット開始 ${payload.index + 1}/${payload.total} ${formatTime(payload.segStart)} - ${formatTime(payload.segEnd)}` , true, 0);
+                updateMessageOverlay(`✂️ カット開始 ${payload.index + 1}/${payload.total} ${formatTime(payload.segStart)} - ${formatTime(payload.segEnd)}`, 0);
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'extract-done':
-                updatemessageOverlay(`✂️ カット済 ${payload.index + 1}/${payload.total} (${Math.round(payload.percent)}%)` , true, 0);
+                updateMessageOverlay(`✂️ カット済 ${payload.index + 1}/${payload.total} (${Math.round(payload.percent)}%)`, 0);
                 break;
             case 'concat-start':
-                updatemessageOverlay(`✂️ 結合中…` , true, 0);
+                updateMessageOverlay(`✂️ 結合中…`, 0);
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'concat-done':
-                updatemessageOverlay(`✂️ 結合完了` , false, 1500);
+                updateMessageOverlay(`✂️ 結合完了`);
                 cutCancelBtn.style.display = 'none';
                 break;
             case 'reencode':
                 const p = payload.percent !== undefined ? Math.round(payload.percent) : 0;
                 const fm = payload.frames !== undefined ? `${payload.frames}f` : '';
                 const tm = payload.timemark ? ` [${payload.timemark}]` : '';
-                updatemessageOverlay(`✂️ カット中… ${p}% ${fm}${tm}` , true, 0);
+                updateMessageOverlay(`✂️ カット中… ${p}% ${fm}${tm}`, 0);
                 cutCancelBtn.style.display = 'inline-block';
                 break;
             case 'done':
                 isCutEditing = false;
-                updatemessageOverlay(`✂️ 保存完了` , false, 1500);
+                updateMessageOverlay(`✂️ 保存完了`);
                 cutCancelBtn.style.display = 'none';
                 break;
             case 'error':
                 isCutEditing = false;
-                updatemessageOverlay(`✂️ カット失敗: ${payload.message || 'エラー'}` , false, 3000);
+                updateMessageOverlay(`✂️ カット失敗: ${payload.message || 'エラー'}`, 6000);
                 cutCancelBtn.style.display = 'none';
                 break;
             default:
                 // 旧スタイル or unknown
                 const percent = payload && payload.percent ? Math.round(payload.percent) : 0;
-                updatemessageOverlay(`✂️ カット中… ${percent}%`, true, 0);
+                updateMessageOverlay(`✂️ カット中… ${percent}%`, 0);
                 break;
         }
     } catch (e) {
-        updatemessageOverlay('✂️ カット処理中…', true, 0);
+        updateMessageOverlay('✂️ カット処理中…', 0);
     }
 });
 
@@ -3281,28 +3301,28 @@ ipcRenderer.on('join-progress', (event, payload) => {
         const stage = payload && payload.stage ? payload.stage : 'progress';
         switch (stage) {
             case 'join-prepare':
-                updatemessageOverlay(`🎞️ 変換中…`, true, 0);
+                updateMessageOverlay(`🎞️ 変換中…`, 0);
                 break;
             case 'convert-pre':
                 const convPercent = Math.round(payload.percent);
                 if (isRepeatPlayMode === 'single') {
-                    updatemessageOverlay(`🎞️ 変換中… （1/1） ${convPercent}%`, true, 0);
+                    updateMessageOverlay(`🎞️ 変換中… （1/1） ${convPercent}%`, 0);
                 } else {
-                    updatemessageOverlay(`🎞️ 変換中… （${payload.currentFile}/${payload.totalFiles}） ${convPercent}%`, true, 0);
+                    updateMessageOverlay(`🎞️ 変換中… （${payload.currentFile}/${payload.totalFiles}） ${convPercent}%`, 0);
                 }
                 break;
             case 'join-start':
-                updatemessageOverlay('🎞️ 結合開始…', true, 0);
+                updateMessageOverlay('🎞️ 結合開始…', 0);
                 break;
             case 'join':
-                updatemessageOverlay(`🎞️ 結合中…`, true, 0);
+                updateMessageOverlay(`🎞️ 結合中…`, 0);
                 break;
             case 'join-done':
-                updatemessageOverlay('🎞️ 結合完了', false, 1500);
+                updateMessageOverlay('🎞️ 結合完了');
                 break;
         }
     } catch (e) {
-        updatemessageOverlay('🎞️ 変換エラー', false, 0);
+        updateMessageOverlay('🎞️ 変換エラー', 6000);
     }
 });
 
@@ -3716,12 +3736,12 @@ function showControlsAndFilename() {
 function hideControlsAndFilename() {
     disabledControls(true);
     disabledfilename(true);
-    messageOverlay.classList.remove('active');
+    // messageOverlay.classList.remove('active');
     hideMenus(false); // 追加：コントロール非表示時にメニューも強制非表示
     clearTimeout(timeout);
-    setTimeout(() => {
-        messageOverlay.style.display = 'none';
-    }, 300);
+    // setTimeout(() => {
+    //     messageOverlay.style.display = 'none';
+    // }, 300);
     videoPlayer.style.cursor = 'none';
     videoContainer.style.cursor = 'none';
 
@@ -3809,7 +3829,7 @@ function applyZoom(zoomPercent) {
     localStorage.setItem('zoom', zoomValue.toString());
     zoomDisplay.textContent = `${zoomValue > 0 ? '+' : ''}${zoomValue}%`;
     if (isZoomMode) {
-        updatemessageOverlay(`🔍 ${zoomValue > 0 ? '+' : ''}${zoomValue}%`);
+        updateMessageOverlay(`🔍 ${zoomValue > 0 ? '+' : ''}${zoomValue}%`);
     }
 }
 
@@ -3898,7 +3918,7 @@ function createAspectRatioMenu() {
             currentAspectRatio = key;
             applyAspectRatioSetting();
             menu.remove();
-            updatemessageOverlay(`📺 ${label}`, false, 1500);
+            updateMessageOverlay(`📺 ${label}`);
         });
 
         item.addEventListener('mouseover', () => {
@@ -3931,7 +3951,7 @@ function createAudioMotionMenu() {
             updateAudioMotion();
             toggleVisualizer(currentMediaType);
             menu.remove();
-            updatemessageOverlay(`🏳️‍🌈 ${label}`, false, 1500);
+            updateMessageOverlay(`🏳️‍🌈 ${label}`);
         });
 
         item.addEventListener('mouseover', () => {
@@ -3978,12 +3998,12 @@ async function exportSettingsToFile(targetFilePath = null) {
         // ダイアログ経由（手動エクスポート）の場合のみオーバーレイメッセージを表示
         if (!targetFilePath) {
             const fileName = filePath.split(/[/\\]/).pop();
-            updatemessageOverlay(`📤 エクスポート: ${fileName}`, false, 3000);
+            updateMessageOverlay(`📤 エクスポート: ${fileName}`);
         }
     } catch (error) {
         console.error('設定エクスポート失敗:', error);
         if (!targetFilePath) {
-            updatemessageOverlay('📤 設定のエクスポートに失敗しました', false, 3000);
+            updateMessageOverlay('📤 設定のエクスポートに失敗しました', 6000);
         }
     }
 }
@@ -4017,7 +4037,7 @@ async function importSettingsFromFile(targetFilePath = null) {
             });
 
             const fileName = filePath.split(/[/\\]/).pop();
-            updatemessageOverlay(`📥 インポート: ${fileName}`, false, 3000);
+            updateMessageOverlay(`📥 インポート: ${fileName}`);
             setTimeout(() => {
                 location.reload();
             }, 300);
@@ -4029,14 +4049,14 @@ async function importSettingsFromFile(targetFilePath = null) {
     } catch (error) {
         console.error('設定インポート失敗:', error);
         if (!targetFilePath) {
-            updatemessageOverlay('📥 設定のインポートに失敗しました', false, 5000);
+            updateMessageOverlay('📥 設定のインポートに失敗しました', 6000);
         }
         return null;
     }
 }
 
 // オーバーレイ表示
-function updatemessageOverlay(content, isInitial = false, autoHideAfter = 3000) {
+function updateMessageOverlay(content, autoHideAfter = 3000, isShowControls = true) {
     messageOverlay.textContent = content;
     const overlayFontSize = parseFloat(messageOverlay.style.fontSize) || 90;
     // 1. 実際の文字サイズ（横幅）を計算する関数
@@ -4061,7 +4081,7 @@ function updatemessageOverlay(content, isInitial = false, autoHideAfter = 3000) 
 
     messageOverlay.style.display = 'block';
     messageOverlay.classList.add('active');
-    if (!isInitial && !isZoomMode) {
+    if (isShowControls) {
         showControlsAndFilename();
     }
     updateIconOverlay();
@@ -4074,13 +4094,13 @@ function updatemessageOverlay(content, isInitial = false, autoHideAfter = 3000) 
         }
 
         messageOverlay._autoHideTimer = setTimeout(() => {
-            hidemessageOverlay();
+            hideMessageOverlay();
         }, autoHideAfter);
     }
 }
 
 // オーバーレイ非表示
-function hidemessageOverlay() {
+function hideMessageOverlay() {
     messageOverlay.classList.remove('active');
     setTimeout(() => {
         messageOverlay.style.display = 'none';
@@ -5320,7 +5340,7 @@ async function setVideoSrc(file) {
         } catch (err) {
             console.error("変換失敗:", err);
             isConverting = false;
-            updatemessageOverlay('🔄️ 変換失敗', false, 5000);
+            updateMessageOverlay('🔄️ 変換失敗', 6000);
             playlistPathArea.value = appNameAndCopyrightValueLine;
             updateIconOverlay();
             // 変換失敗時もシークバーをリセット
@@ -5360,7 +5380,7 @@ function isVideoStopped() {
 async function urlInputEnter() {
     const inputUrl = urlInput.value.trim();
     if (!inputUrl) {
-        updatemessageOverlay('🌐 入力URL不正');
+        updateMessageOverlay('🌐 入力URL不正', 6000);
         updateIconOverlay();
         return;
     }
@@ -5373,7 +5393,7 @@ async function urlInputEnter() {
     if (platform === 'Twitch') {
         videoId = extractTwitchVideoId(inputUrl);
         if (!videoId) {
-            updatemessageOverlay('🌐 無効なTwitch URL');
+            updateMessageOverlay('🌐 無効なTwitch URL', 6000);
             updateIconOverlay();
             return;
         }
@@ -5382,7 +5402,7 @@ async function urlInputEnter() {
         playlistId = extractYouTubePlaylistId(inputUrl);
         videoId = extractYouTubeVideoId(inputUrl);
         if (!videoId) {
-            updatemessageOverlay('🌐 無効なYouTube URL');
+            updateMessageOverlay('🌐 無効なYouTube URL', 6000);
             updateIconOverlay();
             return;
         }
@@ -5394,7 +5414,7 @@ async function urlInputEnter() {
     } else if (platform === 'Other') {
         videoUrl = inputUrl;
     } else {
-        updatemessageOverlay('🌐 無効なURL');
+        updateMessageOverlay('🌐 無効なURL', 6000);
         updateIconOverlay();
         return;
     }
@@ -5405,7 +5425,7 @@ async function urlInputEnter() {
         if (result.success) {
             console.log("ブラウザ起動依頼成功", result.message);
         } else {
-            updatemessageOverlay(`🌐 ブラウザ起動失敗（${result.messag}）。`);
+            updateMessageOverlay(`🌐 ブラウザ起動失敗（${result.messag}）。`, 6000);
         }
 
         hideURLInputControls();
@@ -5414,7 +5434,7 @@ async function urlInputEnter() {
         updateIconOverlay();
     } catch (error) {
         console.error("IPCエラー:", err);
-        updatemessageOverlay(`🌐 動画プレーヤーの設定失敗（${error.message}）。別の動画を試してください。`);
+        updateMessageOverlay(`🌐 動画プレーヤーの設定失敗（${error.message}）。別の動画を試してください。`, 6000);
         updateIconOverlay();
     }
 }
@@ -5473,7 +5493,11 @@ function closeHelp() {
 
 // プレイリストのファイル追加
 async function playlistAdd(videoFiles) {
-    if (!videoFiles || videoFiles.length === 0) return;
+    if (!videoFiles || videoFiles.length === 0) {
+        hideMessageOverlay();
+        return;
+    }
+    updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
 
     // 既存のプレイリスト内のパス一覧
     const existingPaths = new Set(playlist.map(item => item?.file?.path));
@@ -5488,7 +5512,10 @@ async function playlistAdd(videoFiles) {
     }
 
     // すべて重複していて追加対象がない場合は中断
-    if (uniqueVideoFiles.length === 0) return;
+    if (uniqueVideoFiles.length === 0) {
+        hideMessageOverlay();
+        return;
+    }
 
     const mappedNewFiles = uniqueVideoFiles.map(file => ({
         file: { path: file.path },
@@ -5515,37 +5542,42 @@ async function playlistAdd(videoFiles) {
     savePlaylistAndPlaybackState();
     // シャッフル状態の維持/更新が必要な場合はここで調整
     saveShuffleState();
+    hideMessageOverlay();
     updateIconOverlay();
 }
 
 // プレイリストのファイル設定
 async function playlistSet(videoFiles) {
-    if (videoFiles.length > 0) {
-        await cleanupTempFiles();
-
-        // ★ 元の読み込み順（Base順）を保存
-        const currentPaths = videoFiles.map(file => file.path);
-        originalLoadOrder = [...currentPaths];
-        localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
-
-        // playlist を初期状態（ファイル取得順）でセット
-        playlist = videoFiles.map(file => ({
-            file: { path: file.path },
-            name: file.path
-        }));
-
-        // ★ 現状の並び替えモード（currentSortMode）を適用
-        await applySort(currentSortMode);
-
-        currentVideoIndex = 0;
-        selectedPlaylistIndex = 0;
-        await playVideo(playlist[currentVideoIndex].file, 0);
-        savePlaylistAndPlaybackState();
-        resetShuffle();
-        saveShuffleState();
-
-        updateIconOverlay();
+    if (!videoFiles || videoFiles.length === 0) {
+        hideMessageOverlay();
+        return;
     }
+    updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
+    
+    await cleanupTempFiles();
+
+    // ★ 元の読み込み順（Base順）を保存
+    const currentPaths = videoFiles.map(file => file.path);
+    originalLoadOrder = [...currentPaths];
+    localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
+
+    // playlist を初期状態（ファイル取得順）でセット
+    playlist = videoFiles.map(file => ({
+        file: { path: file.path },
+        name: file.path
+    }));
+
+    // ★ 現状の並び替えモード（currentSortMode）を適用
+    await applySort(currentSortMode);
+
+    currentVideoIndex = 0;
+    selectedPlaylistIndex = 0;
+    await playVideo(playlist[currentVideoIndex].file, 0);
+    savePlaylistAndPlaybackState();
+    resetShuffle();
+    saveShuffleState();
+    hideMessageOverlay();
+    updateIconOverlay();
 }
 
 // HTML5対応拡張子判定
@@ -5638,7 +5670,11 @@ function getCurrentAddModePosition() {
 
 // プレイリストにファイルを挿入するヘルパー関数
 function insertFilesIntoPlaylist(files, addPosition = 0) {
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {
+        hideMessageOverlay();
+        return;
+    }
+    updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
 
     // 既存のプレイリスト内のパス一覧（Setで高速化）
     const existingPaths = new Set(playlist.map(item => item?.file?.path));
@@ -5660,7 +5696,10 @@ function insertFilesIntoPlaylist(files, addPosition = 0) {
         }
     }
 
-    if (uniqueFiles.length === 0) return;
+    if (uniqueFiles.length === 0) {
+        hideMessageOverlay();
+        return;
+    }
 
     const insertIndex = getPlaylistInsertIndex(addPosition);
     const formattedFiles = uniqueFiles.map(f => ({ file: { path: f.path }, name: f.name }));
@@ -5684,6 +5723,7 @@ function insertFilesIntoPlaylist(files, addPosition = 0) {
     updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
     resetShuffle();
+    hideMessageOverlay();
     saveShuffleState();
     showControlsAndFilename();
 }
@@ -5696,7 +5736,7 @@ async function addToPlaylist(addPosition = 0) {
         await insertFilesIntoPlaylist(files, addPosition);
     } catch (e) {
         console.error('追加エラー:', e);
-        updatemessageOverlay('📚 動画追加に失敗', false, 5000);
+        updateMessageOverlay('📚 動画追加に失敗', 6000);
     }
 }
 
@@ -5704,7 +5744,7 @@ async function addToPlaylist(addPosition = 0) {
 async function removeFromPlaylist() {
     const selectedIndex = selectedPlaylistIndex >= 0 && selectedPlaylistIndex < playlist.length ? selectedPlaylistIndex : currentVideoIndex;
     if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= playlist.length) {
-        updatemessageOverlay('📚 削除する動画を選択してください', false, 2000);
+        updateMessageOverlay('📚 削除する動画を選択してください');
         return;
     }
 
@@ -5787,7 +5827,7 @@ async function clearPlaylist() {
 // プレイリスト保存
 async function savePlaylist() {
     if (playlist.length === 0) {
-        updatemessageOverlay('📚 保存する動画がありません', false, 2000);
+        updateMessageOverlay('📚 保存する動画がありません', 6000);
         return;
     }
 
@@ -5802,15 +5842,20 @@ async function savePlaylist() {
     });
 
     if (saveResult.success) {
-        updatemessageOverlay(`📚 保存完了: ${path.basename(result.filePath)}`);
+        updateMessageOverlay(`📚 保存完了: ${path.basename(result.filePath)}`);
     } else {
-        updatemessageOverlay('📚 保存に失敗しました', false, 5000);
+        updateMessageOverlay('📚 保存に失敗しました', 6000);
         console.error(saveResult.error);
     }
 }
 
 // ドラッグ＆ドロップファイルのプレイリスト設定
 async function addFilesFromPaths(fullPaths, isAppend = false) {
+    if (isAppend) {
+        updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
+    } else {
+        updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
+    }
     const newFiles = [];
 
     for (const fullPath of fullPaths) {
@@ -5837,6 +5882,8 @@ async function addFilesFromPaths(fullPaths, isAppend = false) {
         }
         debouncedUpdateFilterList();
         debouncedScrollCurrentFilterItem();
+    } else {
+        hideMessageOverlay();
     }
 }
 
@@ -5846,7 +5893,7 @@ async function cleanupTempFiles() {
     if (isConverting) {
         await cancelConversion();  // 即中断
         isConverting = false;
-        updatemessageOverlay('🔄️ 変換中止', false, 3000);
+        updateMessageOverlay('🔄️ 変換中止');
     }
 
     // 一時ファイル削除
@@ -5856,11 +5903,7 @@ async function cleanupTempFiles() {
 // 全動画結合処理
 async function joinPlaylistVideos() {
     if (playlist.length < 2) {
-        updatemessageOverlay(
-            playlist.length === 0 ? '🎞️ プレイリストが空です' : '動画が1つだけなので結合不要です',
-            false,
-            3000
-        );
+        updateMessageOverlay(playlist.length === 0 ? '🎞️ プレイリストが空です' : '動画が1つだけなので結合不要です');
         return;
     }
 
@@ -5882,7 +5925,7 @@ async function joinPlaylistVideos() {
     // 結合開始
     isJoinEditing = true;           // 中断ボタン制御用に流用
     cutCancelBtn.style.display = 'inline-block';
-    updatemessageOverlay('🎞️ 結合準備中…', true, 0);
+    updateMessageOverlay('🎞️ 結合準備中…', 0);
 
     try {
         const videoPaths = playlist.map(item => item.file.path);
@@ -5894,13 +5937,13 @@ async function joinPlaylistVideos() {
         });
 
         if (result && result.outputPath) {
-            updatemessageOverlay(`🎞️ 結合完了！`, false, 3000);
+            updateMessageOverlay(`🎞️ 結合完了`);
         } else {
-            updatemessageOverlay('🎞️ 結合が中断されました', false, 2000);
+            updateMessageOverlay('🎞️ 結合が中断されました');
         }
     } catch (err) {
         console.error('結合エラー:', err);
-        updatemessageOverlay(`🎞️ 結合失敗: ${err.message || '不明なエラー'}`, false, 5000);
+        updateMessageOverlay(`🎞️ 結合失敗: ${err.message || '不明なエラー'}`, 6000);
     } finally {
         isJoinEditing = false;
         cutCancelBtn.style.display = 'none';
@@ -5915,7 +5958,7 @@ function setPlaybackRate(rate, showOverlay = true) {
     if (speedSelect) speedSelect.value = parseFloat(rate).toFixed(2);
     localStorage.setItem('playbackSpeed', rate);
     if (showOverlay) {
-        updatemessageOverlay(`🏃‍♂️‍➡️ ${rate}x`, false, 1000);
+        updateMessageOverlay(`🏃‍♂️‍➡️ ${rate}x`);
     }
 }
 
@@ -5932,7 +5975,7 @@ function changePlaybackRate(direction) { // direction: 1 増速, -1 減速
     if (newRate !== playbackRates[idx]) {
         setPlaybackRate(newRate);
     } else {
-        updatemessageOverlay(`🏃‍♂️‍➡️ ${playbackRates[newIdx]}x`, false, 1000);
+        updateMessageOverlay(`🏃‍♂️‍➡️ ${playbackRates[newIdx]}x`);
     }
 }
 
@@ -6340,13 +6383,15 @@ function buildAddMenuContent(menu) {
     const folderItem = createMenuItem('📁 フォルダ選択', false, async () => {
         menu.remove();
         try {
-            const files = await openFolderDialog();
-            if (files && files.length > 0) {
-                await insertFilesIntoPlaylist(files, getCurrentAddModePosition());
-            }
+            const folderPath = await openFolderDialog();
+            if (!folderPath) return;
+            updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
+            const videoFiles = await getFolderVideoFiles(folderPath);
+            
+            await insertFilesIntoPlaylist(videoFiles, getCurrentAddModePosition());
         } catch (e) {
             console.error('フォルダ追加エラー:', e);
-            updatemessageOverlay('📚 フォルダ追加に失敗', false, 5000);
+            updateMessageOverlay('📚 フォルダ追加に失敗', 6000);
         }
     });
     menu.appendChild(folderItem);
@@ -6354,13 +6399,15 @@ function buildAddMenuContent(menu) {
     const fileItem = createMenuItem('🗒️ ファイル選択', false, async () => {
         menu.remove();
         try {
-            const files = await openVideoDialog();
-            if (files && files.length > 0) {
-                await insertFilesIntoPlaylist(files, getCurrentAddModePosition());
-            }
+            const filePaths = await openVideoDialog();
+            if (!filePaths || filePaths.length === 0) return;
+            updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
+            const videoFiles = await getFileVideoFiles(filePaths);
+            
+            await insertFilesIntoPlaylist(videoFiles, getCurrentAddModePosition());
         } catch (e) {
             console.error('ファイル追加エラー:', e);
-            updatemessageOverlay('📚 ファイル追加に失敗', false, 5000);
+            updateMessageOverlay('📚 ファイル追加に失敗', 6000);
         }
     });
     menu.appendChild(fileItem);
@@ -6724,7 +6771,7 @@ function selectTrackMenu(type, menu, fullLabel, trackObj = null) {
     subtitleSelectBtn.classList.remove('subtitles-active');
     if (type === 'subtitle') {
         if (trackObj && !trackObj.exists) {
-            updatemessageOverlay(`🔠 字幕ファイルが存在しません`, false, 3000);
+            updateMessageOverlay(`🔠 字幕ファイルが存在しません`, 6000);
         }
 
         // 動画再生状態・時間退避
