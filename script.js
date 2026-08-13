@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.14.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.15.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -4887,9 +4887,8 @@ function toggleRandomPlay() {
 
     if (isRandomPlayMode && !wasRandom) {
         const indices = getFilteredIndices();
-        if (indices.length !== playlist.length) {
+        if (indices.length !== playlist.length && currentSortMode === 'random') {
             shuffleFiltered();
-            currentSortMode = 'random';
         } else {
             // 通常 → ランダム に変更（ケース1・3）
             if (!shuffleOrder || shuffleOrder.length !== playlist.length) {
