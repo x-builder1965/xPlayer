@@ -141,15 +141,14 @@ const AUDIOMOTION_NODES = {
             outlineBars: false,       // バーの外枠（輪郭線）描画をオフ
         }
     },
-    'preset4': { label: 'レトロ・LED ヴァイブ',
+    'preset4': { label: 'レトロ・ヴァイブ',
         options: {
             mode: 0,                  // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
-            gradient: 'classic',      // グラデーションテーマ (グリーン〜イエロー〜レッドの王道イコライザー風)
             ledBars: true,            // バーをLEDブロック状（点灯セグメント風）に分割表示
             showPeaks: true,          // ピーク（頂点）表示を有効化
         }
     },
-    'preset5': { label: 'センタースプリット・バー',
+    'preset5': { label: 'センタースプリット',
         options: {
             mode: 2,                  // 周波数帯域の分割解像度 (1/2 オクターブ表示)
             barSpace: 0.2,            // バー同士の隙間の比率 (バー幅の20%分を空ける)
@@ -162,14 +161,13 @@ const AUDIOMOTION_NODES = {
             reflexFit: true,          // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
         }
     },
-    'preset6': { label: '円形ビジュアライザー',
+    'preset6': { label: 'サークル・ヴォルテックス',
         options: {
             mode: 3,                  // 周波数帯域の分割解像度 (1/3 オクターブ表示)
             radial: true,             // 円形（ラジアル）表示を有効化
             spin: true,               // 円形ビジュアライザーの自動回転を有効化
             spinSpeed: 1,             // 回転速度 (正の値で時計回り、大きいほど高速)
             gradient: 'prism',        // グラデーションテーマ (プリズムカラー)
-            channelLayout: 'single',  // 音声チャンネル表示 (L/Rを合成したシングル描画)
         }
     },
     'preset7': { label: 'クリスタル・スペクトラム',
@@ -7225,15 +7223,25 @@ function updateAudioMotion() {
     // 実際に適用するモードのキーを決定
     let targetMode = audioMotionMode;
     if (targetMode === 'random') {
-        const presets = ['preset1', 'preset2', 'preset3', 'preset4', 'preset5', 'preset6', 'preset7', 'preset8', 'preset9'];
+        // AUDIOMOTION_NODES から「なし」と「ランダム」を除外したキーを動的に取得
+        // ※除外対象のキー名や日本語ラベルに合わせて条件を調整してください
+        const excludeKeys = ['none', 'random', 'なし', 'ランダム', '（なし）', '（ランダム）'];
+        const presets = Object.keys(AUDIOMOTION_NODES).filter(
+            key => !excludeKeys.includes(key) && !excludeKeys.includes(AUDIOMOTION_NODES[key]?.label)
+        );
         // 前回選ばれたプリセットを除外した候補リストを作成
         const availablePresets = presets.filter(preset => preset !== lastRandomPreset);
-        // 候補の中からランダムで選択
-        targetMode = availablePresets[Math.floor(Math.random() * availablePresets.length)];
+        // 候補の中からランダムで選択（候補が存在する場合）
+        if (availablePresets.length > 0) {
+            targetMode = availablePresets[Math.floor(Math.random() * availablePresets.length)];
+        } else if (presets.length > 0) {
+            // 万が一前回と同じ1つしか候補がない場合などのフォールバック
+            targetMode = presets[0];
+        }
         // 今回選ばれたプリセットを記憶
         lastRandomPreset = targetMode;
     } else {
-        // ランダム以外のモード（preset1〜6やnone）が手動選択された場合は記憶をリセット
+        // ランダム以外のモード（個別のプリセットやnoneなど）が手動選択された場合は記憶をリセット
         lastRandomPreset = null;
     }
 
