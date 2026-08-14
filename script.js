@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.15.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.16.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -104,9 +104,7 @@ const DEFAULT_AUDIO_MOTION_OPTIONS = {
 };
 // オーディオモーション設定のNODE定義
 const AUDIOMOTION_NODES = {
-    'none': {    label: '（なし）',
-        options: {}
-    },
+    'none': {    label: '（なし）', options: {} },
     'preset1': { label: 'LEDオーディオコンポ',
         options: {
             mode: 3,         // 周波数帯域の分割解像度 (1/3オクターブ表示)
@@ -5749,7 +5747,7 @@ async function removeFromPlaylist() {
 
     await cleanupTempFiles();
     
-    // 再生中かどうかの判定
+    // 現在再生されている動画が削除対象、かつ実際に再生中（paused ではない）かを判定
     const isCurrentlyPlaying = currentVideoIndex === selectedIndex && !videoPlayer.paused;
 
     // 削除対象のファイルパスを取得（spliceする前に保存）
@@ -5758,16 +5756,14 @@ async function removeFromPlaylist() {
     // 削除実行
     playlist.splice(selectedIndex, 1);
 
-    // --- 追加: originalLoadOrder から削除対象パスを除去して localStorage に保存 ---
+    // --- originalLoadOrder から削除対象パスを除去して localStorage に保存 ---
     if (removedItem && Array.isArray(originalLoadOrder)) {
-        // 対象のパスを除外した配列を作成
         originalLoadOrder = originalLoadOrder.filter(path => path !== removedItem.file.path);
-        // localStorage を更新
         localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
     }
     // ---------------------------------------------------------------------------------
 
-    // 新しいインデックスを計算
+    // 削除後の新しいインデックスを計算
     let newIndex;
     if (selectedIndex < playlist.length) {
         // 次がある → 次を選択
@@ -5778,22 +5774,38 @@ async function removeFromPlaylist() {
     }
 
     if (playlist.length > 0) {
+        // 削除対象が現在読み込まれている動画（currentVideoIndex）の場合の処理
         if (currentVideoIndex === selectedIndex) {
             currentVideoIndex = newIndex;
+            const nextFile = playlist[newIndex].file;
+
+            if (isCurrentlyPlaying) {
+                // 【再生中だった場合】新しい動画を playVideo() で自動再生
+                await playVideo(nextFile);
+            } else {
+                // 【一時停止・停止中だった場合】新しい動画を読み込んで停止状態にする
+                await setVideoSrc(nextFile);
+                isPlaying = false;
+                videoPlayer.pause();
+            }
         } else if (currentVideoIndex > selectedIndex) {
+            // 削除位置より後ろにあった場合、インデックスを1繰り下げる
             currentVideoIndex -= 1;
         }
+
         selectedPlaylistIndex = newIndex;
         updatePlaylistDisplay();
-        if (isCurrentlyPlaying) {
-            playStopBtn.click();
-        }
     } else {
+        // プレイリストが空になった場合
+        videoPlayer.pause();
+        isPlaying = false;
+        videoPlayerElement.removeAttribute('src');
+        audioPlayer.removeAttribute('src');
         playlistPathArea.value = appNameAndCopyrightValueLine;
         updateIconOverlay();
-        playStopBtn.click();
         selectedPlaylistIndex = -1;
     }
+
     savePlaylistAndPlaybackState();
     resetShuffle();
     saveShuffleState(); // 現在のシャッフル位置を保存
