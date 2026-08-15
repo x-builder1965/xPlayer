@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.18.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.19.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -52,9 +52,21 @@ const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際�
 const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
 
 const SORT_MODES = {
-    none:       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
-    path_asc:   { label: '動画パス▲',   fn: () => [...playlist].sort((a, b) => a.file.path.localeCompare(b.file.path)) },
-    path_desc:  { label: '動画パス▼',   fn: () => [...playlist].sort((a, b) => b.file.path.localeCompare(a.file.path)) },
+    none:       { label: '（なし）',     fn: () => getPlaylistInOriginalOrder() },
+    path_asc:   { label: 'メディアパス▲',   fn: () => [...playlist].sort((a, b) => (a.file?.path || '').localeCompare(b.file?.path || '')) },
+    path_desc:  { label: 'メディアパス▼',   fn: () => [...playlist].sort((a, b) => (b.file?.path || '').localeCompare(a.file?.path || '')) },
+    type_asc:   { label: '種類▲',       fn: () => [...playlist].sort((a, b) => {
+        const extA = getFileExtension(a.file?.path);
+        const extB = getFileExtension(b.file?.path);
+        const comp = extA.localeCompare(extB);
+        return comp !== 0 ? comp : (a.file?.path || '').localeCompare(b.file?.path || '');
+    })},
+    type_desc:  { label: '種類▼',       fn: () => [...playlist].sort((a, b) => {
+        const extA = getFileExtension(a.file?.path);
+        const extB = getFileExtension(b.file?.path);
+        const comp = extB.localeCompare(extA);
+        return comp !== 0 ? comp : (a.file?.path || '').localeCompare(b.file?.path || '');
+    })},
     ctime_asc:  { label: '作成日時▲',   fn: async () => await sortByCreationTime(true) },
     ctime_desc: { label: '作成日時▼',   fn: async () => await sortByCreationTime(false)},
     random:     { label: '（ランダム）', fn: () => sortRandomPlaylist() }
@@ -737,9 +749,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         currentSortMode = savedCurrentSortMode;
         if (currentSortMode === 'none') {
-        } else if (currentSortMode === 'path_asc' || currentSortMode === 'path_desc') {
-            sortPlaylistBtn.classList.add('sorted-active');
-        } else if (currentSortMode === 'ctime_asc' || currentSortMode === 'ctime_desc') {
+            // アクティブクラス付与なし
+        } else if (['path_asc', 'path_desc', 'type_asc', 'type_desc', 'ctime_asc', 'ctime_desc'].includes(currentSortMode)) {
             sortPlaylistBtn.classList.add('sorted-active');
         } else if (currentSortMode === 'random') {
             sortPlaylistBtn.classList.add('random-sorted-active');
@@ -2470,7 +2481,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 📩並び替えボタンクリックイベント（トグル実装）
     sortPlaylistBtn.addEventListener('click', (e) => {
-        // clearPlaylistFilter();
         if (isFilterPanelVisible) debouncedUpdateFilterList();
         debouncedScrollCurrentFilterItem();
         e.stopPropagation();
@@ -2478,7 +2488,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const existingMenu = document.querySelector('.sort-playlist-menu');
         if (existingMenu) {
             existingMenu.remove();
-            document.removeEventListener('click', closeMenu); // ← ここも後で修正必要
             return;
         }
 
@@ -2496,7 +2505,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         targetContainer.appendChild(menu);
 
-        function closeMenu(ev) {    // ← function宣言ならhoistingされるのでOK
+        function closeMenu(ev) {
             if (!menu.contains(ev.target) && ev.target !== sortPlaylistBtn) {
                 menu.remove();
                 document.removeEventListener('click', closeMenu);
@@ -4474,7 +4483,6 @@ function debounce(func, timeout = 300) {
 async function updateFilterList() {
     if (!filterList) return;
 
-    // 実行ごとにIDをカウントアップし、この実行の「世代ID」を保持する（対策2）
     const myUpdateId = ++currentUpdateId;
 
     filterList.innerHTML = '';
@@ -4511,23 +4519,18 @@ async function updateFilterList() {
         return;
     }
 
-    // 表示モードの判定
     const isTileMode = ['thumb-small', 'thumb-medium', 'thumb-large'].includes(playlistDisplayMode);
     const isListOrThumbListMode = ['list', 'thumb-list'].includes(playlistDisplayMode);
-    
-    // 【修正】すべてのモード（タイル・リスト・サムネイルリスト）でグルーピングを有効にする判定
     const isGroupEnabledMode = isTileMode || isListOrThumbListMode;
     
-    // 並び替え状態の判定
+    // ソート種別の判定を追加
     const isCreationTimeSort = ['ctime_asc', 'ctime_desc'].includes(currentSortMode);
-    const isNoSortOrRandom = ['none', 'random'].includes(currentSortMode); // （なし）または（ランダム）
+    const isTypeSort = ['type_asc', 'type_desc'].includes(currentSortMode);
+    const isNoSortOrRandom = ['none', 'random'].includes(currentSortMode);
 
-    // グルーピングの追跡用変数
     let lastGroupKey = null;
     let currentGroupItemsContainer = null;
 
-    // 【修正】「並び替え＝（なし）または（ランダム）」かつ「タイルモード」の場合のみ、外側に1つだけグリッドコンテナを作成
-    // ※リスト系は縦並びのため、(なし/ランダム)時もそのまま filterList 直下に追加します
     if (isTileMode && isNoSortOrRandom) {
         currentGroupItemsContainer = document.createElement('div');
         currentGroupItemsContainer.className = 'folder-group-items';
@@ -4540,27 +4543,21 @@ async function updateFilterList() {
     }
 
     for (const { item, index } of results) {
-        // 【重要】ループの各ステップ開始時に、すでに次の新しい検索が始まっていないかチェック
         if (myUpdateId !== currentUpdateId) return;
 
         updateItemCount(index, playlist.length);
 
-        // --- 表示形式・並び替えに応じたコンテナの決定ロジック ---
         let targetContainer = filterList;
 
         if (isGroupEnabledMode) {
             if (isTileMode && isNoSortOrRandom) {
-                // タイルモードかつ（なし）・ランダム時はグループヘッダなしで、事前に作成した共通グリッドへ追加
                 targetContainer = currentGroupItemsContainer;
             } else if (isListOrThumbListMode && isNoSortOrRandom) {
-                // 【追加】リスト系かつ（なし）・ランダム時はグループヘッダなしで、そのまま filterList 直下へ追加
                 targetContainer = filterList;
             } else {
-                // グループのキー（タイトル文字列）を決定
                 let currentGroupKey = '';
 
                 if (isCreationTimeSort) {
-                    // 作成日時▲・▼の場合：確実に取得できるミリ秒を利用
                     let dateStr = '作成日不明';
                     if (item.file?.path) {
                         try {
@@ -4572,8 +4569,6 @@ async function updateFilterList() {
                                 const year = d.getFullYear();
                                 const month = String(d.getMonth() + 1).padStart(2, '0');
                                 const date = String(d.getDate()).padStart(2, '0');
-                                
-                                // 曜日を定義（0:日, 1:月, ... 6:土）
                                 const dayOfWeek = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()];
                                 
                                 dateStr = `${year}年${month}月${date}日（${dayOfWeek}）`;
@@ -4582,35 +4577,32 @@ async function updateFilterList() {
                             console.warn(`表示用stat失敗: ${item.file.path}`, err);
                         }
                     }
-                    
                     if (myUpdateId !== currentUpdateId) return;
                     currentGroupKey = dateStr;
+                } else if (isTypeSort) {
+                    // 種類▲・▼ の場合は拡張子でグループ化
+                    currentGroupKey = getFileExtension(item.file?.path).toUpperCase();
                 } else {
-                    // 上記以外（従来のフォルダパスによるグルーピング）
+                    // 動画パス▲・▼ などの場合はフォルダパスでグループ化
                     const fullPath = item.file?.path || item.name || '無題';
                     const currentFolderPath = path.dirname(fullPath);
                     currentGroupKey = currentFolderPath === '.' ? 'ルートフォルダ' : currentFolderPath;
                 }
 
-                // 新しいグループ（日付またはフォルダ）に切り替わった場合
                 if (currentGroupKey !== lastGroupKey) {
                     lastGroupKey = currentGroupKey;
 
-                    // グループ全体の親要素を作成
                     const folderGroup = document.createElement('div');
                     folderGroup.className = 'folder-group';
 
-                    // グループヘッダを作成
                     const folderTitle = document.createElement('div');
                     folderTitle.className = 'folder-group-title';
                     folderTitle.textContent = currentGroupKey;
                     folderGroup.appendChild(folderTitle);
 
-                    // アイテムを格納するコンテナを作成
                     currentGroupItemsContainer = document.createElement('div');
                     
                     if (isTileMode) {
-                        // タイルモードの場合は横並び（Grid）にするためのクラスを付与
                         currentGroupItemsContainer.className = 'folder-group-items';
                         currentGroupItemsContainer.classList.add(
                             playlistDisplayMode === 'thumb-small' ? 'playlist-grid-small' :
@@ -4618,7 +4610,6 @@ async function updateFilterList() {
                             'playlist-grid-large'
                         );
                     } else {
-                        // 【追加】リスト・サムネイルリストの場合は縦に並べるだけの単純なフレックス/ブロックコンテナにする
                         currentGroupItemsContainer.className = 'folder-group-list-items';
                         currentGroupItemsContainer.style.display = 'flex';
                         currentGroupItemsContainer.style.flexDirection = 'column';
@@ -4633,7 +4624,6 @@ async function updateFilterList() {
                 targetContainer = currentGroupItemsContainer;
             }
         }
-        // -----------------------------------------------------------
 
         const button = document.createElement('button');
         button.type = 'button';
@@ -4693,53 +4683,49 @@ async function updateFilterList() {
             button.appendChild(textBlock);
             button.title = displayText;
 
-			const setFallbackThumb = () => {
-			    thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#2a2a2a"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="18">No Thumbnail</text></svg>');
-			    thumbWrap.style.background = 'rgba(0,0,0,0.2)';
-			};
-			const setMusicThumb = () => {
-			    thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#5672f1"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="62">♬</text></svg>');
-			    thumbWrap.style.background = 'rgba(0,0,0,0.2)';
-			};
-			// 音声ファイルの判定関数（拡張子チェック）
-			const isAudioFile = (filePath) => {
-			    if (!filePath) return false;
-			    const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
-			    return AUDIO_EXTENSIONS.includes(ext);
-			};
-			
-			try {
-			    // 音声ファイルの場合はサムネイル取得を行わずに Music 用サムネイルを設定
-			    if (isAudioFile(item.file?.path)) {
-			        setMusicThumb();
-			    } else {
-			        const thumbUrl = await getPlaylistThumbnailDataUrl(item.file?.path, thumbDims.width);
-			        if (myUpdateId !== currentUpdateId) return;
-			
-			        if (thumbUrl) {
-			            thumb.src = thumbUrl;
-			        } else {
-			            setFallbackThumb();
-			        }
-			    }
-			} catch (error) {
-			    console.error(`サムネイル取得失敗 [Index: ${index}]:`, error);
-			    if (myUpdateId !== currentUpdateId) return;
-			    setFallbackThumb();
-			}
+            const setFallbackThumb = () => {
+                thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#2a2a2a"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="18">No Thumbnail</text></svg>');
+                thumbWrap.style.background = 'rgba(0,0,0,0.2)';
+            };
+            const setMusicThumb = () => {
+                thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#5672f1"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="62">♬</text></svg>');
+                thumbWrap.style.background = 'rgba(0,0,0,0.2)';
+            };
+
+            const isAudioFile = (filePath) => {
+                if (!filePath) return false;
+                const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
+                return AUDIO_EXTENSIONS.includes(ext);
+            };
+            
+            try {
+                if (isAudioFile(item.file?.path)) {
+                    setMusicThumb();
+                } else {
+                    const thumbUrl = await getPlaylistThumbnailDataUrl(item.file?.path, thumbDims.width);
+                    if (myUpdateId !== currentUpdateId) return;
+
+                    if (thumbUrl) {
+                        thumb.src = thumbUrl;
+                    } else {
+                        setFallbackThumb();
+                    }
+                }
+            } catch (error) {
+                console.error(`サムネイル取得失敗 [Index: ${index}]:`, error);
+                if (myUpdateId !== currentUpdateId) return;
+                setFallbackThumb();
+            }
         }
 
         button.addEventListener('click', async (e) => {
-            // 選択インデックスを更新
             selectedPlaylistIndex = index;
 
-            // ★修正: リスト全体の再描画(updateFilterList)を呼ばず、DOM要素のクラス変更だけで対応する
             filterList.querySelectorAll('.filter-item.selected').forEach(el => {
                 el.classList.remove('selected');
             });
             button.classList.add('selected');
 
-            // トラックの更新処理のみ実行
             if (modeChange === 'video') {
                 await updateTrack('subtitle');
             } else {
@@ -4748,15 +4734,12 @@ async function updateFilterList() {
         });
 
         button.addEventListener('dblclick', async (e) => {
-            // 1回目のclickで処理が行われているため、連動する状態を最新化
             selectedPlaylistIndex = index;
             currentVideoIndex = index;
 
-            // パネルを非表示にする（非表示にするのでスクロール描画も発生しない）
             isFilterPanelVisible = false;
             if (filterPanel) filterPanel.style.display = 'none';
 
-            // 動画再生と状態保存
             await playVideo(item.file, 0);
             updatePlaylistDisplay();
             savePlaylistAndPlaybackState();
@@ -6353,7 +6336,7 @@ async function applySort(modeKey = currentSortMode) {
 // 並び替えポップアップメニュー作成関数
 function createSortMenu() {
     const menu = document.createElement('div');
-    menu.className = 'sort-playlist-menu';  // CSSで位置・スタイルを調整
+    menu.className = 'sort-playlist-menu';
 
     Object.entries(SORT_MODES).forEach(([key, {label}]) => {
         const item = document.createElement('div');
@@ -6363,7 +6346,6 @@ function createSortMenu() {
 
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
-            // ソートを実行（常に全体ソート）
             await applySortFiltered(key);
             
             if (isFilterPanelVisible) debouncedUpdateFilterList();
@@ -6382,6 +6364,13 @@ function createSortMenu() {
     });
 
     return menu;
+}
+
+// ファイルパスから拡張子（小文字）を取得するヘルパー関数
+function getFileExtension(filePath) {
+    if (!filePath) return '';
+    const ext = path.extname(filePath).toLowerCase();
+    return ext ? ext : '拡張子なし';
 }
 
 // 並び替えボタンのUI更新関数

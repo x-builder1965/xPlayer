@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.14.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.19.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -101,7 +101,7 @@ function createWindow() {
     const win = new BrowserWindow({
         width: 1280,
         height: 720,
-        title: 'xPlayer -動画プレイヤー-',
+        title: 'xPlayer -メディアプレイヤー-',
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
