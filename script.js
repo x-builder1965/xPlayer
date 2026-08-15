@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.17.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.18.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -60,6 +60,17 @@ const SORT_MODES = {
     random:     { label: '（ランダム）', fn: () => sortRandomPlaylist() }
 };
 const ADD_MODES = {
+    Folder: {
+        label: '📁 フォルダ選択',
+        fn: async () => await addFilesToPlaylist(openFolderDialog, getFolderVideoFiles),
+        isAction: true // モード変更ではなく即時実行アクションであることを示すフラグ
+    },
+    File: {
+        label: '🗒️ ファイル選択',
+        fn: async () => await addFilesToPlaylist(openVideoDialog, getFileVideoFiles),
+        isAction: true
+    },
+    Separator: { isSeparator: true }, // セパレータ要素
     Add0: { label: '選択行に追加',     fn: async () => await addToPlaylist(0) },
     Add1: { label: '選択行の下に追加', fn: async () => await addToPlaylist(1) }
 };
@@ -78,138 +89,138 @@ const PLAYLIST_NODES = {
     'thumb-medium': { label: 'サムネイル中', width: 216, height: 122 },
     'thumb-large':  { label: 'サムネイル大', width: 432, height: 244 }
 };
-       // オーディオモーション設定のデフォルトオプション定義
+// オーディオモーション設定のデフォルトオプション定義
 const DEFAULT_AUDIO_MOTION_OPTIONS = {
-    mode: 3,                          // 周波数帯域の分割解像度 (0: 離散バー, 1: 1/1オクターブ ~ 10: 1/10オクターブ等)
-    radial: false,                    // 円形（ラジアル）表示を無効化（通常の水平表示）
-    barSpace: 0.1,                    // バー同士の隙間の比率 (0: 隙間なし ~ 1: バー幅と同等)
-    ledBars: false,                   // バーをLEDブロック状に区切る表示をオフ（通常のソリッド描画）
-    showPeaks: true,                  // ピーク（頂点）ホールドラインの表示を有効化
-    fillAlpha: 1,                     // スペクトラム内部の塗りつぶし不透明度 (0: 完全透明 ~ 1: 完全不透明)
-    lineWidth: 0,                     // バー/波形の外枠線の太さpx (0: 枠線なし)
-    gradient: 'classic',              // 使用するグラデーションテーマ ('classic', 'neon', 'gem' 等)
-    lumaBars: false,                  // 輝度（明るさ）に基づいたカラー調整をオフ
-    reflexRatio: 0.02,                // 下部への反射（ミラー）描画の高さ比率 (0: なし ~ 1: 完全同サイズ)
-    reflexAlpha: 0,                   // 反射部分の不透明度 (0: 完全透明/非表示 ~ 1: 完全不透明)
-    reflexBright: false,              // 反射部分の減衰（減光処理）をオフ
-    spin: 0,                          // 円形表示時の回転速度 (0: 回転なし, 正の値で時計回り)
-    radius: 0.3,                      // 円形表示時の内径半径の比率 (0: 中心から ~ 1: 外枠いっぱい)
-    bgAlpha: 0,                       // Canvas背景の透明度 (0: 完全透明 ~ 1: 完全不透明)
-    showBgColor: false,               // テーマ固有の背景色描画をオフ
-    overlay: true,                    // 背景透過時や複数描画時の重ね合わせ表示最適化
-    reflexFit: false,                 // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
-    outlineBars: true,                // バーの外枠（輪郭線）描画
-    spinSpeed: 0,                     // 回転速度 (正の値で時計回り、大きいほど高速)
-    channelLayout: 'single',          // 音声チャンネル表示 (L/Rを合成したシングル描画)
-    mirror: 0,                        // ミラー表示 (0: なし, -1: 左右反転, 1: 左右上下反転)
-	maxFreq: 22000,                   // 表示する最大周波数 (Hz)
-	frequencyScale: 'log',            // 周波数軸のスケール ('log' | 'linear' | 'bark' | 'mel' | 'notes')
-	roundBars: false,                 // バーの頂点を丸く丸めるか
-	gradient: 'classic',              // 使用するグラデーションプリセット名またはカスタム定義
+    mode: 3,                                // 周波数帯域の分割解像度 (0: 離散バー, 1: 1/1オクターブ ~ 10: 1/10オクターブ等)
+    radial: false,                          // 円形（ラジアル）表示を無効化（通常の水平表示）
+    barSpace: 0.1,                          // バー同士の隙間の比率 (0: 隙間なし ~ 1: バー幅と同等)
+    ledBars: false,                         // バーをLEDブロック状に区切る表示をオフ（通常のソリッド描画）
+    showPeaks: true,                        // ピーク（頂点）ホールドラインの表示を有効化
+    fillAlpha: 1,                           // スペクトラム内部の塗りつぶし不透明度 (0: 完全透明 ~ 1: 完全不透明)
+    lineWidth: 0,                           // バー/波形の外枠線の太さpx (0: 枠線なし)
+    gradient: 'classic',                    // 使用するグラデーションテーマ ('classic', 'neon', 'gem' 等)
+    lumaBars: false,                        // 輝度（明るさ）に基づいたカラー調整をオフ
+    reflexRatio: 0.02,                      // 下部への反射（ミラー）描画の高さ比率 (0: なし ~ 1: 完全同サイズ)
+    reflexAlpha: 0,                         // 反射部分の不透明度 (0: 完全透明/非表示 ~ 1: 完全不透明)
+    reflexBright: false,                    // 反射部分の減衰（減光処理）をオフ
+    spin: 0,                                // 円形表示時の回転速度 (0: 回転なし, 正の値で時計回り)
+    radius: 0.3,                            // 円形表示時の内径半径の比率 (0: 中心から ~ 1: 外枠いっぱい)
+    bgAlpha: 0,                             // Canvas背景の透明度 (0: 完全透明 ~ 1: 完全不透明)
+    showBgColor: false,                     // テーマ固有の背景色描画をオフ
+    overlay: true,                          // 背景透過時や複数描画時の重ね合わせ表示最適化
+    reflexFit: false,                       // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
+    outlineBars: true,                      // バーの外枠（輪郭線）描画
+    spinSpeed: 0,                           // 回転速度 (正の値で時計回り、大きいほど高速)
+    channelLayout: 'single',                // 音声チャンネル表示 (L/Rを合成したシングル描画)
+    mirror: 0,                              // ミラー表示 (0: なし, -1: 左右反転, 1: 左右上下反転)
+	maxFreq: 22000,                         // 表示する最大周波数 (Hz)
+	frequencyScale: 'log',                  // 周波数軸のスケール ('log' | 'linear' | 'bark' | 'mel' | 'notes')
+	roundBars: false,                       // バーの頂点を丸く丸めるか
+	gradient: 'classic',                    // 使用するグラデーションプリセット名またはカスタム定義
 };
-       // オーディオモーション設定のNODE定義
+// オーディオモーション設定のNODE定義
 const AUDIOMOTION_NODES = {
     'none': {    label: '（なし）', options: {} },
     'preset1': { label: 'LEDオーディオコンポ',
         options: {
-            mode: 3,                  // 周波数帯域の分割解像度 (1/3オクターブ表示)
-            barSpace: 0.2,            // バー同士の隙間の比率 (バー幅の20%分空ける)
-            ledBars: true,            // バーをLEDブロック状（点灯セグメント風）に区切って表示
+            mode: 3,                        // 周波数帯域の分割解像度 (1/3オクターブ表示)
+            barSpace: 0.2,                  // バー同士の隙間の比率 (バー幅の20%分空ける)
+            ledBars: true,                  // バーをLEDブロック状（点灯セグメント風）に区切って表示
         }
     },
     'preset2': { label: 'レインボウ・サイバーパンク',
         options: {
-            mode: 2,                  // 周波数帯域の分割解像度 (1/2 オクターブ表示)
-            gradient: 'rainbow',      // グラデーションテーマ (レインボーカラー)
-            showPeaks: true,          // ピーク（頂点）ホールドラインの表示を有効化
-            linearBar: true,          // バーの振幅変化を線形（リニア）スケールで計算
-            bgAlpha: 0.7,             // Canvas背景の不透明度 (描画更新時の残像感を調整)
-            fillAlpha: 1,             // スペクトラム内部の塗りつぶし不透明度 (0: 完全透明 ~ 1: 完全不透明)
-            reflexRatio: 0.3,         // 下部への反射（ミラー）描画の高さ比率 (本体の30%の高さ)
-            reflexAlpha: 0.5,         // 反射部分の不透明度 (ほんのり透ける40%表示)
+            mode: 2,                        // 周波数帯域の分割解像度 (1/2 オクターブ表示)
+            gradient: 'rainbow',            // グラデーションテーマ (レインボーカラー)
+            showPeaks: true,                // ピーク（頂点）ホールドラインの表示を有効化
+            linearBar: true,                // バーの振幅変化を線形（リニア）スケールで計算
+            bgAlpha: 0.7,                   // Canvas背景の不透明度 (描画更新時の残像感を調整)
+            fillAlpha: 1,                   // スペクトラム内部の塗りつぶし不透明度 (0: 完全透明 ~ 1: 完全不透明)
+            reflexRatio: 0.3,               // 下部への反射（ミラー）描画の高さ比率 (本体の30%の高さ)
+            reflexAlpha: 0.5,               // 反射部分の不透明度 (ほんのり透ける40%表示)
         }
     },
     'preset3': { label: 'ミニマル・クラシック',
         options: {
-            mode: 1,                  // 周波数帯域の分割解像度 (1/1 オクターブ：シンプルな10本前後のバー)
-            barSpace: 0.25,           // バー同士の隙間の比率 (バー幅の25%分を空ける)
-            gradient: 'prism',        // グラデーションテーマ (プリズムカラー)
-            showBgColor: false,       // テーマ固有の背景色描画をオフ (背景透過)
-            showScaleX: false,        // X軸（周波数Hz）目盛りの表示をオフ
-            showScaleY: false,        // Y軸（音圧dB）目盛りの表示をオフ
-            showPeaks: false,         // ピーク（頂点）ラインの表示をオフ
-            outlineBars: false,       // バーの外枠（輪郭線）描画をオフ
+            mode: 1,                        // 周波数帯域の分割解像度 (1/1 オクターブ：シンプルな10本前後のバー)
+            barSpace: 0.25,                 // バー同士の隙間の比率 (バー幅の25%分を空ける)
+            gradient: 'prism',              // グラデーションテーマ (プリズムカラー)
+            showBgColor: false,             // テーマ固有の背景色描画をオフ (背景透過)
+            showScaleX: false,              // X軸（周波数Hz）目盛りの表示をオフ
+            showScaleY: false,              // Y軸（音圧dB）目盛りの表示をオフ
+            showPeaks: false,               // ピーク（頂点）ラインの表示をオフ
+            outlineBars: false,             // バーの外枠（輪郭線）描画をオフ
         }
     },
     'preset4': { label: 'レトロ・ヴァイブ',
         options: {
-            mode: 0,                  // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
-            ledBars: true,            // バーをLEDブロック状（点灯セグメント風）に分割表示
-            showPeaks: true,          // ピーク（頂点）表示を有効化
+            mode: 0,                        // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
+            ledBars: true,                  // バーをLEDブロック状（点灯セグメント風）に分割表示
+            showPeaks: true,                // ピーク（頂点）表示を有効化
         }
     },
     'preset5': { label: 'センタースプリット',
         options: {
-            mode: 2,                  // 周波数帯域の分割解像度 (1/2 オクターブ表示)
-            barSpace: 0.2,            // バー同士の隙間の比率 (バー幅の20%分を空ける)
-            gradient: 'rainbow',      // グラデーションテーマ (レインボーカラー)
-            fillAlpha: 0.85,          // スペクトラム内部の塗りつぶし不透明度 (85%表示)
-            showPeaks: true,          // ピーク（頂点）ラインの表示を有効化
-            reflexRatio: 0.5,         // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
-            reflexAlpha: 1,           // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
-            reflexBright: false,      // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
-            reflexFit: true,          // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
+            mode: 2,                        // 周波数帯域の分割解像度 (1/2 オクターブ表示)
+            barSpace: 0.2,                  // バー同士の隙間の比率 (バー幅の20%分を空ける)
+            gradient: 'rainbow',            // グラデーションテーマ (レインボーカラー)
+            fillAlpha: 0.85,                // スペクトラム内部の塗りつぶし不透明度 (85%表示)
+            showPeaks: true,                // ピーク（頂点）ラインの表示を有効化
+            reflexRatio: 0.5,               // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
+            reflexAlpha: 1,                 // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
+            reflexBright: false,            // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
+            reflexFit: true,                // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
         }
     },
     'preset6': { label: 'サークル・ヴォルテックス',
         options: {
-            mode: 3,                  // 周波数帯域の分割解像度 (1/3 オクターブ表示)
-            radial: true,             // 円形（ラジアル）表示を有効化
-            spin: true,               // 円形ビジュアライザーの自動回転を有効化
-            spinSpeed: 1,             // 回転速度 (正の値で時計回り、大きいほど高速)
-            gradient: 'prism',        // グラデーションテーマ (プリズムカラー)
+            mode: 3,                        // 周波数帯域の分割解像度 (1/3 オクターブ表示)
+            radial: true,                   // 円形（ラジアル）表示を有効化
+            spin: true,                     // 円形ビジュアライザーの自動回転を有効化
+            spinSpeed: 1,                   // 回転速度 (正の値で時計回り、大きいほど高速)
+            gradient: 'prism',              // グラデーションテーマ (プリズムカラー)
         }
     },
     'preset7': { label: 'クリスタル・スペクトラム',
         options: {
-            mode: 10,                 // 周波数帯域の分割解像度 (1/2 オクターブ表示)
-            barSpace: 0.25,           // バー同士の隙間の比率 (バー幅の20%分を空ける)
-            gradient: 'rainbow',      // グラデーションテーマ (レインボーカラー)
-            showPeaks: true,          // ピーク（頂点）ラインの表示を有効化
-            lineWidth: 4,             // バー/波形の外枠線の太さpx (4pxの輪郭線)
-            fillAlpha: 0.5,           // スペクトラム内部の塗りつぶし不透明度 (50%表示)
-            reflexRatio: 0.5,         // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
-            reflexAlpha: 1,           // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
-            reflexBright: 1,          // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
-            reflexFit: -1,            // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
+            mode: 10,                       // 周波数帯域の分割解像度 (1/2 オクターブ表示)
+            barSpace: 0.25,                 // バー同士の隙間の比率 (バー幅の20%分を空ける)
+            gradient: 'rainbow',            // グラデーションテーマ (レインボーカラー)
+            showPeaks: true,                // ピーク（頂点）ラインの表示を有効化
+            lineWidth: 4,                   // バー/波形の外枠線の太さpx (4pxの輪郭線)
+            fillAlpha: 0.5,                 // スペクトラム内部の塗りつぶし不透明度 (50%表示)
+            reflexRatio: 0.5,               // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
+            reflexAlpha: 1,                 // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
+            reflexBright: 1,                // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
+            reflexFit: -1,                  // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
             mirror: 1,
         }
     },
     'preset8': { label: 'プリズム・リフレクト',
         options: {
-            mode: 4,                  // 周波数帯域の分割解像度 (1/2 オクターブ表示)
-            barSpace: 0.25,           // バー同士の隙間の比率 (バー幅の20%分を空ける)
-            gradient: 'prism',        // グラデーションテーマ (プリズムカラー)
-            showPeaks: true,          // ピーク（頂点）ラインの表示を有効化
-            reflexRatio: 0.5,         // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
-            reflexAlpha: 1,           // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
-            reflexBright: 1,          // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
-            reflexFit: 0,             // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
-            maxFreq: 16000,           // 表示する最大周波数 (16000Hz)
-            roundBars: true,          // バーの頂点を丸く丸める
+            mode: 4,                        // 周波数帯域の分割解像度 (1/2 オクターブ表示)
+            barSpace: 0.25,                 // バー同士の隙間の比率 (バー幅の20%分を空ける)
+            gradient: 'prism',              // グラデーションテーマ (プリズムカラー)
+            showPeaks: true,                // ピーク（頂点）ラインの表示を有効化
+            reflexRatio: 0.5,               // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
+            reflexAlpha: 1,                 // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
+            reflexBright: 1,                // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
+            reflexFit: 0,                   // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
+            maxFreq: 16000,                 // 表示する最大周波数 (16000Hz)
+            roundBars: true,                // バーの頂点を丸く丸める
         }
     },
     'preset9': { label: 'デュアルグロウ・セグメント',
         options: {
-            mode: 10,                 // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
-            ledBars: true,            // バーをLEDブロック状（点灯セグメント風）に分割表示
-            showPeaks: true,          // ピーク（頂点）表示を有効化
-            gradient: 'steelblue',    // 使用するグラデーションプリセット名またはカスタム定義
-            gradientLeft: 'steelblue',// ステレオ表示時の左チャンネル用グラデーション
-            gradientRight: 'orangered',// ステレオ表示時の右チャンネル用グラデーション
-            channelLayout: 'dual-combined',// 音声チャンネル表示 (L/Rを合成したシングル描画)
-            lineWidth: 2,             // バー/波形の外枠線の太さpx (4pxの輪郭線)
-            fillAlpha: 0.5,           // スペクトラム内部の塗りつぶし不透明度 (50%表示)
+            mode: 10,                       // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
+            ledBars: true,                  // バーをLEDブロック状（点灯セグメント風）に分割表示
+            showPeaks: true,                // ピーク（頂点）表示を有効化
+            gradient: 'steelblue',          // 使用するグラデーションプリセット名またはカスタム定義
+            gradientLeft: 'steelblue',      // ステレオ表示時の左チャンネル用グラデーション
+            gradientRight: 'orangered',     // ステレオ表示時の右チャンネル用グラデーション
+            channelLayout: 'dual-combined', // 音声チャンネル表示 (L/Rを合成したシングル描画)
+            lineWidth: 2,                   // バー/波形の外枠線の太さpx (4pxの輪郭線)
+            fillAlpha: 0.5,                 // スペクトラム内部の塗りつぶし不透明度 (50%表示)
         }
     },
     'random': { label: '（ランダム）', options: {} }
@@ -728,10 +739,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (currentSortMode === 'none') {
         } else if (currentSortMode === 'path_asc' || currentSortMode === 'path_desc') {
             sortPlaylistBtn.classList.add('sorted-active');
-        } else if (currentSortMode === 'random') {
-            sortPlaylistBtn.classList.add('random-sorted-active');
         } else if (currentSortMode === 'ctime_asc' || currentSortMode === 'ctime_desc') {
             sortPlaylistBtn.classList.add('sorted-active');
+        } else if (currentSortMode === 'random') {
+            sortPlaylistBtn.classList.add('random-sorted-active');
         } else {
             sortPlaylistBtn.classList.add('sorted-active');
         }
@@ -6352,11 +6363,7 @@ function createSortMenu() {
 
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
-            
-            // 1. ソート実行前にフィルターを解除
-            // clearPlaylistFilter();
-            
-            // 2. ソートを実行（常に全体ソート）
+            // ソートを実行（常に全体ソート）
             await applySortFiltered(key);
             
             if (isFilterPanelVisible) debouncedUpdateFilterList();
@@ -6409,6 +6416,21 @@ if (isRepeatPlayMode === 'none') {
     updateRepeatButtonUI();
 }
 
+// 共通の追加処理ハンドラー
+async function addFilesToPlaylist(getPathsFn, getFilesFn) {
+    try {
+        const paths = await getPathsFn();
+        if (!paths || (Array.isArray(paths) && paths.length === 0)) return;
+        
+        updateMessageOverlay('📚 プレイリスト追加中...', 0);
+        const videoFiles = await getFilesFn(paths);
+        await insertFilesIntoPlaylist(videoFiles, getCurrentAddModePosition());
+    } catch (e) {
+        console.error('プレイリスト追加エラー:', e);
+        updateMessageOverlay('📚 追加に失敗', 6000);
+    }
+}
+
 // プレイリスト追加ポップアップメニュー作成関数
 function buildAddMenuContent(menu) {
     menu.innerHTML = '';
@@ -6436,45 +6458,30 @@ function buildAddMenuContent(menu) {
         return item;
     };
 
-    const folderItem = createMenuItem('📁 フォルダ選択', false, async () => {
-        menu.remove();
-        try {
-            const folderPath = await openFolderDialog();
-            if (!folderPath) return;
-            updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
-            const videoFiles = await getFolderVideoFiles(folderPath);
-            
-            await insertFilesIntoPlaylist(videoFiles, getCurrentAddModePosition());
-        } catch (e) {
-            console.error('フォルダ追加エラー:', e);
-            updateMessageOverlay('📚 フォルダ追加に失敗', 6000);
+    // ADD_MODES をループしてメニューアイテムを一括生成
+    Object.entries(ADD_MODES).forEach(([key, mode]) => {
+        // セパレーターの描画
+        if (mode.isSeparator) {
+            const separator = document.createElement('div');
+            separator.style.margin = '6px 0';
+            separator.style.borderTop = '1px solid #666';
+            menu.appendChild(separator);
+            return;
         }
-    });
-    menu.appendChild(folderItem);
 
-    const fileItem = createMenuItem('🗒️ ファイル選択', false, async () => {
-        menu.remove();
-        try {
-            const filePaths = await openVideoDialog();
-            if (!filePaths || filePaths.length === 0) return;
-            updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
-            const videoFiles = await getFileVideoFiles(filePaths);
-            
-            await insertFilesIntoPlaylist(videoFiles, getCurrentAddModePosition());
-        } catch (e) {
-            console.error('ファイル追加エラー:', e);
-            updateMessageOverlay('📚 ファイル追加に失敗', 6000);
+        // 即時実行アクション（フォルダ／ファイル選択）の場合
+        if (mode.isAction) {
+            const item = createMenuItem(mode.label, false, async () => {
+                menu.remove();
+                await mode.fn();
+            });
+            menu.appendChild(item);
+            return;
         }
-    });
-    menu.appendChild(fileItem);
 
-    const separator = document.createElement('div');
-    separator.style.margin = '6px 0';
-    separator.style.borderTop = '1px solid #666';
-    menu.appendChild(separator);
-
-    Object.entries(ADD_MODES).forEach(([key, {label}]) => {
-        const item = createMenuItem((currentAddMode === key ? '✅ ' : '　　') + label, currentAddMode === key, (event) => {
+        // モード切り替え（選択行に追加／選択行の下に追加）の場合
+        const isSelected = currentAddMode === key;
+        const item = createMenuItem((isSelected ? '✅ ' : '　　') + mode.label, isSelected, () => {
             currentAddMode = key;
             buildAddMenuContent(menu);
         });
