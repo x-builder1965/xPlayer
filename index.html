@@ -1,7 +1,7 @@
 <!-- --------------------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -メディアプレイヤー- Ver5.19.0'; -->
+<!-- const appName = 'xPlayer -メディアプレイヤー- Ver5.21.0'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -35,19 +35,19 @@
                     <button id="modeChangeBtn" data-tooltip="視聴モード（Ctrl+v）">🎬</button>
                     <button id="editModeBtn" data-tooltip="編集モード（Ctrl+e）">✂️</button>
                     <button id="joinPlaylistBtn" data-tooltip="結合編集（Ctrl+j）">🎞️</button>
-                    <input id="playlistPathArea" type="text" readonly placeholder="再生中動画パス" data-tooltip="再生中動画パス">
+                    <input id="playlistPathArea" type="text" readonly placeholder="再生中メディアパス" data-tooltip="再生中メディアパス">
                     <button id="randomPlayBtn" class="play-mode-btn" data-tooltip="ランダム再生 (Ctrl+r)">🔀</button>
                     <button id="repeatPlayBtn"  class="play-mode-btn" data-tooltip="繰り返し再生 (Ctrl+Shift+r)">🔁</button>
                 </div>
                 <div class="url-input-panel">
-                    <input id="urlInput" type="text" placeholder="動画のURLを入力" data-tooltip="動画のURLを入力">
+                    <input id="urlInput" type="text" placeholder="URLを入力" data-tooltip="URLを入力">
                     <button id="urlClearBtn" data-tooltip="URLクリア（Shift+C）">🔘</button>
                     <button id="urlConfirmBtn" data-tooltip="URL再生（Enter）">✅</button>
                 </div>
             </div>
             <div id="filterPanel" class="filter-panel">
                 <div class="filter-panel-header">
-                    <span id="itemCount" data-tooltip="絞込動画数/総動画数）">00,000 / 00,000</span>
+                    <span id="itemCount" data-tooltip="絞込数/総数）">00,000 / 00,000</span>
                     <div class="filter-container">
                         <input id="playlistFilterInput" type="text" autocomplete="off" placeholder="フィルタ条件（AND:スペース区切り、OR:カンマ区切り）" data-tooltip="プレイリストを絞り込み（例：aaaa bbbb, cccc dddd）">
                         <ul id="filterHistoryList" class="filter-history-dropdown hidden"></ul>
@@ -88,16 +88,16 @@
             <div class="controls">
                 <div class="control-row">
                     <div class="left-controls">
-                        <button id="urlInputBtn" data-tooltip="ネット動画選択（Ctrl+n）">🌐</button>
+                        <button id="urlInputBtn" data-tooltip="ネットURL入力（Ctrl+n）">🌐</button>
                         <button id="folderInput" data-tooltip="フォルダ選択（Ctrl+d）">📁</button>
                         <button id="videoInput" data-tooltip="ファイル選択（Ctrl+f）">🗒️</button>
                         <span class="spacer"></span>
-                        <button id="prevVideoBtn" data-tooltip="前の動画へ（PgUp）">⏮️</button>
+                        <button id="prevVideoBtn" data-tooltip="前へ（PgUp）">⏮️</button>
                         <button id="rewindBtn" data-tooltip="30秒戻る（Ctrl+←）">⏪</button>
                         <button id="playPauseBtn" data-tooltip="再生（Space／Right Click）">▶️</button>
                         <button id="playStopBtn" data-tooltip="停止（Ctrl+Space／Ctrl+Right Click）">⏹️</button>
                         <button id="fastForwardBtn" data-tooltip="30秒進む（Ctrl+→）">⏩</button>
-                        <button id="nextVideoBtn" data-tooltip="次の動画へ（PgDw）">⏭️</button>
+                        <button id="nextVideoBtn" data-tooltip="次へ（PgDw）">⏭️</button>
                         <span class="spacer"></span>
                         <button id="settingsBtn" data-tooltip="設定モード開始（Ctrl+q）">⚙️</button>
                         <button id="zoomBtn" data-tooltip="ズームモード開始（Ctrl+z）">🔍</button>
@@ -124,7 +124,7 @@
                         <option value="3.00">3.00x</option>
                         <option value="5.00">5.00x</option>
                     </select>
-                    <span id="timeDisplay" data-tooltip="再生時間/動画時間（←→／Swipe Left Right）">0:00:00 / 0:00:00</span>
+                    <span id="timeDisplay" data-tooltip="再生時間/総時間（←→／Swipe Left Right）">0:00:00 / 0:00:00</span>
                     <input type="range" id="seekBar" value="0" min="0" max="100" data-tooltip="再生位置変更（←→／Swipe Left Right）">
                 </div>
             </div>
@@ -175,7 +175,7 @@
                         </colgroup>
                         <tbody>
                             <tr>
-                                <td class="sub-title">🎬 プレイ動画パネル</td>
+                                <td class="sub-title">🎬 プレイメディアパネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
                                 <td class="mouse sub-title"></td>
@@ -203,7 +203,7 @@
                                 <td class="note">・プレイリスト内の動画を結合。<br>※音声：１トラックのみ残します。字幕：欠損します。</td>
                             </tr>
                             <tr>
-                                <td>　・再生中動画パス</td>
+                                <td>　・再生中メディアパス</td>
                                 <td class="icon">Text Box</td>
                                 <td class="key">Ctrl+g</td>
                                 <td class="mouse">Click</td>
@@ -214,14 +214,14 @@
                                 <td class="icon">🔀</td>
                                 <td class="key">Ctrl+r</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリスト内の動画をランダムに再生。🔀（青）：通常再生／🔀（赤）：ランダム再生。</td>
+                                <td class="note">・プレイリスト内のメディアをランダムに再生。🔀（青）：通常再生／🔀（赤）：ランダム再生。</td>
                             </tr>
                             <tr>
                                 <td>　・繰り返し再生</td>
                                 <td class="icon">🔁／🔂</td>
                                 <td class="key">Ctrl+Shift+r</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリスト内の動画を繰り返し再生。🔁（青）：繰返無効／🔁（赤）：全動画繰返／🔂（黄）：１動画繰返。</td>
+                                <td class="note">・プレイリスト内のメディアを繰り返し再生。🔁（青）：繰返無効／🔁（赤）：全メディア繰返／🔂（黄）：１メディア繰返。</td>
                             </tr>
                             <tr>
                                 <td class="sub-title">📚 プレイリストパネル</td>
@@ -263,35 +263,35 @@
                                 <td class="icon">🔼</td>
                                 <td class="key">Shift+p</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択動画を上へ移動。</td>
+                                <td class="note">・プレイリストの選択メディアを上へ移動。</td>
                             </tr>
                             <tr>
                                 <td>　・プレイリスト編集 下へ移動</td>
                                 <td class="icon">🔽</td>
                                 <td class="key">Shift+n</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択動画を下へ移動。</td>
+                                <td class="note">・プレイリストの選択メディアを下へ移動。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト編集 動画追加</td>
+                                <td>　・プレイリスト編集 メディア追加</td>
                                 <td class="icon">＋</td>
                                 <td class="key">Shift+a</td>
                                 <td class="mouse">Popup Menu</td>
-                                <td class="note">・プレイリストの選択位置に選択した動画・プレイリスト内の動画を追加。</td>
+                                <td class="note">・プレイリストの選択位置に選択したメディアファイル・プレイリスト内のメディアを追加。</td>
                             </tr>
                             <tr>
-                                <td>　・プレイリスト編集 動画削除</td>
+                                <td>　・プレイリスト編集 メディア削除</td>
                                 <td class="icon">－</td>
                                 <td class="key">Shift+d</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの選択位置の動画を削除。</td>
+                                <td class="note">・プレイリストの選択位置のメディアを削除。</td>
                             </tr>
                             <tr>
                                 <td>　・プレイリスト編集 クリア</td>
                                 <td class="icon">🆑</td>
                                 <td class="key">Shift+c</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの全動画をクリア。</td>
+                                <td class="note">・プレイリストの全メディアをクリア。</td>
                             </tr>
                             <tr>
                                 <td>　・プレイリスト編集 保存</td>
@@ -305,7 +305,7 @@
                                 <td class="icon">List</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse">Click／Double Click</td>
-                                <td class="note">・クリック：プレイリスト内の動画を選択。／ダブルクリック：選択した動画を再生。</td>
+                                <td class="note">・クリック：プレイリスト内のメディアを選択。／ダブルクリック：選択したメディアを再生。</td>
                             </tr>
                             <tr>
                                 <td class="sub-title">🛠️ コントロールパネル</td>
@@ -315,67 +315,67 @@
                                 <td class="note sub-title"></td>
                             </tr>
                             <tr>
-                                <td>　・ネット動画入力表示</td>
+                                <td>　・ネットURL入力表示</td>
                                 <td class="icon">🌐</td>
                                 <td class="key">Ctrl+n</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・ネット動画のURL入力表示（青）または再生（URLコピー済）／入力非表示（赤）。</td>
+                                <td class="note">・ネットメディアのURL入力表示（青）または再生（URLコピー済）／入力非表示（赤）。</td>
                             </tr>
                             <tr>
                                 <td>　・フォルダ選択</td>
                                 <td class="icon">📁</td>
                                 <td class="key">Ctrl+d</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・選択フォルダ内（階層フォルダ含む）の動画およびプレイリスト内の動画を再生。</td>
+                                <td class="note">・選択フォルダ内（階層フォルダ含む）のメディアファイルおよびプレイリスト内のメディアを再生。</td>
                             </tr>
                             <tr>
                                 <td>　・ファイル選択</td>
                                 <td class="icon">🗒️</td>
                                 <td class="key">Ctrl+f</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・選択動画（mp4、webm、mkv）またはプレイリスト（amppl）内の動画を再生。</td>
+                                <td class="note">・選択メディアファイルまたはプレイリスト（amppl）内のメディアを再生。</td>
                             </tr>
                             <tr>
-                                <td>　・前の動画へ</td>
+                                <td>　・前へ</td>
                                 <td class="icon">⏮️</td>
                                 <td class="key">PgUp<br>Home</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの再生中動画の前動画を再生。Homeで先頭へ移動。</td>
+                                <td class="note">・プレイリストの再生中メディアの前メディアを再生。Homeで先頭へ移動。</td>
                             </tr>
                             <tr>
                                 <td>　・30秒戻る</td>
                                 <td class="icon">⏪</td>
                                 <td class="key">Ctrl+←</td>
                                 <td class="mouse">Ctrl+Swipe Left</td>
-                                <td class="note">・再生中のまたは一時停止中動画を30秒前に戻す。</td>
+                                <td class="note">・再生中のまたは一時停止中メディアを30秒前に戻す。</td>
                             </tr>
                             <tr>
                                 <td>　・再生／一時停止</td>
                                 <td class="icon">▶️／⏸️</td>
                                 <td class="key">Space</td>
                                 <td class="mouse">Right Click</td>
-                                <td class="note">・プレイリストで選択中の動画を▶️再生（再開）（青）または再生中の動画を⏸️一時停止（赤）。</td>
+                                <td class="note">・プレイリストで選択中のメディアを▶️再生（再開）（青）または再生中のメディアを⏸️一時停止（赤）。</td>
                             </tr>
                             <tr>
                                 <td>　・停止</td>
                                 <td class="icon">⏹️</td>
                                 <td class="key">Ctrl+Space</td>
                                 <td class="mouse">Ctrl+Right Click</td>
-                                <td class="note">・再生中の動画を停止。再開時は先頭から再生。</td>
+                                <td class="note">・再生中のメディアを停止。再開時は先頭から再生。</td>
                             </tr>
                             <tr>
                                 <td>　・30秒進む</td>
                                 <td class="icon">⏩</td>
                                 <td class="key">Ctrl+→</td>
                                 <td class="mouse">Ctrl+Swipe Right</td>
-                                <td class="note">・再生中のまたは一時停止中動画を30秒先に進める。</td>
+                                <td class="note">・再生中のまたは一時停止中メディアを30秒先に進める。</td>
                             </tr>
                             <tr>
-                                <td>　・次の動画へ</td>
+                                <td>　・次へ</td>
                                 <td class="icon">⏭️</td>
                                 <td class="key">PgDw<br>End</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイリストの再生中動画の次動画を再生。Endで最後へ移動。</td>
+                                <td class="note">・プレイリストの再生中メディアの次メディアを再生。Endで最後へ移動。</td>
                             </tr>
                             <tr>
                                 <td>　・設定モード切替</td>
@@ -410,7 +410,7 @@
                                 <td class="icon">🔇／🔊</td>
                                 <td class="key">Ctrl+m</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・再生中の動画の音声を🔇ミュート（赤）または🔊ミュート解除（青）を切り替える。</td>
+                                <td class="note">・再生中のメディアの音声を🔇ミュート（赤）または🔊ミュート解除（青）を切り替える。</td>
                             </tr>
                             <tr>
                                 <td>　・音量変更</td>
@@ -434,32 +434,32 @@
                                 <td class="note">・シークバーの操作でプレビュー表示、再生時間を変更。</td>
                             </tr>
                             <tr>
-                                <td class="sub-title">🌐 ネット動画再生パネル</td>
+                                <td class="sub-title">🌐 ネットURL入力パネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
                                 <td class="mouse sub-title"></td>
                                 <td class="note sub-title"></td>
                             </tr>
                             <tr>
-                                <td>　・ネット動画URL入力</td>
+                                <td>　・ネットURL入力</td>
                                 <td class="icon">Text Box</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・ネット動画のURL入力。</td>
+                                <td class="note">・ネットのURL入力。</td>
                             </tr>
                             <tr>
-                                <td>　・ネット動画URLクリア</td>
+                                <td>　・ネットURLクリア</td>
                                 <td class="icon">🔘</td>
                                 <td class="key">Shift+c</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・ネット動画URLをクリア。</td>
+                                <td class="note">・ネットURLをクリア。</td>
                             </tr>
                             <tr>
-                                <td>　・ネット動画再生</td>
+                                <td>　・ネット再生</td>
                                 <td class="icon">✅</td>
                                 <td class="key">Enter</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・YouTube・Twichなどの動画をポップアウトで再生。</td>
+                                <td class="note">・YouTube・Twichなどをポップアウトで再生。</td>
                             </tr>
                             <tr>
                                 <td class="sub-title">✂️ 動画カット編集パネル</td>
@@ -585,7 +585,7 @@
                                 <td class="icon">↔️/↕️/⏺️</td>
                                 <td class="key">Ctrl+x</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・再生動画の拡大・縮小。↔️：動画を含む（青）、↕️：動画を覆う（赤）、⏺️：動画を満たす（黄）</td>
+                                <td class="note">・再生メディアの拡大・縮小。↔️：含む（青）、↕️：覆う（赤）、⏺️：満たす（黄）</td>
                             </tr>
                             <tr>
                                 <td>　・スナップショット</td>
@@ -627,7 +627,7 @@
                                 <td class="icon no-data">なし</td>
                                 <td class="key">Ctrl+c</td>
                                 <td class="mouse">Click</td>
-                                <td class="note">・プレイ動画パネル・コントロールパネル表示／非表示。（3秒で自動非表示）</td>
+                                <td class="note">・プレイメディアパネル・コントロールパネル表示／非表示。（3秒で自動非表示）</td>
                             </tr>
                             <tr>
                                 <td>　・再描画（リロード）</td>
@@ -641,21 +641,21 @@
                                 <td class="icon no-data">なし</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・エクスプローラで動画、プレイリストファイルのダブルクリックで再生。</td>
+                                <td class="note">・エクスプローラでメディア、プレイリストファイルのダブルクリックで再生。</td>
                             </tr>
                             <tr>
                                 <td>　・ドラッグ＆ドロップ再生</td>
                                 <td class="icon no-data">なし</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・フォルダ、動画ファイル、プレイリストファイルのドラッグ＆ドロップで再生。Ctrlキー＋でリスト追加。</td>
+                                <td class="note">・フォルダ、メディアファイル、プレイリストファイルのドラッグ＆ドロップで再生。Ctrlキー＋でリスト追加。</td>
                             </tr>
                             <tr>
-                                <td>　・アプリ起動時の前回動画再生</td>
+                                <td>　・アプリ起動時の前回再生</td>
                                 <td class="icon no-data">なし</td>
                                 <td class="key no-data">なし</td>
                                 <td class="mouse no-data">なし</td>
-                                <td class="note">・アプリ起動時に前回終了した動画を継続して再生。その他設定オプションも継続設定。</td>
+                                <td class="note">・アプリ起動時に前回終了したメディアを継続して再生。その他設定オプションも継続設定。</td>
                             </tr>
                         </tbody>
                     </table>
@@ -668,6 +668,8 @@
                     <li>2026-08-xx Ver5.xx.0 メディアプレイヤー化計画：画像のスライド表示機能の追加。</li>
                     <li>2026-08-xx Ver5.xx.0 音声ファイルのカット編集・結合編集対応。</li>
                     <li>【実装済】</li>
+                    <li>2026-08-15 Ver5.21.0 メディアプレイヤー化計画：各メッセージ・ツールチップなど見直し。</li>
+                    <li>2026-08-15 Ver5.20.0 アプリ起動時の複数引数の対応。</li>
                     <li>2026-08-15 Ver5.19.0 種類（拡張子）の並び替え機能を追加。</li>
                     <li>2026-08-15 Ver5.18.0 プレイリソ編集の追加メニュー（NODE）を改善。</li>
                     <li>2026-08-14 Ver5.17.0 オーディオモーション設定（プリセット）を追加。</li>

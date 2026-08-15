@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.20.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.21.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -525,7 +525,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // localStorageからの復元
     await allLocalStorageSetting();
 
-    // 動画初期化（未設定状態）
+    // メディア初期化（未設定状態）
     videoPlayer.removeAttribute('src');
     videoPlayer.load();
     audioPlayer.removeAttribute('src');
@@ -534,7 +534,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     videoPreview.load();
     updateMediaPlayerDisplay();
 
-    // ネット動画選択のアイコン表示更新
+    // ネットURL選択のアイコン表示更新
     updateUrlButtonIcon();
 
     // フィルタ履歴をlocalStorageから復元
@@ -861,7 +861,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     })();
 
     // 🔲個別イベントリスナー登録🔲
-    // 🌐ネット動画選択
+    // 🌐ネットURL選択
     urlInputBtn.addEventListener('click', async () => {
         if (isurlInputPanelVisible) {
             // 現在表示中 → キャンセル
@@ -947,7 +947,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         urlInputEnter();
     });
 
-    // 再生中動画パス表示エリアクリック
+    // 再生中メディアパス表示エリアクリック
     playlistPathArea.addEventListener('click', () => {
         if (!filterPanel) return;
         isFilterPanelVisible = !isFilterPanelVisible;
@@ -1057,7 +1057,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         cleanupTempFiles();
     });
 
-    // ⏮️前の動画
+    // ⏮️前ヘ
     prevVideoBtn.addEventListener('click', async () => {
         const prevIndex = getPrevVideoIndex();
 
@@ -1102,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // ⏭️次の動画
+    // ⏭️次へ
     nextVideoBtn.addEventListener('click', async () => {
         const nextIndex = getNextVideoIndex();
 
@@ -1449,19 +1449,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ❌ヘルプ（閉じる）イベントリスナー
     helpCloseBtn.addEventListener('click', closeHelp);
 
-    // ▶️動画再生
+    // ▶️メディア再生
     videoPlayer.addEventListener('play', () => {
         // メディアナビゲータ再生中設定
         navigator.mediaSession.playbackState = 'playing';
     });
 
-    // ⏸️動画一時停止
+    // ⏸️メディア一時停止
     videoPlayer.addEventListener('pause', () => {
         // メディアナビゲータ一時停止設定
         navigator.mediaSession.playbackState = 'paused';
     });
 
-    // 動画メタデータ読み込み
+    // メディアメタデータ読み込み
     videoPlayer.addEventListener('loadedmetadata', () => {
         // 変換ファイル削除
         if (isConverting) {
@@ -1495,7 +1495,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         joinPlaylistVideos();
     });
 
-    // 🎬動画エラー（共通化・安全・モード対応）
+    // 🎬メディアエラー（共通化・安全・モード対応）
     videoPlayer.addEventListener('error', (e) => {
         const error = videoPlayer.error;
         if (!error) return;
@@ -1561,7 +1561,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 switch (videoPlayer.error.code) {
                     case 1: errorMsg = '▶️ 再生がユーザーにより中止されました'; break;
                     case 2: errorMsg = '▶️ ネットワークエラーで読み込めません'; break;
-                    case 3: errorMsg = '▶️ 動画のデコードに失敗しました（破損／コーデック非対応）'; break;
+                    case 3: errorMsg = '▶️ メディアのデコードに失敗しました（破損／コーデック非対応）'; break;
                     case 4: errorMsg = '▶️ このファイル形式は再生できません'; break;
                 }
             }
@@ -1600,7 +1600,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // 動画終了、次の動画へ
+    // メディア終了、次へ
     videoPlayer.addEventListener('ended', async () => {
         videoPlayer.currentTime = 0;
         localStorage.setItem('currentTime', 0);
@@ -1609,7 +1609,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await deleteTempVideo();
 
         // 常にgetNextVideoIndex()を呼び、次があれば再生
-        // （ランダムOFF・repeat 'none' でも次動画に進む）
+        // （ランダムOFF・repeat 'none' でも次に進む）
         const nextIndex = getNextVideoIndex();
         if (nextIndex >= 0) {
             currentVideoIndex = nextIndex;
@@ -1627,7 +1627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateIconOverlay();
     });
 
-    // 動画クリック
+    // メディアクリック
     mediaContainer.addEventListener('contextmenu', (event) => {
         event.preventDefault();
         if (event.ctrlKey) {
@@ -1637,7 +1637,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // 動画ダブルクリック
+    // メディアダブルクリック
     mediaContainer.addEventListener('dblclick', (event) => {
         event.preventDefault();
         fullscreenBtn.click();
@@ -2607,9 +2607,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ショートカットキー（イベントリスナー）
 document.addEventListener('keydown', async (event) => {
-    // 動画のURLの入力中はショートカット無効
+    // メディアURL入力中はショートカット無効
     if (document.activeElement === urlInput) {  
-        // 動画のURLクリア（Escape）
+        // メディアURLクリア（Escape）
         if (event.key === 'Escape') {
             event.preventDefault();
             urlClearBtn.click();
@@ -2643,16 +2643,16 @@ document.addEventListener('keydown', async (event) => {
         }
     }
 
-    // ■🌐ネット動画再生■
+    // ■🌐ネットURL表示■
     if (urlInput.style.display === 'inline-block' && urlInput === document.activeElement) {
-        // 🔘ネット動画Url入力クリア（Shift+C）
+        // 🔘ネットUrl入力クリア（Shift+C）
         if (event.shiftKey && event.key.toLowerCase() === 'c') {
             event.preventDefault();
             urlClearBtn.click();
             return;
         }
 
-        // ✅ネット動画Url入力確定（Enter）
+        // ✅ネットUrl入力確定（Enter）
         if (event.key === 'Enter') {
             event.preventDefault();
             urlConfirmBtn.click();
@@ -2845,7 +2845,7 @@ document.addEventListener('keydown', async (event) => {
             return;
         }
 
-        // 🔼前動画再生（shift+p）
+        // 🔼前再生（shift+p）
         if (event.shiftKey && event.key.toLowerCase() === 'p') {
             if (playlist.length > 1) {
                 event.preventDefault();
@@ -2854,7 +2854,7 @@ document.addEventListener('keydown', async (event) => {
             }
         }
         
-        // 🔽次動画再生（shift+n）
+        // 🔽次再生（shift+n）
         if (event.shiftKey && event.key.toLowerCase() === 'n') {
             if (playlist.length > 1) {
                 event.preventDefault();
@@ -2863,14 +2863,14 @@ document.addEventListener('keydown', async (event) => {
             }
         }
     
-        // ＋動画追加（shift+a）
+        // ＋メディア追加（shift+a）
         if (event.shiftKey && event.key.toLowerCase() === 'a') {
             event.preventDefault();
             addPlaylistBtn.click();
             return;
         }
         
-        // －動画削除（shift+d）
+        // －メディア削除（shift+d）
         if (event.shiftKey && event.key.toLowerCase() === 'd') {
             if (playlist.length > 0) {
                 event.preventDefault();
@@ -2888,7 +2888,7 @@ document.addEventListener('keydown', async (event) => {
             }
         }
         
-        // 💾動画保存（shift+s）
+        // 💾プレイリスト保存（shift+s）
         if (event.shiftKey && event.key.toLowerCase() === 's') {
             if (playlist.length > 0) {
                 event.preventDefault();
@@ -2946,7 +2946,7 @@ document.addEventListener('keydown', async (event) => {
     }
 
     // ■コントロールパネル■
-    // 🌐ネット動画選択（Ctrl+n）
+    // 🌐ネットURL入力（Ctrl+n）
     if (event.ctrlKey && event.key === 'n') {
         event.preventDefault();
         urlInputBtn.click();
@@ -2967,7 +2967,7 @@ document.addEventListener('keydown', async (event) => {
         return;
     }
 
-    // 先頭動画再生（Home）
+    // 先頭再生（Home）
     if (event.key === 'Home') {
         if (playlist.length > 1) {
             currentVideoIndex = 0;
@@ -2980,7 +2980,7 @@ document.addEventListener('keydown', async (event) => {
         }
     }
 
-    // ⏮️前の動画へ（PgUp）
+    // ⏮️前へ（PgUp）
     if (event.key === 'PageUp' && playlist.length > 0) {
         event.preventDefault();
         prevVideoBtn.click();
@@ -3015,14 +3015,14 @@ document.addEventListener('keydown', async (event) => {
         return;
     } 
 
-    // ⏭️次の動画へ（PgDw）
+    // ⏭️次へ（PgDw）
     if (event.key === 'PageDown' && playlist.length > 0) {
         event.preventDefault();
         nextVideoBtn.click();
         return;
     }
     
-    // 最終動画再生（End）
+    // 最終再生（End）
     if (event.key === 'End') {
         if (playlist.length > 1) {
             currentVideoIndex = playlist.length - 1;
@@ -4330,10 +4330,10 @@ function adjustFilterPanelHeight() {
     const editHeader = document.querySelector('.edit-header');
     const cutRangesList = document.getElementById('cutRangesList');
     
-    // 1. プレイ動画パネルの下端の座標を計算
+    // 1. プレイメディアパネルの下端の座標を計算
     const filenameBottom = filename.offsetTop + filename.offsetHeight;
     
-    // 2. プレイリストの top を計算（動画パネルの下端 + 余白 4px）
+    // 2. プレイリストの top を計算（プレイメディアパネルの下端 + 余白 4px）
     const playlistTop = filenameBottom + 10;
     filterPanel.style.top = `${playlistTop}px`;
     editPanel.style.top = `${playlistTop}px`;
@@ -4519,7 +4519,7 @@ async function updateFilterList() {
     updateItemCount(results.length, playlist.length);
 
     if (results.length === 0) {
-        filterList.innerHTML = '<div class="filter-empty">一致する動画がありません。</div>';
+        filterList.innerHTML = '<div class="filter-empty">一致するメディアがありません。</div>';
         return;
     }
 
@@ -4587,7 +4587,7 @@ async function updateFilterList() {
                     // 種類▲・▼ の場合は拡張子でグループ化
                     currentGroupKey = getFileExtension(item.file?.path).toUpperCase();
                 } else {
-                    // 動画パス▲・▼ などの場合はフォルダパスでグループ化
+                    // ファイル▲・▼ などの場合はフォルダパスでグループ化
                     const fullPath = item.file?.path || item.name || '無題';
                     const currentFolderPath = path.dirname(fullPath);
                     currentGroupKey = currentFolderPath === '.' ? 'ルートフォルダ' : currentFolderPath;
@@ -4875,7 +4875,7 @@ function updatePlaylistDisplay() {
     updateItemCount(playlist.length, playlist.length); 
 }
 
-// 現在再生中の動画のパスを取得するヘルパー関数
+// 現在再生中のメディアのパスを取得するヘルパー関数
 function getCurrentPlaybackPath() {
     let currentPath = playlist[currentVideoIndex]?.file?.path || '';
     if (!currentPath && videoPlayer?.src) {
@@ -4904,7 +4904,7 @@ function updateUrlButtonIcon() {
     } else {
         urlInputBtn.textContent = '🌐';
         urlInputBtn.classList.remove('mode-active');
-        urlInputBtn.setAttribute('data-tooltip', 'ネット動画を開く (Ctrl+n)');
+        urlInputBtn.setAttribute('data-tooltip', 'ネットURLを開く (Ctrl+n)');
     }
 }
 
@@ -4966,7 +4966,7 @@ function toggleRandomPlay() {
         // 表示はそのまま、次回 next/prev が通常順になるだけ
     }
 
-    // フィルタ条件をクリアし、再生動画の行位置にスクロール
+    // フィルタ条件をクリアし、再生メディアの行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
     // clearPlaylistFilter();
     if (isFilterPanelVisible) debouncedUpdateFilterList();
@@ -4980,7 +4980,7 @@ function shuffle(array) {
         [array[i], array[j]] = [array[j], array[i]];
     }
 
-    // 2. 再生中動画(currentVideoIndex)が存在する場合、配列の先頭に移動
+    // 2. 再生中メディア(currentVideoIndex)が存在する場合、配列の先頭に移動
     if (typeof currentVideoIndex !== 'undefined' && currentVideoIndex !== null && currentVideoIndex >= 0) {
         const indexInArray = array.indexOf(currentVideoIndex);
         if (indexInArray > -1) {
@@ -4998,7 +4998,7 @@ function resetShuffle() {
         shuffleOrder = [...Array(playlist.length).keys()]; // 0〜length-1 の配列
         shuffle(shuffleOrder);                             // シャッフル
 
-        // 先頭に移動した再生中動画からスタートするため、ポジションを 0 に設定
+        // 先頭に移動した再生中メディアからスタートするため、ポジションを 0 に設定
         shufflePosition = 0; 
         saveShuffleState();
     } else {
@@ -5008,7 +5008,7 @@ function resetShuffle() {
     }
 }
 
-// 前再生動画取得
+// 前再生メディア取得
 function getPrevVideoIndex() {
     if (playlist.length === 0) return -1;
     if (isRepeatPlayMode === 'single') {
@@ -5054,7 +5054,7 @@ function getPrevVideoIndex() {
     }
 }
 
-// 次再生動画取得
+// 次再生メディア取得
 function getNextVideoIndex() {
     if (playlist.length === 0) return -1;
     if (isRepeatPlayMode === 'single') {
@@ -5154,11 +5154,11 @@ async function toggleurlInputPanel(show = null) {
     updateUrlButtonIcon();   // ← ここで色も更新
 }
 
-// 動画再生
+// メディア再生
 async function playVideo(file, currentTime) {
     if (!file?.path) return;
 
-    // 動画ソース設定
+    // メディアソース設定
     isPlaying = true;
     await setVideoSrc(file);
 
@@ -5182,7 +5182,7 @@ async function playVideo(file, currentTime) {
         stopPeriodicSave();
     });
 
-    // フィルタ条件をクリアし、再生動画の行位置にスクロール
+    // フィルタ条件をクリアし、再生メディアの行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
     // clearPlaylistFilter();
     updatePlaylistDisplay();
@@ -5228,7 +5228,7 @@ function findNextValidPosition(currentTime) {
     return -1; // 全てのカット後 → そのまま最後まで
 }
 
-// 動画のメタデータがロードされてから currentTime を操作するヘルパー
+// メディアのメタデータがロードされてから currentTime を操作するヘルパー
 function setVideoDurationTime() {
     if (videoPlayer.readyState >= 1) { // HAVE_METADATA 以上
         videoPlayer.currentTime = videoPlayer.duration;
@@ -5247,7 +5247,7 @@ async function togglePlayPause() {
     isPlaying = true;
     if (videoPlayer.paused) {
         if (isVideoStopped() || currentVideoIndex === -1) {
-            // 動画ソース設定
+            // メディアソース設定
             currentVideoIndex = 0;
             if (selectedPlaylistIndex >= 0) {
                 currentVideoIndex = selectedPlaylistIndex;
@@ -5292,7 +5292,7 @@ async function togglePlayPause() {
         stopPeriodicSave();
     }
 
-    // フィルタ条件をクリアし、再生動画の行位置にスクロール
+    // フィルタ条件をクリアし、再生メディアの行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
     // clearPlaylistFilter();
     updatePlaylistDisplay();
@@ -5301,7 +5301,7 @@ async function togglePlayPause() {
     updateIconOverlay();
 }
 
-// 動画ソース設定
+// メディアソース設定
 async function setVideoSrc(file) {
     playPauseBtn.textContent = '▶️';
     playPauseBtn.classList.remove('paused-active');
@@ -5411,7 +5411,7 @@ async function setVideoSrc(file) {
     videoPlayer.volume = volumeBar.value;
 }
 
-// 動画／停止中判定
+// メディアの停止中判定
 function isVideoStopped() {
     return videoPlayer.paused && !videoPlayer.currentSrc && playlist.length > 0;
 }
@@ -5474,12 +5474,12 @@ async function urlInputEnter() {
         updateIconOverlay();
     } catch (error) {
         console.error("IPCエラー:", err);
-        updateMessageOverlay(`🌐 動画プレーヤーの設定失敗（${error.message}）。別の動画を試してください。`, 6000);
+        updateMessageOverlay(`🌐 ネットURLの設定失敗（${error.message}）。別のURLを試してください。`, 6000);
         updateIconOverlay();
     }
 }
 
-// 動画プラットフォーム判定
+// ネットURLプラットフォーム判定
 function isTwitchOrYouTube(inputUrl) {
     if (inputUrl.includes('http')) {
         if (inputUrl.includes('twitch.tv') && inputUrl.includes('videos')) {
@@ -5493,21 +5493,21 @@ function isTwitchOrYouTube(inputUrl) {
     return null;
 }
 
-// Twitch動画ID抽出
+// TwitchのID抽出
 function extractTwitchVideoId(url) {
     const regex = /twitch\.tv\/videos\/(\d+)/;
     const match = url.match(regex);
     return match ? match[1] : null;
 }
 
-// YouTube動画リストID抽出
+// YouTubeのリストID抽出
 function extractYouTubePlaylistId(url) {
     const regex = /[?&]list=([^&#]+)/;
     const match = url.match(regex);
     return match ? match[1] : null;
 }
 
-// YouTube動画ID抽出
+// YouTubeのID抽出
 function extractYouTubeVideoId(url) {
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const match = url.match(regex);
@@ -5776,7 +5776,7 @@ async function addToPlaylist(addPosition = 0) {
         await insertFilesIntoPlaylist(files, addPosition);
     } catch (e) {
         console.error('追加エラー:', e);
-        updateMessageOverlay('📚 動画追加に失敗', 6000);
+        updateMessageOverlay('📚 メディア追加に失敗', 6000);
     }
 }
 
@@ -5784,13 +5784,13 @@ async function addToPlaylist(addPosition = 0) {
 async function removeFromPlaylist() {
     const selectedIndex = selectedPlaylistIndex >= 0 && selectedPlaylistIndex < playlist.length ? selectedPlaylistIndex : currentVideoIndex;
     if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= playlist.length) {
-        updateMessageOverlay('📚 削除する動画を選択してください');
+        updateMessageOverlay('📚 削除するメディアを選択してください');
         return;
     }
 
     await cleanupTempFiles();
     
-    // 現在再生されている動画が削除対象、かつ実際に再生中（paused ではない）かを判定
+    // 現在再生されているメディアが削除対象、かつ実際に再生中（paused ではない）かを判定
     const isCurrentlyPlaying = currentVideoIndex === selectedIndex && !videoPlayer.paused;
 
     // 削除対象のファイルパスを取得（spliceする前に保存）
@@ -5817,16 +5817,16 @@ async function removeFromPlaylist() {
     }
 
     if (playlist.length > 0) {
-        // 削除対象が現在読み込まれている動画（currentVideoIndex）の場合の処理
+        // 削除対象が現在読み込まれているメディア（currentVideoIndex）の場合の処理
         if (currentVideoIndex === selectedIndex) {
             currentVideoIndex = newIndex;
             const nextFile = playlist[newIndex].file;
 
             if (isCurrentlyPlaying) {
-                // 【再生中だった場合】新しい動画を playVideo() で自動再生
+                // 【再生中だった場合】新しいメディアを playVideo() で自動再生
                 await playVideo(nextFile);
             } else {
-                // 【一時停止・停止中だった場合】新しい動画を読み込んで停止状態にする
+                // 【一時停止・停止中だった場合】新しいメディアを読み込んで停止状態にする
                 await setVideoSrc(nextFile);
                 isPlaying = false;
                 videoPlayer.pause();
@@ -5881,7 +5881,7 @@ async function clearPlaylist() {
 // プレイリスト保存
 async function savePlaylist() {
     if (playlist.length === 0) {
-        updateMessageOverlay('📚 保存する動画がありません', 6000);
+        updateMessageOverlay('📚 保存するメディアがありません', 6000);
         return;
     }
 
@@ -6386,11 +6386,11 @@ function updateRepeatButtonUI() {
 
     if (isRepeatPlayMode === 'all') {
         btn.classList.add('repeat-all');
-        btn.setAttribute('data-tooltip', '全動画繰り返し再生中（Ctrl+Shift+r）');
+        btn.setAttribute('data-tooltip', '全メディア繰り返し再生中（Ctrl+Shift+r）');
     } else if (isRepeatPlayMode === 'single') {
         btn.classList.add('repeat-single');
         btn.textContent = '🔂';
-        btn.setAttribute('data-tooltip', '1動画繰り返し再生中（Ctrl+Shift+r）');
+        btn.setAttribute('data-tooltip', '1メディア繰り返し再生中（Ctrl+Shift+r）');
     } else {
         btn.setAttribute('data-tooltip', '繰り返し再生無効（Ctrl+Shift+r）');
     }
