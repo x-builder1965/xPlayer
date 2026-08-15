@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.21.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.22.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -125,7 +125,7 @@ const DEFAULT_AUDIO_MOTION_OPTIONS = {
     spinSpeed: 0,                           // 回転速度 (正の値で時計回り、大きいほど高速)
     channelLayout: 'single',                // 音声チャンネル表示 (L/Rを合成したシングル描画)
     mirror: 0,                              // ミラー表示 (0: なし, -1: 左右反転, 1: 左右上下反転)
-	maxFreq: 22000,                         // 表示する最大周波数 (Hz)
+	maxFreq: 12000,                         // 表示する最大周波数 (Hz)
 	frequencyScale: 'log',                  // 周波数軸のスケール ('log' | 'linear' | 'bark' | 'mel' | 'notes')
 	roundBars: false,                       // バーの頂点を丸く丸めるか
 	gradient: 'classic',                    // 使用するグラデーションプリセット名またはカスタム定義
@@ -177,7 +177,7 @@ const AUDIOMOTION_NODES = {
             barSpace: 0.2,                  // バー同士の隙間の比率 (バー幅の20%分を空ける)
             gradient: 'rainbow',            // グラデーションテーマ (レインボーカラー)
             fillAlpha: 0.85,                // スペクトラム内部の塗りつぶし不透明度 (85%表示)
-            showPeaks: true,                // ピーク（頂点）ラインの表示を有効化
+            showPeaks: false,               // ピーク（頂点）ラインの表示を有効化
             reflexRatio: 0.5,               // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
             reflexAlpha: 1,                 // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
             reflexBright: false,            // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
@@ -191,6 +191,7 @@ const AUDIOMOTION_NODES = {
             spin: true,                     // 円形ビジュアライザーの自動回転を有効化
             spinSpeed: 1,                   // 回転速度 (正の値で時計回り、大きいほど高速)
             gradient: 'prism',              // グラデーションテーマ (プリズムカラー)
+            mirror: 1,                      // ミラー表示 (0: なし, -1: 左右反転, 1: 左右上下反転)
         }
     },
     'preset7': { label: 'クリスタル・スペクトラム',
@@ -199,13 +200,13 @@ const AUDIOMOTION_NODES = {
             barSpace: 0.25,                 // バー同士の隙間の比率 (バー幅の20%分を空ける)
             gradient: 'rainbow',            // グラデーションテーマ (レインボーカラー)
             showPeaks: true,                // ピーク（頂点）ラインの表示を有効化
-            lineWidth: 4,                   // バー/波形の外枠線の太さpx (4pxの輪郭線)
-            fillAlpha: 0.5,                 // スペクトラム内部の塗りつぶし不透明度 (50%表示)
+            lineWidth: 1,                   // バー/波形の外枠線の太さpx (4pxの輪郭線)
+            fillAlpha: 0.7,                 // スペクトラム内部の塗りつぶし不透明度 (50%表示)
             reflexRatio: 0.5,               // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
             reflexAlpha: 1,                 // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
             reflexBright: 1,                // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
             reflexFit: -1,                  // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
-            mirror: 1,
+            mirror: 1,                      // ミラー表示 (0: なし, -1: 左右反転, 1: 左右上下反転)
         }
     },
     'preset8': { label: 'プリズム・リフレクト',
@@ -213,12 +214,11 @@ const AUDIOMOTION_NODES = {
             mode: 4,                        // 周波数帯域の分割解像度 (1/2 オクターブ表示)
             barSpace: 0.25,                 // バー同士の隙間の比率 (バー幅の20%分を空ける)
             gradient: 'prism',              // グラデーションテーマ (プリズムカラー)
-            showPeaks: true,                // ピーク（頂点）ラインの表示を有効化
+            showPeaks: false,               // ピーク（頂点）ラインの表示を有効化
             reflexRatio: 0.5,               // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
             reflexAlpha: 1,                 // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
             reflexBright: 1,                // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
             reflexFit: 0,                   // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
-            maxFreq: 16000,                 // 表示する最大周波数 (16000Hz)
             roundBars: true,                // バーの頂点を丸く丸める
         }
     },
@@ -226,7 +226,7 @@ const AUDIOMOTION_NODES = {
         options: {
             mode: 10,                       // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
             ledBars: true,                  // バーをLEDブロック状（点灯セグメント風）に分割表示
-            showPeaks: true,                // ピーク（頂点）表示を有効化
+            showPeaks: false,               // ピーク（頂点）ラインの表示を有効化
             gradient: 'steelblue',          // 使用するグラデーションプリセット名またはカスタム定義
             gradientLeft: 'steelblue',      // ステレオ表示時の左チャンネル用グラデーション
             gradientRight: 'orangered',     // ステレオ表示時の右チャンネル用グラデーション
