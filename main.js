@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.19.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.20.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -319,16 +319,30 @@ app.whenReady().then(() => {
 
     mainWindow.webContents.once('did-finish-load', async () => {
         try {
-            const args = process.argv.slice(app.isPackaged ? 1 : 2);
+            // パッケージ化の有無で開始インデックスを調整
+            const rawArgs = process.argv.slice(app.isPackaged ? 1 : 2);
+            
+            // フラグ（--xxxなど）を除外して有効なパスのみ抽出
+            const args = rawArgs.filter(arg => !arg.startsWith('-'));
             if (args.length === 0) return;
 
-            const filePath = args[0];
-            const exists = await fs.stat(filePath).then(() => true).catch(() => false);
-            if (!exists) return;
+            // 複数パスを並列で存在チェック＆処理
+            const filePromises = args.map(async (filePath) => {
+                const exists = await fs.stat(filePath).then(() => true).catch(() => false);
+                if (!exists) return [];
+                // 既存の処理（ファイルパスまたはフォルダパスから該当ファイル一覧を取得）
+                return await processCommandLineFile(filePath);
+            });
 
-            const files = await processCommandLineFile(filePath);
-            if (files.length > 0) {
-                mainWindow.webContents.send('auto-play-files', files);
+            // すべてのパスの結果を結合してフラット化
+            const results = await Promise.all(filePromises);
+            const allFiles = results.flat(); // ネストされた配列を解きほぐす
+
+            // 重複ファイルを除外（必要に応じて）
+            const uniqueFiles = [...new Set(allFiles)];
+
+            if (uniqueFiles.length > 0) {
+                mainWindow.webContents.send('auto-play-files', uniqueFiles);
             }
         } catch (err) {
             console.error('コマンドライン自動再生エラー:', err);

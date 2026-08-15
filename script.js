@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.19.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.20.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -3244,18 +3244,22 @@ window.addEventListener('unload', () => {
 // 🔲ipcRenderer ハンドラ登録🔲
 // main.js からの自動再生指示を受信
 ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
-    if (!videoFiles || videoFiles.length === 0) return;
+    if (!Array.isArray(videoFiles) || videoFiles.length === 0) return;
 
     const runAutoPlay = async () => {
-        await playlistSet(videoFiles);
+        try {
+            await playlistSet(videoFiles);
+        } catch (err) {
+            console.error('プレイリスト設定エラー:', err);
+        }
     };
 
+    // 起動直後のdocument.loading取得不良の対処のため100msの待機
     setTimeout(async () => {
-        // DOMの構築が完了しているか確認
+        // did-finish-load 後に送信されるため、DOM読み込みは通常完了しています
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', runAutoPlay, { once: true });
         } else {
-            // すでにDOM読み込み完了済みの場合は即時実行
             await runAutoPlay();
         }
     }, 100);

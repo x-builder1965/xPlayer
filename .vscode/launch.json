@@ -12,7 +12,8 @@
       },
       "args": [
         ".",                          // カレントディレクトリのアプリを起動
-        // "H:/PlayList/NAS/手作り/Anime（再生履歴）.amppl",
+        // "H:/Anime/Anime（放映中）/(4：木)_202607_★★★★☆_(TV)_片田舎のおっさん、剣聖になるⅡ",
+        // "H:/Anime/Anime（放映中）/(3：水)_202607_★★★★★_(TV)_幼女戦記Ⅱ/幼女戦記Ⅱ 第06話 「囮」  [23m40s] (x264+AAC 1280x720).mp4",
         "--remote-debugging-port=9223" // Rendererアタッチ用ポート（必須）
       ],
       "console": "integratedTerminal",
