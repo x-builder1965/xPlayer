@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.22.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.23.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -438,6 +438,8 @@ let savedWallpaperPath = null;
 let savedAlwaysOnTop = null;
 let savedAudioMotionMode = null;
 let savedFilterHistory = null;
+let savedAudioMotionOptions = null;
+let savedAudioMotionNodes = null;
 
 // グローバル（共通）変数
 let Initializing = true;
@@ -3548,6 +3550,9 @@ async function allLocalStorageSetting() {
     if (!isSecondary) {
         // --- 初回起動時 ---
         appNameAndCopyright.textContent = appNameAndCopyrightValue;
+        // 【追加】先に AUDIOMOTION_NODES を復元・初期化
+        loadAudioMotionOptions();
+        loadAudioMotionNodes();
         // 1. localStorage から値を取得し対象変数に設定
         savedVolume = localStorage.getItem('volume');
         savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
@@ -3575,10 +3580,12 @@ async function allLocalStorageSetting() {
         savedAudioMotionMode = localStorage.getItem('audioMotionMode');
         savedFilterHistory = localStorage.getItem('filterHistory');
         savedOriginalOrder = localStorage.getItem('originalLoadOrder');
+        // 【追加】NODE設定（JSON文字列）を取得
+        savedAudioMotionOptions = localStorage.getItem('audioMotionOptions');
+        savedAudioMotionNodes = localStorage.getItem('audioMotionNodes');
 
         // 2. 取得情報をユーザーフォルダの xPlayerSettings.json に保存
         await exportSettingsToFile(settingsFilePath);
-
     } else {
         // --- 重複起動時 ---
         appNameAndCopyright.textContent = `🚫${appNameAndCopyrightValue}}`;
@@ -3613,6 +3620,29 @@ async function allLocalStorageSetting() {
             savedAudioMotionMode = loadedSettings['audioMotionMode'] ?? null;
             savedFilterHistory = loadedSettings['filterHistory'] ?? null;
             savedOriginalOrder = loadedSettings['originalLoadOrder'] ?? null;
+            // 【追加】JSONファイルから DEFAULT_AUDIO_MOTION_OPTIONS を復元
+            if (loadedSettings['audioMotionOptions']) {
+                try {
+                    const parsed = typeof loadedSettings['audioMotionOptions'] === 'string'
+                        ? JSON.parse(loadedSettings['audioMotionOptions'])
+                        : loadedSettings['audioMotionOptions'];
+                    Object.assign(DEFAULT_AUDIO_MOTION_OPTIONS, parsed);
+                } catch (e) {
+                    console.error('audioMotionOptions の復元エラー:', e);
+                }
+            }
+            // 【追加】JSONファイルから AUDIOMOTION_NODES を復元
+            if (loadedSettings['audioMotionNodes']) {
+                try {
+                    const parsed = typeof loadedSettings['audioMotionNodes'] === 'string' 
+                        ? JSON.parse(loadedSettings['audioMotionNodes']) 
+                        : loadedSettings['audioMotionNodes'];
+                    Object.keys(AUDIOMOTION_NODES).forEach(key => delete AUDIOMOTION_NODES[key]);
+                    Object.assign(AUDIOMOTION_NODES, parsed);
+                } catch (e) {
+                    console.error('audioMotionNodes の復元エラー:', e);
+                }
+            }
         }
     }
 }
@@ -7274,5 +7304,60 @@ function toggleVisualizer(show) {
     } else {
         visualizerContainer.style.display = 'none';
         videoPlayer.style.display = 'block'; // 動画時は動画エリアを表示
+    }
+}
+
+// DEFAULT_AUDIO_MOTION_OPTIONS を localStorage に保存する
+function saveAudioMotionOptions() {
+    try {
+        localStorage.setItem('audioMotionOptions', JSON.stringify(DEFAULT_AUDIO_MOTION_OPTIONS));
+    } catch (err) {
+        console.error('DEFAULT_AUDIO_MOTION_OPTIONS の保存に失敗しました:', err);
+    }
+}
+
+// DEFAULT_AUDIO_MOTION_OPTIONS を localStorage から読み込んで復元する
+// 保存されていない場合はデフォルト値をそのまま使用し、localStorage に初期保存する
+function loadAudioMotionOptions() {
+    const jsonStr = localStorage.getItem('audioMotionOptions');
+    if (jsonStr) {
+        try {
+            const parsed = JSON.parse(jsonStr);
+            // 既存の DEFAULT_AUDIO_MOTION_OPTIONS のプロパティを上書き・復元
+            Object.assign(DEFAULT_AUDIO_MOTION_OPTIONS, parsed);
+        } catch (err) {
+            console.error('DEFAULT_AUDIO_MOTION_OPTIONS の復元に失敗したため初期値を使用します:', err);
+            saveAudioMotionOptions();
+        }
+    } else {
+        // localStorage に存在しない場合はデフォルト値を保存
+        saveAudioMotionOptions();
+    }
+}
+
+// AUDIOMOTION_NODES を localStorage に保存する
+function saveAudioMotionNodes() {
+    try {
+        localStorage.setItem('audioMotionNodes', JSON.stringify(AUDIOMOTION_NODES));
+    } catch (err) {
+        console.error('AUDIOMOTION_NODES の保存に失敗しました:', err);
+    }
+}
+
+// AUDIOMOTION_NODES を localStorage から読み込んで復元する
+// 保存されていない場合はデフォルト値をそのまま使用し、localStorage に初期保存する
+function loadAudioMotionNodes() {
+    const jsonStr = localStorage.getItem('audioMotionNodes');
+    if (jsonStr) {
+        try {
+            const parsed = JSON.parse(jsonStr);
+            Object.keys(AUDIOMOTION_NODES).forEach(key => delete AUDIOMOTION_NODES[key]);
+            Object.assign(AUDIOMOTION_NODES, parsed);
+        } catch (err) {
+            console.error('AUDIOMOTION_NODES の復元に失敗したため初期値を使用します:', err);
+            saveAudioMotionNodes();
+        }
+    } else {
+        saveAudioMotionNodes();
     }
 }
