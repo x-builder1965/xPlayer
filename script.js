@@ -53,8 +53,8 @@ const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
 
 const SORT_MODES = {
     none:       { label: '（なし）',     fn: () => getPlaylistInOriginalOrder() },
-    path_asc:   { label: 'メディアパス▲',   fn: () => [...playlist].sort((a, b) => (a.file?.path || '').localeCompare(b.file?.path || '')) },
-    path_desc:  { label: 'メディアパス▼',   fn: () => [...playlist].sort((a, b) => (b.file?.path || '').localeCompare(a.file?.path || '')) },
+    path_asc:   { label: 'ファイル▲',   fn: () => [...playlist].sort((a, b) => (a.file?.path || '').localeCompare(b.file?.path || '')) },
+    path_desc:  { label: 'ファイル▼',   fn: () => [...playlist].sort((a, b) => (b.file?.path || '').localeCompare(a.file?.path || '')) },
     type_asc:   { label: '種類▲',       fn: () => [...playlist].sort((a, b) => {
         const extA = getFileExtension(a.file?.path);
         const extB = getFileExtension(b.file?.path);
