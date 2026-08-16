@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.23.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.24.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -4080,12 +4080,19 @@ async function exportSettingsToFile(targetFilePath = null) {
             filePath = result.filePath;
         }
 
-        // localStorage の内容をオブジェクトにまとめる
+        // localStorage の内容をオブジェクトにまとめる（二重エンコードの解消）
         const settings = {};
         for (let i = 0; i < localStorage.length; i += 1) {
             const key = localStorage.key(i);
             if (key) {
-                settings[key] = localStorage.getItem(key);
+                const rawValue = localStorage.getItem(key);
+                try {
+                    // JSON化された文字列（配列やオブジェクト、数値、真偽値等）ならパースしてオブジェクト構造に復元
+                    settings[key] = JSON.parse(rawValue);
+                } catch {
+                    // パースできない通常の文字列（パス文字列など）はそのまま保持
+                    settings[key] = rawValue;
+                }
             }
         }
 
@@ -4130,7 +4137,14 @@ async function importSettingsFromFile(targetFilePath = null) {
         if (!targetFilePath) {
             localStorage.clear();
             Object.entries(settings).forEach(([key, value]) => {
-                localStorage.setItem(key, String(value));
+                if (typeof value === 'object' && value !== null) {
+                    // オブジェクトや配列は JSON 文字列化して localStorage に保存
+                    localStorage.setItem(key, JSON.stringify(value));
+                } else {
+                    // 文字列・数値・ブーリアン等は String 化して保存
+                    // （旧フォーマットの二重化された JSON 文字列が来ても安全にそのまま保存されます）
+                    localStorage.setItem(key, String(value));
+                }
             });
 
             const fileName = filePath.split(/[/\\]/).pop();
@@ -4146,7 +4160,10 @@ async function importSettingsFromFile(targetFilePath = null) {
     } catch (error) {
         console.error('設定インポート失敗:', error);
         if (!targetFilePath) {
-            updateMessageOverlay('📥 設定のインポートに失敗しました', 6000);
+            const errorMsg = (error instanceof SyntaxError)
+                ? '📥 設定ファイルの形式（JSON）が破損しています'
+                : '📥 設定のインポートに失敗しました';
+            updateMessageOverlay(errorMsg, 6000);
         }
         return null;
     }
