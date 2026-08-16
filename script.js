@@ -1448,11 +1448,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 📤設定エクスポート
     exportSettingsBtn.addEventListener('click', async () => {
         await exportSettingsToFile();
-        if (isSecondary) {
-            // 重複起動時は警告メッセージを表示
-            updateMessageOverlay('📤 【警告】重複起動中のため起動直後の設定をエクスポート', 6000);
-            return;
-        }
     });
 
     // ❌設定モード終了
@@ -4074,10 +4069,11 @@ function createAudioMotionMenu() {
 }
 
 // 設定のエクスポート
-async function exportSettingsToFile(targetFilePath = null, noMessage = false) {
+async function exportSettingsToFile(targetFilePath = null) {
+    if (isSecondary && targetFilePath) return;
+    // targetFilePath指定あり＝初回起動
     try {
         let filePath = targetFilePath;
-
         // 引数の保存先ファイルパスが Null の場合
         if (!filePath) {
             const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
@@ -4089,33 +4085,42 @@ async function exportSettingsToFile(targetFilePath = null, noMessage = false) {
             filePath = result.filePath;
         }
 
-        // localStorage の内容をオブジェクトにまとめる（二重エンコードの解消）
-        const settings = {};
-        for (let i = 0; i < localStorage.length; i += 1) {
-            const key = localStorage.key(i);
-            if (key) {
-                const rawValue = localStorage.getItem(key);
-                try {
-                    // JSON化された文字列（配列やオブジェクト、数値、真偽値等）ならパースしてオブジェクト構造に復元
-                    settings[key] = JSON.parse(rawValue);
-                } catch {
-                    // パースできない通常の文字列（パス文字列など）はそのまま保持
-                    settings[key] = rawValue;
+        let settings = {};
+        if (!isSecondary) {
+            // localStorage の内容をオブジェクトにまとめる
+            for (let i = 0; i < localStorage.length; i += 1) {
+                const key = localStorage.key(i);
+                if (key) {
+                    const rawValue = localStorage.getItem(key);
+                    try {
+                        settings[key] = JSON.parse(rawValue);
+                    } catch {
+                        settings[key] = rawValue;
+                    }
                 }
             }
+        } else {
+            // 1. ファイルから文字列として読み込む
+            const fileData = await fs.readFile(settingsFilePath, 'utf8');
+            // 2. オブジェクトにパース（二重シリアライズを防ぐ）
+            settings = JSON.parse(fileData);
         }
-
-        // 指定されたパスにエクスポート
+        // 指定されたパスにエクスポート（どちらの分岐を通っても正しいオブジェクト構造でシリアライズされる）
         await fs.writeFile(filePath, JSON.stringify(settings, null, 2), 'utf8');
 
         // ダイアログ経由（手動エクスポート）の場合のみオーバーレイメッセージを表示
-        if (!targetFilePath && !noMessage) {
+        if (!targetFilePath) {
             const fileName = filePath.split(/[/\\]/).pop();
-            updateMessageOverlay(`📤 エクスポート: ${fileName}`);
+            if (!isSecondary) {
+                updateMessageOverlay(`📤 エクスポート: ${fileName}`);
+            } else {
+                // 重複起動時は警告メッセージを表示
+                updateMessageOverlay(`📤 エクスポート（起動時点）: ${fileName}`);
+            }
         }
     } catch (error) {
         console.error('設定エクスポート失敗:', error);
-        if (!targetFilePath && !noMessage) {
+        if (!targetFilePath) {
             updateMessageOverlay('📤 設定のエクスポートに失敗しました', 6000);
         }
     }
@@ -7422,7 +7427,7 @@ function loadAudioMotionNodes() {
 async function localSturageSetItemAndFile(key, value) {
     if (!isSecondary) {
         localStorage.setItem(key, value);
-        await exportSettingsToFile(settingsFilePath, true);
+        await exportSettingsToFile(settingsFilePath);
     }
 }
 
@@ -7430,7 +7435,7 @@ async function localSturageSetItemAndFile(key, value) {
 async function localSturageRemoveItemAndFile(key) {
     if (!isSecondary) {
         localStorage.removeItem(key);
-        await exportSettingsToFile(settingsFilePath, true);
+        await exportSettingsToFile(settingsFilePath);
     }
 }
 
@@ -7438,6 +7443,6 @@ async function localSturageRemoveItemAndFile(key) {
 async function localSturageClearAndFile() {
     if (!isSecondary) {
         localStorage.clear();
-        await exportSettingsToFile(settingsFilePath, true);
+        await exportSettingsToFile(settingsFilePath);
     }
 }
