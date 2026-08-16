@@ -4070,7 +4070,7 @@ function createAudioMotionMenu() {
 
 // 設定のエクスポート
 async function exportSettingsToFile(targetFilePath = null) {
-    if (isSecondary) {
+    if (isSecondary && !targetFilePath) {
         // 重複起動時は警告メッセージを表示して処理を中断
         updateMessageOverlay('📤 重複起動時は設定のエクスポートはできません', 6000);
         return;
@@ -4121,58 +4121,70 @@ async function exportSettingsToFile(targetFilePath = null) {
 
 // 設定のインポート
 async function importSettingsFromFile(targetFilePath = null) {
-    try {
-        let filePath = targetFilePath;
+    // targetFilePath 指定時のみリトライ（最大3回）、指定なし（ダイアログ経由）は1回のみ実行
+    const maxRetries = targetFilePath ? 3 : 1;
 
-        // 引数の取得先ファイルパスが Null の場合
-        if (!filePath) {
-            const result = await showOpenSettingsDialog();
-            if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
-                return null;
-            }
-            filePath = result.filePaths[0];
-        }
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            let filePath = targetFilePath;
 
-        const content = await fs.readFile(filePath, 'utf8');
-        const settings = JSON.parse(content);
-
-        if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
-            throw new Error('設定ファイルの形式が正しくありません');
-        }
-
-        // ダイアログ経由（手動インポート）の場合のみ localStorage を更新してリロード
-        if (!targetFilePath) {
-            localSturageClearAndFile();
-            Object.entries(settings).forEach(([key, value]) => {
-                if (typeof value === 'object' && value !== null) {
-                    // オブジェクトや配列は JSON 文字列化して localStorage に保存
-                    localSturageSetItemAndFile(key, JSON.stringify(value));
-                } else {
-                    // 文字列・数値・ブーリアン等は String 化して保存
-                    // （旧フォーマットの二重化された JSON 文字列が来ても安全にそのまま保存されます）
-                    localSturageSetItemAndFile(key, String(value));
+            // 引数の取得先ファイルパスが Null の場合
+            if (!filePath) {
+                const result = await showOpenSettingsDialog();
+                if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+                    return null;
                 }
-            });
+                filePath = result.filePaths[0];
+            }
 
-            const fileName = filePath.split(/[/\\]/).pop();
-            updateMessageOverlay(`📥 インポート: ${fileName}`);
-            setTimeout(() => {
-                location.reload();
-            }, 300);
-        }
+            const content = await fs.readFile(filePath, 'utf8');
+            const settings = JSON.parse(content);
 
-        // 読み込んだ設定オブジェクトを返す
-        return settings;
+            if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+                throw new Error('設定ファイルの形式が正しくありません');
+            }
 
-    } catch (error) {
-        console.error('設定インポート失敗:', error);
-        if (!targetFilePath) {
+            // ダイアログ経由（手動インポート）の場合のみ localStorage を更新してリロード
+            if (!targetFilePath) {
+                localSturageClearAndFile();
+                Object.entries(settings).forEach(([key, value]) => {
+                    if (typeof value === 'object' && value !== null) {
+                        // オブジェクトや配列は JSON 文字列化して localStorage に保存
+                        localSturageSetItemAndFile(key, JSON.stringify(value));
+                    } else {
+                        // 文字列・数値・ブーリアン等は String 化して保存
+                        localSturageSetItemAndFile(key, String(value));
+                    }
+                });
+
+                const fileName = filePath.split(/[/\\]/).pop();
+                updateMessageOverlay(`📥 インポート: ${fileName}`);
+                setTimeout(() => {
+                    location.reload();
+                }, 300);
+            }
+
+            // 成功した場合は設定オブジェクトを返す
+            return settings;
+
+        } catch (error) {
+            console.error(`設定インポート失敗 (${attempt}/${maxRetries}回目):`, error);
+
+            // 最大リトライ回数に達していない場合は次のループ（リトライ）へ
+            if (attempt < maxRetries) {
+                // 必要に応じて短い待機時間を挟む場合は以下を有効化してください
+                // await new Promise(resolve => setTimeout(resolve, 500));
+                continue;
+            }
+
+            // 最終試行でエラーになった場合のメッセージ表示処理
             const errorMsg = (error instanceof SyntaxError)
                 ? '📥 設定ファイルの形式（JSON）が破損しています'
                 : '📥 設定のインポートに失敗しました';
+            
             updateMessageOverlay(errorMsg, 6000);
+            return null;
         }
-        return null;
     }
 }
 
