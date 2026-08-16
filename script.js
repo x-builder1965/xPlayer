@@ -1442,24 +1442,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 📥設定インポート
     importSettingsBtn.addEventListener('click', async () => {
-        if (isSecondary) {
-            // 重複起動時は警告メッセージを表示して処理を中断
-            updateMessageOverlay('📥 重複起動時は設定のインポートはできません', 6000);
-            return;
-        }
-
         await importSettingsFromFile();
     });
 
     // 📤設定エクスポート
     exportSettingsBtn.addEventListener('click', async () => {
+        await exportSettingsToFile();
         if (isSecondary) {
-            // 重複起動時は警告メッセージを表示して処理を中断
-            updateMessageOverlay('📤 重複起動時は設定のエクスポートはできません', 6000);
+            // 重複起動時は警告メッセージを表示
+            updateMessageOverlay('📤 【警告】重複起動中のため起動直後の設定をエクスポート', 6000);
             return;
         }
-
-        await exportSettingsToFile();
     });
 
     // ❌設定モード終了
