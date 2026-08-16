@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.24.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.25.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -712,8 +712,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // コントロールサイズ適用
     let controlSizeX = calculateControlSizeX();
     let controlSizeY = calculateControlSizeY();
-    localStorage.setItem('controlSizeX', controlSizeX);
-    localStorage.setItem('controlSizeY', controlSizeY);
+    localSturageSetItemAndFile('controlSizeX', controlSizeX);
+    localSturageSetItemAndFile('controlSizeY', controlSizeY);
     updateControlSize(controlSizeX, controlSizeY);
     adjustFilterPanelHeight();
     applyAspectRatioSetting();
@@ -851,7 +851,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     playPauseBtn.textContent = '⏸️';
                     playPauseBtn.classList.add('paused-active');
                     playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-                    localStorage.setItem('currentTime', videoPlayer.currentTime);
+                    localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
                     stopPeriodicSave();
                     showControlsAndFilename();
                     hideMessageOverlay();
@@ -936,7 +936,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             modeChangeBtn.textContent = modeChange === 'video' ? '🎬' : '🔄️';
             modeChangeBtn.setAttribute('data-tooltip', modeChange === 'video' ? '視聴モード（Ctrl+v）' : '変換モード（Ctrl+v）');
-            localStorage.setItem('modeChange', modeChange);
+            localSturageSetItemAndFile('modeChange', modeChange);
         } else {
             if (modeChange === 'convert') {
                 updateMessageOverlay('🎬 変換中は再生モード切替不可');
@@ -1045,7 +1045,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         videoPlayer.load();                     // src属性が無い状態でload → エラーにならない
         videoPreview.removeAttribute('src');
         videoPreview.load();
-        localStorage.setItem('currentTime', 0);
+        localSturageSetItemAndFile('currentTime', 0);
 
         // 4. UI更新（停止状態を強制）
         playPauseBtn.textContent = '⏸️';
@@ -1093,7 +1093,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             seekBar.value = (100 / videoPlayer.duration) * newTime;
             updateTimeDisplay();
             updateMessageOverlay(`🕓 ${formatTime(newTime)}`);
-            localStorage.setItem('currentTime', newTime);
+            localSturageSetItemAndFile('currentTime', newTime);
             showControlsAndFilename();
             updateIconOverlay();
         }
@@ -1108,7 +1108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             seekBar.value = (100 / videoPlayer.duration) * newTime;
             updateTimeDisplay();
             updateMessageOverlay(`🕓 ${formatTime(newTime)}`);
-            localStorage.setItem('currentTime', newTime);
+            localSturageSetItemAndFile('currentTime', newTime);
             showControlsAndFilename();
             updateIconOverlay();
         }
@@ -1148,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateVolumeDisplay();
         updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
         volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
-        localStorage.setItem('volume', videoPlayer.volume);
+        localSturageSetItemAndFile('volume', videoPlayer.volume);
         updateIconOverlay();
     });
 
@@ -1390,7 +1390,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     wallpaperBtn.style.background = '';
                 }
             }
-            localStorage.setItem('wallpaperPath', videoContainer.style.backgroundImage);
+            localSturageSetItemAndFile('wallpaperPath', videoContainer.style.backgroundImage);
             updateIconOverlay();
         } catch (e) {
             updateMessageOverlay('🖼️ 背景壁紙選択エラー', 6000);
@@ -1627,7 +1627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // メディア終了、次へ
     videoPlayer.addEventListener('ended', async () => {
         videoPlayer.currentTime = 0;
-        localStorage.setItem('currentTime', 0);
+        localSturageSetItemAndFile('currentTime', 0);
 
         // 一時ファイル削除
         await deleteTempVideo();
@@ -1697,8 +1697,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             translateY += deltaY;
             const scale = (100 + zoomValue) / 100;
             videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-            localStorage.setItem('translateX', translateX.toString());
-            localStorage.setItem('translateY', translateY.toString());
+            localSturageSetItemAndFile('translateX', translateX.toString());
+            localSturageSetItemAndFile('translateY', translateY.toString());
 
             updateIconOverlay();
             return;
@@ -1720,7 +1720,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 seekBar.value = (100 / videoPlayer.duration) * newTime;
                 updateTimeDisplay();
                 updateMessageOverlay(`🕓 ${formatTime(newTime)}`, 1000);
-                localStorage.setItem('currentTime', newTime);
+                localSturageSetItemAndFile('currentTime', newTime);
                 darkOverlay.style.display = 'block';
             } else if (absDeltaY > absDeltaX && absDeltaY > 5) {
                 isVolumeDragging = true;
@@ -1733,7 +1733,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
                 updateVolumeDisplay();
                 updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 1000);
-                localStorage.setItem('volume', videoPlayer.volume);
+                localSturageSetItemAndFile('volume', videoPlayer.volume);
             }
 
             dragStartX = event.clientX;
@@ -1835,7 +1835,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
         updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 1000);
-        localStorage.setItem('volume', videoPlayer.volume);
+        localSturageSetItemAndFile('volume', videoPlayer.volume);
         showControlsAndFilename();
         updateIconOverlay();
     });
@@ -1857,7 +1857,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!videoPlayer.duration) return;
         // 最後にユーザーがセットした値を優先して使う
         updateTimeDisplay();                       // 正しい時間で更新
-        localStorage.setItem('currentTime', videoPlayer.currentTime);
+        localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
     });
 
     // カット編集シークバー マウスクリック
@@ -1956,7 +1956,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!videoPlayer.duration) return;
         // 最後にユーザーがセットした値を優先して使う
         updateTimeDisplay();                       // 正しい時間で更新
-        localStorage.setItem('currentTime', videoPlayer.currentTime);
+        localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
     });
 
     // シークバー マウスクリック
@@ -2042,7 +2042,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
         updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
-        localStorage.setItem('volume', videoPlayer.volume);
+        localSturageSetItemAndFile('volume', videoPlayer.volume);
         updateIconOverlay();
     });
 
@@ -2081,7 +2081,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!isNaN(rate) && rate > 0) {
             currentPlaybackRate = rate;               // ← ここを追加
             videoPlayer.playbackRate = rate;
-            localStorage.setItem('playbackSpeed', rate);
+            localSturageSetItemAndFile('playbackSpeed', rate);
             updateMessageOverlay(`🏃‍♂️‍➡️ ${rate}x`);
         }
     });
@@ -3115,7 +3115,7 @@ document.addEventListener('keydown', async (event) => {
         volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
         updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
-        localStorage.setItem('volume', videoPlayer.volume);
+        localSturageSetItemAndFile('volume', videoPlayer.volume);
         showControlsAndFilename();
         updateIconOverlay();
         return;
@@ -3245,8 +3245,8 @@ window.addEventListener('resize', () => {
     
     const controlSizeX = calculateControlSizeX();
     const controlSizeY = calculateControlSizeY();
-    localStorage.setItem('controlSizeX', controlSizeX);
-    localStorage.setItem('controlSizeY', controlSizeY);
+    localSturageSetItemAndFile('controlSizeX', controlSizeX);
+    localSturageSetItemAndFile('controlSizeY', controlSizeY);
     updateControlSize(controlSizeX, controlSizeY);
     adjustFilterPanelHeight();
     applyAspectRatioSetting();
@@ -3936,10 +3936,10 @@ function applyZoom(zoomPercent) {
     // transform は translate(px,px) scale() の順に指定
     videoPlayer.style.transformOrigin = 'center center';
     videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-    localStorage.setItem('translateX', translateX.toString());
-    localStorage.setItem('translateY', translateY.toString());
+    localSturageSetItemAndFile('translateX', translateX.toString());
+    localSturageSetItemAndFile('translateY', translateY.toString());
     zoomValue = zoomPercent;
-    localStorage.setItem('zoom', zoomValue.toString());
+    localSturageSetItemAndFile('zoom', zoomValue.toString());
     zoomDisplay.textContent = `${zoomValue > 0 ? '+' : ''}${zoomValue}%`;
     if (isZoomMode) {
         updateMessageOverlay(`🔍 ${zoomValue > 0 ? '+' : ''}${zoomValue}%`);
@@ -3965,7 +3965,7 @@ function applyFitModeSetting(setFitMode) {
         fitModeBtn.setAttribute('data-tooltip', '画像を含む（Ctrl+x）');
     }
     videoPlayer.style.objectFit = fitMode;
-    localStorage.setItem('fitMode', fitMode);
+    localSturageSetItemAndFile('fitMode', fitMode);
     applyAspectRatioSetting();
 }
 
@@ -4008,7 +4008,7 @@ function applyAspectRatioSetting() {
 
     videoContainer.style.justifyContent = 'center';
     videoContainer.style.alignItems = 'center';
-    localStorage.setItem('aspectRatio', currentAspectRatio);
+    localSturageSetItemAndFile('aspectRatio', currentAspectRatio);
 
     if (aspectRatioBtn) {
         aspectRatioBtn.classList.toggle('aspectRatio-active', currentAspectRatio !== 'none');
@@ -4151,15 +4151,15 @@ async function importSettingsFromFile(targetFilePath = null) {
 
         // ダイアログ経由（手動インポート）の場合のみ localStorage を更新してリロード
         if (!targetFilePath) {
-            localStorage.clear();
+            localSturageClearAndFile();
             Object.entries(settings).forEach(([key, value]) => {
                 if (typeof value === 'object' && value !== null) {
                     // オブジェクトや配列は JSON 文字列化して localStorage に保存
-                    localStorage.setItem(key, JSON.stringify(value));
+                    localSturageSetItemAndFile(key, JSON.stringify(value));
                 } else {
                     // 文字列・数値・ブーリアン等は String 化して保存
                     // （旧フォーマットの二重化された JSON 文字列が来ても安全にそのまま保存されます）
-                    localStorage.setItem(key, String(value));
+                    localSturageSetItemAndFile(key, String(value));
                 }
             });
 
@@ -4306,7 +4306,7 @@ function startPeriodicSave() {
     if (saveInterval) clearInterval(saveInterval);
     saveInterval = setInterval(() => {
         if (!videoPlayer.paused && playlist.length > 0) {
-            localStorage.setItem('currentTime', videoPlayer.currentTime);
+            localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
         }
     }, 1000);
 }
@@ -4323,13 +4323,13 @@ function stopPeriodicSave() {
 function savePlaylistAndPlaybackState() {
     if (playlist.length > 0) {
         const playlistPaths = playlist.map(item => item.file.path);
-        localStorage.setItem('playlist', JSON.stringify(playlistPaths));
-        localStorage.setItem('currentVideoIndex', currentVideoIndex);
-        localStorage.setItem('currentTime', videoPlayer.currentTime || 0);
+        localSturageSetItemAndFile('playlist', JSON.stringify(playlistPaths));
+        localSturageSetItemAndFile('currentVideoIndex', currentVideoIndex);
+        localSturageSetItemAndFile('currentTime', videoPlayer.currentTime || 0);
     } else {
-        localStorage.removeItem('playlist');
-        localStorage.removeItem('currentVideoIndex');
-        localStorage.removeItem('currentTime');
+        localSturageRemoveItemAndFile('playlist');
+        localSturageRemoveItemAndFile('currentVideoIndex');
+        localSturageRemoveItemAndFile('currentTime');
     }
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     debouncedScrollCurrentFilterItem();
@@ -4442,7 +4442,7 @@ function adjustFilterPanelHeight() {
 function setPlaylistDisplayMode(mode) {
     if (!['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].includes(mode)) return;
     playlistDisplayMode = mode;
-    localStorage.setItem('playlistDisplayMode', mode);
+    localSturageSetItemAndFile('playlistDisplayMode', mode);
     if (filterList) {
         filterList.classList.remove('playlist-grid', 'playlist-grid-small', 'playlist-grid-medium', 'playlist-grid-large');
         if (['thumb-small', 'thumb-medium', 'thumb-large'].includes(mode)) {
@@ -4855,7 +4855,7 @@ function getFilteredIndices() {
 async function applySortFiltered(modeKey = currentSortMode) {
     if (!SORT_MODES[modeKey]) return;
     currentSortMode = modeKey;
-    localStorage.setItem('playlistSortMode', modeKey);
+    localSturageSetItemAndFile('playlistSortMode', modeKey);
 
     // ボタンのスタイル更新
     sortPlaylistBtn.classList.remove('sorted-active', 'random-sorted-active');
@@ -4986,7 +4986,7 @@ function updateRandomButtonUI() {
 function toggleRandomPlay() {
     const wasRandom = isRandomPlayMode;
     isRandomPlayMode = !isRandomPlayMode;
-    localStorage.setItem('isRandomPlayMode', isRandomPlayMode);
+    localSturageSetItemAndFile('isRandomPlayMode', isRandomPlayMode);
     updateRandomButtonUI();
 
     if (isRandomPlayMode && !wasRandom) {
@@ -5166,12 +5166,12 @@ function getNextVideoIndex() {
 // ランダム再生の状態を保存
 function saveShuffleState() {
     if (isRandomPlayMode) {
-        localStorage.setItem('shuffleOrder', JSON.stringify(shuffleOrder));
-        localStorage.setItem('shufflePosition', shufflePosition.toString());
+        localSturageSetItemAndFile('shuffleOrder', JSON.stringify(shuffleOrder));
+        localSturageSetItemAndFile('shufflePosition', shufflePosition.toString());
     } else {
         // ランダムOFFならクリア
-        localStorage.removeItem('shuffleOrder');
-        localStorage.removeItem('shufflePosition');
+        localSturageRemoveItemAndFile('shuffleOrder');
+        localSturageRemoveItemAndFile('shufflePosition');
     }
 }
 
@@ -5232,7 +5232,7 @@ async function playVideo(file, currentTime) {
         // 再生時間復元
         if (!isNaN(currentTime) && currentTime >= 0) {
             videoPlayer.currentTime = currentTime;
-            localStorage.setItem('currentTime', videoPlayer.currentTime);
+            localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
         }
     }
 
@@ -5351,7 +5351,7 @@ async function togglePlayPause() {
         playPauseBtn.textContent = '⏸️';
         playPauseBtn.classList.add('paused-active');
         playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-        localStorage.setItem('currentTime', videoPlayer.currentTime);
+        localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
         stopPeriodicSave();
     }
 
@@ -5633,7 +5633,7 @@ async function playlistAdd(videoFiles) {
     // 元の読み込み順（originalLoadOrder）にも追加パスを記録
     const newPaths = uniqueVideoFiles.map(file => file.path);
     originalLoadOrder.push(...newPaths);
-    localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
+    localSturageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
 
     // もし元々リストが空だった場合は先頭の曲を再生
     if (isFirstTime) {
@@ -5662,7 +5662,7 @@ async function playlistSet(videoFiles) {
     // ★ 元の読み込み順（Base順）を保存
     const currentPaths = videoFiles.map(file => file.path);
     originalLoadOrder = [...currentPaths];
-    localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
+    localSturageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
 
     // playlist を初期状態（ファイル取得順）でセット
     playlist = videoFiles.map(file => ({
@@ -5747,7 +5747,7 @@ function updateEditModeButtonUI() {
             playPauseBtn.textContent = '⏸️';
             playPauseBtn.classList.add('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-            localStorage.setItem('currentTime', videoPlayer.currentTime);
+            localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
             stopPeriodicSave();
         }
         editSeekBar.value = seekBar.value;
@@ -5816,7 +5816,7 @@ function insertFilesIntoPlaylist(files, addPosition = 0) {
     // ★ 追加後も「現在のプレイリスト順」を「なし」の基準とする
     const currentPaths = playlist.map(item => item.file.path);
     originalLoadOrder = [...currentPaths];
-    localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
+    localSturageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
 
     // shuffleOrder の最後に追加
     if (shuffleOrder && shuffleOrder.length > 0) {
@@ -5865,7 +5865,7 @@ async function removeFromPlaylist() {
     // --- originalLoadOrder から削除対象パスを除去して localStorage に保存 ---
     if (removedItem && Array.isArray(originalLoadOrder)) {
         originalLoadOrder = originalLoadOrder.filter(path => path !== removedItem.file.path);
-        localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
+        localSturageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
     }
     // ---------------------------------------------------------------------------------
 
@@ -5933,7 +5933,7 @@ async function clearPlaylist() {
 
     // ★ クリアしたら基準順もクリア
     originalLoadOrder = [];
-    localStorage.removeItem('originalLoadOrder');
+    localSturageRemoveItemAndFile('originalLoadOrder');
 
     savePlaylistAndPlaybackState();
     resetShuffle();
@@ -6073,7 +6073,7 @@ function setPlaybackRate(rate, showOverlay = true) {
     currentPlaybackRate = rate;                    // ← 追加
     videoPlayer.playbackRate = rate;
     if (speedSelect) speedSelect.value = parseFloat(rate).toFixed(2);
-    localStorage.setItem('playbackSpeed', rate);
+    localSturageSetItemAndFile('playbackSpeed', rate);
     if (showOverlay) {
         updateMessageOverlay(`🏃‍♂️‍➡️ ${rate}x`);
     }
@@ -6345,7 +6345,7 @@ function getPlaylistInOriginalOrder() {
         originalLoadOrder = storedOriginalOrder;
     } else if (!Array.isArray(originalLoadOrder) || originalLoadOrder.length !== playlist.length) {
         originalLoadOrder = playlist.map(item => item.file.path);
-        localStorage.setItem('originalLoadOrder', JSON.stringify(originalLoadOrder));
+        localSturageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
     }
 
     // パス → アイテムのマッピングを作成（高速検索用）
@@ -6410,7 +6410,7 @@ async function applySort(modeKey = currentSortMode) {
     if (!SORT_MODES[modeKey]) return;
 
     currentSortMode = modeKey;
-    localStorage.setItem('playlistSortMode', modeKey);
+    localSturageSetItemAndFile('playlistSortMode', modeKey);
 
     const prevCurrentPath = playlist[currentVideoIndex]?.file?.path;
 
@@ -6497,7 +6497,7 @@ if (isRepeatPlayMode === 'none') {
     } else {
         isRepeatPlayMode = 'none';
     }
-    localStorage.setItem('isRepeatPlayMode', isRepeatPlayMode);
+    localSturageSetItemAndFile('isRepeatPlayMode', isRepeatPlayMode);
     updateRepeatButtonUI();
 }
 
@@ -6933,15 +6933,16 @@ function selectTrackMenu(type, menu, fullLabel, trackObj = null) {
 
         currentSubtitleTrack = trackObj;
         selectedSubtitleLabel = trackObj ? getCleanLabel(fullLabel) : '（なし）';
-        selectedSubtitleLabel !== '（なし）' ? subtitleSelectBtn.classList.add('subtitles-active') : null;        localStorage.setItem('selectedSubtitleTrack', JSON.stringify(currentSubtitleTrack));
-        localStorage.setItem('selectedSubtitleLabel', selectedSubtitleLabel);
+        selectedSubtitleLabel !== '（なし）' ? subtitleSelectBtn.classList.add('subtitles-active') : null;
+        localSturageSetItemAndFile('selectedSubtitleTrack', JSON.stringify(currentSubtitleTrack));
+        localSturageSetItemAndFile('selectedSubtitleLabel', selectedSubtitleLabel);
     } else {
         updateVideoAudio(trackObj, currentTracks);
         
         currentAudioTrack = trackObj;
         selectedAudioLabel = trackObj ? getCleanLabel(fullLabel) : '日本語';
-        localStorage.setItem('selectedAudioTrack', JSON.stringify(currentSubtitleTrack));
-        localStorage.setItem('selectedAudioLabel', selectedAudioLabel);
+        localSturageSetItemAndFile('selectedAudioTrack', JSON.stringify(currentSubtitleTrack));
+        localSturageSetItemAndFile('selectedAudioLabel', selectedAudioLabel);
     }
 
     // メニュー閉じる処理など
@@ -7034,7 +7035,7 @@ function loadFilterHistory() {
 
 // フィルタ履歴をlocalStorageに保存
 function saveFilterHistory() {
-    localStorage.setItem('filterHistory', JSON.stringify(filterHistory));
+    localSturageSetItemAndFile('filterHistory', JSON.stringify(filterHistory));
 }
 
 // フィルタ履歴に項目を追加
@@ -7165,7 +7166,7 @@ async function toggleAlwaysOnTop() {
     if (typeof window.electronAPI?.setAlwaysOnTop === 'function') {
         await window.electronAPI.setAlwaysOnTop(isAlwaysOnTop);
     }
-    localStorage.setItem('alwaysOnTop', isAlwaysOnTop ? 'true' : 'false');
+    localSturageSetItemAndFile('alwaysOnTop', isAlwaysOnTop ? 'true' : 'false');
     updateAlwaysOnTopButtonUI();
 }
 
@@ -7301,7 +7302,7 @@ function updateAudioMotion() {
         }
     }
     
-    localStorage.setItem('audioMotionMode', audioMotionMode);
+    localSturageSetItemAndFile('audioMotionMode', audioMotionMode);
 
     const visualizerContainer = document.getElementById('visualizerContainer');
     const audioPlayer = document.getElementById('audioPlayer');
@@ -7372,7 +7373,7 @@ function toggleVisualizer(show) {
 // DEFAULT_AUDIO_MOTION_OPTIONS を localStorage に保存する
 function saveAudioMotionOptions() {
     try {
-        localStorage.setItem('audioMotionOptions', JSON.stringify(DEFAULT_AUDIO_MOTION_OPTIONS));
+        localSturageSetItemAndFile('audioMotionOptions', JSON.stringify(DEFAULT_AUDIO_MOTION_OPTIONS));
     } catch (err) {
         console.error('DEFAULT_AUDIO_MOTION_OPTIONS の保存に失敗しました:', err);
     }
@@ -7400,7 +7401,7 @@ function loadAudioMotionOptions() {
 // AUDIOMOTION_NODES を localStorage に保存する
 function saveAudioMotionNodes() {
     try {
-        localStorage.setItem('audioMotionNodes', JSON.stringify(AUDIOMOTION_NODES));
+        localSturageSetItemAndFile('audioMotionNodes', JSON.stringify(AUDIOMOTION_NODES));
     } catch (err) {
         console.error('AUDIOMOTION_NODES の保存に失敗しました:', err);
     }
@@ -7421,5 +7422,29 @@ function loadAudioMotionNodes() {
         }
     } else {
         saveAudioMotionNodes();
+    }
+}
+
+// localStorageバックアップファイル更新付きlocalStrage.setItem
+async function localSturageSetItemAndFile(key, value) {
+    if (!isSecondary) {
+        localStorage.setItem(key, value);
+        await exportSettingsToFile(settingsFilePath, true);
+    }
+}
+
+// localStorageバックアップファイル更新付きlocalStrage.removeItem
+async function localSturageRemoveItemAndFile(key) {
+    if (!isSecondary) {
+        localStorage.removeItem(key);
+        await exportSettingsToFile(settingsFilePath, true);
+    }
+}
+
+// localStorageバックアップファイル更新付きlocalStrage.clear
+async function localSturageClearAndFile() {
+    if (!isSecondary) {
+        localStorage.clear();
+        await exportSettingsToFile(settingsFilePath, true);
     }
 }
