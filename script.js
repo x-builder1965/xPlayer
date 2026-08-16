@@ -50,6 +50,7 @@ const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac
 const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
 const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
+const settingsFilePath = getUserSettingsPath();
 
 const SORT_MODES = {
     none:       { label: '（なし）',     fn: () => getPlaylistInOriginalOrder() },
@@ -516,10 +517,13 @@ let currentMediaType = 'video';
 let audioMotion = null;
 let audioMotionMode = null;
 let lastRandomPreset = null;		// 直前にランダムで選ばれたプリセットを保持する変数（関数の外に定義）
+let isSecondary = null;
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
 document.addEventListener('DOMContentLoaded', async () => {
+    // 重複起動（セカンダリインスタンス）判定
+    isSecondary = await window.electronAPI.checkIsSecondaryInstance();
     // DOM要素を取得
     allDOMsetting();
     // まず重複起動時の localStorage 書き込み防止を設定
@@ -819,12 +823,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // 引数なし → プレイリストと再生状態復元
-        if (savedPlaylist && savedCurrentVideoIndex && savedCurrentTime) {
+        // savedCurrentVideoIndex が 0 であっても通過できるように修正
+        if (savedPlaylist && savedCurrentVideoIndex != null && savedCurrentTime != null) {
             try {
-                // 変数名を parsedPlaylist に統一
-                const parsedPlaylist = safeJSONParse(savedPlaylist, []);
+                // すでに配列の場合はそのまま、文字列の場合は JSON Parse
+                const parsedPlaylist = typeof savedPlaylist === 'string' 
+                    ? safeJSONParse(savedPlaylist, []) 
+                    : savedPlaylist;
                 const parsedCurrentVideoIndex = parseInt(savedCurrentVideoIndex, 10);
-                if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0 && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
+                if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0 && 
+                    !isNaN(parsedCurrentVideoIndex) && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
                     updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
                     playlist = parsedPlaylist.map(path => ({
                         file: { path },
@@ -835,7 +843,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     debouncedUpdateFilterList();
                     debouncedScrollCurrentFilterItem();
                     await playVideo(playlist[currentVideoIndex].file, savedCurrentTime);
-                    // 常に一時停止、アプリ起動後5ms後に強制トリガー
                     setTimeout(() => {
                         if (videoPlayer.src) {
                             videoPlayer.play().then(() => videoPlayer.pause()).catch(() => {});
@@ -1435,9 +1442,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 📥設定インポート
     importSettingsBtn.addEventListener('click', async () => {
-        // 重複起動（セカンダリインスタンス）判定
-        const isSecondary = await window.electronAPI.checkIsSecondaryInstance();
-
         if (isSecondary) {
             // 重複起動時は警告メッセージを表示して処理を中断
             updateMessageOverlay('📥 重複起動時は設定のインポートはできません', 6000);
@@ -1449,9 +1453,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 📤設定エクスポート
     exportSettingsBtn.addEventListener('click', async () => {
-        // 重複起動（セカンダリインスタンス）判定
-        const isSecondary = await window.electronAPI.checkIsSecondaryInstance();
-
         if (isSecondary) {
             // 重複起動時は警告メッセージを表示して処理を中断
             updateMessageOverlay('📤 重複起動時は設定のエクスポートはできません', 6000);
@@ -3534,9 +3535,6 @@ async function checkInstance() {
 
 // 重複起動時の localStorage 書き込み防止処理
 async function setupLocalStorageProtection() {
-    // メインプロセスへ重複起動かを問い合わせ
-    const isSecondary = await window.electronAPI.checkIsSecondaryInstance();
-
     if (isSecondary) {
         console.warn('⚠️ 重複起動を検知しました。localStorage への書き込みを無効化します。');
 
@@ -3565,9 +3563,6 @@ async function setupLocalStorageProtection() {
 
 // localStorage から復元 (非同期化)
 async function allLocalStorageSetting() {
-    const isSecondary = await window.electronAPI.checkIsSecondaryInstance();
-    const settingsFilePath = getUserSettingsPath();
-
     if (!isSecondary) {
         // --- 初回起動時 ---
         appNameAndCopyright.textContent = appNameAndCopyrightValue;
@@ -4086,7 +4081,7 @@ function createAudioMotionMenu() {
 }
 
 // 設定のエクスポート
-async function exportSettingsToFile(targetFilePath = null) {
+async function exportSettingsToFile(targetFilePath = null, noMessage = false) {
     try {
         let filePath = targetFilePath;
 
@@ -4121,13 +4116,13 @@ async function exportSettingsToFile(targetFilePath = null) {
         await fs.writeFile(filePath, JSON.stringify(settings, null, 2), 'utf8');
 
         // ダイアログ経由（手動エクスポート）の場合のみオーバーレイメッセージを表示
-        if (!targetFilePath) {
+        if (!targetFilePath && !noMessage) {
             const fileName = filePath.split(/[/\\]/).pop();
             updateMessageOverlay(`📤 エクスポート: ${fileName}`);
         }
     } catch (error) {
         console.error('設定エクスポート失敗:', error);
-        if (!targetFilePath) {
+        if (!targetFilePath && !noMessage) {
             updateMessageOverlay('📤 設定のエクスポートに失敗しました', 6000);
         }
     }

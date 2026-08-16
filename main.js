@@ -513,8 +513,16 @@ ipcMain.handle('open-wallpaper-dialog', async () => {
 
 // コマンドライン引数取得
 ipcMain.handle('get-command-line-args', () => {
-    const args = process.argv.slice(app.isPackaged ? 1 : 2);
-    return args.length > 0 ? args : null;
+    const rawArgs = process.argv.slice(app.isPackaged ? 1 : 2);
+    
+    // 特定のデバッグ引数やフラグを除外する
+    const filteredArgs = rawArgs.filter(arg => 
+        !arg.startsWith('--remote-debugging-port=') &&
+        !arg.startsWith('--inspect=') &&
+        !arg.startsWith('--inspect-brk=')
+    );
+
+    return filteredArgs.length > 0 ? filteredArgs : null;
 });
 
 // コマンドライン引数処理（レンダラー用）
