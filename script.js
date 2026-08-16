@@ -1447,6 +1447,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 📤設定エクスポート
     exportSettingsBtn.addEventListener('click', async () => {
+        if (isSecondary) {
+            // 重複起動時は警告メッセージを表示して処理を中断
+            updateMessageOverlay('📤 重複起動時は設定のエクスポートはできません', 6000);
+            return;
+        }
         await exportSettingsToFile();
     });
 
