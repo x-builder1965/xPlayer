@@ -683,8 +683,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ランダム再生リスト復元
     if (savedShuffleOrder) {
         try {
-            const parsedPlaylist = JSON.parse(savedPlaylist);
-            shuffleOrder = JSON.parse(savedShuffleOrder);
+            // 変数名を parsedPlaylist に統一
+            const parsedPlaylist = safeJSONParse(savedPlaylist, []);
+            shuffleOrder = safeJSONParse(savedShuffleOrder, []);
+            
             // プレイリストの長さが変わっていたら無効化
             if (!Array.isArray(shuffleOrder) || shuffleOrder.length !== parsedPlaylist.length) {
                 shuffleOrder = [];
@@ -809,7 +811,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 引数なし → 状態復元
         if (savedOriginalOrder) {
             try {
-                originalLoadOrder = JSON.parse(savedOriginalOrder);
+                originalLoadOrder = safeJSONParse(savedOriginalOrder, []);
             } catch (e) {
                 console.warn('originalLoadOrder の復元に失敗:', e);
                 originalLoadOrder = [];
@@ -819,8 +821,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 引数なし → プレイリストと再生状態復元
         if (savedPlaylist && savedCurrentVideoIndex && savedCurrentTime) {
             try {
-                const parsedPlaylist = JSON.parse(savedPlaylist);
-                const parsedCurrentVideoIndex = parseInt(savedCurrentVideoIndex);
+                // 変数名を parsedPlaylist に統一
+                const parsedPlaylist = safeJSONParse(savedPlaylist, []);
+                const parsedCurrentVideoIndex = parseInt(savedCurrentVideoIndex, 10);
                 if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0 && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
                     updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
                     playlist = parsedPlaylist.map(path => ({
@@ -1432,11 +1435,29 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 📥設定インポート
     importSettingsBtn.addEventListener('click', async () => {
+        // 重複起動（セカンダリインスタンス）判定
+        const isSecondary = await window.electronAPI.checkIsSecondaryInstance();
+
+        if (isSecondary) {
+            // 重複起動時は警告メッセージを表示して処理を中断
+            updateMessageOverlay('📥 重複起動時は設定のインポートはできません', 6000);
+            return;
+        }
+
         await importSettingsFromFile();
     });
 
     // 📤設定エクスポート
     exportSettingsBtn.addEventListener('click', async () => {
+        // 重複起動（セカンダリインスタンス）判定
+        const isSecondary = await window.electronAPI.checkIsSecondaryInstance();
+
+        if (isSecondary) {
+            // 重複起動時は警告メッセージを表示して処理を中断
+            updateMessageOverlay('📤 重複起動時は設定のエクスポートはできません', 6000);
+            return;
+        }
+
         await exportSettingsToFile();
     });
 
@@ -1697,7 +1718,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 videoPlayer.currentTime = newTime;
                 seekBar.value = (100 / videoPlayer.duration) * newTime;
                 updateTimeDisplay();
-                updateMessageOverlay(`🕓 ${formatTime(newTime)}`, 500);
+                updateMessageOverlay(`🕓 ${formatTime(newTime)}`, 1000);
                 localStorage.setItem('currentTime', newTime);
                 darkOverlay.style.display = 'block';
             } else if (absDeltaY > absDeltaX && absDeltaY > 5) {
@@ -1710,7 +1731,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
                 volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
                 updateVolumeDisplay();
-                updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 500);
+                updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 1000);
                 localStorage.setItem('volume', videoPlayer.volume);
             }
 
@@ -1793,7 +1814,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             applyZoom(newZoom);
 
             // フィードバック表示（任意だがおすすめ）
-            updateMessageOverlay(`🔍 ${newZoom > 0 ? '+' : ''}${newZoom}%`, 500);
+            updateMessageOverlay(`🔍 ${newZoom > 0 ? '+' : ''}${newZoom}%`, 1000);
 
             return;  // ここで終了 → 音量調整には行かない
         }
@@ -1812,7 +1833,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
         volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
-        updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 500);
+        updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 1000);
         localStorage.setItem('volume', videoPlayer.volume);
         showControlsAndFilename();
         updateIconOverlay();
@@ -6285,12 +6306,41 @@ async function sortByCreationTime(ascending = true) {
 function getStoredOriginalLoadOrder() {
     try {
         if (!originalLoadOrder) return [];
-        const parsed = JSON.parse(originalLoadOrder);
-        return Array.isArray(parsed) ? parsed : [];
+        
+        // 既に配列になっている場合はそのまま返す
+        if (Array.isArray(originalLoadOrder)) {
+            return originalLoadOrder;
+        }
+
+        // 文字列の場合は JSON.parse を試みる
+        if (typeof originalLoadOrder === 'string') {
+            const parsed = JSON.parse(originalLoadOrder);
+            return Array.isArray(parsed) ? parsed : [];
+        }
+
+        return [];
     } catch (e) {
         console.warn('originalLoadOrder の復元に失敗:', e);
         return [];
     }
+}
+
+// 安全に JSON パースを行うヘルパー関数
+// @param {any} input - パース対象の値
+// @param {any} fallback - エラー時または無効な場合のデフォルト値
+function safeJSONParse(input, fallback = []) {
+    if (!input) return fallback;
+    // 既に配列やオブジェクトの場合はそのまま返す
+    if (typeof input === 'object') return input;
+    
+    if (typeof input === 'string') {
+        try {
+            return JSON.parse(input);
+        } catch (e) {
+            return fallback;
+        }
+    }
+    return fallback;
 }
 
 // 元の順番でプレイリストを再構築するヘルパー関数
