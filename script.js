@@ -1447,11 +1447,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 📤設定エクスポート
     exportSettingsBtn.addEventListener('click', async () => {
-        if (isSecondary) {
-            // 重複起動時は警告メッセージを表示して処理を中断
-            updateMessageOverlay('📤 重複起動時は設定のエクスポートはできません', 6000);
-            return;
-        }
         await exportSettingsToFile();
     });
 
@@ -4075,7 +4070,12 @@ function createAudioMotionMenu() {
 
 // 設定のエクスポート
 async function exportSettingsToFile(targetFilePath = null) {
-    if (isSecondary && targetFilePath) return;
+    if (isSecondary) {
+        // 重複起動時は警告メッセージを表示して処理を中断
+        updateMessageOverlay('📤 重複起動時は設定のエクスポートはできません', 6000);
+        return;
+    }
+
     // targetFilePath指定あり＝初回起動
     try {
         let filePath = targetFilePath;
@@ -4091,24 +4091,17 @@ async function exportSettingsToFile(targetFilePath = null) {
         }
 
         let settings = {};
-        if (!isSecondary) {
-            // localStorage の内容をオブジェクトにまとめる
-            for (let i = 0; i < localStorage.length; i += 1) {
-                const key = localStorage.key(i);
-                if (key) {
-                    const rawValue = localStorage.getItem(key);
-                    try {
-                        settings[key] = JSON.parse(rawValue);
-                    } catch {
-                        settings[key] = rawValue;
-                    }
+        // localStorage の内容をオブジェクトにまとめる
+        for (let i = 0; i < localStorage.length; i += 1) {
+            const key = localStorage.key(i);
+            if (key) {
+                const rawValue = localStorage.getItem(key);
+                try {
+                    settings[key] = JSON.parse(rawValue);
+                } catch {
+                    settings[key] = rawValue;
                 }
             }
-        } else {
-            // 1. ファイルから文字列として読み込む
-            const fileData = await fs.readFile(settingsFilePath, 'utf8');
-            // 2. オブジェクトにパース（二重シリアライズを防ぐ）
-            settings = JSON.parse(fileData);
         }
         // 指定されたパスにエクスポート（どちらの分岐を通っても正しいオブジェクト構造でシリアライズされる）
         await fs.writeFile(filePath, JSON.stringify(settings, null, 2), 'utf8');
@@ -4116,12 +4109,7 @@ async function exportSettingsToFile(targetFilePath = null) {
         // ダイアログ経由（手動エクスポート）の場合のみオーバーレイメッセージを表示
         if (!targetFilePath) {
             const fileName = filePath.split(/[/\\]/).pop();
-            if (!isSecondary) {
-                updateMessageOverlay(`📤 エクスポート: ${fileName}`);
-            } else {
-                // 重複起動時は警告メッセージを表示
-                updateMessageOverlay(`📤 エクスポート（起動時点）: ${fileName}`);
-            }
+            updateMessageOverlay(`📤 エクスポート: ${fileName}`);
         }
     } catch (error) {
         console.error('設定エクスポート失敗:', error);
