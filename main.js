@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.20.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.26.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -317,7 +317,13 @@ async function extractSubtitlesOnly(inputPath, baseName, outDir, metadata) {
 app.whenReady().then(() => {
     mainWindow = createWindow();
 
-    mainWindow.webContents.once('did-finish-load', async () => {
+    // 初回ロード判定用フラグ
+    let isInitialLoad = true;
+    mainWindow.webContents.on('did-finish-load', async () => {
+        // リロード時など2回目以降のロード時は引数処理を行わない
+        if (!isInitialLoad) return;
+        isInitialLoad = false;
+
         try {
             // パッケージ化の有無で開始インデックスを調整
             const rawArgs = process.argv.slice(app.isPackaged ? 1 : 2);
@@ -342,7 +348,10 @@ app.whenReady().then(() => {
             const uniqueFiles = [...new Set(allFiles)];
 
             if (uniqueFiles.length > 0) {
-                mainWindow.webContents.send('auto-play-files', uniqueFiles);
+                // 起動直後のsend('auto-play-files')の伝送不良対応のため待機
+                setTimeout(async () => {
+                    mainWindow.webContents.send('auto-play-files', uniqueFiles);
+                }, 1000);
             }
         } catch (err) {
             console.error('コマンドライン自動再生エラー:', err);

@@ -1,12 +1,13 @@
 // ---------------------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.25.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.26.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
 const { 
     ipcRenderer, 
+    checkIsSecondaryInstance,
     fs, 
     os, 
     path, 
@@ -35,7 +36,7 @@ const {
     cutVideoMultiple,
     getVideoTracks,
     openWallpaperDialog,
-    checkIsSecondaryInstance
+    getPid
 } = window.electronAPI;
 
 // 固定値設定
@@ -51,6 +52,7 @@ const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
 const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
 const settingsFilePath = getUserSettingsPath();
+const pid = getPid();
 
 const SORT_MODES = {
     none:       { label: '（なし）',     fn: () => getPlaylistInOriginalOrder() },
@@ -443,6 +445,7 @@ let savedAudioMotionOptions = null;
 let savedAudioMotionNodes = null;
 
 // グローバル（共通）変数
+let localSettings = {};     // localSettingsをオブジェクトとして初期化
 let Initializing = true;
 let playlist = [];
 let currentVideoIndex = 0;
@@ -530,6 +533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await setupLocalStorageProtection();
     // localStorageからの復元
     await allLocalStorageSetting();
+    await saveAllLocalSettings();
 
     // メディア初期化（未設定状態）
     videoPlayer.removeAttribute('src');
@@ -804,9 +808,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // プレイリストと再生状態の復元
     (async () => {
+        // リロード判定（PerformanceNavigationTiming API）
+        const navEntries = performance.getEntriesByType('navigation');
+        const isReload = navEntries.length > 0 && navEntries[0].type === 'reload';
         // 起動時の引数有無判定
         const args = await getCommandLineArgs();
-        if (args && args.length > 0) {
+        if (!isReload && args && args.length > 0) {
             updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
             // main.js が auto-play-files を送信するので、ここでは何もしない
             return;
@@ -3266,15 +3273,12 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
         }
     };
 
-    // 起動直後のdocument.loading取得不良の対処のため100msの待機
-    setTimeout(async () => {
-        // did-finish-load 後に送信されるため、DOM読み込みは通常完了しています
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', runAutoPlay, { once: true });
-        } else {
-            await runAutoPlay();
-        }
-    }, 100);
+    // did-finish-load 後に送信されるため、DOM読み込みは通常完了しています
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runAutoPlay, { once: true });
+    } else {
+        await runAutoPlay();
+    }
 });
 
 // 変換進捗受信
@@ -3554,9 +3558,10 @@ async function allLocalStorageSetting() {
     if (!isSecondary) {
         // --- 初回起動時 ---
         appNameAndCopyright.textContent = appNameAndCopyrightValue;
-        // 【追加】先に AUDIOMOTION_NODES を復元・初期化
+        // 先に AUDIOMOTION_NODES を復元・初期化
         loadAudioMotionOptions();
         loadAudioMotionNodes();
+
         // 1. localStorage から値を取得し対象変数に設定
         savedVolume = localStorage.getItem('volume');
         savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
@@ -3584,7 +3589,6 @@ async function allLocalStorageSetting() {
         savedAudioMotionMode = localStorage.getItem('audioMotionMode');
         savedFilterHistory = localStorage.getItem('filterHistory');
         savedOriginalOrder = localStorage.getItem('originalLoadOrder');
-        // 【追加】NODE設定（JSON文字列）を取得
         savedAudioMotionOptions = localStorage.getItem('audioMotionOptions');
         savedAudioMotionNodes = localStorage.getItem('audioMotionNodes');
 
@@ -3592,12 +3596,37 @@ async function allLocalStorageSetting() {
         await exportSettingsToFile(settingsFilePath);
     } else {
         // --- 重複起動時 ---
-        appNameAndCopyright.textContent = `🚫${appNameAndCopyrightValue}}`;
-        // 1. ユーザーフォルダの xPlayerSettings.json を読込
-        const loadedSettings = await importSettingsFromFile(settingsFilePath);
+        appNameAndCopyright.textContent = `🚫${appNameAndCopyrightValue}`;
 
+        // pid（プロセスID）を取得して個別の設定ファイルパスを生成
+        const pidSettingsFilePath = settingsFilePath.replace(/\.json$/, `_${pid}.json`);
+
+        // xPlayerSettings_(pid).json の存在確認
+        let hasPidFile = false;
+        try {
+            await fs.access(pidSettingsFilePath);
+            hasPidFile = true;
+        } catch {
+            hasPidFile = false;
+        }
+
+        let loadedSettings = null;
+        if (hasPidFile) {
+            // 手動インポート：importSettingsFromFile(xPlayerSettings_(pid).json) で実行
+            loadedSettings = await importSettingsFromFile(pidSettingsFilePath);
+            // xPlayerSettings_(pid).json を削除
+            try {
+                await fs.unlink(pidSettingsFilePath);
+            } catch (e) {
+                console.error(`ファイル削除失敗 (${pidSettingsFilePath}):`, e);
+            }
+        } else {
+            // 自動インポート：importSettingsFromFile(xPlayerSettings.json) で実行
+            loadedSettings = await importSettingsFromFile(settingsFilePath);
+        }
+
+        // 戻り値（importSettingsFromFile の設定オブジェクト）→ 各 saved変数
         if (loadedSettings) {
-            // 2. 取得情報を対象変数に設定
             savedVolume = loadedSettings['volume'] ?? null;
             savedPlaybackSpeed = loadedSettings['playbackSpeed'] ?? null;
             savedPlaylist = loadedSettings['playlist'] ?? null;
@@ -3624,7 +3653,10 @@ async function allLocalStorageSetting() {
             savedAudioMotionMode = loadedSettings['audioMotionMode'] ?? null;
             savedFilterHistory = loadedSettings['filterHistory'] ?? null;
             savedOriginalOrder = loadedSettings['originalLoadOrder'] ?? null;
-            // 【追加】JSONファイルから DEFAULT_AUDIO_MOTION_OPTIONS を復元
+            savedAudioMotionOptions = loadedSettings['audioMotionOptions'] ?? null;
+            savedAudioMotionNodes = loadedSettings['audioMotionNodes'] ?? null;
+
+            // JSONファイルから DEFAULT_AUDIO_MOTION_OPTIONS を復元
             if (loadedSettings['audioMotionOptions']) {
                 try {
                     const parsed = typeof loadedSettings['audioMotionOptions'] === 'string'
@@ -3635,7 +3667,7 @@ async function allLocalStorageSetting() {
                     console.error('audioMotionOptions の復元エラー:', e);
                 }
             }
-            // 【追加】JSONファイルから AUDIOMOTION_NODES を復元
+            // JSONファイルから AUDIOMOTION_NODES を復元
             if (loadedSettings['audioMotionNodes']) {
                 try {
                     const parsed = typeof loadedSettings['audioMotionNodes'] === 'string' 
@@ -4070,13 +4102,6 @@ function createAudioMotionMenu() {
 
 // 設定のエクスポート
 async function exportSettingsToFile(targetFilePath = null) {
-    if (isSecondary && !targetFilePath) {
-        // 重複起動時は警告メッセージを表示して処理を中断
-        updateMessageOverlay('📤 重複起動時は設定のエクスポートはできません', 6000);
-        return;
-    }
-
-    // targetFilePath指定あり＝初回起動
     try {
         let filePath = targetFilePath;
         // 引数の保存先ファイルパスが Null の場合
@@ -4091,18 +4116,25 @@ async function exportSettingsToFile(targetFilePath = null) {
         }
 
         let settings = {};
-        // localStorage の内容をオブジェクトにまとめる
-        for (let i = 0; i < localStorage.length; i += 1) {
-            const key = localStorage.key(i);
-            if (key) {
-                const rawValue = localStorage.getItem(key);
-                try {
-                    settings[key] = JSON.parse(rawValue);
-                } catch {
-                    settings[key] = rawValue;
+        if (!isSecondary) {
+            // localStorage の内容をオブジェクトにまとめる
+            for (let i = 0; i < localStorage.length; i += 1) {
+                const key = localStorage.key(i);
+                if (key) {
+                    const rawValue = localStorage.getItem(key);
+                    try {
+                        settings[key] = JSON.parse(rawValue);
+                    } catch {
+                        settings[key] = rawValue;
+                    }
                 }
             }
+        } else {
+            // localSettings の内容をオブジェクトにまとめる
+            // (localSettings がオブジェクトとして管理されているため、そのまま参照またはコピー)
+            settings = { ...localSettings };
         }
+
         // 指定されたパスにエクスポート（どちらの分岐を通っても正しいオブジェクト構造でシリアライズされる）
         await fs.writeFile(filePath, JSON.stringify(settings, null, 2), 'utf8');
 
@@ -4121,7 +4153,6 @@ async function exportSettingsToFile(targetFilePath = null) {
 
 // 設定のインポート
 async function importSettingsFromFile(targetFilePath = null) {
-    // targetFilePath 指定時のみリトライ（最大3回）、指定なし（ダイアログ経由）は1回のみ実行
     const maxRetries = targetFilePath ? 3 : 1;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -4144,19 +4175,25 @@ async function importSettingsFromFile(targetFilePath = null) {
                 throw new Error('設定ファイルの形式が正しくありません');
             }
 
-            // ダイアログ経由（手動インポート）の場合のみ localStorage を更新してリロード
+            // ファイル指定なし（手動インポート）の場合
             if (!targetFilePath) {
-                localSturageClearAndFile();
-                Object.entries(settings).forEach(([key, value]) => {
-                    if (typeof value === 'object' && value !== null) {
-                        // オブジェクトや配列は JSON 文字列化して localStorage に保存
-                        localSturageSetItemAndFile(key, JSON.stringify(value));
-                    } else {
-                        // 文字列・数値・ブーリアン等は String 化して保存
-                        localSturageSetItemAndFile(key, String(value));
-                    }
-                });
+                if (!isSecondary) {
+                    // 初回起動時：設定ファイル→localStorage
+                    localSturageClearAndFile();
+                    Object.entries(settings).forEach(([key, value]) => {
+                        if (typeof value === 'object' && value !== null) {
+                            localSturageSetItemAndFile(key, JSON.stringify(value));
+                        } else {
+                            localSturageSetItemAndFile(key, String(value));
+                        }
+                    });
+                } else {
+                    // 重複起動時：pidを取得して設定ファイル→xPlayerSettings_(pid).json出力
+                    const pidSettingsFilePath = settingsFilePath.replace(/\.json$/, `_${pid}.json`);
+                    await fs.writeFile(pidSettingsFilePath, JSON.stringify(settings, null, 2), 'utf8');
+                }
 
+                // 強制リロード
                 const fileName = filePath.split(/[/\\]/).pop();
                 updateMessageOverlay(`📥 インポート: ${fileName}`);
                 setTimeout(() => {
@@ -4164,20 +4201,16 @@ async function importSettingsFromFile(targetFilePath = null) {
                 }, 300);
             }
 
-            // 成功した場合は設定オブジェクトを返す
+            // settings変数を返却
             return settings;
 
         } catch (error) {
             console.error(`設定インポート失敗 (${attempt}/${maxRetries}回目):`, error);
 
-            // 最大リトライ回数に達していない場合は次のループ（リトライ）へ
             if (attempt < maxRetries) {
-                // 必要に応じて短い待機時間を挟む場合は以下を有効化してください
-                // await new Promise(resolve => setTimeout(resolve, 500));
                 continue;
             }
 
-            // 最終試行でエラーになった場合のメッセージ表示処理
             const errorMsg = (error instanceof SyntaxError)
                 ? '📥 設定ファイルの形式（JSON）が破損しています'
                 : '📥 設定のインポートに失敗しました';
@@ -7430,14 +7463,38 @@ function loadAudioMotionNodes() {
 
 // localStorageバックアップファイル更新付きlocalStrage.setItem
 async function localSturageSetItemAndFile(key, value) {
+    let parsedValue = value;
+    let stringValue = value;
+
+    if (typeof value === 'string') {
+        // value がすでに JSON 文字列化されている場合はオブジェクトに復元（二重化防止）
+        try {
+            parsedValue = JSON.parse(value);
+        } catch (e) {
+            // 通常の文字列の場合はそのまま保持
+            parsedValue = value;
+        }
+    } else {
+        // value がオブジェクト/配列等の場合は JSON 文字列に変換
+        stringValue = JSON.stringify(value);
+    }
+    // 1. メモリ上のオブジェクトには生データ（オブジェクト/配列/基本型）を保持
+    localSettings[key] = parsedValue;
+
     if (!isSecondary) {
-        localStorage.setItem(key, value);
+        // 2. localStorage には文字列化されたデータを保存
+        localStorage.setItem(key, stringValue);
+        // 3. ファイルへ保存
         await exportSettingsToFile(settingsFilePath);
     }
 }
 
+
 // localStorageバックアップファイル更新付きlocalStrage.removeItem
 async function localSturageRemoveItemAndFile(key) {
+    // メモリ上のオブジェクトから削除
+    delete localSettings[key];
+        
     if (!isSecondary) {
         localStorage.removeItem(key);
         await exportSettingsToFile(settingsFilePath);
@@ -7446,8 +7503,43 @@ async function localSturageRemoveItemAndFile(key) {
 
 // localStorageバックアップファイル更新付きlocalStrage.clear
 async function localSturageClearAndFile() {
+    // メモリ上のオブジェクトを空にする
+    localSettings = {};
+
     if (!isSecondary) {
         localStorage.clear();
         await exportSettingsToFile(settingsFilePath);
     }
+}
+
+// 各設定値を localSettings, localStorage, ファイルへ保存
+async function saveAllLocalSettings() {
+    await localSturageSetItemAndFile('volume', savedVolume);
+    await localSturageSetItemAndFile('playbackSpeed', savedPlaybackSpeed);
+    await localSturageSetItemAndFile('playlist', savedPlaylist);
+    await localSturageSetItemAndFile('currentVideoIndex', savedCurrentVideoIndex);
+    await localSturageSetItemAndFile('currentTime', savedCurrentTime);
+    await localSturageSetItemAndFile('fitMode', savedFitMode);
+    await localSturageSetItemAndFile('zoom', savedZoom);
+    await localSturageSetItemAndFile('translateX', savedTranslateX);
+    await localSturageSetItemAndFile('translateY', savedTranslateY);
+    await localSturageSetItemAndFile('editFrameRate', savedEditFrameRate);
+    await localSturageSetItemAndFile('isRandomPlayMode', savedIsRandomPlayMode);
+    await localSturageSetItemAndFile('isRepeatPlayMode', savedIsRepeatPlayMode);
+    await localSturageSetItemAndFile('shuffleOrder', savedShuffleOrder);
+    await localSturageSetItemAndFile('shufflePosition', savedShufflePosition);
+    await localSturageSetItemAndFile('aspectRatio', savedAspectRatio);
+    await localSturageSetItemAndFile('playlistSortMode', savedCurrentSortMode);
+    await localSturageSetItemAndFile('playlistDisplayMode', savedPlaylistDisplayMode);
+    await localSturageSetItemAndFile('selectedAudioLabel', savedSelectedAudioLabel);
+    await localSturageSetItemAndFile('selectedAudioTrack', savedSelectedAudioTrack);
+    await localSturageSetItemAndFile('selectedSubtitleLabel', savedSelectedSubtitleLabel);
+    await localSturageSetItemAndFile('selectedSubtitleTrack', savedSelectedSubtitleTrack);
+    await localSturageSetItemAndFile('wallpaperPath', savedWallpaperPath);
+    await localSturageSetItemAndFile('alwaysOnTop', savedAlwaysOnTop);
+    await localSturageSetItemAndFile('audioMotionMode', savedAudioMotionMode);
+    await localSturageSetItemAndFile('filterHistory', savedFilterHistory);
+    await localSturageSetItemAndFile('originalLoadOrder', savedOriginalOrder);
+    await localSturageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
+    await localSturageSetItemAndFile('audioMotionNodes', savedAudioMotionNodes);
 }
