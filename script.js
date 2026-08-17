@@ -1,7 +1,7 @@
-// ---------------------------------------------------------------------
+// -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.26.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.27.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -534,6 +534,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // localStorageからの復元
     await allLocalStorageSetting();
     await saveAllLocalSettings();
+
+    // リスナー登録完了後、メインプロセスへ準備完了を通知
+    ipcRenderer.send('app-ready');
 
     // メディア初期化（未設定状態）
     videoPlayer.removeAttribute('src');
@@ -7058,13 +7061,25 @@ async function deleteTempVideo() {
 function loadFilterHistory() {
     if (savedFilterHistory) {
         try {
-            filterHistory = JSON.parse(savedFilterHistory);
+            // すでに配列ならそのまま使い、文字列なら JSON.parse する
+            if (Array.isArray(savedFilterHistory)) {
+                filterHistory = savedFilterHistory;
+            } else if (typeof savedFilterHistory === 'string') {
+                filterHistory = JSON.parse(savedFilterHistory);
+            } else {
+                filterHistory = [];
+            }
+
+            // 件数制限
             if (filterHistory.length > 1000) {
                 filterHistory = filterHistory.slice(-1000);
             }
         } catch (e) {
+            console.error('filterHistory の読み込みエラー:', e);
             filterHistory = [];
         }
+    } else {
+        filterHistory = [];
     }
     updateFilterHistoryList();
 }

@@ -1,7 +1,7 @@
-// ---------------------------------------------------------------------
+// -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.26.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.27.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -317,50 +317,28 @@ async function extractSubtitlesOnly(inputPath, baseName, outDir, metadata) {
 app.whenReady().then(() => {
     mainWindow = createWindow();
 
-    // 初回ロード判定用フラグ
-    let isInitialLoad = true;
-    mainWindow.webContents.on('did-finish-load', async () => {
-        // リロード時など2回目以降のロード時は引数処理を行わない
-        if (!isInitialLoad) return;
-        isInitialLoad = false;
-
+    // レンダラーからの準備完了通知を待つ
+    ipcMain.once('app-ready', async (event) => {
         try {
-            // パッケージ化の有無で開始インデックスを調整
             const rawArgs = process.argv.slice(app.isPackaged ? 1 : 2);
-            
-            // フラグ（--xxxなど）を除外して有効なパスのみ抽出
             const args = rawArgs.filter(arg => !arg.startsWith('-'));
             if (args.length === 0) return;
 
-            // 複数パスを並列で存在チェック＆処理
             const filePromises = args.map(async (filePath) => {
                 const exists = await fs.stat(filePath).then(() => true).catch(() => false);
                 if (!exists) return [];
-                // 既存の処理（ファイルパスまたはフォルダパスから該当ファイル一覧を取得）
                 return await processCommandLineFile(filePath);
             });
 
-            // すべてのパスの結果を結合してフラット化
             const results = await Promise.all(filePromises);
-            const allFiles = results.flat(); // ネストされた配列を解きほぐす
-
-            // 重複ファイルを除外（必要に応じて）
-            const uniqueFiles = [...new Set(allFiles)];
+            const uniqueFiles = [...new Set(results.flat())];
 
             if (uniqueFiles.length > 0) {
-                // 起動直後のsend('auto-play-files')の伝送不良対応のため待機
-                setTimeout(async () => {
-                    mainWindow.webContents.send('auto-play-files', uniqueFiles);
-                }, 1000);
+                // 確実にリスナーが登録されている状態で送信
+                event.sender.send('auto-play-files', uniqueFiles);
             }
         } catch (err) {
             console.error('コマンドライン自動再生エラー:', err);
-        }
-    });
-
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            mainWindow = createWindow();
         }
     });
 });

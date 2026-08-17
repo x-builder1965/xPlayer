@@ -1,7 +1,7 @@
-// ---------------------------------------------------------------------
+// -- preload.js -------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.26.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.27.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -96,9 +96,9 @@ contextBridge.exposeInMainWorld('AudioMotionAPI', {
 contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer: {
         invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
-        on: (channel, listener) => ipcRenderer.on(channel, listener)
+        on: (channel, listener) => ipcRenderer.on(channel, listener),
+        send: (channel, ...args) => ipcRenderer.send(channel, ...args)
     },
-    checkIsSecondaryInstance: () => ipcRenderer.invoke('check-secondary-instance'),
     fs,
     os: { homedir: os.homedir },
     path,
@@ -135,5 +135,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     cutVideoMultiple: (data) => ipcRenderer.invoke('cut-video-multiple', data),
     getVideoTracks: (filePath) => ipcRenderer.invoke('get-video-tracks', filePath),
     openWallpaperDialog: () => ipcRenderer.invoke('open-wallpaper-dialog'),
+    checkIsSecondaryInstance: () => ipcRenderer.invoke('check-secondary-instance'),
     getPid: () => process.pid
 });
