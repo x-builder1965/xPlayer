@@ -1,13 +1,12 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.28.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.30.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
 const { 
     ipcRenderer, 
-    checkIsSecondaryInstance,
     fs, 
     os, 
     path, 
@@ -25,6 +24,7 @@ const {
     showSaveJoinDialog,
     showSaveSettingsDialog,
     showOpenSettingsDialog,
+    setAlwaysOnTop,
     getCommandLineArgs,
     convertVideo,
     cancelConversion,
@@ -36,6 +36,7 @@ const {
     cutVideoMultiple,
     getVideoTracks,
     openWallpaperDialog,
+    checkIsSecondaryInstance,
     getPid
 } = window.electronAPI;
 
@@ -527,7 +528,7 @@ let isSecondary = null;
 // DOMContentロード完了（初期処理）
 document.addEventListener('DOMContentLoaded', async () => {
     // 多重起動（セカンダリインスタンス）判定
-    isSecondary = await window.electronAPI.checkIsSecondaryInstance();
+    isSecondary = await checkIsSecondaryInstance();
     // DOM要素を取得
     allDOMsetting();
     // まず多重起動時の localStorage 書き込み防止を設定
@@ -618,9 +619,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 常に最前面復元
     if (savedAlwaysOnTop === 'true') {
         isAlwaysOnTop = true;
-        if (typeof window.electronAPI?.setAlwaysOnTop === 'function') {
-            window.electronAPI.setAlwaysOnTop(true);
-        }
+        await setAlwaysOnTop(true);
     }
     updateAlwaysOnTopButtonUI();
 
@@ -3777,7 +3776,9 @@ async function pasteFromClipboard() {
         const text = await Promise.race([
             navigator.clipboard.readText(),
             new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('クリップボードの読み込みがタイムアウトしました')), TIMEOUT_MS)
+                setTimeout(() => {
+                    reject(new Error('クリップボードの読み込みがタイムアウトしました')) 
+                }, TIMEOUT_MS)
             )
         ]);
         const trimmedText = text.trim();
@@ -4270,7 +4271,7 @@ async function importSettingsFromFile(targetFilePath = null) {
 }
 
 // オーバーレイ表示
-function updateMessageOverlay(content, autoHideAfter = 3000, isShowControls = true) {
+function updateMessageOverlay(content, autoHideAfter = overlayTimeout, isShowControls = true) {
     messageOverlay.textContent = content;
     const overlayFontSize = parseFloat(messageOverlay.style.fontSize) || 90;
     // 1. 実際の文字サイズ（横幅）を計算する関数
@@ -7259,9 +7260,7 @@ function updateAlwaysOnTopButtonUI() {
 
 async function toggleAlwaysOnTop() {
     isAlwaysOnTop = !isAlwaysOnTop;
-    if (typeof window.electronAPI?.setAlwaysOnTop === 'function') {
-        await window.electronAPI.setAlwaysOnTop(isAlwaysOnTop);
-    }
+    await setAlwaysOnTop(isAlwaysOnTop);
     localSturageSetItemAndFile('alwaysOnTop', isAlwaysOnTop ? 'true' : 'false');
     updateAlwaysOnTopButtonUI();
 }
