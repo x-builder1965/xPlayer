@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 常に最前面復元
-    if (savedAlwaysOnTop === 'true' || savedAlwaysOnTop === true) {
+    if (savedAlwaysOnTop === 'true') {
         isAlwaysOnTop = true;
         if (typeof window.electronAPI?.setAlwaysOnTop === 'function') {
             window.electronAPI.setAlwaysOnTop(true);
@@ -686,7 +686,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateRepeatButtonUI();
 
     // 再生モード復元
-    if (savedIsRandomPlayMode === 'true' || savedIsRandomPlayMode === true) {
+    if (savedIsRandomPlayMode === 'true') {
         isRandomPlayMode = true;
     }
     updateRandomButtonUI();
@@ -3653,19 +3653,21 @@ async function allLocalStorageSetting() {
             savedTranslateX = getVal('translateX', savedTranslateX, '0');
             savedTranslateY = getVal('translateY', savedTranslateY, '0');
             savedEditFrameRate = getVal('editFrameRate', savedEditFrameRate, '30');
-            savedIsRandomPlayMode = getVal('isRandomPlayMode', savedIsRandomPlayMode, 'false');
-            savedIsRepeatPlayMode = getVal('isRepeatPlayMode', savedIsRepeatPlayMode, 'false');
+            const rawRandomMode = getVal('isRandomPlayMode', savedIsRandomPlayMode, 'false');
+            savedIsRandomPlayMode = String(rawRandomMode); // true (boolean) を "true" (string) に変換            
+            savedIsRepeatPlayMode = getVal('isRepeatPlayMode', savedIsRepeatPlayMode, 'none');
             savedShuffleOrder = getVal('shuffleOrder', savedShuffleOrder);
             savedShufflePosition = getVal('shufflePosition', savedShufflePosition, '0');
-            savedAspectRatio = getVal('aspectRatio', savedAspectRatio, 'auto');
-            savedCurrentSortMode = getVal('playlistSortMode', savedCurrentSortMode, 'default');
+            savedAspectRatio = getVal('aspectRatio', savedAspectRatio, 'none');
+            savedCurrentSortMode = getVal('playlistSortMode', savedCurrentSortMode, 'none');
             savedPlaylistDisplayMode = getVal('playlistDisplayMode', savedPlaylistDisplayMode, 'normal');
             savedSelectedAudioLabel = getVal('selectedAudioLabel', savedSelectedAudioLabel);
             savedSelectedAudioTrack = getVal('selectedAudioTrack', savedSelectedAudioTrack);
             savedSelectedSubtitleLabel = getVal('selectedSubtitleLabel', savedSelectedSubtitleLabel);
             savedSelectedSubtitleTrack = getVal('selectedSubtitleTrack', savedSelectedSubtitleTrack);
             savedWallpaperPath = getVal('wallpaperPath', savedWallpaperPath);
-            savedAlwaysOnTop = getVal('alwaysOnTop', savedAlwaysOnTop, 'false');
+            const rawAlwaysOnTop = getVal('alwaysOnTop', savedAlwaysOnTop, 'false');
+            savedAlwaysOnTop = String(rawAlwaysOnTop); // true (boolean) を "true" (string) に変換
             savedAudioMotionMode = getVal('audioMotionMode', savedAudioMotionMode);
             savedFilterHistory = getVal('filterHistory', savedFilterHistory);
             savedOriginalOrder = getVal('originalLoadOrder', savedOriginalOrder);
