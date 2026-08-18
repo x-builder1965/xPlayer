@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.27.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.28.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -441,6 +441,7 @@ let savedWallpaperPath = null;
 let savedAlwaysOnTop = null;
 let savedAudioMotionMode = null;
 let savedFilterHistory = null;
+let savedOriginalOrder = null;
 let savedAudioMotionOptions = null;
 let savedAudioMotionNodes = null;
 
@@ -525,15 +526,14 @@ let isSecondary = null;
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
 document.addEventListener('DOMContentLoaded', async () => {
-    // 重複起動（セカンダリインスタンス）判定
+    // 多重起動（セカンダリインスタンス）判定
     isSecondary = await window.electronAPI.checkIsSecondaryInstance();
     // DOM要素を取得
     allDOMsetting();
-    // まず重複起動時の localStorage 書き込み防止を設定
+    // まず多重起動時の localStorage 書き込み防止を設定
     await setupLocalStorageProtection();
     // localStorageからの復元
     await allLocalStorageSetting();
-    await saveAllLocalSettings();
 
     // リスナー登録完了後、メインプロセスへ準備完了を通知
     ipcRenderer.send('app-ready');
@@ -616,7 +616,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 常に最前面復元
-    if (savedAlwaysOnTop === 'true') {
+    if (savedAlwaysOnTop === 'true' || savedAlwaysOnTop === true) {
         isAlwaysOnTop = true;
         if (typeof window.electronAPI?.setAlwaysOnTop === 'function') {
             window.electronAPI.setAlwaysOnTop(true);
@@ -686,7 +686,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateRepeatButtonUI();
 
     // 再生モード復元
-    if (savedIsRandomPlayMode === 'true') {
+    if (savedIsRandomPlayMode === 'true' || savedIsRandomPlayMode === true) {
         isRandomPlayMode = true;
     }
     updateRandomButtonUI();
@@ -3520,7 +3520,7 @@ function getUserSettingsPath() {
     return path.join(os.homedir(), 'xPlayerSettings.json');
 }
 
-// 重複起動判定ヘルパー
+// 多重起動判定ヘルパー
 async function checkInstance() {
     if (typeof checkIsSecondaryInstance === 'function') {
         return await checkIsSecondaryInstance();
@@ -3528,10 +3528,10 @@ async function checkInstance() {
     return false; // 万が一取得できない場合は初回起動扱い
 }
 
-// 重複起動時の localStorage 書き込み防止処理
+// 多重起動時の localStorage 書き込み防止処理
 async function setupLocalStorageProtection() {
     if (isSecondary) {
-        console.warn('⚠️ 重複起動を検知しました。localStorage への書き込みを無効化します。');
+        console.warn('⚠️ 多重起動を検知しました。localStorage への書き込みを無効化します。');
 
         // 原型のメソッドを保持
         const originalSetItem = localStorage.setItem.bind(localStorage);
@@ -3540,18 +3540,18 @@ async function setupLocalStorageProtection() {
 
         // setItem をガード
         localStorage.setItem = function (key, value) {
-            console.log(`[重複起動ガード] setItem スキップ: ${key}`);
+            console.log(`[多重起動ガード] setItem スキップ: ${key}`);
             // 何もせず書き込みをスキップ
         };
 
         // clear をガード
         localStorage.clear = function () {
-            console.log('[重複起動ガード] clear スキップ');
+            console.log('[多重起動ガード] clear スキップ');
         };
 
         // removeItem をガード
         localStorage.removeItem = function (key) {
-            console.log(`[重複起動ガード] removeItem スキップ: ${key}`);
+            console.log(`[多重起動ガード] removeItem スキップ: ${key}`);
         };
     }
 }
@@ -3598,7 +3598,7 @@ async function allLocalStorageSetting() {
         // 2. 取得情報をユーザーフォルダの xPlayerSettings.json に保存
         await exportSettingsToFile(settingsFilePath);
     } else {
-        // --- 重複起動時 ---
+        // --- 多重起動時 ---
         appNameAndCopyright.textContent = `🚫${appNameAndCopyrightValue}`;
 
         // pid（プロセスID）を取得して個別の設定ファイルパスを生成
@@ -3630,34 +3630,47 @@ async function allLocalStorageSetting() {
 
         // 戻り値（importSettingsFromFile の設定オブジェクト）→ 各 saved変数
         if (loadedSettings) {
-            savedVolume = loadedSettings['volume'] ?? null;
-            savedPlaybackSpeed = loadedSettings['playbackSpeed'] ?? null;
-            savedPlaylist = loadedSettings['playlist'] ?? null;
-            savedCurrentVideoIndex = loadedSettings['currentVideoIndex'] ?? null;
-            savedCurrentTime = loadedSettings['currentTime'] ?? null;
-            savedFitMode = loadedSettings['fitMode'] ?? null;
-            savedZoom = loadedSettings['zoom'] ?? null;
-            savedTranslateX = loadedSettings['translateX'] ?? null;
-            savedTranslateY = loadedSettings['translateY'] ?? null;
-            savedEditFrameRate = loadedSettings['editFrameRate'] ?? null;
-            savedIsRandomPlayMode = loadedSettings['isRandomPlayMode'] ?? null;
-            savedIsRepeatPlayMode = loadedSettings['isRepeatPlayMode'] ?? null;
-            savedShuffleOrder = loadedSettings['shuffleOrder'] ?? null;
-            savedShufflePosition = loadedSettings['shufflePosition'] ?? null;
-            savedAspectRatio = loadedSettings['aspectRatio'] ?? null;
-            savedCurrentSortMode = loadedSettings['playlistSortMode'] ?? null;
-            savedPlaylistDisplayMode = loadedSettings['playlistDisplayMode'] ?? null;
-            savedSelectedAudioLabel = loadedSettings['selectedAudioLabel'] ?? null;
-            savedSelectedAudioTrack = loadedSettings['selectedAudioTrack'] ?? null;
-            savedSelectedSubtitleLabel = loadedSettings['selectedSubtitleLabel'] ?? null;
-            savedSelectedSubtitleTrack = loadedSettings['selectedSubtitleTrack'] ?? null;
-            savedWallpaperPath = loadedSettings['wallpaperPath'] ?? null;
-            savedAlwaysOnTop = loadedSettings['alwaysOnTop'] ?? null;
-            savedAudioMotionMode = loadedSettings['audioMotionMode'] ?? null;
-            savedFilterHistory = loadedSettings['filterHistory'] ?? null;
-            savedOriginalOrder = loadedSettings['originalLoadOrder'] ?? null;
-            savedAudioMotionOptions = loadedSettings['audioMotionOptions'] ?? null;
-            savedAudioMotionNodes = loadedSettings['audioMotionNodes'] ?? null;
+            // 安全な値取得ヘルパー
+            // loadedSettings に値があれば採用し、無ければ現在のメモリ変数(currentVal)を維持、それも無ければ defaultValue
+            const getVal = (key, currentVal, defaultValue = null) => {
+                if (loadedSettings[key] !== undefined && loadedSettings[key] !== null) {
+                    return loadedSettings[key];
+                }
+                if (currentVal !== undefined && currentVal !== null) {
+                    return currentVal;
+                }
+                return defaultValue;
+            };
+
+            // 各変数への代入（現在保持している変数値自体を第2引数に渡して保護）
+            savedVolume = getVal('volume', savedVolume, '1.0');
+            savedPlaybackSpeed = getVal('playbackSpeed', savedPlaybackSpeed, '1.0');
+            savedPlaylist = getVal('playlist', savedPlaylist);
+            savedCurrentVideoIndex = getVal('currentVideoIndex', savedCurrentVideoIndex, '0');
+            savedCurrentTime = getVal('currentTime', savedCurrentTime, '0');
+            savedFitMode = getVal('fitMode', savedFitMode, 'contain');
+            savedZoom = getVal('zoom', savedZoom, '1.0');
+            savedTranslateX = getVal('translateX', savedTranslateX, '0');
+            savedTranslateY = getVal('translateY', savedTranslateY, '0');
+            savedEditFrameRate = getVal('editFrameRate', savedEditFrameRate, '30');
+            savedIsRandomPlayMode = getVal('isRandomPlayMode', savedIsRandomPlayMode, 'false');
+            savedIsRepeatPlayMode = getVal('isRepeatPlayMode', savedIsRepeatPlayMode, 'false');
+            savedShuffleOrder = getVal('shuffleOrder', savedShuffleOrder);
+            savedShufflePosition = getVal('shufflePosition', savedShufflePosition, '0');
+            savedAspectRatio = getVal('aspectRatio', savedAspectRatio, 'auto');
+            savedCurrentSortMode = getVal('playlistSortMode', savedCurrentSortMode, 'default');
+            savedPlaylistDisplayMode = getVal('playlistDisplayMode', savedPlaylistDisplayMode, 'normal');
+            savedSelectedAudioLabel = getVal('selectedAudioLabel', savedSelectedAudioLabel);
+            savedSelectedAudioTrack = getVal('selectedAudioTrack', savedSelectedAudioTrack);
+            savedSelectedSubtitleLabel = getVal('selectedSubtitleLabel', savedSelectedSubtitleLabel);
+            savedSelectedSubtitleTrack = getVal('selectedSubtitleTrack', savedSelectedSubtitleTrack);
+            savedWallpaperPath = getVal('wallpaperPath', savedWallpaperPath);
+            savedAlwaysOnTop = getVal('alwaysOnTop', savedAlwaysOnTop, 'false');
+            savedAudioMotionMode = getVal('audioMotionMode', savedAudioMotionMode);
+            savedFilterHistory = getVal('filterHistory', savedFilterHistory);
+            savedOriginalOrder = getVal('originalLoadOrder', savedOriginalOrder);
+            savedAudioMotionOptions = getVal('audioMotionOptions', savedAudioMotionOptions);
+            savedAudioMotionNodes = getVal('audioMotionNodes', savedAudioMotionNodes);
 
             // JSONファイルから DEFAULT_AUDIO_MOTION_OPTIONS を復元
             if (loadedSettings['audioMotionOptions']) {
@@ -3684,6 +3697,36 @@ async function allLocalStorageSetting() {
             }
         }
     }
+
+    // 各設定値の localStorageと設定ファイルを同期（主に多重起動用）
+    await localSturageSetItemAndFile('volume', savedVolume);
+    await localSturageSetItemAndFile('playbackSpeed', savedPlaybackSpeed);
+    await localSturageSetItemAndFile('playlist', savedPlaylist);
+    await localSturageSetItemAndFile('currentVideoIndex', savedCurrentVideoIndex);
+    await localSturageSetItemAndFile('currentTime', savedCurrentTime);
+    await localSturageSetItemAndFile('fitMode', savedFitMode);
+    await localSturageSetItemAndFile('zoom', savedZoom);
+    await localSturageSetItemAndFile('translateX', savedTranslateX);
+    await localSturageSetItemAndFile('translateY', savedTranslateY);
+    await localSturageSetItemAndFile('editFrameRate', savedEditFrameRate);
+    await localSturageSetItemAndFile('isRandomPlayMode', savedIsRandomPlayMode);
+    await localSturageSetItemAndFile('isRepeatPlayMode', savedIsRepeatPlayMode);
+    await localSturageSetItemAndFile('shuffleOrder', savedShuffleOrder);
+    await localSturageSetItemAndFile('shufflePosition', savedShufflePosition);
+    await localSturageSetItemAndFile('aspectRatio', savedAspectRatio);
+    await localSturageSetItemAndFile('playlistSortMode', savedCurrentSortMode);
+    await localSturageSetItemAndFile('playlistDisplayMode', savedPlaylistDisplayMode);
+    await localSturageSetItemAndFile('selectedAudioLabel', savedSelectedAudioLabel);
+    await localSturageSetItemAndFile('selectedAudioTrack', savedSelectedAudioTrack);
+    await localSturageSetItemAndFile('selectedSubtitleLabel', savedSelectedSubtitleLabel);
+    await localSturageSetItemAndFile('selectedSubtitleTrack', savedSelectedSubtitleTrack);
+    await localSturageSetItemAndFile('wallpaperPath', savedWallpaperPath);
+    await localSturageSetItemAndFile('alwaysOnTop', savedAlwaysOnTop);
+    await localSturageSetItemAndFile('audioMotionMode', savedAudioMotionMode);
+    await localSturageSetItemAndFile('filterHistory', savedFilterHistory);
+    await localSturageSetItemAndFile('originalLoadOrder', savedOriginalOrder);
+    await localSturageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
+    await localSturageSetItemAndFile('audioMotionNodes', savedAudioMotionNodes);
 }
 
 // 音声トラック・字幕トラック更新
@@ -4191,7 +4234,7 @@ async function importSettingsFromFile(targetFilePath = null) {
                         }
                     });
                 } else {
-                    // 重複起動時：pidを取得して設定ファイル→xPlayerSettings_(pid).json出力
+                    // 多重起動時：pidを取得して設定ファイル→xPlayerSettings_(pid).json出力
                     const pidSettingsFilePath = settingsFilePath.replace(/\.json$/, `_${pid}.json`);
                     await fs.writeFile(pidSettingsFilePath, JSON.stringify(settings, null, 2), 'utf8');
                 }
@@ -5644,7 +5687,7 @@ async function playlistAdd(videoFiles) {
     // 既存のプレイリスト内のパス一覧
     const existingPaths = new Set(playlist.map(item => item?.file?.path));
 
-    // 重複を除外した新しいファイルのみを抽出（追加リスト内での重複も排除）
+    // 多重を除外した新しいファイルのみを抽出（追加リスト内での多重も排除）
     const uniqueVideoFiles = [];
     for (const file of videoFiles) {
         if (file?.path && !existingPaths.has(file.path)) {
@@ -5653,7 +5696,7 @@ async function playlistAdd(videoFiles) {
         }
     }
 
-    // すべて重複していて追加対象がない場合は中断
+    // すべて多重していて追加対象がない場合は中断
     if (uniqueVideoFiles.length === 0) {
         hideMessageOverlay();
         return;
@@ -5829,7 +5872,7 @@ function insertFilesIntoPlaylist(files, addPosition = 0) {
         // パスが存在し、かつ既存のプレイリストに含まれていないものだけを抽出
         .filter(file => file.path && !existingPaths.has(file.path));
 
-    // 追加する新規ファイル内での重複も排除したい場合（必要に応じて）
+    // 追加する新規ファイル内での多重も排除したい場合（必要に応じて）
     const uniqueFiles = [];
     for (const file of normalizedFiles) {
         if (!existingPaths.has(file.path)) {
@@ -7525,36 +7568,4 @@ async function localSturageClearAndFile() {
         localStorage.clear();
         await exportSettingsToFile(settingsFilePath);
     }
-}
-
-// 各設定値を localSettings, localStorage, ファイルへ保存
-async function saveAllLocalSettings() {
-    await localSturageSetItemAndFile('volume', savedVolume);
-    await localSturageSetItemAndFile('playbackSpeed', savedPlaybackSpeed);
-    await localSturageSetItemAndFile('playlist', savedPlaylist);
-    await localSturageSetItemAndFile('currentVideoIndex', savedCurrentVideoIndex);
-    await localSturageSetItemAndFile('currentTime', savedCurrentTime);
-    await localSturageSetItemAndFile('fitMode', savedFitMode);
-    await localSturageSetItemAndFile('zoom', savedZoom);
-    await localSturageSetItemAndFile('translateX', savedTranslateX);
-    await localSturageSetItemAndFile('translateY', savedTranslateY);
-    await localSturageSetItemAndFile('editFrameRate', savedEditFrameRate);
-    await localSturageSetItemAndFile('isRandomPlayMode', savedIsRandomPlayMode);
-    await localSturageSetItemAndFile('isRepeatPlayMode', savedIsRepeatPlayMode);
-    await localSturageSetItemAndFile('shuffleOrder', savedShuffleOrder);
-    await localSturageSetItemAndFile('shufflePosition', savedShufflePosition);
-    await localSturageSetItemAndFile('aspectRatio', savedAspectRatio);
-    await localSturageSetItemAndFile('playlistSortMode', savedCurrentSortMode);
-    await localSturageSetItemAndFile('playlistDisplayMode', savedPlaylistDisplayMode);
-    await localSturageSetItemAndFile('selectedAudioLabel', savedSelectedAudioLabel);
-    await localSturageSetItemAndFile('selectedAudioTrack', savedSelectedAudioTrack);
-    await localSturageSetItemAndFile('selectedSubtitleLabel', savedSelectedSubtitleLabel);
-    await localSturageSetItemAndFile('selectedSubtitleTrack', savedSelectedSubtitleTrack);
-    await localSturageSetItemAndFile('wallpaperPath', savedWallpaperPath);
-    await localSturageSetItemAndFile('alwaysOnTop', savedAlwaysOnTop);
-    await localSturageSetItemAndFile('audioMotionMode', savedAudioMotionMode);
-    await localSturageSetItemAndFile('filterHistory', savedFilterHistory);
-    await localSturageSetItemAndFile('originalLoadOrder', savedOriginalOrder);
-    await localSturageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
-    await localSturageSetItemAndFile('audioMotionNodes', savedAudioMotionNodes);
 }
