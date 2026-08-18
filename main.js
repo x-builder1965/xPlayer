@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.27.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.29.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1604,55 +1604,74 @@ ipcMain.handle('cancel-join', async () => {
 
 // ブラウザ起動ハンドラ
 ipcMain.handle('open-video-in-browser', async (event, videoUrl) => {
-  try {
-    // Chromeのパスをメイン側で管理（セキュリティ向上・パス漏洩防止）
-    let chromePath;
+    try {
+        let browserPath;
+        let isEdge = false;
 
-    if (process.platform === 'win32') {
-      // Windowsの場合、複数の候補から最初に見つかったものを利用
-      const possiblePaths = [
-        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-        process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
-        // 必要ならさらに追加
-      ];
+        if (process.platform === 'win32') {
+            // 1. Chromeのパス候補（優先度: 高）
+            const chromePaths = [
+                'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+                process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
+            ];
 
-      for (const path of possiblePaths) {
-        try {
-          require('fs').accessSync(path);
-          chromePath = path;
-          break;
-        } catch {}
-      }
+            // 2. Edgeのパス候補（優先度: 低）
+            const edgePaths = [
+                'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+                'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+                process.env.LOCALAPPDATA + '\\Microsoft\\Edge\\Application\\msedge.exe',
+            ];
 
-      if (!chromePath) {
-        throw new Error('Chromeが見つかりません。インストールを確認してください。');
-      }
+            // Chromeの存在チェック
+            for (const path of chromePaths) {
+                try {
+                    require('fs').accessSync(path);
+                    browserPath = path;
+                    break;
+                } catch {}
+            }
 
-    } else if (process.platform === 'darwin') {
-      chromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-    } else {
-      // Linuxなど（適宜対応）
-      chromePath = 'google-chrome';
+            // Chromeが見つからなければEdgeをチェック
+            if (!browserPath) {
+                for (const path of edgePaths) {
+                    try {
+                        require('fs').accessSync(path);
+                        browserPath = path;
+                        isEdge = true;
+                        break;
+                    } catch {}
+                }
+            }
+
+            if (!browserPath) {
+                throw new Error('ChromeおよびEdgeが見つかりません。ブラウザのインストールを確認してください。');
+            }
+
+        } else if (process.platform === 'darwin') {
+            browserPath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+        } else {
+            // Linuxなど
+            browserPath = 'google-chrome';
+        }
+
+        // コマンド構築（Chrome / Edge 両方で --app オプションが利用可能）
+        const profileOpt = isEdge ? '--profile-directory="Default"' : '--profile-directory=Default';
+        const command = `"${browserPath}" ${profileOpt} --app="${videoUrl}" --new-window`;
+
+        // 実行（非同期でfire-and-forget）
+        exec(command, (error) => {
+            if (error) {
+                console.error('ブラウザ起動エラー:', error);
+            }
+        });
+
+        return { success: true, message: `起動コマンド: ${command}` };
+
+    } catch (err) {
+        console.error(err);
+        return { success: false, message: err.message };
     }
-
-    // コマンド構築（--app= でポップアップ風再生）
-    const command = `"${chromePath}" --profile-directory=Default --app="${videoUrl}" --new-window`;
-
-    // 実行（非同期でfire-and-forget）
-    exec(command, (error) => {
-      if (error) {
-        console.error('ブラウザ起動エラー:', error);
-        // 必要ならレンダラーにエラー通知IPCを送る
-      }
-    });
-
-    return { success: true, message: `起動コマンド: ${command}` };
-
-  } catch (err) {
-    console.error(err);
-    return { success: false, message: err.message };
-  }
 });
 
 // 音声トラック情報・字幕トラック情報取得

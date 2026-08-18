@@ -3,7 +3,7 @@
 ## 概要
 xPlayer は **ローカル動画・音声の再生および簡易編集** に特化した Electron ベースのマルチメディアプレイヤーです。  
 幅広いフォーマットに対応しており、プレイリスト管理、再生速度変更、カット編集、動画結合、デジタルズーム、音声/字幕トラック切り替えなどの機能を備えています。  
-※ Web上の動画（YouTube / Twitch / 各種URL）は、外部ブラウザ（Chrome推奨）でポップアップ再生できます。
+※ Web上の動画（YouTube / Twitch / 各種URL）は、外部ブラウザ（Chrome または Edge）でポップアップ再生できます。
 
 > **Note:** 変更履歴は、アプリ内のヘルプ（❔）下部の「変更履歴」をご参照ください。
 
@@ -35,7 +35,7 @@ xPlayer は **ローカル動画・音声の再生および簡易編集** に特
   - 高機能フィルタ検索（AND検索：スペース区切り / OR検索：カンマ区切り）と該当件数表示  
 
 - **🌐 ネットURL再生**  
-  - YouTube / Twitch などの URL を Chrome 経由で外部再生  
+  - YouTube / Twitch などの URL を Chrome または Edge 経由で外部再生  
   - クリップボード内の URL を自動検知してポップアウト再生
 
 - **✂️ カット編集**  
@@ -70,7 +70,7 @@ xPlayer は **ローカル動画・音声の再生および簡易編集** に特
 ## 注意事項
 - **多重起動について:** 
   - プレイヤーの多重起動は可能ですが、最初に起動したプレイヤーの設定値のみ保持されます。  
-  - 多重起動したプレイヤーにはコントロールパネルの表示名に 🚫 マークが表示されます。  
+  - 多重起動時、プレイヤーのコントロールパネルの表示名には 🚫 マークが表示されます。  
 
 ---
 
@@ -126,7 +126,7 @@ npm run sign           # 署名付きビルド（環境変数 CSC_KEY_PASSWORD �
 ### 商標・権利表記
 - Electron は OpenJS Foundation の商標または登録商標です。
 - FFmpeg は Fabrice Bellard 氏および FFmpeg プロジェクトの商標または登録商標です。
-- Windows および Snipping Tool は Microsoft Corporation の米国およびその他の国における登録商標です。
+- Windows, Snipping Tool および  icrosoft Edge は Microsoft Corporation の米国およびその他の国における登録商標です。
 - Google Chrome および YouTube は Google LLC の登録商標です。
 - Twitch は Twitch Interactive, Inc. の登録商標です。
 - その他、記載されている会社名、製品名、サービス名はそれぞれの各社の登録商標または商標です。
