@@ -107,6 +107,8 @@ npm run dist:portable  # ポータブル版 (.exe) の生成
 npm run sign           # 署名付きビルド（環境変数 CSC_KEY_PASSWORD が必要）
 ```
 
+---
+
 
 ## ライセンス・使用ライブラリ・商標表記
 
