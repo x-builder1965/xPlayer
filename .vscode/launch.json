@@ -13,7 +13,7 @@
       "args": [
         ".",                          // カレントディレクトリのアプリを起動
         // "H:/Anime/Anime（放映中）/(4：木)_202607_★★★★☆_(TV)_片田舎のおっさん、剣聖になるⅡ",
-        // "H:/PlayList/HDD/手作り/Music.amppl",
+        // "H:/PlayList/NAS/手作り/Anime（再生履歴）.amppl",
         "--remote-debugging-port=9223" // Rendererアタッチ用ポート（必須）
       ],
       "console": "integratedTerminal",

@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.30.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.31.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -87,8 +87,8 @@ const ADD_MODES = {
         isAction: true
     },
     Separator: { isSeparator: true }, // セパレータ要素
-    Add0: { label: '選択行に追加',     fn: async () => await addToPlaylist(0) },
-    Add1: { label: '選択行の下に追加', fn: async () => await addToPlaylist(1) }
+    Add0: { label: '選択行に追加' },
+    Add1: { label: '選択行の下に追加' }
 };
 const ASPECT_NODES = {
     'none': { label: '（なし）', value: null },
@@ -523,6 +523,7 @@ let audioMotion = null;
 let audioMotionMode = null;
 let lastRandomPreset = null;		// 直前にランダムで選ばれたプリセットを保持する変数（関数の外に定義）
 let isSecondary = null;
+let argsIntervalId = null;
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -816,7 +817,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 起動時の引数有無判定
         const args = await getCommandLineArgs();
         if (!isReload && args && args.length > 0) {
-            updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
+            argsIntervalId = setIntervalMessageOverlay();
             // main.js が auto-play-files を送信するので、ここでは何もしない
             return;
         }
@@ -842,7 +843,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const parsedCurrentVideoIndex = parseInt(savedCurrentVideoIndex, 10);
                 if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0 && 
                     !isNaN(parsedCurrentVideoIndex) && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
-                    updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
+                    const intervalId = setIntervalMessageOverlay();
                     playlist = parsedPlaylist.map(path => ({
                         file: { path },
                         name: path
@@ -863,7 +864,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
                     stopPeriodicSave();
                     showControlsAndFilename();
-                    hideMessageOverlay();
+                    clearIntervalMessageOverlay(intervalId);
                     updateIconOverlay();
                 } else {
                     playlistPathArea.value = appNameAndCopyrightValueLine;
@@ -872,7 +873,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (e) {
                 console.error('プレイリスト復元エラー:', e);
                 playlistPathArea.value = appNameAndCopyrightValueLine;
-                hideMessageOverlay();
+                clearIntervalMessageOverlay(intervalId);
                 updateIconOverlay();
             }
         } else {
@@ -898,12 +899,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const folderPath = await openFolderDialog();
             if (!folderPath) return;
-            updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
+            const intervalId = setIntervalMessageOverlay();
             const videoFiles = await getFolderVideoFiles(folderPath);
 
             playlistSet(videoFiles);
             debouncedUpdateFilterList();
             debouncedScrollCurrentFilterItem();
+            clearIntervalMessageOverlay(intervalId);
         } catch (e) {
             updateMessageOverlay('📁 フォルダ選択エラー', 6000);
             console.error('フォルダ選択エラー:', e);
@@ -916,12 +918,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const filePaths = await openVideoDialog();
             if (!filePaths || filePaths.length === 0) return;
-            updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
+            const intervalId = setIntervalMessageOverlay();
             const videoFiles = await getFileVideoFiles(filePaths);
 
             playlistSet(videoFiles);
             debouncedUpdateFilterList();
             debouncedScrollCurrentFilterItem();
+            clearIntervalMessageOverlay(intervalId);
         } catch (e) {
             updateMessageOverlay('🗒️ ファイル選択エラー', 6000);
             console.error('ファイル選択エラー:', e);
@@ -2259,11 +2262,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Ctrlキー（MacのCmdキー含む）が押されているか判定
         const isAppend = e.ctrlKey || e.metaKey;
-        if (isAppend) {
-            updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
-        } else {
-            updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
-        }
+        const intervalId = setIntervalMessageOverlay(isAppend);
 
         const fullPaths = [];
         for (const file of files) {
@@ -2279,6 +2278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // isAppend フラグを渡す
             await addFilesFromPaths(fullPaths, isAppend);
         }
+        clearIntervalMessageOverlay(intervalId);
     });
 
     // ✂️編集モード切替
@@ -3269,7 +3269,10 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
 
     const runAutoPlay = async () => {
         try {
+            clearIntervalMessageOverlay(argsIntervalId);
+            const intervalId = setIntervalMessageOverlay();
             await playlistSet(videoFiles);
+            clearIntervalMessageOverlay(intervalId);
         } catch (err) {
             console.error('プレイリスト設定エラー:', err);
         }
@@ -5685,7 +5688,6 @@ async function playlistAdd(videoFiles) {
         hideMessageOverlay();
         return;
     }
-    updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
 
     // 既存のプレイリスト内のパス一覧
     const existingPaths = new Set(playlist.map(item => item?.file?.path));
@@ -5730,7 +5732,6 @@ async function playlistAdd(videoFiles) {
     savePlaylistAndPlaybackState();
     // シャッフル状態の維持/更新が必要な場合はここで調整
     saveShuffleState();
-    hideMessageOverlay();
     updateIconOverlay();
 }
 
@@ -5740,8 +5741,6 @@ async function playlistSet(videoFiles) {
         hideMessageOverlay();
         return;
     }
-    updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
-    
     await cleanupTempFiles();
 
     // ★ 元の読み込み順（Base順）を保存
@@ -5764,7 +5763,6 @@ async function playlistSet(videoFiles) {
     savePlaylistAndPlaybackState();
     resetShuffle();
     saveShuffleState();
-    hideMessageOverlay();
     updateIconOverlay();
 }
 
@@ -5862,7 +5860,6 @@ function insertFilesIntoPlaylist(files, addPosition = 0) {
         hideMessageOverlay();
         return;
     }
-    updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
 
     // 既存のプレイリスト内のパス一覧（Setで高速化）
     const existingPaths = new Set(playlist.map(item => item?.file?.path));
@@ -5911,21 +5908,8 @@ function insertFilesIntoPlaylist(files, addPosition = 0) {
     updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
     resetShuffle();
-    hideMessageOverlay();
     saveShuffleState();
     showControlsAndFilename();
-}
-
-// プレイリスト追加
-async function addToPlaylist(addPosition = 0) {
-    try {
-        const files = await openVideoDialog();
-        if (!files || files.length === 0) return;
-        await insertFilesIntoPlaylist(files, addPosition);
-    } catch (e) {
-        console.error('追加エラー:', e);
-        updateMessageOverlay('📚 メディア追加に失敗', 6000);
-    }
 }
 
 // プレイリスト削除
@@ -6053,11 +6037,6 @@ async function savePlaylist() {
 
 // ドラッグ＆ドロップファイルのプレイリスト設定
 async function addFilesFromPaths(fullPaths, isAppend = false) {
-    if (isAppend) {
-        updateMessageOverlay(`📚 プレイリスト追加中...`, 0);
-    } else {
-        updateMessageOverlay(`📚 プレイリスト作成中...`, 0);
-    }
     const newFiles = [];
 
     for (const fullPath of fullPaths) {
@@ -6084,8 +6063,6 @@ async function addFilesFromPaths(fullPaths, isAppend = false) {
         }
         debouncedUpdateFilterList();
         debouncedScrollCurrentFilterItem();
-    } else {
-        hideMessageOverlay();
     }
 }
 
@@ -6592,9 +6569,10 @@ async function addFilesToPlaylist(getPathsFn, getFilesFn) {
         const paths = await getPathsFn();
         if (!paths || (Array.isArray(paths) && paths.length === 0)) return;
         
-        updateMessageOverlay('📚 プレイリスト追加中...', 0);
+        const intervalId = setIntervalMessageOverlay(true);
         const videoFiles = await getFilesFn(paths);
         await insertFilesIntoPlaylist(videoFiles, getCurrentAddModePosition());
+        clearIntervalMessageOverlay(intervalId);
     } catch (e) {
         console.error('プレイリスト追加エラー:', e);
         updateMessageOverlay('📚 追加に失敗', 6000);
@@ -7569,4 +7547,20 @@ async function localSturageClearAndFile() {
         localStorage.clear();
         await exportSettingsToFile(settingsFilePath);
     }
+}
+
+function setIntervalMessageOverlay(isAppend = false) {
+    const actionText = isAppend ? '追加' : '作成';
+    // 1秒間隔でメッセージを更新し続けるタイマーのセット
+    updateMessageOverlay(`📚 プレイリスト${actionText}中...`, 0, false);
+    const intervalId = setInterval(() => {
+        updateMessageOverlay(`📚 プレイリスト${actionText}中...`, 0, false);
+    }, 250);
+
+    return intervalId;
+}
+
+function clearIntervalMessageOverlay(intervalId) {
+    clearInterval(intervalId);
+    hideMessageOverlay();
 }
