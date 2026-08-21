@@ -523,7 +523,7 @@ let audioMotion = null;
 let audioMotionMode = null;
 let lastRandomPreset = null;		// 直前にランダムで選ばれたプリセットを保持する変数（関数の外に定義）
 let isSecondary = null;
-let doNotHideMessageOverlay = false;
+let disableMessageOverlay = false;
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -817,7 +817,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 起動時の引数有無判定
         const args = await getCommandLineArgs();
         if (!isReload && args && args.length > 0) {
-            setPlaylistMessageOverlay();
+            updateMessageOverlay(`📚 プレイリスト作成中...`, 0, false);
             // main.js が auto-play-files を送信するので、ここでは何もしない
             return;
         }
@@ -843,7 +843,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const parsedCurrentVideoIndex = parseInt(savedCurrentVideoIndex, 10);
                 if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0 && 
                     !isNaN(parsedCurrentVideoIndex) && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
-                    setPlaylistMessageOverlay();
+                    updateMessageOverlay(`📚 プレイリスト作成中...`, 0, false);
                     playlist = parsedPlaylist.map(path => ({
                         file: { path },
                         name: path
@@ -864,7 +864,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
                     stopPeriodicSave();
                     showControlsAndFilename();
-                    clearPlaylistMessageOverlay();
+                    hideMessageOverlay(true);
                     updateIconOverlay();
                 } else {
                     playlistPathArea.value = appNameAndCopyrightValueLine;
@@ -873,7 +873,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (e) {
                 console.error('プレイリスト復元エラー:', e);
                 playlistPathArea.value = appNameAndCopyrightValueLine;
-                clearPlaylistMessageOverlay();
+                hideMessageOverlay(true);
                 updateIconOverlay();
             }
         } else {
@@ -899,13 +899,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const folderPath = await openFolderDialog();
             if (!folderPath) return;
-            setPlaylistMessageOverlay();
+            updateMessageOverlay(`📚 プレイリスト作成中...`, 0, false);
             const videoFiles = await getFolderVideoFiles(folderPath);
 
             playlistSet(videoFiles);
             debouncedUpdateFilterList();
             debouncedScrollCurrentFilterItem();
-            clearPlaylistMessageOverlay();
+            hideMessageOverlay(true);
         } catch (e) {
             updateMessageOverlay('📁 フォルダ選択エラー', 6000);
             console.error('フォルダ選択エラー:', e);
@@ -918,13 +918,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const filePaths = await openVideoDialog();
             if (!filePaths || filePaths.length === 0) return;
-            setPlaylistMessageOverlay();
+            updateMessageOverlay(`📚 プレイリスト作成中...`, 0, false);
             const videoFiles = await getFileVideoFiles(filePaths);
 
             playlistSet(videoFiles);
             debouncedUpdateFilterList();
             debouncedScrollCurrentFilterItem();
-            clearPlaylistMessageOverlay();
+            hideMessageOverlay(true);
         } catch (e) {
             updateMessageOverlay('🗒️ ファイル選択エラー', 6000);
             console.error('ファイル選択エラー:', e);
@@ -2262,7 +2262,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Ctrlキー（MacのCmdキー含む）が押されているか判定
         const isAppend = e.ctrlKey || e.metaKey;
-        setPlaylistMessageOverlay(isAppend);
+        const actionText = isAppend ? '追加' : '作成';
+        updateMessageOverlay(`📚 プレイリスト${actionText}中...`, 0, false);
 
         const fullPaths = [];
         for (const file of files) {
@@ -2278,7 +2279,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // isAppend フラグを渡す
             await addFilesFromPaths(fullPaths, isAppend);
         }
-        clearPlaylistMessageOverlay();
+        hideMessageOverlay(true);
     });
 
     // ✂️編集モード切替
@@ -2441,7 +2442,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const saveResult = await showSaveCutDialog({ fileName: defaultOutName });
             if (saveResult.canceled) {
-                setTimeout(hideMessageOverlay, 1500);
+                hideMessageOverlay();
                 return;
             }
 
@@ -3270,7 +3271,7 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
     const runAutoPlay = async () => {
         try {
             await playlistSet(videoFiles);
-            clearPlaylistMessageOverlay();
+            hideMessageOverlay(true);
         } catch (err) {
             console.error('プレイリスト設定エラー:', err);
         }
@@ -4268,61 +4269,6 @@ async function importSettingsFromFile(targetFilePath = null) {
             updateMessageOverlay(errorMsg, 6000);
             return null;
         }
-    }
-}
-
-// オーバーレイ表示
-function updateMessageOverlay(content, autoHideAfter = overlayTimeout, isShowControls = true) {
-    messageOverlay.textContent = content;
-    const overlayFontSize = parseFloat(messageOverlay.style.fontSize) || 90;
-    // 1. 実際の文字サイズ（横幅）を計算する関数
-    function getTextWidth(text, font) {
-        // メモリ上に一時的なcanvasを作成
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        context.font = font;
-        // 指定したフォントでの正確な横幅（px）を返す
-        return context.measureText(text).width;
-    }
-    // 2. 現在のフォント設定を取得（font-familyも合わせるとより正確になります）
-    const computedStyle = window.getComputedStyle(messageOverlay);
-    const fontSetting = `${overlayFontSize}px ${computedStyle.fontFamily || 'sans-serif'}`;
-    // 3. 文字列全体の実際の横幅を測定
-    const actualTextWidth = getTextWidth(content, fontSetting);
-    // 4. 横幅の計算（文字幅に左右の余白40pxを足す）
-    let overlayWidth = actualTextWidth + 40;
-    // 5. 最小・最大幅の制限
-    overlayWidth = Math.max(200, Math.min(overlayWidth, window.innerWidth * 0.8));
-    messageOverlay.style.width = `${overlayWidth}px`;
-
-    messageOverlay.style.display = 'block';
-    messageOverlay.classList.add('active');
-    if (isShowControls) {
-        showControlsAndFilename();
-    }
-    updateIconOverlay();
-
-    // 自動非表示の処理
-    if (autoHideAfter > 0) {
-        // 以前のタイマーが残っていたらクリア（複数回呼び出し対策）
-        if (messageOverlay._autoHideTimer) {
-            clearTimeout(messageOverlay._autoHideTimer);
-        }
-
-        messageOverlay._autoHideTimer = setTimeout(() => {
-            hideMessageOverlay();
-        }, autoHideAfter);
-    }
-}
-
-// オーバーレイ非表示
-function hideMessageOverlay() {
-    if (!doNotHideMessageOverlay) {
-        messageOverlay.classList.remove('active');
-        setTimeout(() => {
-            messageOverlay.style.display = 'none';
-        }, 300);
-        updateIconOverlay();
     }
 }
 
@@ -6569,10 +6515,10 @@ async function addFilesToPlaylist(getPathsFn, getFilesFn) {
         const paths = await getPathsFn();
         if (!paths || (Array.isArray(paths) && paths.length === 0)) return;
         
-        setPlaylistMessageOverlay(true);
+        updateMessageOverlay(`📚 プレイリスト追加中...`, 0, false);
         const videoFiles = await getFilesFn(paths);
         await insertFilesIntoPlaylist(videoFiles, getCurrentAddModePosition());
-        clearPlaylistMessageOverlay();
+        hideMessageOverlay(true);
     } catch (e) {
         console.error('プレイリスト追加エラー:', e);
         updateMessageOverlay('📚 追加に失敗', 6000);
@@ -7549,14 +7495,59 @@ async function localSturageClearAndFile() {
     }
 }
 
-function setPlaylistMessageOverlay(isAppend = false) {
-    doNotHideMessageOverlay = true;
-    const actionText = isAppend ? '追加' : '作成';
-    // 1秒間隔でメッセージを更新し続けるタイマーのセット
-    updateMessageOverlay(`📚 プレイリスト${actionText}中...`, 0, false);
+// オーバーレイ表示
+function updateMessageOverlay(content, autoHideAfter = overlayTimeout, isShowControls = true) {
+    messageOverlay.textContent = content;
+    const overlayFontSize = parseFloat(messageOverlay.style.fontSize) || 90;
+    // 1. 実際の文字サイズ（横幅）を計算する関数
+    function getTextWidth(text, font) {
+        // メモリ上に一時的なcanvasを作成
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        context.font = font;
+        // 指定したフォントでの正確な横幅（px）を返す
+        return context.measureText(text).width;
+    }
+    // 2. 現在のフォント設定を取得（font-familyも合わせるとより正確になります）
+    const computedStyle = window.getComputedStyle(messageOverlay);
+    const fontSetting = `${overlayFontSize}px ${computedStyle.fontFamily || 'sans-serif'}`;
+    // 3. 文字列全体の実際の横幅を測定
+    const actualTextWidth = getTextWidth(content, fontSetting);
+    // 4. 横幅の計算（文字幅に左右の余白40pxを足す）
+    let overlayWidth = actualTextWidth + 40;
+    // 5. 最小・最大幅の制限
+    overlayWidth = Math.max(200, Math.min(overlayWidth, window.innerWidth * 0.8));
+    messageOverlay.style.width = `${overlayWidth}px`;
+
+    messageOverlay.style.display = 'block';
+    messageOverlay.classList.add('active');
+    if (isShowControls) {
+        showControlsAndFilename();
+    }
+    updateIconOverlay();
+
+    // 自動非表示の処理
+    if (autoHideAfter > 0) {
+        // 以前のタイマーが残っていたらクリア（複数回呼び出し対策）
+        if (messageOverlay._autoHideTimer) {
+            clearTimeout(messageOverlay._autoHideTimer);
+        }
+
+        messageOverlay._autoHideTimer = setTimeout(() => {
+            hideMessageOverlay();
+        }, autoHideAfter);
+        disableMessageOverlay = false;
+    } else {
+        disableMessageOverlay = true;
+    }
 }
 
-function clearPlaylistMessageOverlay() {
-    doNotHideMessageOverlay = false;
-    hideMessageOverlay();
+// オーバーレイメッセージ非表示
+function hideMessageOverlay(compulsion = false) {
+    if (!disableMessageOverlay || compulsion) {
+        messageOverlay.classList.remove('active');
+        messageOverlay.style.display = 'none';
+        disableMessageOverlay = false;
+        updateIconOverlay();
+    }
 }
