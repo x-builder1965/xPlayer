@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.31.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.32.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2949,7 +2949,7 @@ document.addEventListener('keydown', async (event) => {
     // ▼プレイリストフィルタ（Ctrl＋g）
     if (event.ctrlKey && event.key === 'g') {
         event.preventDefault();
-        toggleFilterPanel();
+        playlistPathArea.click();
         return;
     }
 
