@@ -3935,6 +3935,7 @@ function hideControlsAndFilename() {
     updateIconOverlay();
 }
 
+// 編集パネル非表示
 function hideEditPanel() {
     const editPanel = document.querySelector('.edit-panel');
     if (editPanel) {
@@ -4544,7 +4545,6 @@ function pathToFileUrl(filePath) {
 }
 
 // プレイリストサムネイルのキャッシュ
-// script.js
 async function getPlaylistThumbnailDataUrl(filePath, size = 180) {
     if (!filePath) return '';
     const cacheKey = `${filePath}|${size}`;
@@ -7176,12 +7176,14 @@ function toggleSettingsPanel(show) {
     updateIconOverlay();
 }
 
+// 常に最前面ボタンのUI更新
 function updateAlwaysOnTopButtonUI() {
     if (!alwaysOnTopBtn) return;
     alwaysOnTopBtn.classList.toggle('always-on-top-active', isAlwaysOnTop);
     alwaysOnTopBtn.setAttribute('data-tooltip', isAlwaysOnTop ? '常に最前面を解除（Ctrl+1）' : '常に最前面を設定（Ctrl+1）');
 }
 
+// 常に最前面切替
 async function toggleAlwaysOnTop() {
     isAlwaysOnTop = !isAlwaysOnTop;
     await setAlwaysOnTop(isAlwaysOnTop);
@@ -7189,17 +7191,20 @@ async function toggleAlwaysOnTop() {
     updateAlwaysOnTopButtonUI();
 }
 
+// メディアファイルの拡張子を取得する関数
 function getMediaFileExtension(filePath) {
     if (!filePath) return '';
     const cleanPath = filePath.split('?')[0];
     return path.extname(cleanPath).toLowerCase();
 }
 
+// メディアファイルが音声ファイルかどうかを判定する関数
 function isAudioFilePath(filePath) {
     const ext = getMediaFileExtension(filePath);
     return AUDIO_EXTENSIONS.includes(ext);
 }
 
+// メディアプレイヤーの表示を更新する関数
 function updateMediaPlayerDisplay() {
     const isAudio = currentMediaType === 'audio';
     if (videoPlayerElement) {
@@ -7213,6 +7218,7 @@ function updateMediaPlayerDisplay() {
     }
 }
 
+// メディアプレイヤーのプロキシを作成する関数
 function createMediaPlayerProxy(videoElement, audioElement) {
     return new Proxy(videoElement, {
         get(target, prop) {
@@ -7471,7 +7477,6 @@ async function localSturageSetItemAndFile(key, value) {
         await exportSettingsToFile(settingsFilePath);
     }
 }
-
 
 // localStorageバックアップファイル更新付きlocalStrage.removeItem
 async function localSturageRemoveItemAndFile(key) {
