@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.32.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.33.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -49,11 +49,13 @@ const appNameAndCopyrightValue = `${appName}\n${copyright}`;
 const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.opus', '.wma', '.aiff', '.aif', '.alac', '.ape'];
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.svg'];
 const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
 const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
 const settingsFilePath = getUserSettingsPath();
 const pid = getPid();
+const IMAGE_DURATION = 5;      // 画像の再生時間（秒）
 
 const SORT_MODES = {
     none:       { label: '（なし）',     fn: () => getPlaylistInOriginalOrder() },
@@ -415,6 +417,7 @@ let changelogBtn = null;
 let changelogContent = null;
 let tableContainer = null;
 let mediaContainer = null;
+let imagePlayer = null;
 
 // localStorage から復得
 let savedVolume = null;
@@ -524,6 +527,9 @@ let audioMotionMode = null;
 let lastRandomPreset = null;		// 直前にランダムで選ばれたプリセットを保持する変数（関数の外に定義）
 let isSecondary = null;
 let disableMessageOverlay = false;
+let imageTimer = null;
+let imageCurrentTime = 0;      // 0〜5秒
+let imageProgressInterval = null;
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -1057,6 +1063,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         videoPlayer.load();                     // src属性が無い状態でload → エラーにならない
         videoPreview.removeAttribute('src');
         videoPreview.load();
+        imagePlayer.removeAttribute('src');
         localSturageSetItemAndFile('currentTime', 0);
 
         // 4. UI更新（停止状態を強制）
@@ -1096,31 +1103,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateIconOverlay();
     });
 
-    // ⏪30秒戻る
+    // ⏪30秒戻る（画像の場合は先頭へ戻す）
     rewindBtn.addEventListener('click', () => {
-        if (videoPlayer.duration) {
-            let newTime = videoPlayer.currentTime - 30;
-            newTime = Math.max(0, newTime);
-            videoPlayer.currentTime = newTime;
-            seekBar.value = (100 / videoPlayer.duration) * newTime;
-            updateTimeDisplay();
-            updateMessageOverlay(`🕓 ${formatTime(newTime)}`);
-            localSturageSetItemAndFile('currentTime', newTime);
+        const duration = getMediaDuration();
+        if (duration) {
+            let newTime = getMediaCurrentTime() - 30;
+            setMediaCurrentTime(newTime);
+            updateMessageOverlay(`🕓 ${formatTime(getMediaCurrentTime())}`);
             showControlsAndFilename();
             updateIconOverlay();
         }
     });
 
-    // ⏩30秒進む
+    // ⏩30秒進む（画像の場合は末尾へ進み次のメディアへ）
     fastForwardBtn.addEventListener('click', () => {
-        if (videoPlayer.duration) {
-            let newTime = videoPlayer.currentTime + 30;
-            newTime = Math.min(videoPlayer.duration, newTime);
-            videoPlayer.currentTime = newTime;
-            seekBar.value = (100 / videoPlayer.duration) * newTime;
-            updateTimeDisplay();
-            updateMessageOverlay(`🕓 ${formatTime(newTime)}`);
-            localSturageSetItemAndFile('currentTime', newTime);
+        const duration = getMediaDuration();
+        if (duration) {
+            let newTime = getMediaCurrentTime() + 30;
+            setMediaCurrentTime(newTime);
+            updateMessageOverlay(`🕓 ${formatTime(getMediaCurrentTime())}`);
             showControlsAndFilename();
             updateIconOverlay();
         }
@@ -1185,13 +1186,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ↔️／↕️／⏺️描画モード切替
     fitModeBtn.addEventListener('click', () => {
-        if (videoPlayer.style.objectFit === 'contain') {
+        const targetElement = getMediaElement();
+        const currentFit = targetElement.style.objectFit || fitMode;
+
+        if (currentFit === 'contain') {
             fitMode = 'cover';
-        } else if (videoPlayer.style.objectFit === 'cover') {
+        } else if (currentFit === 'cover') {
             fitMode = 'fill';
         } else {
             fitMode = 'contain';
-            fitModeBtn.setAttribute('data-tooltip', '画像を含む（Ctrl+x）');
         }
         applyFitModeSetting(fitMode);
         showControlsAndFilename();
@@ -1685,7 +1688,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // マウス移動
+    // マウス移動（ドラッグシーク）
     mediaContainer.addEventListener('mousemove', (event) => {
         // ズームモード時のパン（画像移動）
         if (isPanning) {
@@ -1696,31 +1699,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             translateX += deltaX;
             translateY += deltaY;
             const scale = (100 + zoomValue) / 100;
-            videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+            
+            const targetElement = (currentMediaType === 'image' && typeof imagePlayer !== 'undefined') ? imagePlayer : videoPlayer;
+            targetElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+            
             localSturageSetItemAndFile('translateX', translateX.toString());
             localSturageSetItemAndFile('translateY', translateY.toString());
-
+    
             updateIconOverlay();
             return;
         }
-
-        if (isDragging && videoPlayer.duration) {
+    
+        const duration = getMediaDuration();
+        if (isDragging && duration) {
             const deltaX = event.clientX - dragStartX;
             const deltaY = event.clientY - dragStartY;
             const absDeltaX = Math.abs(deltaX);
             const absDeltaY = Math.abs(deltaY);
-
+    
             if (absDeltaX > absDeltaY && absDeltaX > 5) {
                 isVolumeDragging = false;
-                const seekStep = videoPlayer.duration / 1000;
+                const seekStep = duration / 1000;
                 const seekTime = deltaX * seekStep * seekSensitivity;
-                let newTime = videoPlayer.currentTime + seekTime;
-                newTime = Math.max(0, Math.min(videoPlayer.duration, newTime));
-                videoPlayer.currentTime = newTime;
-                seekBar.value = (100 / videoPlayer.duration) * newTime;
-                updateTimeDisplay();
-                updateMessageOverlay(`🕓 ${formatTime(newTime)}`, 1000);
-                localSturageSetItemAndFile('currentTime', newTime);
+                let newTime = getMediaCurrentTime() + seekTime;
+                setMediaCurrentTime(newTime);
+                updateMessageOverlay(`🕓 ${formatTime(getMediaCurrentTime())}`, 1000);
                 darkOverlay.style.display = 'block';
             } else if (absDeltaY > absDeltaX && absDeltaY > 5) {
                 isVolumeDragging = true;
@@ -1735,7 +1738,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 1000);
                 localSturageSetItemAndFile('volume', videoPlayer.volume);
             }
-
+    
             dragStartX = event.clientX;
             dragStartY = event.clientY;
             updateIconOverlay();
@@ -1750,13 +1753,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const wasDragging = isDragging;
             const wasVolumeDragging = isVolumeDragging;
             const wasPanning = isPanning;
-
+    
             isDragging = false;
             isVolumeDragging = false;
             isPanning = false;
             darkOverlay.style.display = 'none';
             resetCursorTimer();
-
+    
             if (wasDragging || wasVolumeDragging) {
                 updateIconOverlay();
             }
@@ -1938,73 +1941,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     // シークバー ドラッグ
     seekBar.addEventListener('input', (e) => {
         if (controls.style.opacity !== '1') return;
-        if (!videoPlayer.duration) return;
-        const time = videoPlayer.duration * (seekBar.value / 100);
-        videoPreview.currentTime = time;
-        videoPlayer.currentTime = videoPreview.currentTime;
-        // 編集モード中は編集用シークバーも同期
-        if ((isEditMode || (typeof editPanel !== 'undefined' && editPanel && window.getComputedStyle(editPanel).display !== 'none')) && typeof editSeekBar !== 'undefined' && editSeekBar) {
-            editSeekBar.value = (time / videoPlayer.duration) * 100;
+        const duration = getMediaDuration();
+        if (!duration) return;
+    
+        const time = duration * (seekBar.value / 100);
+        setMediaCurrentTime(time);
+    
+        if (currentMediaType !== 'image') {
+            videoPreview.currentTime = time;
         }
-        updateTimeDisplay();
+    
+        if ((isEditMode || (typeof editPanel !== 'undefined' && editPanel && window.getComputedStyle(editPanel).display !== 'none')) && typeof editSeekBar !== 'undefined' && editSeekBar) {
+            editSeekBar.value = (time / duration) * 100;
+        }
         updateMessageOverlay(`🕓 ${formatTime(time)}`);
     });
 
     // シークバー スライダー変更
     seekBar.addEventListener('change', () => {
         if (controls.style.opacity !== '1') return;
-        if (!videoPlayer.duration) return;
-        // 最後にユーザーがセットした値を優先して使う
-        updateTimeDisplay();                       // 正しい時間で更新
-        localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
+        const duration = getMediaDuration();
+        if (!duration) return;
+        
+        updateTimeDisplay();
+        localSturageSetItemAndFile('currentTime', getMediaCurrentTime());
     });
 
     // シークバー マウスクリック
     seekBar.addEventListener('mousedown', (e) => {
         if (controls.style.opacity !== '1') return;
-        if (e.button === 0 && videoPlayer.duration) {
-            videoPlayer.currentTime = videoPreview.currentTime;
+        const duration = getMediaDuration();
+        if (e.button === 0 && duration) {
+            if (currentMediaType !== 'image') {
+                videoPlayer.currentTime = videoPreview.currentTime;
+            }
             isDragging = true;
             isSeekDragging = true;
             darkOverlay.style.display = 'block';
-            editSeekBar.value = seekBar.value; // カット編集シークバーも同期
+            if (typeof editSeekBar !== 'undefined' && editSeekBar) {
+                editSeekBar.value = seekBar.value;
+            }
         }
     });
 
     // シークバー マウスオーバー
     seekBar.addEventListener('mouseover', (e) => {
         if (controls.style.opacity !== '1') return;
-        if (!videoPlayer.duration || playlist.length === 0) return;
+        const duration = getMediaDuration();
+        if (!duration || playlist.length === 0) return;
         isMouseOverSeekBar = true;
-        // ★ 動画以外（音声ファイル等）の場合はプレビューを表示しない
+    
         const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
         const ext = path.extname(currentSrc).toLowerCase();
         if (!isVideoFile(ext)) return;
         videoPreview.style.display = 'block';
-        // プレビュー位置更新
         updatePreviewPosition(e);
     });
 
     // シークバー マウス移動
     seekBar.addEventListener('mousemove', (e) => {
         if (controls.style.opacity !== '1') return;
-        if (!videoPlayer.duration || !isMouseOverSeekBar) return;
+        const duration = getMediaDuration();
+        if (!duration || !isMouseOverSeekBar) return;
+    
         const rect = seekBar.getBoundingClientRect();
         const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        const time = videoPlayer.duration * percent;
-
-        // プレビュー時間更新・位置更新
-        videoPreview.currentTime = time;
-        updatePreviewPosition(e);
-
-        // シークバー表示更新（ドラッグ中は無視）
+        const time = duration * percent;
+    
+        if (currentMediaType === 'video') {
+            videoPreview.currentTime = time;
+            updatePreviewPosition(e);
+        }
+    
         if (!isSeekDragging) {
             seekBar.value = percent * 100;
             updateTimeDisplay();
         } else {
-            seekBar.value = (videoPreview.currentTime / videoPreview.duration) * 100;
-            editSeekBar.value = seekBar.value; // カット編集シークバーも同期
-            videoPlayer.currentTime = videoPreview.currentTime;
+            setMediaCurrentTime(time);
+            if (typeof editSeekBar !== 'undefined' && editSeekBar) {
+                editSeekBar.value = seekBar.value;
+            }
         }
     });
 
@@ -2013,11 +2029,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (controls.style.opacity !== '1') return;
         isMouseOverSeekBar = false;
         videoPreview.style.display = 'none';
-        // 通常の時間表示に戻す
-        if (!isSeekDragging && videoPlayer.duration) {
-            const value = (100 / videoPlayer.duration) * videoPlayer.currentTime;
+    
+        const duration = getMediaDuration();
+        if (!isSeekDragging && duration) {
+            const value = (100 / duration) * getMediaCurrentTime();
             seekBar.value = value;
-            editSeekBar.value = seekBar.value; // カット編集シークバーも同期
+            if (typeof editSeekBar !== 'undefined' && editSeekBar) {
+                editSeekBar.value = seekBar.value;
+            }
             updateTimeDisplay();
         }
     });
@@ -2026,7 +2045,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     seekBar.addEventListener('mouseleave', () => {
         if (controls.style.opacity !== '1') return;
         if (isSeekDragging && !seekBar.matches(':active')) {
-            editSeekBar.value = seekBar.value; // カット編集シークバーも同期
+            if (typeof editSeekBar !== 'undefined' && editSeekBar) {
+                editSeekBar.value = seekBar.value;
+            }
             isSeekDragging = false;
             darkOverlay.style.display = 'none';
         }
@@ -2079,10 +2100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (controls.style.opacity !== '1') return;
         const rate = parseFloat(e.target.value);
         if (!isNaN(rate) && rate > 0) {
-            currentPlaybackRate = rate;               // ← ここを追加
-            videoPlayer.playbackRate = rate;
-            localSturageSetItemAndFile('playbackSpeed', rate);
-            updateMessageOverlay(`🏃‍♂️‍➡️ ${rate}x`);
+            setPlaybackRate(rate);
         }
     });
 
@@ -3513,6 +3531,7 @@ function allDOMsetting() {
     changelogContent = document.getElementById('changelogContent');
     tableContainer = document.getElementById('tableContainer');
     mediaContainer = document.getElementById('mediaContainer');
+    imagePlayer = document.getElementById('imagePlayer');
 }
 
 // ユーザーフォルダ内の設定ファイルパスを取得
@@ -4002,17 +4021,20 @@ function updateVolumeDisplay() {
 
 // ズーム適用
 function applyZoom(zoomPercent) {
-    // ズーム値（-100～+500）をscale値（0～6）に変換
-    // 公式: scale = (100 + zoomPercent) / 100
     const scale = (100 + zoomPercent) / 100;
-    // transform は translate(px,px) scale() の順に指定
-    videoPlayer.style.transformOrigin = 'center center';
-    videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    const targetElement = getMediaElement();
+
+    targetElement.style.transformOrigin = 'center center';
+    targetElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+
     localSturageSetItemAndFile('translateX', translateX.toString());
     localSturageSetItemAndFile('translateY', translateY.toString());
     zoomValue = zoomPercent;
     localSturageSetItemAndFile('zoom', zoomValue.toString());
-    zoomDisplay.textContent = `${zoomValue > 0 ? '+' : ''}${zoomValue}%`;
+    
+    if (zoomDisplay) {
+        zoomDisplay.textContent = `${zoomValue > 0 ? '+' : ''}${zoomValue}%`;
+    }
     if (isZoomMode) {
         updateMessageOverlay(`🔍 ${zoomValue > 0 ? '+' : ''}${zoomValue}%`);
     }
@@ -4029,6 +4051,7 @@ function applyFitModeSetting(setFitMode) {
     } else if (setFitMode === 'fill') {
         fitMode = 'fill';
         fitModeBtn.classList.add('fitMode-fill');
+        fitModeBtn.classList.add('fitMode-fill');
         fitModeBtn.textContent = '⏺️';
         fitModeBtn.setAttribute('data-tooltip', '画像を満たす（Ctrl+x）');
     } else {
@@ -4036,7 +4059,10 @@ function applyFitModeSetting(setFitMode) {
         fitModeBtn.textContent = '↔️';
         fitModeBtn.setAttribute('data-tooltip', '画像を含む（Ctrl+x）');
     }
-    videoPlayer.style.objectFit = fitMode;
+
+    const targetElement = getMediaElement();
+    targetElement.style.objectFit = fitMode;
+
     localSturageSetItemAndFile('fitMode', fitMode);
     applyAspectRatioSetting();
 }
@@ -4044,16 +4070,19 @@ function applyFitModeSetting(setFitMode) {
 // アスペクト比適用
 function applyAspectRatioSetting() {
     const selectedOption = ASPECT_NODES[currentAspectRatio];
+    const targetElement = getMediaElement();
 
-    if (!selectedOption || currentAspectRatio === 'none') {
-        videoPlayer.style.aspectRatio = '';
-        videoPlayer.style.width = '100%';
-        videoPlayer.style.height = '100%';
-        videoPlayer.style.maxWidth = '100%';
-        videoPlayer.style.maxHeight = '100%';
-        videoPlayer.style.objectFit = fitMode;
-        videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${(100 + zoomValue) / 100})`;
-    } else {
+    // 不要なスタイルをクリア
+    targetElement.style.aspectRatio = '';
+    targetElement.style.width = '100%';
+    targetElement.style.height = '100%';
+    targetElement.style.maxWidth = '100%';
+    targetElement.style.maxHeight = '100%';
+    targetElement.style.objectFit = fitMode;
+    targetElement.style.transformOrigin = 'center center';
+    targetElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${(100 + zoomValue) / 100})`;
+
+    if (selectedOption && currentAspectRatio !== 'none') {
         const [width, height] = selectedOption.value.split(' / ').map(Number);
         const ratio = width / height;
         const containerWidth = videoContainer.clientWidth || window.innerWidth;
@@ -4068,14 +4097,12 @@ function applyAspectRatioSetting() {
             targetWidth = targetHeight * ratio;
         }
 
-        videoPlayer.style.aspectRatio = `${width} / ${height}`;
-        videoPlayer.style.width = `${Math.round(targetWidth)}px`;
-        videoPlayer.style.height = `${Math.round(targetHeight)}px`;
-        videoPlayer.style.maxWidth = '100vw';
-        videoPlayer.style.maxHeight = '100vh';
-        videoPlayer.style.objectFit = fitMode;
-        videoPlayer.style.margin = '0 auto';
-        videoPlayer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${(100 + zoomValue) / 100})`;
+        targetElement.style.aspectRatio = `${width} / ${height}`;
+        targetElement.style.width = `${Math.round(targetWidth)}px`;
+        targetElement.style.height = `${Math.round(targetHeight)}px`;
+        targetElement.style.maxWidth = '100vw';
+        targetElement.style.maxHeight = '100vh';
+        targetElement.style.margin = '0 auto';
     }
 
     videoContainer.style.justifyContent = 'center';
@@ -4758,10 +4785,13 @@ async function updateFilterList() {
             thumbWrap.className = 'filter-item-thumb-wrap';
             thumbWrap.style.width = `${thumbDims.width}px`;
             thumbWrap.style.height = `${thumbDims.height}px`;
+            thumbWrap.style.background = '#000000'; // 黒背景を敷くことでcontain時の余白を目立ちにくくする
+            
             const thumb = document.createElement('img');
             thumb.className = 'filter-item-thumb';
             thumb.style.width = '100%';
             thumb.style.height = '100%';
+            thumb.style.objectFit = 'contain'; // ★画像をアスペクト比固定で全体表示（contain）に設定
             thumb.alt = fileName;
             thumb.src = '';
             thumbWrap.appendChild(thumb);
@@ -4796,13 +4826,26 @@ async function updateFilterList() {
             const isAudioFile = (filePath) => {
                 if (!filePath) return false;
                 const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
-                return AUDIO_EXTENSIONS.includes(ext);
+                return typeof AUDIO_EXTENSIONS !== 'undefined' ? AUDIO_EXTENSIONS.includes(ext) : ['.mp3', '.wav', '.flac', '.aac', '.m4a', '.ogg'].includes(ext);
+            };
+
+            // ★画像ファイルの判定関数を追加
+            const isImageFile = (filePath) => {
+                if (!filePath) return false;
+                const cleanPath = filePath.split('?')[0];
+                const ext = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
+                return ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].includes(ext);
             };
             
             try {
                 if (isAudioFile(item.file?.path)) {
                     setMusicThumb();
+                } else if (isImageFile(item.file?.path)) {
+                    // ★画像ファイルの場合はローカルファイルをそのままURL化してセット（高速化 & そのままサムネ化）
+                    const imageUrl = `file://${item.file.path.replace(/\\/g, '/')}`;
+                    thumb.src = imageUrl;
                 } else {
+                    // 動画等の場合
                     const thumbUrl = await getPlaylistThumbnailDataUrl(item.file?.path, thumbDims.width);
                     if (myUpdateId !== currentUpdateId) return;
 
@@ -5251,39 +5294,95 @@ async function toggleurlInputPanel(show = null) {
     updateUrlButtonIcon();   // ← ここで色も更新
 }
 
+// 次のプレイリストアイテムを再生する汎用フォールバック関数
+async function playNextPlaylistItem() {
+        videoPlayer.currentTime = 0;
+        localSturageSetItemAndFile('currentTime', 0);
+
+        // 一時ファイル削除
+        await deleteTempVideo();
+
+        // 常にgetNextVideoIndex()を呼び、次があれば再生
+        // （ランダムOFF・repeat 'none' でも次に進む）
+        const nextIndex = getNextVideoIndex();
+        if (nextIndex >= 0) {
+            currentVideoIndex = nextIndex;
+            await playVideo(playlist[currentVideoIndex].file, 0);
+        } else {
+            if (modeChange === 'convert') {
+                seekBar.value = 0;
+                updateMessageOverlay('🔄️ 変換完了');
+            }
+            playStopBtn.click(); // プレイリストの最後で停止
+        }
+        savePlaylistAndPlaybackState();
+
+        showControlsAndFilename();
+        updateIconOverlay();
+}
+
 // メディア再生
 async function playVideo(file, currentTime) {
     if (!file?.path) return;
 
-    // メディアソース設定
+    if (imageTimer) {
+        clearTimeout(imageTimer);
+        imageTimer = null;
+    }
+    stopImageProgress();
+
     isPlaying = true;
     await setVideoSrc(file);
+    updateIconOverlay();
 
-    if (modeChange === 'convert') {
-        // 再生即終了 → 最後尾へ
-        setVideoDurationTime(); // duration が NaN でも安全に処理
+    // 【追加】動画・画像切り替え時に相互の設定（アスペクト比・描画モード・ズーム・パン）を適用
+    syncDisplaySettingsToCurrentMedia();
+
+    if (currentMediaType === 'image') {
+        playPauseBtn.textContent = '▶️';
+        playPauseBtn.classList.remove('paused-active');
+        playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+
+        imageCurrentTime = (!isNaN(currentTime) && currentTime >= 0) ? Math.min(IMAGE_DURATION, currentTime) : 0;
+        
+        seekBar.value = (100 / IMAGE_DURATION) * imageCurrentTime;
+        updateTimeDisplay();
+
+        // 速度で除算して実タイマー時間を算出
+        const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
+
+        startPeriodicSave();
+        startImageProgress();
+
+        imageTimer = setTimeout(async () => {
+            imageTimer = null;
+            stopImageProgress();
+            await playNextPlaylistItem();
+        }, remainingMs);
     } else {
-        // 再生時間復元
-        if (!isNaN(currentTime) && currentTime >= 0) {
-            videoPlayer.currentTime = currentTime;
-            localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
+        if (modeChange === 'convert') {
+            setVideoDurationTime();
+        } else {
+            if (!isNaN(currentTime) && currentTime >= 0) {
+                videoPlayer.currentTime = currentTime;
+                localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
+            }
         }
+
+        // 動画再生時に現在の再生速度を適用
+        videoPlayer.playbackRate = currentPlaybackRate || 1.0;
+
+        startPeriodicSave();
+        videoPlayer.play().catch(() => {
+            playPauseBtn.textContent = '⏸️';
+            playPauseBtn.classList.add('paused-active');
+            playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+            stopPeriodicSave();
+        });
     }
 
-    // 再生開始
-    startPeriodicSave();
-    videoPlayer.play().catch(() => {
-        playPauseBtn.textContent = '⏸️';
-        playPauseBtn.classList.add('paused-active');
-        playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-        stopPeriodicSave();
-    });
-
-    // フィルタ条件をクリアし、再生メディアの行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
-    // clearPlaylistFilter();
     updatePlaylistDisplay();
-
     showControlsAndFilename();
     updateIconOverlay();
 }
@@ -5342,9 +5441,46 @@ function setVideoDurationTime() {
 // 再生/一時停止切替
 async function togglePlayPause() {
     isPlaying = true;
+
+    // 画像表示中のトグル処理
+    if (currentMediaType === 'image') {
+        if (imageTimer) {
+            // 【再生中 → 一時停止】タイマーを停止
+            clearTimeout(imageTimer);
+            imageTimer = null;
+            stopImageProgress();
+            
+            playPauseBtn.textContent = '⏸️';
+            playPauseBtn.classList.add('paused-active');
+            playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+            stopPeriodicSave();
+        } else {
+            // 【一時停止中 → 再開】残り時間を計算してタイマー再開
+            playPauseBtn.textContent = '▶️';
+            playPauseBtn.classList.remove('paused-active');
+            playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            
+            startPeriodicSave();
+            startImageProgress();
+
+            const remainingMs = (IMAGE_DURATION - imageCurrentTime) * 1000;
+            imageTimer = setTimeout(async () => {
+                imageTimer = null;
+                stopImageProgress();
+                await playNextPlaylistItem();
+            }, remainingMs > 0 ? remainingMs : 5000);
+        }
+
+        selectedPlaylistIndex = currentVideoIndex;
+        updatePlaylistDisplay();
+        showControlsAndFilename();
+        updateIconOverlay();
+        return;
+    }
+
+    // 動画・音声のトグル処理
     if (videoPlayer.paused) {
         if (isVideoStopped() || currentVideoIndex === -1) {
-            // メディアソース設定
             currentVideoIndex = 0;
             if (selectedPlaylistIndex >= 0) {
                 currentVideoIndex = selectedPlaylistIndex;
@@ -5358,21 +5494,17 @@ async function togglePlayPause() {
         }
 
         if (modeChange === 'convert') {
-            // 再生即終了 → 最後尾へ
-            setVideoDurationTime(); // duration が NaN でも安全に処理
+            setVideoDurationTime();
         } else {
-            // カット編集モードで、かつカット範囲がある場合 → 次の有効な位置へジャンプ
             const isInEditMode = isEditMode || (editPanel && window.getComputedStyle(editPanel).display !== 'none');
             if (isInEditMode && cutRanges.length > 0) {
                 const nextPos = findNextValidPosition(videoPlayer.currentTime);
-
                 if (nextPos >= 0 && nextPos < videoPlayer.duration) {
                     videoPlayer.currentTime = nextPos;
                 }
             }
         }
         
-        // 再生開始
         startPeriodicSave();
         videoPlayer.play().catch(() => {
             playPauseBtn.textContent = '⏸️';
@@ -5389,105 +5521,140 @@ async function togglePlayPause() {
         stopPeriodicSave();
     }
 
-    // フィルタ条件をクリアし、再生メディアの行位置にスクロール
     selectedPlaylistIndex = currentVideoIndex;
-    // clearPlaylistFilter();
     updatePlaylistDisplay();
-
     showControlsAndFilename();
     updateIconOverlay();
 }
 
+// 画像ファイル判定ヘルパー
+function isImageFilePath(filePath) {
+    if (!filePath) return false;
+    const cleanPath = filePath.split('?')[0];
+    const ext = path.extname(cleanPath).toLowerCase();
+    return IMAGE_EXTENSIONS.includes(ext);
+}
+
 // メディアソース設定
 async function setVideoSrc(file) {
+    // 既存のタイマーがあればクリア
+    if (imageTimer) {
+        clearTimeout(imageTimer);
+        imageTimer = null;
+    }
+
     playPauseBtn.textContent = '▶️';
     playPauseBtn.classList.remove('paused-active');
     playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+    
 
-    // クエリパラメータを除去して正しい拡張子を取得
     let cleanPath = file.path;
     if (cleanPath.includes('?')) {
         cleanPath = cleanPath.split('?')[0];
     }
     const ext = path.extname(cleanPath).toLowerCase();
     const isAudio = isAudioFilePath(file.path);
-    currentMediaType = isAudio ? 'audio' : 'video';
-    updateMediaPlayerDisplay();
+    const isImage = isImageFilePath(file.path);
 
-    // audioMotionの初期化と表示切り替え
+    // メディアタイプ判定
+    if (isImage) {
+        currentMediaType = 'image';
+    } else if (isAudio) {
+        currentMediaType = 'audio';
+    } else {
+        currentMediaType = 'video';
+    }
+
+    updateMediaPlayerDisplay();
     updateAudioMotion();
     toggleVisualizer(currentMediaType);
 
-    // media.src設定
-    if (isAudio) {
+    // 画像処理分岐
+    if (isImage) {
         isConverting = false;
-        const mediaUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
-        videoPlayerElement.src = mediaUrl;
-        audioPlayer.src = mediaUrl;
+        const imageUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
+        
+        // 表示要素切り替え
+        imagePlayer.src = imageUrl;
+
+        // video/audio はリセットして停止
+        videoPlayerElement.pause();
+        videoPlayerElement.removeAttribute('src');
+        videoPlayerElement.load();
+        audioPlayer.removeAttribute('src');
+        audioPlayer.load();
         videoPreview.removeAttribute('src');
         videoPreview.load();
-        baseConvertFile = null;
-        tempConvertFile = null;
-    } else if (isHTML5_SUPPORTED(ext)) {
-        isConverting = false;
-        const videoUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
-        videoPlayerElement.src = videoUrl;
-        audioPlayer.src = videoUrl;
-        videoPreview.src = videoUrl;
+
         baseConvertFile = null;
         tempConvertFile = null;
     } else {
-        try {
-            // 一時ファイル削除
-            await deleteTempVideo();
+        // 画像以外を表示する場合は img を非表示にして video を表示
+        imagePlayer.style.display = 'none';
+        imagePlayer.removeAttribute('src');
+        videoPlayerElement.style.display = 'block';
 
-            const wasIsPlaying = isPlaying;
-            isConverting = true;
-            updatePlaylistDisplay();
-            // シークバーを赤色に変更
-            currentConvertPromise = convertVideo(file.path, modeChange, currentAudioIndex);
-            const convertedPath = await currentConvertPromise;
-
-            const videoUrl = `file://${convertedPath}`;
+        if (isAudio) {
+            isConverting = false;
+            const mediaUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
+            videoPlayerElement.src = mediaUrl;
+            audioPlayer.src = mediaUrl;
+            videoPreview.removeAttribute('src');
+            videoPreview.load();
+            baseConvertFile = null;
+            tempConvertFile = null;
+        } else if (isHTML5_SUPPORTED(ext)) {
+            isConverting = false;
+            const videoUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
             videoPlayerElement.src = videoUrl;
             audioPlayer.src = videoUrl;
             videoPreview.src = videoUrl;
-            baseConvertFile = file.path;
-            tempConvertFile = convertedPath;
-            
-            // パスのパラメータ排除・対応拡張子判定
-            let cleanPath = baseConvertFile;
-            if (cleanPath.includes('?')) {
-                cleanPath = cleanPath.split('?')[0];
-            }
-            const ext = path.extname(cleanPath).toLowerCase();
-            const validExt = isHTML5_SUPPORTED(ext);
-            // 削除ファイル設定
-            delConvertFile = null;
-            if (!validExt) {
-                if (baseConvertFile != tempConvertFile) {
-                    if (modeChange === 'video') {
-                        delConvertFile = tempConvertFile;
-                    } else {
-                        delConvertFile = baseConvertFile;
-                    }
+            baseConvertFile = null;
+            tempConvertFile = null;
+        } else {
+            try {
+                await deleteTempVideo();
+                const wasIsPlaying = isPlaying;
+                isConverting = true;
+                updatePlaylistDisplay();
+
+                currentConvertPromise = convertVideo(file.path, modeChange, currentAudioIndex);
+                const convertedPath = await currentConvertPromise;
+
+                const videoUrl = `file://${convertedPath}`;
+                videoPlayerElement.src = videoUrl;
+                audioPlayer.src = videoUrl;
+                videoPreview.src = videoUrl;
+                baseConvertFile = file.path;
+                tempConvertFile = convertedPath;
+                
+                let cleanPath = baseConvertFile;
+                if (cleanPath.includes('?')) {
+                    cleanPath = cleanPath.split('?')[0];
                 }
-            }            
-            isPlaying = wasIsPlaying;
-        } catch (err) {
-            console.error("変換失敗:", err);
-            isConverting = false;
-            updateMessageOverlay('🔄️ 変換失敗', 6000);
-            playlistPathArea.value = appNameAndCopyrightValueLine;
-            updateIconOverlay();
-            // 変換失敗時もシークバーをリセット
-            seekBar.value = 0;
-            return;
+                const ext = path.extname(cleanPath).toLowerCase();
+                const validExt = isHTML5_SUPPORTED(ext);
+                delConvertFile = null;
+                if (!validExt) {
+                    if (baseConvertFile != tempConvertFile) {
+                        delConvertFile = (modeChange === 'video') ? tempConvertFile : baseConvertFile;
+                    }
+                }            
+                isPlaying = wasIsPlaying;
+            } catch (err) {
+                console.error("変換失敗:", err);
+                isConverting = false;
+                updateMessageOverlay('🔄️ 変換失敗', 6000);
+                playlistPathArea.value = appNameAndCopyrightValueLine;
+                updateIconOverlay();
+                seekBar.value = 0;
+                return;
+            }
         }
     }
-    
-    // 音声トラック・字幕トラックボタン表示
-    if (currentMediaType !== 'audio') {
+
+    // トラック情報制御（画像以外）
+    if (currentMediaType !== 'audio' && currentMediaType !== 'image') {
         if (modeChange === 'video') {
             await updateTrack('subtitle');
         } else {
@@ -5496,21 +5663,33 @@ async function setVideoSrc(file) {
     }
     updateTrackButtonsVisibility();
 
-    // 共通再生処理
+    // 共通再生処理（動画/音声の場合）
     videoPlayer.load();
     videoPreview.load();
     videoPreview.pause();
-    updatePlaylistDisplay();
-
-    // 再生速度復元（起動時のvideo.load前では設定ができていないため設定）
     videoPlayer.playbackRate = currentPlaybackRate;
-    // 現在の音量を適用する
     videoPlayer.volume = volumeBar.value;
+
+    updateMediaPlayerDisplay();
+    updatePlaylistDisplay();
 }
 
-// メディアの停止中判定
+// メディアの停止中判定（動画・音声・画像に対応）
 function isVideoStopped() {
-    return videoPlayer.paused && !videoPlayer.currentSrc && playlist.length > 0;
+    if (playlist.length === 0) return false;
+
+    // 画像の場合：画像が表示されていなければ停止中（または imagePlayer.src が空）
+    if (currentMediaType === 'image') {
+        return !imagePlayer.src || imagePlayer.style.display === 'none';
+    }
+
+    // 音声の場合：audioPlayer が停止中でかつ src が設定されていない場合
+    if (currentMediaType === 'audio') {
+        return audioPlayer.paused && !audioPlayer.src;
+    }
+
+    // 動画の場合：videoPlayer が停止中でかつ src が設定されていない場合
+    return videoPlayer.paused && !videoPlayer.currentSrc;
 }
 
 // Url再生完成
@@ -6078,18 +6257,39 @@ async function joinPlaylistVideos() {
 // 再生速度設定
 function setPlaybackRate(rate, showOverlay = true) {
     if (isNaN(rate) || rate <= 0) return;
-    currentPlaybackRate = rate;                    // ← 追加
+    currentPlaybackRate = rate;
     videoPlayer.playbackRate = rate;
+
     if (speedSelect) speedSelect.value = parseFloat(rate).toFixed(2);
     localSturageSetItemAndFile('playbackSpeed', rate);
+
     if (showOverlay) {
         updateMessageOverlay(`🏃‍♂️‍➡️ ${rate}x`);
+    }
+
+    // ★ 画像表示中の場合は進行タイマーと切り替えタイマーを現在速度で再構築
+    if (currentMediaType === 'image' && imageTimer) {
+        clearTimeout(imageTimer);
+        stopImageProgress();
+
+        const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / currentPlaybackRate) * 1000;
+        if (remainingMs <= 0) {
+            playNextPlaylistItem();
+        } else {
+            startImageProgress();
+            imageTimer = setTimeout(async () => {
+                imageTimer = null;
+                stopImageProgress();
+                await playNextPlaylistItem();
+            }, remainingMs);
+        }
     }
 }
 
 // 再生速度変更（増速／減速）
 function changePlaybackRate(direction) { // direction: 1 増速, -1 減速
-    const current = parseFloat(videoPlayer.playbackRate || 1.0);
+    // 動画/画像問わず currentPlaybackRate から現在のインデックスを取得
+    const current = parseFloat(currentPlaybackRate || 1.0);
     let idx = playbackRates.findIndex(r => Math.abs(r - current) < 0.001);
     if (idx === -1) {
         idx = playbackRates.reduce((best, r, i) => Math.abs(r - current) < Math.abs(playbackRates[best] - current) ? i : best, 0);
@@ -6097,6 +6297,7 @@ function changePlaybackRate(direction) { // direction: 1 増速, -1 減速
     let newIdx = idx + direction;
     newIdx = Math.max(0, Math.min(newIdx, playbackRates.length - 1));
     const newRate = playbackRates[newIdx];
+    
     if (newRate !== playbackRates[idx]) {
         setPlaybackRate(newRate);
     } else {
@@ -7207,12 +7408,27 @@ function isAudioFilePath(filePath) {
 // メディアプレイヤーの表示を更新する関数
 function updateMediaPlayerDisplay() {
     const isAudio = currentMediaType === 'audio';
+    const isImage = currentMediaType === 'image';
+
+    videoPlayerElement.style.display = 'none';
+    audioPlayer.style.display = 'none';
+    imagePlayer.style.display = 'none';
+    // 動画プレイヤーの表示切替（音声・画像の場合は非表示）
     if (videoPlayerElement) {
-        videoPlayerElement.style.display = isAudio ? 'none' : 'block';
+        videoPlayerElement.style.display = (isAudio || isImage) ? 'none' : 'block';
     }
+
+    // 音声プレイヤーの表示切替
     if (audioPlayer) {
         audioPlayer.style.display = isAudio ? 'block' : 'none';
     }
+
+    // 画像プレイヤーの表示切替
+    if (imagePlayer) {
+        imagePlayer.style.display = isImage ? 'block' : 'none';
+    }
+
+    // ビデオプレビューの表示切替
     if (videoPreview) {
         videoPreview.style.display = 'none';
     }
@@ -7554,5 +7770,114 @@ function hideMessageOverlay(compulsion = false) {
         messageOverlay.style.display = 'none';
         disableMessageOverlay = false;
         updateIconOverlay();
+    }
+}
+
+// メディアの総再生時間を取得（画像は5秒固定）
+function getMediaDuration() {
+    if (currentMediaType === 'image') return IMAGE_DURATION;
+    return videoPlayer.duration || 0;
+}
+
+// メディアの現在再生時間を取得
+function getMediaCurrentTime() {
+    if (currentMediaType === 'image') return imageCurrentTime;
+    return videoPlayer.currentTime || 0;
+}
+
+// メディアの現在再生時間を設定・シーク
+function setMediaCurrentTime(time) {
+    const duration = getMediaDuration();
+    const clampedTime = Math.max(0, Math.min(duration, time));
+
+    if (currentMediaType === 'image') {
+        imageCurrentTime = clampedTime;
+
+        seekBar.value = (100 / IMAGE_DURATION) * imageCurrentTime;
+        updateTimeDisplay();
+
+        if (imageTimer) {
+            clearTimeout(imageTimer);
+            stopImageProgress();
+
+            // 速度で除算して実際のタイマーミリ秒を算出
+            const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
+            if (remainingMs <= 0) {
+                playNextPlaylistItem();
+            } else {
+                startImageProgress();
+                imageTimer = setTimeout(async () => {
+                    imageTimer = null;
+                    stopImageProgress();
+                    await playNextPlaylistItem();
+                }, remainingMs);
+            }
+        }
+    } else {
+        videoPlayer.currentTime = clampedTime;
+        if (duration > 0) {
+            seekBar.value = (100 / duration) * clampedTime;
+        }
+        updateTimeDisplay();
+    }
+
+    localSturageSetItemAndFile('currentTime', clampedTime);
+}
+
+// 画像の100ms周期プログレス更新タイマー
+function startImageProgress() {
+    if (imageProgressInterval) clearInterval(imageProgressInterval);
+
+    seekBar.value = (100 / IMAGE_DURATION) * imageCurrentTime;
+    updateTimeDisplay();
+
+    let lastTimestamp = performance.now();
+
+    imageProgressInterval = setInterval(() => {
+        const now = performance.now();
+        // 実時間差(秒) × 再生速度
+        const delta = ((now - lastTimestamp) / 1000) * (currentPlaybackRate || 1.0);
+        lastTimestamp = now;
+
+        if (imageCurrentTime < IMAGE_DURATION) {
+            imageCurrentTime = Math.min(IMAGE_DURATION, imageCurrentTime + delta);
+            seekBar.value = (100 / IMAGE_DURATION) * imageCurrentTime;
+            updateTimeDisplay();
+        } else {
+            stopImageProgress();
+        }
+    }, 50);
+}
+
+// 画像再生状況の表示を停止
+function stopImageProgress() {
+    if (imageProgressInterval) {
+        clearInterval(imageProgressInterval);
+        imageProgressInterval = null;
+    }
+}
+
+// 現在表示中のメディア要素（videoPlayer または imagePlayer）を取得するヘルパー関数
+function getMediaElement() {
+    if (currentMediaType === 'image' && typeof imagePlayer !== 'undefined' && imagePlayer) {
+        return imagePlayer;
+    }
+    return videoPlayer;
+}
+
+// 現在保持している表示設定（アスペクト比、描画モード、ズーム、パン）を
+// 切り替わったメディア（画像/動画）に即時反映させる共通関数
+function syncDisplaySettingsToCurrentMedia() {
+    // 1. アスペクト比の設定を適用
+    applyAspectRatioSetting();
+
+    // 2. 描画モードの設定を適用（既存の fitMode 変数を引き継ぐ）
+    if (typeof fitMode !== 'undefined') {
+        applyFitModeSetting(fitMode);
+    }
+
+    // 3. ズームおよびパン位置（translateX, translateY）を再適用
+    if (typeof zoomValue !== 'undefined') {
+        applyZoom(zoomValue);
     }
 }

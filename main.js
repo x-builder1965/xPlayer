@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.29.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.33.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -22,10 +22,14 @@ const VIDEO_EXTENSIONS = [
     'ts', 'mts', 'm2ts', 'vob', 'ogv', '3gp', 'm4v', 'asf'
 ];
 const AUDIO_EXTENSIONS = [
-    'mp3', 'wav', 'flac', 'ogg', 'oga', 'm4a', 'aac', 'opus', 'wma', 'aiff', 'aif', 'alac', 'ape', 'm4b', 'mid', 'midi'
+    'mp3', 'wav', 'flac', 'ogg', 'oga', 'm4a', 'aac', 'opus', 'wma', 
+    'aiff', 'aif', 'alac', 'ape', 'm4b', 'mid', 'midi'
+];
+const IMAGE_EXTENSIONS = [
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'svg'
 ];
 const VIDEO_PLAYLIST = ['amppl'];
-const SUPPORTED_MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS];
+const SUPPORTED_MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS];
 const SUPPORTED_MEDIA_EXTENSIONS_REGEX = new RegExp(`\\.(${SUPPORTED_MEDIA_EXTENSIONS.join('|')})$`, 'i');
 const VIDEO_PLAYLIST_REGEX = new RegExp(`\\.(${VIDEO_PLAYLIST.join('|')})$`, 'i');
 const gotTheLock = app.requestSingleInstanceLock();     // 🔧 単一インスタンスロックの取得（重複起動の判定）
@@ -375,11 +379,13 @@ ipcMain.handle('open-video-dialog', async () => {
         properties: ['openFile', 'multiSelections'], // 複数選択可能
         filters: [
             {
-                name: '音声・動画ファイルとプレイリスト',
+                name: '音声・動画・画像ファイルとプレイリスト',
                 extensions: [...SUPPORTED_MEDIA_EXTENSIONS, ...VIDEO_PLAYLIST]
             },
-            { name: '音声・動画ファイル', extensions: SUPPORTED_MEDIA_EXTENSIONS },
-            { name: 'xPlayer プレイリスト', extensions: VIDEO_PLAYLIST }
+            { name: '動画ファイル', extensions: VIDEO_EXTENSIONS },
+            { name: '音声ファイル', extensions: AUDIO_EXTENSIONS },
+            { name: '画像ファイル', extensions: IMAGE_EXTENSIONS },
+            { name: 'プレイリスト', extensions: VIDEO_PLAYLIST }
         ]
     });
 
