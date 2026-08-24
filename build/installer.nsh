@@ -5,8 +5,8 @@
 ; =========================================================
 !macro customHeader
   !define MUI_DIRECTORYPAGE_VARIABLE $INSTDIR
-  ; 64bit OS時は C:\Program Files\Multimedia\xPlayer に設定
-  InstallDir "$PROGRAMFILES64\Multimedia\xPlayer"
+  ; 64bit OS時は C:\Program Files\xPlayer に設定
+  InstallDir "$PROGRAMFILES64\xPlayer"
 !macroend
 
 
