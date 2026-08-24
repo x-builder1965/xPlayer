@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.34.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.35.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1067,6 +1067,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         videoPlayer.pause();
         isPlaying = false;
         currentVideoIndex = -1;  // 停止状態を明示
+
+        // 画像表示用タイマーを停止
+        if (currentMediaType === 'image') {
+            clearTimeout(imageTimer);
+            imageTimer = null;
+            stopImageProgress();
+        }
 
         // 3. srcを完全にクリア（これが大事！）
         videoPlayer.removeAttribute('src');     // ← これだけでOK

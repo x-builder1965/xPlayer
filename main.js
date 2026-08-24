@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.33.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.35.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -184,7 +184,13 @@ async function getVideoFilesRecursively(folderPath) {
     try {
         const files = await fs.readdir(folderPath, { withFileTypes: true });
         for (const file of files) {
+            // 先頭が '.' で始まる隠しフォルダ・隠しファイルをスキップ
+            if (file.name.startsWith('.')) {
+                continue;
+            }
+
             const fullPath = path.join(folderPath, file.name);
+
             if (file.isDirectory()) {
                 const subFiles = await getVideoFilesRecursively(fullPath);
                 videoFiles.push(...subFiles);
@@ -856,7 +862,6 @@ ipcMain.handle('capture-screenshot', async (event) => {
 });
 
 // 動画サムネイル生成
-// main.js
 ipcMain.handle('generate-video-thumbnail', async (event, { filePath, size = 180 }) => {
     if (!filePath) return null;
 
