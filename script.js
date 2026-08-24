@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.35.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.36.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -3954,14 +3954,15 @@ function hideTooltip(element) {
 
 // コントロール＋ファイル名表示（タイマー付き）
 function showControlsAndFilename(compulsion = false) {
-    if (pauseShowControls && !compulsion) return;
-
-    disabledControls(false);
-    disabledfilename(false);
-    if (messageOverlay.classList.contains('active')) {
-        messageOverlay.style.display = 'block';
-        messageOverlay.classList.add('active');
+    if (!pauseShowControls || compulsion) {
+        disabledControls(false);
+        disabledfilename(false);
+        if (messageOverlay.classList.contains('active')) {
+            messageOverlay.style.display = 'block';
+            messageOverlay.classList.add('active');
+        }
     }
+
     clearTimeout(timeout);
     if (!isMouseOverControls && !isurlInputPanelVisible) {
         timeout = setTimeout(() => {
@@ -4060,6 +4061,7 @@ function updateVolumeDisplay() {
 
 // ズーム適用
 function applyZoom(zoomPercent) {
+    const prevZoomValue = zoomValue;
     const scale = (100 + zoomPercent) / 100;
     const targetElement = getMediaElement();
 
@@ -4074,7 +4076,7 @@ function applyZoom(zoomPercent) {
     if (zoomDisplay) {
         zoomDisplay.textContent = `${zoomValue > 0 ? '+' : ''}${zoomValue}%`;
     }
-    if (isZoomMode) {
+    if (isZoomMode && prevZoomValue !== zoomValue) {
         updateMessageOverlay(`🔍 ${zoomValue > 0 ? '+' : ''}${zoomValue}%`);
     }
 }
@@ -5372,7 +5374,6 @@ async function playVideo(file, currentTime) {
 
     isPlaying = true;
     await setVideoSrc(file);
-    updateIconOverlay();
 
     // 【追加】動画・画像切り替え時に相互の設定（アスペクト比・描画モード・ズーム・パン）を適用
     syncDisplaySettingsToCurrentMedia();
@@ -5387,17 +5388,19 @@ async function playVideo(file, currentTime) {
         seekBar.value = (100 / IMAGE_DURATION) * imageCurrentTime;
         updateTimeDisplay();
 
-        // 速度で除算して実タイマー時間を算出
-        const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
+        // ★ isPlaying が true の場合のみタイマーをセット
+        if (isPlaying) {
+            const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
 
-        startPeriodicSave();
-        startImageProgress();
+            startPeriodicSave();
+            startImageProgress();
 
-        imageTimer = setTimeout(async () => {
-            imageTimer = null;
-            stopImageProgress();
-            await playNextPlaylistItem();
-        }, remainingMs);
+            imageTimer = setTimeout(async () => {
+                imageTimer = null;
+                stopImageProgress();
+                await playNextPlaylistItem();
+            }, remainingMs);
+        }
     } else {
         if (modeChange === 'convert') {
             setVideoDurationTime();
@@ -5479,12 +5482,24 @@ function setVideoDurationTime() {
 
 // 再生/一時停止切替
 async function togglePlayPause() {
-    isPlaying = true;
 
     // 画像表示中のトグル処理
     if (currentMediaType === 'image') {
+        
+        // ★ 停止状態（インデックス初期化時）からの再生の場合、画像を再読み込みして再生開始
+        if (currentVideoIndex === -1 || !imagePlayer.getAttribute('src')) {
+            currentVideoIndex = selectedPlaylistIndex >= 0 ? selectedPlaylistIndex : 0;
+            const file = playlist[currentVideoIndex]?.file;
+            if (file) {
+                isPlaying = true;
+                await playVideo(file, 0); // 0秒から再生開始
+            }
+            return;
+        }
+
         if (imageTimer) {
             // 【再生中 → 一時停止】タイマーを停止
+            isPlaying = false;
             clearTimeout(imageTimer);
             imageTimer = null;
             stopImageProgress();
@@ -5494,7 +5509,9 @@ async function togglePlayPause() {
             playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
             stopPeriodicSave();
         } else {
-            // 【一時停止中 → 再開】残り時間を計算してタイマー再開
+            // 【一時停止中 → 再開】
+            isPlaying = true;
+            
             playPauseBtn.textContent = '▶️';
             playPauseBtn.classList.remove('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
@@ -5502,12 +5519,13 @@ async function togglePlayPause() {
             startPeriodicSave();
             startImageProgress();
 
-            const remainingMs = (IMAGE_DURATION - imageCurrentTime) * 1000;
+            const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
+            
             imageTimer = setTimeout(async () => {
                 imageTimer = null;
                 stopImageProgress();
                 await playNextPlaylistItem();
-            }, remainingMs > 0 ? remainingMs : 5000);
+            }, remainingMs > 0 ? remainingMs : 0);
         }
 
         selectedPlaylistIndex = currentVideoIndex;
@@ -5516,6 +5534,9 @@ async function togglePlayPause() {
         updateIconOverlay();
         return;
     }
+
+    // 動画・音声のトグル処理
+    isPlaying = true;
 
     // 動画・音声のトグル処理
     if (videoPlayer.paused) {
