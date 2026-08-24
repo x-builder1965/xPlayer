@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.33.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.34.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -49,7 +49,7 @@ const appNameAndCopyrightValue = `${appName}\n${copyright}`;
 const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
 const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.opus', '.wma', '.aiff', '.aif', '.alac', '.ape'];
-const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.svg'];
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'];
 const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
 const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
@@ -443,6 +443,7 @@ let savedSelectedSubtitleLabel = null;
 let savedSelectedSubtitleTrack = null;
 let savedWallpaperPath = null;
 let savedAlwaysOnTop = null;
+let savedPauseShowControls = null;
 let savedAudioMotionMode = null;
 let savedFilterHistory = null;
 let savedOriginalOrder = null;
@@ -530,6 +531,7 @@ let disableMessageOverlay = false;
 let imageTimer = null;
 let imageCurrentTime = 0;      // 0〜5秒
 let imageProgressInterval = null;
+let pauseShowControls = false;
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -588,6 +590,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             wallpaperBtn.classList.remove('wallpaper-active');
         }
     }
+
+    // コントロール表示抑止の復元
+    if (savedPauseShowControls === 'true') {
+        pauseShowControls = true;
+    } else {
+        pauseShowControls = false;
+    }
+    togglePauseShowControls();
 
     // ボリューム復元
     if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
@@ -1414,11 +1424,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // 🔝常に前面設定
-    alwaysOnTopBtn.addEventListener('click', () => {
-        toggleAlwaysOnTop();
-    });
-
     // 🏳️‍🌈オーディオモーシュン設定ボタン
     audioMotionBtn.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -1453,6 +1458,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => {
             document.addEventListener('click', closeMenu, { once: true });
         }, 0);
+    });
+
+    // 👁️コントロール表示抑止
+    pauseShowBtn.addEventListener('click', async () => {
+        hideMessageOverlay();
+        pauseShowControls = !pauseShowControls;
+        togglePauseShowControls();
+        localSturageSetItemAndFile('pauseShowControls', pauseShowControls);
+        updateIconOverlay();
+    });
+
+    // 🔝常に前面設定
+    alwaysOnTopBtn.addEventListener('click', () => {
+        toggleAlwaysOnTop();
     });
 
     // 📥設定インポート
@@ -1784,7 +1803,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     hideControlsAndFilename();
                     hideEditPanel();
                 } else {
-                    showControlsAndFilename();
+                    showControlsAndFilename(true);
                 }
             }
             hideMenus();
@@ -2812,13 +2831,6 @@ document.addEventListener('keydown', async (event) => {
 
     // ■設定パネル■
     if (isSettingsPanelOpen === true) {
-        // 🖥️フルスクリーン表示（Ctrl+a）
-        if (event.ctrlKey && event.key.toLowerCase() === 'a') {
-            event.preventDefault();
-            fullscreenBtn.click();
-            return;
-        }
-
         // 🖼️背景壁紙選択（Ctrl+p）
         if (event.ctrlKey && event.key === 'p') {
             event.preventDefault();
@@ -2826,17 +2838,31 @@ document.addEventListener('keydown', async (event) => {
             return;
         }
 
-        // 🔝常に最前面（Ctrl+1）
-        if (event.ctrlKey && event.key === '1') {
-            event.preventDefault();
-            alwaysOnTopBtn.click();
-            return;
-        }
-
         // 🏳️‍🌈オーディオモーション設定（Ctrl+m）
         if (event.ctrlKey && event.key === 'm') {
             event.preventDefault();
             audioMotionBtn.click();
+            return;
+        }
+
+        // 👁️コントロール表示抑止（Ctrl+y）
+        if (event.ctrlKey && event.key === 'y') {
+            event.preventDefault();
+            pauseShowBtn.click();
+            return;
+        }
+
+        // 🖥️フルスクリーン表示（Ctrl+a）
+        if (event.ctrlKey && event.key === 'a') {
+            event.preventDefault();
+            fullscreenBtn.click();
+            return;
+        }
+
+        // 🔝常に最前面（Ctrl+1）
+        if (event.ctrlKey && event.key === '1') {
+            event.preventDefault();
+            alwaysOnTopBtn.click();
             return;
         }
 
@@ -3609,6 +3635,7 @@ async function allLocalStorageSetting() {
         savedSelectedSubtitleTrack = localStorage.getItem('selectedSubtitleTrack');
         savedWallpaperPath = localStorage.getItem('wallpaperPath');
         savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
+        savedPauseShowControls = localStorage.getItem('pauseShowControls');
         savedAudioMotionMode = localStorage.getItem('audioMotionMode');
         savedFilterHistory = localStorage.getItem('filterHistory');
         savedOriginalOrder = localStorage.getItem('originalLoadOrder');
@@ -3687,7 +3714,9 @@ async function allLocalStorageSetting() {
             savedSelectedSubtitleTrack = getVal('selectedSubtitleTrack', savedSelectedSubtitleTrack);
             savedWallpaperPath = getVal('wallpaperPath', savedWallpaperPath);
             const rawAlwaysOnTop = getVal('alwaysOnTop', savedAlwaysOnTop, 'false');
-            savedAlwaysOnTop = String(rawAlwaysOnTop); // true (boolean) を "true" (string) に変換
+            savedAlwaysOnTop = String(rawAlwaysOnTop);
+            const rawPauseShowControls = getVal('pauseShowControls', savedPauseShowControls, 'false');
+            savedPauseShowControls = String(rawPauseShowControls);
             savedAudioMotionMode = getVal('audioMotionMode', savedAudioMotionMode);
             savedFilterHistory = getVal('filterHistory', savedFilterHistory);
             savedOriginalOrder = getVal('originalLoadOrder', savedOriginalOrder);
@@ -3744,6 +3773,7 @@ async function allLocalStorageSetting() {
     await localSturageSetItemAndFile('selectedSubtitleTrack', savedSelectedSubtitleTrack);
     await localSturageSetItemAndFile('wallpaperPath', savedWallpaperPath);
     await localSturageSetItemAndFile('alwaysOnTop', savedAlwaysOnTop);
+    await localSturageSetItemAndFile('pauseShowControls', savedPauseShowControls);
     await localSturageSetItemAndFile('audioMotionMode', savedAudioMotionMode);
     await localSturageSetItemAndFile('filterHistory', savedFilterHistory);
     await localSturageSetItemAndFile('originalLoadOrder', savedOriginalOrder);
@@ -3916,7 +3946,9 @@ function hideTooltip(element) {
 }
 
 // コントロール＋ファイル名表示（タイマー付き）
-function showControlsAndFilename() {
+function showControlsAndFilename(compulsion = false) {
+    if (pauseShowControls && !compulsion) return;
+
     disabledControls(false);
     disabledfilename(false);
     if (messageOverlay.classList.contains('active')) {
@@ -7879,5 +7911,19 @@ function syncDisplaySettingsToCurrentMedia() {
     // 3. ズームおよびパン位置（translateX, translateY）を再適用
     if (typeof zoomValue !== 'undefined') {
         applyZoom(zoomValue);
+    }
+}
+
+// コントロール表示抑止の表示
+function togglePauseShowControls() {
+    if (pauseShowControls) {
+        if (pauseShowBtn) {
+            pauseShowBtn.classList.add('pause-active');
+            pauseShowBtn.style.background = '';
+        }
+    } else {
+        if (pauseShowBtn) {
+            pauseShowBtn.classList.remove('pause-active');
+        }
     }
 }

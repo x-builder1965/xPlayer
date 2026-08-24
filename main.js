@@ -26,7 +26,7 @@ const AUDIO_EXTENSIONS = [
     'aiff', 'aif', 'alac', 'ape', 'm4b', 'mid', 'midi'
 ];
 const IMAGE_EXTENSIONS = [
-    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp', 'svg'
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp'
 ];
 const VIDEO_PLAYLIST = ['amppl'];
 const SUPPORTED_MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS];

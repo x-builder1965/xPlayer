@@ -1,7 +1,7 @@
 <!-- -- index.html ------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -メディアプレイヤー- Ver5.33.0'; -->
+<!-- const appName = 'xPlayer -メディアプレイヤー- Ver5.34.0'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -132,6 +132,7 @@
             <div id="settingsPanel" class="settings-panel">
                 <button id="wallpaperBtn" data-tooltip="背景壁紙（Ctrl+p）">🖼️</button>
                 <button id="audioMotionBtn" data-tooltip="オーディオモーション設定（Ctrl+m）">🏳️‍🌈</button>
+                <button id="pauseShowBtn" data-tooltip="コントロール表示抑止（Ctrl+y）">👁️</button>
                 <button id="fullscreenBtn" data-tooltip="フルスクリーン表示（Ctrl+a／Double Click）">🖥️</button>
                 <button id="alwaysOnTopBtn" data-tooltip="常に最前面を設定（Ctrl+1）">🔝</button>
                 <button id="importSettingsBtn" data-tooltip="設定インポート（Ctrl+i）">📥</button>
@@ -526,6 +527,13 @@
                                 <td class="note">・音声再生中のモーションの表示を切り替え。</td>
                             </tr>
                             <tr>
+                                <td>　・コントロール表示抑止</td>
+                                <td class="icon">👁️</td>
+                                <td class="key">Ctrl+y</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・メディア切り替わり時のコントロールパネル・再生中パスパネルの表示を抑止。</td>
+                            </tr>
+                            <tr>
                                 <td>　・フルスクリーン表示／解除</td>
                                 <td class="icon">🖥️</td>
                                 <td class="key">Ctrl+a</td>
@@ -668,6 +676,7 @@
                     <li>【実装予定】</li>
                     <li>2026-08-xx Ver5.xx.0 音声ファイルのカット編集・結合編集対応。</li>
                     <li>【実装済】</li>
+                    <li>2026-08-24 Ver5.34.0 コントロールパネル・再生中パスパネルの自動表示抑止機能の追加。</li>
                     <li>2026-08-24 Ver5.33.0 メディアプレイヤー化計画：画像のスライド表示機能の追加。</li>
                     <li>2026-08-22 Ver5.32.0 プレイリスト表示ショートカットキー処理の改善。</li>
                     <li>2026-08-19 Ver5.31.0 「プレイリスト作成（追加）中...」メッセージの表示・非表示の改善。</li>
