@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.37.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.38.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -4049,8 +4049,19 @@ function disabledfilename(disable) {
 
 // 再生時間表示更新
 function updateTimeDisplay() {
-    const currentTime = formatTime(videoPlayer.currentTime);
-    const duration = formatTime(videoPlayer.duration);
+    let current = 0;
+    let total = 0;
+
+    if (currentMediaType === 'image') {
+        current = imageCurrentTime || 0;
+        total = IMAGE_DURATION || 0;
+    } else {
+        current = videoPlayer.currentTime || 0;
+        total = videoPlayer.duration || 0;
+    }
+
+    const currentTime = formatTime(current);
+    const duration = formatTime(total);
     timeDisplay.textContent = `${currentTime} / ${duration}`;
     updateIconOverlay();
 }
