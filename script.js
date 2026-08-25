@@ -47,10 +47,10 @@ const volumeStep = 0.001;
 const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 5.0];
 const appNameAndCopyrightValue = `${appName}\n${copyright}`;
 const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
-const HTML5_SUPPORTED = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
+const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.opus', '.wma', '.aiff', '.aif', '.alac', '.ape'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'];
-const HTML5_SUPPORTED_CONVERT = [];  // 動画変換対象外拡張子
+const VIDEO_EXTENSIONS_CONVERT = [];  // 動画変換対象外拡張子
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
 const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
 const settingsFilePath = getUserSettingsPath();
@@ -1604,7 +1604,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         // 共通関数で判定
-        if (isHTML5_SUPPORTED(ext)) {
+        if (isVIDEO_EXTENSIONS(ext)) {
             stopPeriodicSave();
             playPauseBtn.textContent = '⏸️';
             playPauseBtn.classList.add('paused-active');
@@ -5677,7 +5677,7 @@ async function setVideoSrc(file) {
             videoPreview.load();
             baseConvertFile = null;
             tempConvertFile = null;
-        } else if (isHTML5_SUPPORTED(ext)) {
+        } else if (isVIDEO_EXTENSIONS(ext)) {
             isConverting = false;
             const videoUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
             videoPlayerElement.src = videoUrl;
@@ -5707,7 +5707,7 @@ async function setVideoSrc(file) {
                     cleanPath = cleanPath.split('?')[0];
                 }
                 const ext = path.extname(cleanPath).toLowerCase();
-                const validExt = isHTML5_SUPPORTED(ext);
+                const validExt = isVIDEO_EXTENSIONS(ext);
                 delConvertFile = null;
                 if (!validExt) {
                     if (baseConvertFile != tempConvertFile) {
@@ -5966,12 +5966,12 @@ async function playlistSet(videoFiles) {
 }
 
 // HTML5対応拡張子判定
-function isHTML5_SUPPORTED(ext) {
+function isVIDEO_EXTENSIONS(ext) {
     const cleanExt = ext.split('?')[0].toLowerCase();
     if (modeChange === 'video') {
-        return HTML5_SUPPORTED.includes(cleanExt) || AUDIO_EXTENSIONS.includes(cleanExt);
+        return VIDEO_EXTENSIONS.includes(cleanExt) || AUDIO_EXTENSIONS.includes(cleanExt);
     } else {
-        return HTML5_SUPPORTED_CONVERT.includes(cleanExt);
+        return VIDEO_EXTENSIONS_CONVERT.includes(cleanExt);
     }
 }
 
@@ -7598,9 +7598,9 @@ function isVideoFile(ext) {
     }
     // modeChange に合わせた動画サポート判定
     if (modeChange === 'video') {
-        return HTML5_SUPPORTED.includes(cleanExt);
+        return VIDEO_EXTENSIONS.includes(cleanExt);
     } else {
-        return HTML5_SUPPORTED_CONVERT.includes(cleanExt);
+        return VIDEO_EXTENSIONS_CONVERT.includes(cleanExt);
     }
 }
 
