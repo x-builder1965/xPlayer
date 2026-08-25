@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.35.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.37.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -11,12 +11,14 @@ const path = require('path');
 const { promises: fs } = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
+const ffprobeStatic = require('ffprobe-static'); // 👈 追加
 const os = require('os');
 const { spawn, exec } = require('child_process');
 const trashModule = require('trash');
 
 // 固定値設定
 const ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
+const ffprobePath = ffprobeStatic.path.replace('app.asar', 'app.asar.unpacked'); // 👈 追加
 const VIDEO_EXTENSIONS = [
     'mp4', 'mkv', 'webm', 'avi', 'flv', 'mov', 'wmv', 'mpg', 'mpeg',
     'ts', 'mts', 'm2ts', 'vob', 'ogv', '3gp', 'm4v', 'asf'
@@ -74,6 +76,7 @@ try {
 
 // === FFmpeg パス設定（asarUnpack 対応）===
 ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(ffprobePath); // 👈 修正 (ffmpegStatic.path から変更)
 
 // 正しい trash の取得方法（ESM対応）
 try {

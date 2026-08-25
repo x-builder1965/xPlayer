@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.36.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.37.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -997,9 +997,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             hideEditPanel();
             zoomEndBtn.click();
             settingsCloseBtn.click();
+            showControlsAndFilename(true);
             try { playlistFilterInput?.focus(); } catch (e) {}
             debouncedUpdateFilterList();
             debouncedScrollCurrentFilterItem();
+        } else {
+            showControlsAndFilename();
         }
         // プレイリストが閉じられたので、非表示タイマーを再開する
         resetCursorTimer();
