@@ -71,7 +71,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "xPlayer",
-      "menuCategory": false,
+      "menuCategory": "Multimedia",
       "installerIcon": "xPlayer.ico",
       "uninstallerIcon": "xPlayer.ico",
       "installerHeaderIcon": "xPlayer.ico",
