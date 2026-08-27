@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.39.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.40.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1861,7 +1861,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             dragStartY = event.clientY;
             updateIconOverlay();
         } else {
-            resetCursorTimer();
+            resetCursorTimer(true);
         }
     });
 
@@ -4080,7 +4080,7 @@ function showControlsAndFilename(compulsion = false) {
             }
         }, overlayTimeout);
     }
-    resetCursorTimer();
+    resetCursorTimer(compulsion);
     updateIconOverlay();
 }
 
@@ -7084,14 +7084,16 @@ function createAddMenu() {
 }
 
 // マウス表示・自動非表示の設定
-function resetCursorTimer() {
-    if (isPanning) {    
-        videoPlayer.style.cursor = 'grabbing'; 
-    } else {
-        videoPlayer.style.cursor = 'auto'; 
-    }
-    videoContainer.style.cursor = 'auto'; 
-
+function resetCursorTimer(compulsion = false) {
+    if (!pauseShowControls || compulsion) {
+	    if (isPanning) {    
+	        videoPlayer.style.cursor = 'grabbing'; 
+	    } else {
+	        videoPlayer.style.cursor = 'auto'; 
+	    }
+	    videoContainer.style.cursor = 'auto'; 
+	}
+	
     // 既存のタイマーがあればクリア
     if (hideMouseTimeout) {
         clearTimeout(hideMouseTimeout);
