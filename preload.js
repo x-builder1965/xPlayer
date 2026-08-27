@@ -1,7 +1,7 @@
 // -- preload.js -------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.27.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.39.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -135,6 +135,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     cutVideoMultiple: (data) => ipcRenderer.invoke('cut-video-multiple', data),
     getVideoTracks: (filePath) => ipcRenderer.invoke('get-video-tracks', filePath),
     openWallpaperDialog: () => ipcRenderer.invoke('open-wallpaper-dialog'),
+    openBgmDialog: () => ipcRenderer.invoke('open-bgm-dialog'),
     checkIsSecondaryInstance: () => ipcRenderer.invoke('check-secondary-instance'),
     getPid: () => process.pid
 });

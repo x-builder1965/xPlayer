@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver5.34.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver5.39.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -964,13 +964,15 @@ button#modeChangeBtn.convert-active,
 #wallpaperBtn.wallpaper-active,
 #pauseShowBtn.pause-active,
 #alwaysOnTopBtn.always-on-top-active,
-#audioMotionBtn.audio-motion-active {
+#audioMotionBtn.audio-motion-active,
+#imageEffectBgmBtn.image-effectbgm-active {
     background: #e63946 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single,
 #fitModeBtn.fitMode-fill,
 #sortPlaylistBtn.random-sorted-active,
-#audioMotionBtn.random-motion-active {
+#audioMotionBtn.random-motion-active,
+#imageEffectBgmBtn.random-effectbgm-active {
     background: #f4d03f !important;   /* 黄系：１動画 */
 }
 .mode-active:hover,
@@ -992,13 +994,15 @@ button#modeChangeBtn.convert-active:hover,
 #wallpaperBtn.wallpaper-active:hover,
 #pauseShowBtn.pause-active:hover,
 #alwaysOnTopBtn.always-on-top-active:hover,
-#audioMotionBtn.audio-motion-active:hover {
+#audioMotionBtn.audio-motion-active:hover,
+#imageEffectBgmBtn.image-effectbgm-active:hover {
     background: #e6394785 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single:hover,
 #fitModeBtn.fitMode-fill:hover,
 #sortPlaylistBtn.random-sorted-active:hover,
-#audioMotionBtn.random-motion-active:hover {
+#audioMotionBtn.random-motion-active:hover,
+#imageEffectBgmBtn.random-effectbgm-active:hover {
     background: #f4d03f7a !important;   /* 黄系：１動画 */
 }
 
@@ -1067,7 +1071,8 @@ button#modeChangeBtn.convert-active:hover,
 .playlist-display-menu,
 .sort-playlist-menu,
 .add-playlist-menu,
-.audio-motion-menu {
+.audio-motion-menu,
+.image-effectbgm-menu {
     position: absolute;
     background: rgba(30, 30, 30, 0.95);
     border: 1px solid #444;

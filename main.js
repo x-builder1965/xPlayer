@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.37.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.39.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -493,7 +493,35 @@ ipcMain.handle('open-wallpaper-dialog', async () => {
         filters: [
             { 
                 name: '画像ファイル', 
-                extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg']
+                extensions: IMAGE_EXTENSIONS
+            },
+            { 
+                name: 'すべてのファイル', 
+                extensions: ['*'] 
+            }
+        ]
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return null;   // キャンセル時は null を返す
+    }
+
+    const filePath = result.filePaths[0];
+    return {
+        name: path.basename(filePath),
+        path: filePath
+    };
+});
+
+// BGM選択（単ファイル選択）
+ipcMain.handle('open-bgm-dialog', async () => {
+    const result = await dialog.showOpenDialog({
+        title: 'BGMを選択',
+        properties: ['openFile'],           // 単ファイル選択
+        filters: [
+            { 
+                name: '音声ファイル', 
+                extensions: AUDIO_EXTENSIONS
             },
             { 
                 name: 'すべてのファイル', 

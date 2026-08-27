@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.38.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.39.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -36,6 +36,7 @@ const {
     cutVideoMultiple,
     getVideoTracks,
     openWallpaperDialog,
+    openBgmDialog,
     checkIsSecondaryInstance,
     getPid
 } = window.electronAPI;
@@ -243,6 +244,19 @@ const AUDIOMOTION_NODES = {
     },
     'random': { label: '（ランダム）', options: {} }
 };
+// イメージエフェクト＆BGM設定のNODE定義
+const IMAGEEFFECTBGM_NODES = {
+    'none': {      label: '（なし）' },
+    'motion1': {   label: 'フェード' },
+    'motion2': {   label: 'スライド（左→右）' },
+    'motion3': {   label: 'スライド（右→左）' },
+    'motion4': {   label: 'スライド（上→下）' },
+    'motion5': {   label: 'スライド（下→上）' },
+    'motion6': {   label: 'ズーム' },
+    'random': {    label: '（ランダム）' },
+    'separator': { isSeparator: true },
+    'bgm': {       label: 'BGM設定' }
+};
 const languageMap = {
     'jpn': '日本語',
     'eng': '英語',
@@ -367,6 +381,7 @@ let exportSettingsBtn = null;
 let importSettingsBtn = null;
 let alwaysOnTopBtn = null;
 let audioMotionBtn = null;
+let imageEffectBgmBtn = null;
 let settingsBtn = null;
 let settingsPanel = null;
 let settingsCloseBtn = null;
@@ -445,10 +460,12 @@ let savedWallpaperPath = null;
 let savedAlwaysOnTop = null;
 let savedPauseShowControls = null;
 let savedAudioMotionMode = null;
+let savedimageEffectBgmMode = null;
 let savedFilterHistory = null;
 let savedOriginalOrder = null;
 let savedAudioMotionOptions = null;
 let savedAudioMotionNodes = null;
+let savedImageBgmPath = null;
 
 // グローバル（共通）変数
 let localSettings = {};     // localSettingsをオブジェクトとして初期化
@@ -525,6 +542,7 @@ let scrollTimeout = null;
 let currentMediaType = 'video';
 let audioMotion = null;
 let audioMotionMode = null;
+let imageEffectBgmMode = null;
 let lastRandomPreset = null;		// 直前にランダムで選ばれたプリセットを保持する変数（関数の外に定義）
 let isSecondary = null;
 let disableMessageOverlay = false;
@@ -532,6 +550,7 @@ let imageTimer = null;
 let imageCurrentTime = 0;      // 0〜5秒
 let imageProgressInterval = null;
 let pauseShowControls = false;
+let imageBgmPath = null;
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -640,11 +659,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     updateAlwaysOnTopButtonUI();
 
-    // ビジュアライザーモード復元
+    // オーディオモーション復元
     if (savedAudioMotionMode && AUDIOMOTION_NODES[savedAudioMotionMode]) {
         audioMotionMode = savedAudioMotionMode;
     } else {
         audioMotionMode = 'preset1';
+    }
+
+    // イメージエフェクト復元
+    if (savedimageEffectBgmMode && IMAGEEFFECTBGM_NODES[savedimageEffectBgmMode]) {
+        imageEffectBgmMode = savedimageEffectBgmMode;
+    } else {
+        imageEffectBgmMode = 'motion1';
+    }
+
+    // イメージBGM復元
+    if (savedImageBgmPath && savedImageBgmPath !== 'null') {
+        imageBgmPath = savedImageBgmPath;
+    } else {
+        imageBgmPath = null;
     }
 
     // ズーム値復元
@@ -1460,6 +1493,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         function closeMenu(ev) {
             if (!menu.contains(ev.target) && ev.target !== audioMotionBtn) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        }
+
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu, { once: true });
+        }, 0);
+    });
+
+    // 💃イメージエフェクト＆BGM設定ボタン
+    imageEffectBgmBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+
+        const existingMenu = document.querySelector('.image-effectbgm-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+            document.removeEventListener('click', closeMenu);
+            return;
+        }
+
+        // メニュー非表示
+        hideMenus();
+
+        const targetContainer = document.fullscreenElement || mainContainer;
+        const menu = createImageEffectBgmMenu();
+        const containerRect = targetContainer.getBoundingClientRect();
+        const btnRect = imageEffectBgmBtn.getBoundingClientRect();
+
+        menu.style.left = `${Math.max(8, btnRect.right - containerRect.left + 2)}px`;
+        menu.style.top = `${Math.max(8, btnRect.top - containerRect.top + 2)}px`;
+
+        targetContainer.appendChild(menu);
+
+        function closeMenu(ev) {
+            if (!menu.contains(ev.target) && ev.target !== imageEffectBgmBtn) {
                 menu.remove();
                 document.removeEventListener('click', closeMenu);
             }
@@ -2855,6 +2924,13 @@ document.addEventListener('keydown', async (event) => {
             return;
         }
 
+        // 💃イメージエフェクト＆BGM設定（Ctrl+b）
+        if (event.ctrlKey && event.key === 'b') {
+            event.preventDefault();
+            imageEffectBgmBtn.click();
+            return;
+        }
+
         // 👁️コントロール表示抑止（Ctrl+y）
         if (event.ctrlKey && event.key === 'y') {
             event.preventDefault();
@@ -3517,6 +3593,7 @@ function allDOMsetting() {
     importSettingsBtn = document.getElementById('importSettingsBtn');
     alwaysOnTopBtn = document.getElementById('alwaysOnTopBtn');
     audioMotionBtn = document.getElementById('audioMotionBtn');
+    imageEffectBgmBtn = document.getElementById('imageEffectBgmBtn');
     settingsBtn = document.getElementById('settingsBtn');
     settingsPanel = document.getElementById('settingsPanel');
     settingsCloseBtn = document.getElementById('settingsCloseBtn');
@@ -3647,10 +3724,12 @@ async function allLocalStorageSetting() {
         savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
         savedPauseShowControls = localStorage.getItem('pauseShowControls');
         savedAudioMotionMode = localStorage.getItem('audioMotionMode');
+        savedimageEffectBgmMode = localStorage.getItem('imageEffectBgmMode');
         savedFilterHistory = localStorage.getItem('filterHistory');
         savedOriginalOrder = localStorage.getItem('originalLoadOrder');
         savedAudioMotionOptions = localStorage.getItem('audioMotionOptions');
         savedAudioMotionNodes = localStorage.getItem('audioMotionNodes');
+        savedImageBgmPath = localStorage.getItem('imageBgmPath');
 
         // 2. 取得情報をユーザーフォルダの xPlayerSettings.json に保存
         await exportSettingsToFile(settingsFilePath);
@@ -3728,10 +3807,12 @@ async function allLocalStorageSetting() {
             const rawPauseShowControls = getVal('pauseShowControls', savedPauseShowControls, 'false');
             savedPauseShowControls = String(rawPauseShowControls);
             savedAudioMotionMode = getVal('audioMotionMode', savedAudioMotionMode);
+            savedimageEffectBgmMode = getVal('imageEffectBgmMode', savedimageEffectBgmMode);
             savedFilterHistory = getVal('filterHistory', savedFilterHistory);
             savedOriginalOrder = getVal('originalLoadOrder', savedOriginalOrder);
             savedAudioMotionOptions = getVal('audioMotionOptions', savedAudioMotionOptions);
             savedAudioMotionNodes = getVal('audioMotionNodes', savedAudioMotionNodes);
+            savedImageBgmPath = getVal('imageBgmPath', savedImageBgmPath);
 
             // JSONファイルから DEFAULT_AUDIO_MOTION_OPTIONS を復元
             if (loadedSettings['audioMotionOptions']) {
@@ -3785,10 +3866,12 @@ async function allLocalStorageSetting() {
     await localSturageSetItemAndFile('alwaysOnTop', savedAlwaysOnTop);
     await localSturageSetItemAndFile('pauseShowControls', savedPauseShowControls);
     await localSturageSetItemAndFile('audioMotionMode', savedAudioMotionMode);
+    await localSturageSetItemAndFile('imageEffectBgmMode', savedimageEffectBgmMode);
     await localSturageSetItemAndFile('filterHistory', savedFilterHistory);
     await localSturageSetItemAndFile('originalLoadOrder', savedOriginalOrder);
     await localSturageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
     await localSturageSetItemAndFile('audioMotionNodes', savedAudioMotionNodes);
+    await localSturageSetItemAndFile('imageBgmPath', savedImageBgmPath);
 }
 
 // 音声トラック・字幕トラック更新
@@ -4017,7 +4100,8 @@ function hideMenus(hideAll = true) {
         '.track-menu',
         '.playlist-display-menu',
         ...(!isZoomMode || hideAll ? ['.aspect-ratio-menu'] : []),
-        ...(!isSettingsPanelOpen || hideAll ? ['.audio-motion-menu'] : [])
+        ...(!isSettingsPanelOpen || hideAll ? ['.audio-motion-menu'] : []),
+        ...(!isSettingsPanelOpen || hideAll ? ['.image-effectbgm-menu'] : [])
     ];
 
     document.querySelectorAll(classes.join(', ')).forEach(m => m.remove());
@@ -4231,6 +4315,92 @@ function createAudioMotionMenu() {
         menu.appendChild(item);
     });
 
+    return menu;
+}
+
+// オーディオモーシュン設定メニューコンテンツ作成・再描画関数
+function buildImageEffectBgmMenuContent(menu) {
+    menu.innerHTML = '';
+
+    Object.entries(IMAGEEFFECTBGM_NODES).forEach(([key, mode]) => {
+        // セパレーターの描画
+        if (mode.isSeparator) {
+            const separator = document.createElement('div');
+            separator.style.margin = '6px 0';
+            separator.style.borderTop = '1px solid #666';
+            menu.appendChild(separator);
+            return;
+        }
+
+        // BGM設定の場合（クリック時にメニューを再描画）
+        if (key === 'bgm') {
+            const isSelected = Boolean(imageBgmPath);
+            const bgm = document.createElement('div');
+            bgm.className = 'menu-item';
+            const getFileName = (target) => {
+                if (!target) return '';
+                return typeof target === 'string' ? target.split(/[/\\]/).pop() : '';
+            };
+            const labelText = isSelected 
+                ? `🎺 ${mode.label}（${getFileName(imageBgmPath)}）`
+                : `　　${mode.label}`;
+            bgm.innerHTML = labelText;
+
+            bgm.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                imageBgmPath = null;
+                const bgmPath = await openBgmDialog();
+                if (bgmPath) {
+                    imageBgmPath = bgmPath.path;
+                }
+                await localSturageSetItemAndFile('imageBgmPath', imageBgmPath);
+                updateImageEffectBgm();
+                buildImageEffectBgmMenuContent(menu); // メニュー内をクリアして再構築
+            });
+
+            bgm.addEventListener('mouseover', () => {
+                bgm.style.background = 'rgba(0,123,255,0.2)';
+            });
+            bgm.addEventListener('mouseout', () => {
+                bgm.style.background = 'none';
+            });
+
+            menu.appendChild(bgm);
+            return;
+        }
+
+        // モード選択アイテムの描画
+        const isSelected = imageEffectBgmMode === key;
+        const item = document.createElement('div');
+        item.className = 'menu-item';
+        item.style.color = isSelected ? '#00ccff' : '#eee';
+        item.innerHTML = (isSelected ? '✅ ' : '　　') + mode.label;
+
+        item.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            imageEffectBgmMode = key;
+            await localSturageSetItemAndFile('imageEffectBgmMode', imageEffectBgmMode);
+            updateImageEffectBgm();
+            menu.remove();
+            updateMessageOverlay(`💃 ${mode.label}`);
+        });
+
+        item.addEventListener('mouseover', () => {
+            item.style.background = 'rgba(0,123,255,0.2)';
+        });
+        item.addEventListener('mouseout', () => {
+            item.style.background = 'none';
+        });
+
+        menu.appendChild(item);
+    });
+}
+
+// メニューコンテナ生成関数
+function createImageEffectBgmMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'image-effectbgm-menu';
+    buildImageEffectBgmMenuContent(menu);
     return menu;
 }
 
@@ -5642,6 +5812,7 @@ async function setVideoSrc(file) {
     updateMediaPlayerDisplay();
     updateAudioMotion();
     toggleVisualizer(currentMediaType);
+    updateImageEffectBgm();
 
     // 画像処理分岐
     if (isImage) {
@@ -7604,7 +7775,7 @@ function isVideoFile(ext) {
     }
 }
 
-// ビジュアライザーの初期化関数
+// オーディオモーションの初期化関数
 function updateAudioMotion() {
     if (audioMotionBtn) {
         // 一旦クラスをクリアして状態に応じて適切なクラスを付与
@@ -7667,7 +7838,7 @@ function updateAudioMotion() {
     }
 }
 
-// ビジュアライザーの表示切替
+// オーディオモーションの表示切替
 function toggleVisualizer(show) {
     const visualizerContainer = document.getElementById('visualizerContainer');
     const videoPlayer = document.getElementById('videoPlayer');
@@ -7737,6 +7908,19 @@ function loadAudioMotionNodes() {
         }
     } else {
         saveAudioMotionNodes();
+    }
+}
+
+// イメージエフェクト＆BGMの初期化関数
+function updateImageEffectBgm() {
+    // イメージエフェクト＆BGM設定ボタンの背景色設定
+    if (imageEffectBgmBtn) {
+        imageEffectBgmBtn.classList.remove('image-effectbgm-active', 'random-effectbgm-active');
+        if (imageEffectBgmMode === 'random') {
+            imageEffectBgmBtn.classList.add('random-effectbgm-active');
+        } else if (imageEffectBgmMode && imageEffectBgmMode !== 'none') {
+            imageEffectBgmBtn.classList.add('image-effectbgm-active');
+        }
     }
 }
 
