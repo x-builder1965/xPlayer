@@ -247,12 +247,12 @@ const AUDIOMOTION_NODES = {
 // イメージエフェクト＆BGM設定のNODE定義
 const IMAGEEFFECTBGM_NODES = {
     'none': {      label: '（なし）' },
-    'motion1': {   label: 'フェード' },
-    'motion2': {   label: 'スライド（左→右）' },
-    'motion3': {   label: 'スライド（右→左）' },
-    'motion4': {   label: 'スライド（上→下）' },
-    'motion5': {   label: 'スライド（下→上）' },
-    'motion6': {   label: 'ズーム' },
+    'effect1': {   label: 'フェード' },
+    'effect2': {   label: 'スライド（左→右）' },
+    'effect3': {   label: 'スライド（右→左）' },
+    'effect4': {   label: 'スライド（上→下）' },
+    'effect5': {   label: 'スライド（下→上）' },
+    'effect6': {   label: 'ズーム' },
     'random': {    label: '（ランダム）' },
     'separator': { isSeparator: true },
     'bgm': {       label: 'BGM設定' }
@@ -460,7 +460,7 @@ let savedWallpaperPath = null;
 let savedAlwaysOnTop = null;
 let savedPauseShowControls = null;
 let savedAudioMotionMode = null;
-let savedimageEffectBgmMode = null;
+let savedImageEffectBgmMode = null;
 let savedFilterHistory = null;
 let savedOriginalOrder = null;
 let savedAudioMotionOptions = null;
@@ -667,10 +667,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // イメージエフェクト復元
-    if (savedimageEffectBgmMode && IMAGEEFFECTBGM_NODES[savedimageEffectBgmMode]) {
-        imageEffectBgmMode = savedimageEffectBgmMode;
+    if (savedImageEffectBgmMode && IMAGEEFFECTBGM_NODES[savedImageEffectBgmMode]) {
+        imageEffectBgmMode = savedImageEffectBgmMode;
     } else {
-        imageEffectBgmMode = 'motion1';
+        imageEffectBgmMode = 'effect1';
     }
 
     // イメージBGM復元
@@ -3724,7 +3724,7 @@ async function allLocalStorageSetting() {
         savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
         savedPauseShowControls = localStorage.getItem('pauseShowControls');
         savedAudioMotionMode = localStorage.getItem('audioMotionMode');
-        savedimageEffectBgmMode = localStorage.getItem('imageEffectBgmMode');
+        savedImageEffectBgmMode = localStorage.getItem('imageEffectBgmMode');
         savedFilterHistory = localStorage.getItem('filterHistory');
         savedOriginalOrder = localStorage.getItem('originalLoadOrder');
         savedAudioMotionOptions = localStorage.getItem('audioMotionOptions');
@@ -3807,7 +3807,7 @@ async function allLocalStorageSetting() {
             const rawPauseShowControls = getVal('pauseShowControls', savedPauseShowControls, 'false');
             savedPauseShowControls = String(rawPauseShowControls);
             savedAudioMotionMode = getVal('audioMotionMode', savedAudioMotionMode);
-            savedimageEffectBgmMode = getVal('imageEffectBgmMode', savedimageEffectBgmMode);
+            savedImageEffectBgmMode = getVal('imageEffectBgmMode', savedImageEffectBgmMode);
             savedFilterHistory = getVal('filterHistory', savedFilterHistory);
             savedOriginalOrder = getVal('originalLoadOrder', savedOriginalOrder);
             savedAudioMotionOptions = getVal('audioMotionOptions', savedAudioMotionOptions);
@@ -3866,7 +3866,7 @@ async function allLocalStorageSetting() {
     await localSturageSetItemAndFile('alwaysOnTop', savedAlwaysOnTop);
     await localSturageSetItemAndFile('pauseShowControls', savedPauseShowControls);
     await localSturageSetItemAndFile('audioMotionMode', savedAudioMotionMode);
-    await localSturageSetItemAndFile('imageEffectBgmMode', savedimageEffectBgmMode);
+    await localSturageSetItemAndFile('imageEffectBgmMode', savedImageEffectBgmMode);
     await localSturageSetItemAndFile('filterHistory', savedFilterHistory);
     await localSturageSetItemAndFile('originalLoadOrder', savedOriginalOrder);
     await localSturageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
