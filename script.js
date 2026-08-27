@@ -57,6 +57,7 @@ const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
 const settingsFilePath = getUserSettingsPath();
 const pid = getPid();
 const IMAGE_DURATION = 5;      // 画像の再生時間（秒）
+const bgmAudio = new Audio();
 
 const SORT_MODES = {
     none:       { label: '（なし）',     fn: () => getPlaylistInOriginalOrder() },
@@ -551,6 +552,7 @@ let imageCurrentTime = 0;      // 0〜5秒
 let imageProgressInterval = null;
 let pauseShowControls = false;
 let imageBgmPath = null;
+let currentLoadedBgmPath = null;    // BGM設定用の変数（パス管理）
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -674,10 +676,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // イメージBGM復元
+    bgmAudio.loop = true; // ★要件: ループ再生
     if (savedImageBgmPath && savedImageBgmPath !== 'null') {
         imageBgmPath = savedImageBgmPath;
     } else {
         imageBgmPath = null;
+    }
+
+    // 音量バーの入力変更をBGM音量に同期
+    if (volumeBar) {
+        bgmAudio.volume = parseFloat(volumeBar.value);
+        volumeBar.addEventListener('input', () => {
+            bgmAudio.volume = parseFloat(volumeBar.value);
+        });
     }
 
     // ズーム値復元
@@ -1109,6 +1120,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             clearTimeout(imageTimer);
             imageTimer = null;
             stopImageProgress();
+
+            // ★ BGMを停止して再生位置を先頭に戻す
+            if (!bgmAudio.paused) {
+                bgmAudio.pause();
+            }
+            bgmAudio.currentTime = 0; // 停止時は巻き戻し
         }
 
         // 3. srcを完全にクリア（これが大事！）
@@ -1199,6 +1216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     volumeMuteBtn.addEventListener('click', () => {
         if (videoPlayer.volume === 0) {
             videoPlayer.volume = lastVolume || 0.2;
+            bgmAudio.volume = videoPlayer.volume; // ★BGMも一緒に更新
             volumeBar.value = videoPlayer.volume;
             volumeMuteBtn.textContent = '🔊';
             volumeMuteBtn.classList.remove('muted-active');
@@ -1206,6 +1224,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             lastVolume = videoPlayer.volume;
             videoPlayer.volume = 0;
+            bgmAudio.volume = 0; // ★BGMも一緒に更新
             volumeBar.value = 0;
             volumeMuteBtn.textContent = '🔇';
             volumeMuteBtn.classList.add('muted-active');
@@ -1828,6 +1847,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const newVolume = videoPlayer.volume - (deltaY * volumeStep);
                 videoPlayer.volume = Math.max(0, Math.min(1, newVolume));
                 volumeBar.value = videoPlayer.volume;
+                bgmAudio.volume = videoPlayer.volume; // ★BGMも一緒に更新
                 lastVolume = videoPlayer.volume;
                 volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
                 volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
@@ -1929,6 +1949,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             videoPlayer.volume = Math.max(0, videoPlayer.volume - volumeStep);
         }
 
+        bgmAudio.volume = videoPlayer.volume; // ★BGMも一緒に更新
         volumeBar.value = videoPlayer.volume;
         lastVolume = videoPlayer.volume;
         volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
@@ -2155,6 +2176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     volumeBar.addEventListener('input', () => {
         if (controls.style.opacity !== '1') return;
         videoPlayer.volume = volumeBar.value;
+        bgmAudio.volume = videoPlayer.volume; // ★BGMも一緒に更新
         lastVolume = videoPlayer.volume;
         volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
         volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
@@ -3237,6 +3259,7 @@ document.addEventListener('keydown', async (event) => {
     if (!isZoomMode && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
         const delta = event.key === 'ArrowUp' ? 0.05 : -0.05;
         videoPlayer.volume = Math.max(0, Math.min(1, videoPlayer.volume + delta));
+        bgmAudio.volume = videoPlayer.volume; // ★BGMも一緒に更新
         volumeBar.value = videoPlayer.volume;
         lastVolume = videoPlayer.volume;
         volumeMuteBtn.textContent = videoPlayer.volume === 0 ? '🔇' : '🔊';
@@ -4346,16 +4369,26 @@ function buildImageEffectBgmMenuContent(menu) {
                 : `　　${mode.label}`;
             bgm.innerHTML = labelText;
 
+            // ① BGM設定選択時の処理（buildImageEffectBgmMenuContent 内の一部）
+            // ※該当の bgm.addEventListener('click', ...) の中身を以下のように書き換えてください
             bgm.addEventListener('click', async (event) => {
                 event.stopPropagation();
-                imageBgmPath = null;
                 const bgmPath = await openBgmDialog();
                 if (bgmPath) {
                     imageBgmPath = bgmPath.path;
+                } else {
+                    imageBgmPath = null;
                 }
                 await localSturageSetItemAndFile('imageBgmPath', imageBgmPath);
+                
+                // ★修正: パス情報をリセットして新しい BGM を読み込ませる
+                currentLoadedBgmPath = null;
+                bgmAudio.removeAttribute('src');
+                bgmAudio.load();
+                await manageBgmState();
+
                 updateImageEffectBgm();
-                buildImageEffectBgmMenuContent(menu); // メニュー内をクリアして再構築
+                buildImageEffectBgmMenuContent(menu);
             });
 
             bgm.addEventListener('mouseover', () => {
@@ -5585,6 +5618,9 @@ async function playVideo(file, currentTime) {
                 await playNextPlaylistItem();
             }, remainingMs);
         }
+
+		// ★追加: 画像再生開始にBGMを追従
+        await manageBgmState();
     } else {
         if (modeChange === 'convert') {
             setVideoDurationTime();
@@ -5595,7 +5631,6 @@ async function playVideo(file, currentTime) {
             }
         }
 
-        // 動画再生時に現在の再生速度を適用
         videoPlayer.playbackRate = currentPlaybackRate || 1.0;
 
         startPeriodicSave();
@@ -5605,6 +5640,9 @@ async function playVideo(file, currentTime) {
             playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
             stopPeriodicSave();
         });
+
+        // ★追加: 動画・音声再生時はBGMを自動一時停止
+        await manageBgmState();
     }
 
     selectedPlaylistIndex = currentVideoIndex;
@@ -5666,10 +5704,8 @@ function setVideoDurationTime() {
 
 // 再生/一時停止切替
 async function togglePlayPause() {
-
     // 画像表示中のトグル処理
     if (currentMediaType === 'image') {
-        
         // ★ 停止状態（インデックス初期化時）からの再生の場合、画像を再読み込みして再生開始
         if (currentVideoIndex === -1 || !imagePlayer.getAttribute('src')) {
             currentVideoIndex = selectedPlaylistIndex >= 0 ? selectedPlaylistIndex : 0;
@@ -5711,6 +5747,9 @@ async function togglePlayPause() {
                 await playNextPlaylistItem();
             }, remainingMs > 0 ? remainingMs : 0);
         }
+
+        // ★追加: 一時停止/再開にBGMを追従
+        await manageBgmState();
 
         selectedPlaylistIndex = currentVideoIndex;
         updatePlaylistDisplay();
@@ -5765,6 +5804,9 @@ async function togglePlayPause() {
         stopPeriodicSave();
     }
 
+    // ★追加: 動画・音声側で再生/一時停止操作された場合はBGMを自動一時停止
+    await manageBgmState();
+
     selectedPlaylistIndex = currentVideoIndex;
     updatePlaylistDisplay();
     showControlsAndFilename();
@@ -5791,7 +5833,6 @@ async function setVideoSrc(file) {
     playPauseBtn.classList.remove('paused-active');
     playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
     
-
     let cleanPath = file.path;
     if (cleanPath.includes('?')) {
         cleanPath = cleanPath.split('?')[0];
@@ -5898,6 +5939,9 @@ async function setVideoSrc(file) {
         }
     }
 
+    // ★追加: メディアタイプ切り替え時のBGM連動処理（画像以外なら自動一時停止）
+    await manageBgmState();
+
     // トラック情報制御（画像以外）
     if (currentMediaType !== 'audio' && currentMediaType !== 'image') {
         if (modeChange === 'video') {
@@ -5914,6 +5958,7 @@ async function setVideoSrc(file) {
     videoPreview.pause();
     videoPlayer.playbackRate = currentPlaybackRate;
     videoPlayer.volume = volumeBar.value;
+    bgmAudio.volume = videoPlayer.volume; // ★BGMも一緒に更新
 
     updateMediaPlayerDisplay();
     updatePlaylistDisplay();
@@ -8151,5 +8196,39 @@ function togglePauseShowControls() {
         if (pauseShowBtn) {
             pauseShowBtn.classList.remove('pause-active');
         }
+    }
+}
+
+// BGMの再生状態を一括制御する関数
+// （画像スライドショー再生中かつisPlaying時のみ再生、それ以外は自動一時停止）
+async function manageBgmState() {
+    // BGMパスが未設定、または画像以外（動画・音声）再生時はBGMを一時停止
+    if (!imageBgmPath || currentMediaType !== 'image') {
+        if (!bgmAudio.paused) bgmAudio.pause();
+        return;
+    }
+
+    // 画像スライドショーが再生中の場合
+    if (isPlaying) {
+        // ★修正: ファイルパス自体が変更された場合のみ src を更新して読み込む（リセット防止）
+        if (currentLoadedBgmPath !== imageBgmPath) {
+            currentLoadedBgmPath = imageBgmPath;
+            bgmAudio.src = `file://${imageBgmPath.replace(/\\/g, '/')}`;
+            bgmAudio.load();
+        }
+
+        try {
+            // ★修正: 一時停止中（再生されていない）場合のみ再生開始（現在の再生位置から継続）
+            if (bgmAudio.paused) {
+                if (volumeBar) bgmAudio.volume = parseFloat(volumeBar.value);
+                bgmAudio.muted = videoPlayer.muted;
+                await bgmAudio.play();
+            }
+        } catch (err) {
+            console.error("BGM再生エラー:", err);
+        }
+    } else {
+        // スライドショー一時停止時は BGM もその位置で一時停止（Resetはしない）
+        if (!bgmAudio.paused) bgmAudio.pause();
     }
 }
