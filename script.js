@@ -5755,6 +5755,8 @@ async function togglePlayPause() {
             clearTimeout(imageTimer);
             imageTimer = null;
             stopImageProgress();
+            // ★追加: 画像アニメーションを一時停止
+            imagePlayer.classList.add('paused');
             
             playPauseBtn.textContent = '⏸️';
             playPauseBtn.classList.add('paused-active');
@@ -5763,6 +5765,8 @@ async function togglePlayPause() {
         } else {
             // 【一時停止中 → 再開】
             isPlaying = true;
+            // ★追加: 画像アニメーションを再開
+            imagePlayer.classList.remove('paused');
             
             playPauseBtn.textContent = '▶️';
             playPauseBtn.classList.remove('paused-active');
@@ -8275,6 +8279,8 @@ async function manageBgmState() {
 function applyImageEffect() {
     if (!imagePlayer) return;
 
+    // ★追加: ポーズ用クラスの解除
+    imagePlayer.classList.remove('paused');
     // 定義済みのエフェクト用CSSクラスをすべて除去
     Object.values(IMAGEEFFECTBGM_NODES).forEach(node => {
         if (node.className) {

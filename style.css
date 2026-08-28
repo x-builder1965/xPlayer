@@ -1213,70 +1213,74 @@ button#modeChangeBtn.convert-active:hover,
 
 /* アニメーション共通（トランジション時間は画像の表示時間に合算されるため適宜調整） */
 .image-effect {
-  will-change: transform, opacity;
+    will-change: transform, opacity;
 }
 /* （なし） */
 .effect-none {
-  opacity: 1;
-  transform: none;
+    opacity: 1;
+    transform: none;
 }
 /* フェード（フェードイン ＆ フェードアウト） */
 .effect-fade {
-  animation: effectFade 3s ease-in-out forwards;
+    animation: effectFade 3s ease-in-out forwards;
 }
 @keyframes effectFade {
-  0%   { opacity: 0; }
-  20%  { opacity: 1; }
-  80%  { opacity: 1; }
-  100% { opacity: 0; }
+    0%   { opacity: 0; }
+    20%  { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { opacity: 0; }
 }
 /* スライド（左→右） */
 .effect-slide-lr {
-  animation: effectSlideLR 3s ease-in-out forwards;
+    animation: effectSlideLR 3s ease-in-out forwards;
 }
 @keyframes effectSlideLR {
-  0%   { opacity: 0; transform: translateX(-100%); }
-  20%  { opacity: 1; transform: translateX(0); }
-  80%  { opacity: 1; transform: translateX(0); }
-  100% { opacity: 0; transform: translateX(100%); }
+    0%   { opacity: 0; transform: translateX(-100%); }
+    20%  { opacity: 1; transform: translateX(0); }
+    80%  { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(100%); }
 }
 /* スライド（右→左） */
 .effect-slide-rl {
-  animation: effectSlideRL 3s ease-in-out forwards;
+    animation: effectSlideRL 3s ease-in-out forwards;
 }
 @keyframes effectSlideRL {
-  0%   { opacity: 0; transform: translateX(100%); }
-  20%  { opacity: 1; transform: translateX(0); }
-  80%  { opacity: 1; transform: translateX(0); }
-  100% { opacity: 0; transform: translateX(-100%); }
+    0%   { opacity: 0; transform: translateX(100%); }
+    20%  { opacity: 1; transform: translateX(0); }
+    80%  { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(-100%); }
 }
 /* スライド（上→下） */
 .effect-slide-tb {
-  animation: effectSlideTB 3s ease-in-out forwards;
+    animation: effectSlideTB 3s ease-in-out forwards;
 }
 @keyframes effectSlideTB {
-  0%   { opacity: 0; transform: translateY(-100%); }
-  20%  { opacity: 1; transform: translateY(0); }
-  80%  { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(100%); }
+    0%   { opacity: 0; transform: translateY(-100%); }
+    20%  { opacity: 1; transform: translateY(0); }
+    80%  { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(100%); }
 }
 /* スライド（下→上） */
 .effect-slide-bt {
-  animation: effectSlideBT 3s ease-in-out forwards;
+    animation: effectSlideBT 3s ease-in-out forwards;
 }
 @keyframes effectSlideBT {
-  0%   { opacity: 0; transform: translateY(100%); }
-  20%  { opacity: 1; transform: translateY(0); }
-  80%  { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-100%); }
+    0%   { opacity: 0; transform: translateY(100%); }
+    20%  { opacity: 1; transform: translateY(0); }
+    80%  { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-100%); }
 }
 /* ズーム (Ken Burns風) */
 .effect-zoom {
-  animation: effectZoom 3s ease-in-out forwards;
+    animation: effectZoom 3s ease-in-out forwards;
 }
 @keyframes effectZoom {
-  0%   { opacity: 0; transform: scale(1.15); }
-  20%  { opacity: 1; transform: scale(1.05); }
-  80%  { opacity: 1; transform: scale(1.0); }
-  100% { opacity: 0; transform: scale(0.95); }
+    0%   { opacity: 0; transform: scale(1.15); }
+    20%  { opacity: 1; transform: scale(1.05); }
+    80%  { opacity: 1; transform: scale(1.0); }
+    100% { opacity: 0; transform: scale(0.95); }
+}
+/* 一時停止時にアニメーションをその場で固定するクラス */
+.image-effect.paused {
+    animation-play-state: paused !important;
 }
