@@ -918,8 +918,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }));
                     currentVideoIndex = parsedCurrentVideoIndex;
                     selectedPlaylistIndex = currentVideoIndex;
-                    debouncedUpdateFilterList();
-                    debouncedScrollCurrentFilterItem();
+                    await debouncedUpdateFilterList();
+                    await debouncedScrollCurrentFilterItem();
 					// 復元メディアの再生
 					await playVideo(playlist[currentVideoIndex].file, savedCurrentTime);
 					// 起動時は一時停止状態にする
@@ -3437,6 +3437,8 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
     const runAutoPlay = async () => {
         try {
             await playlistSet(videoFiles);
+            debouncedUpdateFilterList();
+            debouncedScrollCurrentFilterItem();
             hideMessageOverlay(true);
         } catch (err) {
             console.error('プレイリスト設定エラー:', err);
