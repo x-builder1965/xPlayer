@@ -677,8 +677,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // イメージBGM復元
-    // オーディオ自体の単一ループを無効化
-    bgmAudio.loop = false; 
+    bgmAudio.loop = false;
     if (savedImageBgmPaths && savedImageBgmPaths !== 'null') {
         try {
             imageBgmPaths = typeof savedImageBgmPaths === 'string' ? JSON.parse(savedImageBgmPaths) : savedImageBgmPaths;
@@ -911,6 +910,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const parsedCurrentVideoIndex = parseInt(savedCurrentVideoIndex, 10);
                 if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0 && 
                     !isNaN(parsedCurrentVideoIndex) && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
+                    // プレイリスト復元
                     updateMessageOverlay(`📚 プレイリスト作成中...`, 0, false);
                     playlist = parsedPlaylist.map(path => ({
                         file: { path },
@@ -920,18 +920,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     selectedPlaylistIndex = currentVideoIndex;
                     debouncedUpdateFilterList();
                     debouncedScrollCurrentFilterItem();
-                    await playVideo(playlist[currentVideoIndex].file, savedCurrentTime);
-                    setTimeout(() => {
-                        if (videoPlayer.src) {
-                            videoPlayer.play().then(() => videoPlayer.pause()).catch(() => {});
-                        }
-                    }, 5);
-                    playPauseBtn.textContent = '⏸️';
-                    playPauseBtn.classList.add('paused-active');
-                    playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-                    localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
-                    stopPeriodicSave();
-                    showControlsAndFilename();
+					// 復元メディアの再生
+					await playVideo(playlist[currentVideoIndex].file, savedCurrentTime);
+					// 起動時は一時停止状態にする
+                    await togglePlayPause();
+                    
                     hideMessageOverlay(true);
                     updateIconOverlay();
                 } else {
@@ -3772,8 +3765,7 @@ async function allLocalStorageSetting() {
         savedOriginalOrder = localStorage.getItem('originalLoadOrder');
         savedAudioMotionOptions = localStorage.getItem('audioMotionOptions');
         savedAudioMotionNodes = localStorage.getItem('audioMotionNodes');
-        savedImageBgmPaths = localStorage.getItem('imageBgmPaths');		// JSON文字列で保存された複数パス配列を取得
-
+        savedImageBgmPaths = localStorage.getItem('imageBgmPaths');
         // 2. 取得情報をユーザーフォルダの xPlayerSettings.json に保存
         await exportSettingsToFile(settingsFilePath);
     } else {
@@ -3914,7 +3906,7 @@ async function allLocalStorageSetting() {
     await localSturageSetItemAndFile('originalLoadOrder', savedOriginalOrder);
     await localSturageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
     await localSturageSetItemAndFile('audioMotionNodes', savedAudioMotionNodes);
-    await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);		// 複数パスの保存同期
+    await localSturageSetItemAndFile('imageBgmPaths', savedImageBgmPaths);
 }
 
 // 音声トラック・字幕トラック更新
