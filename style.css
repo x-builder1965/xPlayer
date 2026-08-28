@@ -1211,9 +1211,8 @@ button#modeChangeBtn.convert-active:hover,
     z-index: 10;
 }
 
-/* アニメーション共通（トランジション時間は用途に合わせて変更可） */
+/* アニメーション共通（トランジション時間は画像の表示時間に合算されるため適宜調整） */
 .image-effect {
-  transition: all 0.6s ease-in-out;
   will-change: transform, opacity;
 }
 /* （なし） */
@@ -1221,51 +1220,63 @@ button#modeChangeBtn.convert-active:hover,
   opacity: 1;
   transform: none;
 }
-/* フェード */
+/* フェード（フェードイン ＆ フェードアウト） */
 .effect-fade {
-  animation: effectFade 0.6s ease-in-out forwards;
+  animation: effectFade 3s ease-in-out forwards;
 }
 @keyframes effectFade {
   0%   { opacity: 0; }
-  100% { opacity: 1; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 /* スライド（左→右） */
 .effect-slide-lr {
-  animation: effectSlideLR 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  animation: effectSlideLR 3s ease-in-out forwards;
 }
 @keyframes effectSlideLR {
   0%   { opacity: 0; transform: translateX(-100%); }
-  100% { opacity: 1; transform: translateX(0); }
+  20%  { opacity: 1; transform: translateX(0); }
+  80%  { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(100%); }
 }
 /* スライド（右→左） */
 .effect-slide-rl {
-  animation: effectSlideRL 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  animation: effectSlideRL 3s ease-in-out forwards;
 }
 @keyframes effectSlideRL {
   0%   { opacity: 0; transform: translateX(100%); }
-  100% { opacity: 1; transform: translateX(0); }
+  20%  { opacity: 1; transform: translateX(0); }
+  80%  { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-100%); }
 }
 /* スライド（上→下） */
 .effect-slide-tb {
-  animation: effectSlideTB 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  animation: effectSlideTB 3s ease-in-out forwards;
 }
 @keyframes effectSlideTB {
   0%   { opacity: 0; transform: translateY(-100%); }
-  100% { opacity: 1; transform: translateY(0); }
+  20%  { opacity: 1; transform: translateY(0); }
+  80%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(100%); }
 }
 /* スライド（下→上） */
 .effect-slide-bt {
-  animation: effectSlideBT 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  animation: effectSlideBT 3s ease-in-out forwards;
 }
 @keyframes effectSlideBT {
   0%   { opacity: 0; transform: translateY(100%); }
-  100% { opacity: 1; transform: translateY(0); }
+  20%  { opacity: 1; transform: translateY(0); }
+  80%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-100%); }
 }
 /* ズーム (Ken Burns風) */
 .effect-zoom {
-  animation: effectZoom 0.8s ease-out forwards;
+  animation: effectZoom 3s ease-in-out forwards;
 }
 @keyframes effectZoom {
   0%   { opacity: 0; transform: scale(1.15); }
-  100% { opacity: 1; transform: scale(1); }
+  20%  { opacity: 1; transform: scale(1.05); }
+  80%  { opacity: 1; transform: scale(1.0); }
+  100% { opacity: 0; transform: scale(0.95); }
 }

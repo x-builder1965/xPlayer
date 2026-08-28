@@ -8275,7 +8275,7 @@ async function manageBgmState() {
 function applyImageEffect() {
     if (!imagePlayer) return;
 
-    // 定義済みのエフェクト用CSSクラスをすべて除去（前回と同じ）
+    // 定義済みのエフェクト用CSSクラスをすべて除去
     Object.values(IMAGEEFFECTBGM_NODES).forEach(node => {
         if (node.className) {
             imagePlayer.classList.remove(node.className);
@@ -8285,20 +8285,16 @@ function applyImageEffect() {
 
     let activeKey = imageEffectBgmMode || 'none';
 
-    // 「（ランダム）」が選択されている場合の処理
+    // 「（ランダム）」時の処理（'none' 除外・連続回避）
     if (activeKey === 'random') {
-        // 抽選候補を作成。
-        // 「classNameが定義されている」かつ「キーが 'none' ではない」ノードのキー配列を取得。
         const availableEffectKeys = Object.keys(IMAGEEFFECTBGM_NODES).filter(
             key => IMAGEEFFECTBGM_NODES[key].className && key !== 'none'
         );
 
         if (availableEffectKeys.length > 0) {
-            // エフェクトが複数ある場合のみ、連続回避ロジックを実行
             if (availableEffectKeys.length > 1) {
                 let randomIndex;
                 let selectedKey;
-                // 直前と同じエフェクト（lastEffectKey）が選ばれる限りループ（再抽選）
                 do {
                     randomIndex = Math.floor(Math.random() * availableEffectKeys.length);
                     selectedKey = availableEffectKeys[randomIndex];
@@ -8306,23 +8302,28 @@ function applyImageEffect() {
                 
                 activeKey = selectedKey;
             } else {
-                // エフェクト候補が1つしかない場合は、それを選択せざるを得ない
                 activeKey = availableEffectKeys[0];
             }
         } else {
-            // 候補がない（万が一の設定不備など）場合は 'none'
             activeKey = 'none';
         }
     }
 
-    // 今回適用するエフェクトキーを「直前のエフェクト」として記憶
     lastEffectKey = activeKey;
 
-    // クラスの適用（前回と同じ）
     const targetNode = IMAGEEFFECTBGM_NODES[activeKey];
     const cssClass = targetNode?.className || IMAGEEFFECTBGM_NODES['none'].className;
 
-    // 一旦リフローを発生させてアニメーションを毎回確実に発火させる
+    // ★追加: IMAGE_DURATION（秒）に合わせてアニメーション時間を自動調整
+    if (typeof IMAGE_DURATION !== 'undefined' && activeKey !== 'none') {
+        const rate = currentPlaybackRate || 1.0;
+        const durationSec = IMAGE_DURATION / rate;
+        imagePlayer.style.animationDuration = `${durationSec}s`;
+    } else {
+        imagePlayer.style.animationDuration = '';
+    }
+
+    // リフローを発生させてアニメーションを再発火
     void imagePlayer.offsetWidth;
     imagePlayer.classList.add(cssClass);
 }
