@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.39.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.41.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -515,9 +515,10 @@ ipcMain.handle('open-wallpaper-dialog', async () => {
 
 // BGM選択（単ファイル選択）
 ipcMain.handle('open-bgm-dialog', async () => {
+    /* ★BGM設定変更★ 複数ファイル選択(multiSelections)に対応 */
     const result = await dialog.showOpenDialog({
         title: 'BGMを選択',
-        properties: ['openFile'],           // 単ファイル選択
+        properties: ['openFile', 'multiSelections'], // ★BGM設定変更★ 複数選択を許可
         filters: [
             { 
                 name: '音声ファイル', 
@@ -530,15 +531,16 @@ ipcMain.handle('open-bgm-dialog', async () => {
         ]
     });
 
+    /* ★BGM設定変更★ キャンセル時または未選択時は null を返す（クリア判定用） */
     if (result.canceled || result.filePaths.length === 0) {
-        return null;   // キャンセル時は null を返す
+        return null;
     }
 
-    const filePath = result.filePaths[0];
-    return {
+    /* ★BGM設定変更★ 選択された全ファイルの情報を配列で返す */
+    return result.filePaths.map(filePath => ({
         name: path.basename(filePath),
         path: filePath
-    };
+    }));
 });
 
 // コマンドライン引数取得

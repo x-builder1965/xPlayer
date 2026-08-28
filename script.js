@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.40.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.41.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -467,6 +467,7 @@ let savedOriginalOrder = null;
 let savedAudioMotionOptions = null;
 let savedAudioMotionNodes = null;
 let savedImageBgmPath = null;
+let savedImageBgmPaths = null;	// ★BGM設定変更★ 複数BGMパスの保持用変数を追加
 
 // グローバル（共通）変数
 let localSettings = {};     // localSettingsをオブジェクトとして初期化
@@ -552,6 +553,8 @@ let imageCurrentTime = 0;      // 0〜5秒
 let imageProgressInterval = null;
 let pauseShowControls = false;
 let imageBgmPath = null;
+let imageBgmPaths = []; 		// ★BGM設定変更★ 複数BGMパスの配列管理変数を追加
+let currentBgmIndex = 0;		// ★BGM設定変更★ 複数BGMパスのインデックス管理を追加
 let currentLoadedBgmPath = null;    // BGM設定用の変数（パス管理）
 
 // 🔲document ハンドラ登録🔲
@@ -676,11 +679,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // イメージBGM復元
-    bgmAudio.loop = true; // ★要件: ループ再生
-    if (savedImageBgmPath && savedImageBgmPath !== 'null') {
-        imageBgmPath = savedImageBgmPath;
+    /* ★BGM設定変更★ オーディオ自体の単一ループを無効化 */
+    bgmAudio.loop = false; 
+    if (savedImageBgmPaths && savedImageBgmPaths !== 'null') {
+        try {
+            imageBgmPaths = typeof savedImageBgmPaths === 'string' ? JSON.parse(savedImageBgmPaths) : savedImageBgmPaths;
+            if (!Array.isArray(imageBgmPaths)) imageBgmPaths = [];
+        } catch (e) {
+            console.error('imageBgmPaths の復元エラー:', e);
+            imageBgmPaths = [];
+        }
+    } else if (savedImageBgmPath && savedImageBgmPath !== 'null') {
+        /* ★BGM設定変更★ 旧バージョン（単一パス）設定からの移行互換処理 */
+        imageBgmPaths = [savedImageBgmPath];
     } else {
-        imageBgmPath = null;
+        imageBgmPaths = [];
     }
 
     // 音量バーの入力変更をBGM音量に同期
@@ -1558,6 +1571,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }, 0);
     });
 
+    // ★BGM設定変更★ 曲終了時に次のBGMへ自動遷移する処理を追加
+    bgmAudio.addEventListener('ended', async () => {
+        if (Array.isArray(imageBgmPaths) && imageBgmPaths.length > 0) {
+            // 次の曲のインデックスに加算（末尾まで行ったら 0 に戻るリストループ）
+            currentBgmIndex = (currentBgmIndex + 1) % imageBgmPaths.length;
+            
+            // パス変更を検知させるため一度クリアして再生状態を更新
+            currentLoadedBgmPath = null;
+            await manageBgmState();
+        }
+    });
+    
     // 👁️コントロール表示抑止
     pauseShowBtn.addEventListener('click', async () => {
         hideMessageOverlay();
@@ -3753,6 +3778,7 @@ async function allLocalStorageSetting() {
         savedAudioMotionOptions = localStorage.getItem('audioMotionOptions');
         savedAudioMotionNodes = localStorage.getItem('audioMotionNodes');
         savedImageBgmPath = localStorage.getItem('imageBgmPath');
+        savedImageBgmPaths = localStorage.getItem('imageBgmPaths');		// ★BGM設定変更★ JSON文字列で保存された複数パス配列を取得
 
         // 2. 取得情報をユーザーフォルダの xPlayerSettings.json に保存
         await exportSettingsToFile(settingsFilePath);
@@ -3836,6 +3862,7 @@ async function allLocalStorageSetting() {
             savedAudioMotionOptions = getVal('audioMotionOptions', savedAudioMotionOptions);
             savedAudioMotionNodes = getVal('audioMotionNodes', savedAudioMotionNodes);
             savedImageBgmPath = getVal('imageBgmPath', savedImageBgmPath);
+            savedImageBgmPaths = getVal('imageBgmPaths', savedImageBgmPaths);		// ★BGM設定変更★ 設定ファイルからの複数パス復元
 
             // JSONファイルから DEFAULT_AUDIO_MOTION_OPTIONS を復元
             if (loadedSettings['audioMotionOptions']) {
@@ -3895,6 +3922,7 @@ async function allLocalStorageSetting() {
     await localSturageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
     await localSturageSetItemAndFile('audioMotionNodes', savedAudioMotionNodes);
     await localSturageSetItemAndFile('imageBgmPath', savedImageBgmPath);
+    await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);		// ★BGM設定変更★ 複数パスの保存同期
 }
 
 // 音声トラック・字幕トラック更新
@@ -4357,47 +4385,63 @@ function buildImageEffectBgmMenuContent(menu) {
 
         // BGM設定の場合（クリック時にメニューを再描画）
         if (key === 'bgm') {
-            const isSelected = Boolean(imageBgmPath);
+            /* ★BGM設定変更★ 配列内に有効なパスが存在するか判定 */
+            const isSelected = Array.isArray(imageBgmPaths) && imageBgmPaths.length > 0;
             const bgm = document.createElement('div');
             bgm.className = 'menu-item';
+            
             const getFileName = (target) => {
                 if (!target) return '';
                 return typeof target === 'string' ? target.split(/[/\\]/).pop() : '';
             };
-            const labelText = isSelected 
-                ? `🎺 ${mode.label}（${getFileName(imageBgmPath)}）`
-                : `　　${mode.label}`;
+        
+            /* ★BGM設定変更★ 件数または最初のファイル名を表示 */
+            let labelText = `　　${mode.label}`;
+            if (isSelected) {
+                if (imageBgmPaths.length === 1) {
+                    labelText = `🎺 ${mode.label}（${getFileName(imageBgmPaths[0])}）`;
+                } else {
+                    labelText = `🎺 ${mode.label}（${imageBgmPaths.length}件のファイル）`;
+                }
+            }
             bgm.innerHTML = labelText;
-
-            // ① BGM設定選択時の処理（buildImageEffectBgmMenuContent 内の一部）
-            // ※該当の bgm.addEventListener('click', ...) の中身を以下のように書き換えてください
+        
             bgm.addEventListener('click', async (event) => {
                 event.stopPropagation();
-                const bgmPath = await openBgmDialog();
-                if (bgmPath) {
-                    imageBgmPath = bgmPath.path;
-                } else {
-                    imageBgmPath = null;
-                }
-                await localSturageSetItemAndFile('imageBgmPath', imageBgmPath);
                 
-                // ★修正: パス情報をリセットして新しい BGM を読み込ませる
+                /* ★BGM設定変更★ ダイアログ呼び出しと複数ファイルの受取 */
+                const selectedBgms = await openBgmDialog();
+                
+                if (selectedBgms && selectedBgms.length > 0) {
+                    // 選択されたパスの配列を抽出
+                    imageBgmPaths = selectedBgms.map(b => b.path);
+                } else {
+                    /* ★BGM設定変更★ キャンセル選択時は全BGMファイルをクリア */
+                    imageBgmPaths = [];
+                }
+        
+                currentBgmIndex = 0;
+                
+                /* ★BGM設定変更★ localStorage に配列をJSON形式で保存 */
+                await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
+                
+                // パス情報をリセットして新しい BGM を読み込ませる
                 currentLoadedBgmPath = null;
                 bgmAudio.removeAttribute('src');
                 bgmAudio.load();
                 await manageBgmState();
-
+        
                 updateImageEffectBgm();
                 buildImageEffectBgmMenuContent(menu);
             });
-
+        
             bgm.addEventListener('mouseover', () => {
                 bgm.style.background = 'rgba(0,123,255,0.2)';
             });
             bgm.addEventListener('mouseout', () => {
                 bgm.style.background = 'none';
             });
-
+        
             menu.appendChild(bgm);
             return;
         }
@@ -8201,11 +8245,17 @@ function togglePauseShowControls() {
     }
 }
 
-// BGMの再生状態を一括制御する関数
-// （画像スライドショー再生中かつisPlaying時のみ再生、それ以外は自動一時停止）
+/**
+ * BGMの再生状態を一括制御する関数（複数BGM・継続再生対応版）
+ */
 async function manageBgmState() {
+    /* ★BGM設定変更★ 配列の存在チェックと、現在再生対象のパスを取得 */
+    const currentPath = (Array.isArray(imageBgmPaths) && imageBgmPaths.length > 0)
+        ? imageBgmPaths[currentBgmIndex || 0]
+        : null;
+
     // BGMパスが未設定、または画像以外（動画・音声）再生時はBGMを一時停止
-    if (!imageBgmPath || currentMediaType !== 'image') {
+    if (!currentPath || currentMediaType !== 'image') {
         if (!bgmAudio.paused) bgmAudio.pause();
         return;
     }
@@ -8213,9 +8263,9 @@ async function manageBgmState() {
     // 画像スライドショーが再生中の場合
     if (isPlaying) {
         // ★修正: ファイルパス自体が変更された場合のみ src を更新して読み込む（リセット防止）
-        if (currentLoadedBgmPath !== imageBgmPath) {
-            currentLoadedBgmPath = imageBgmPath;
-            bgmAudio.src = `file://${imageBgmPath.replace(/\\/g, '/')}`;
+        if (currentLoadedBgmPath !== currentPath) {
+            currentLoadedBgmPath = currentPath;
+            bgmAudio.src = `file://${currentPath.replace(/\\/g, '/')}`;
             bgmAudio.load();
         }
 
