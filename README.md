@@ -129,7 +129,7 @@ npm run sign           # 署名付きビルド（環境変数 CSC_KEY_PASSWORD �
 ### 商標・権利表記
 - Electron は OpenJS Foundation の商標または登録商標です。
 - FFmpeg は Fabrice Bellard 氏および FFmpeg プロジェクトの商標または登録商標です。
-- Windows, Snipping Tool および  icrosoft Edge は Microsoft Corporation の米国およびその他の国における登録商標です。
+- Windows, Snipping Tool および  Microsoft Edge は Microsoft Corporation の米国およびその他の国における登録商標です。
 - Google Chrome および YouTube は Google LLC の登録商標です。
 - Twitch は Twitch Interactive, Inc. の登録商標です。
 - その他、記載されている会社名、製品名、サービス名はそれぞれの各社の登録商標または商標です。
