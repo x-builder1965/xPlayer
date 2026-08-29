@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.43.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.44.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -434,6 +434,7 @@ let changelogContent = null;
 let tableContainer = null;
 let mediaContainer = null;
 let imagePlayer = null;
+let imageWrapper = null;
 
 // localStorage から復得
 let savedVolume = null;
@@ -1128,6 +1129,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 bgmAudio.pause();
             }
             bgmAudio.currentTime = 0; // 停止時は巻き戻し
+        }
+
+        if (imageWrapper) {
+            imageWrapper.style.display = 'none';
+            imageWrapper.className = ''; // アニメーション・pausedクラス等をすべてクリア
         }
 
         // 3. srcを完全にクリア（これが大事！）
@@ -1832,6 +1838,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             translateY += deltaY;
             const scale = (100 + zoomValue) / 100;
             
+            // ★修正: 画像の場合も imagePlayer 本体に transform を適用（親の imageWrapper のアニメーションと分離）
             const targetElement = (currentMediaType === 'image' && typeof imagePlayer !== 'undefined') ? imagePlayer : videoPlayer;
             targetElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
             
@@ -3684,6 +3691,7 @@ function allDOMsetting() {
     tableContainer = document.getElementById('tableContainer');
     mediaContainer = document.getElementById('mediaContainer');
     imagePlayer = document.getElementById('imagePlayer');
+    imageWrapper = document.getElementById('imageWrapper');
 }
 
 // ユーザーフォルダ内の設定ファイルパスを取得
@@ -5759,8 +5767,8 @@ async function togglePlayPause() {
             clearTimeout(imageTimer);
             imageTimer = null;
             stopImageProgress();
-            // ★追加: 画像アニメーションを一時停止
-            imagePlayer.classList.add('paused');
+            // ★修正: paused クラスの追加先を imageWrapper に変更
+            if (imageWrapper) imageWrapper.classList.add('paused');
             
             playPauseBtn.textContent = '⏸️';
             playPauseBtn.classList.add('paused-active');
@@ -5769,8 +5777,8 @@ async function togglePlayPause() {
         } else {
             // 【一時停止中 → 再開】
             isPlaying = true;
-            // ★追加: 画像アニメーションを再開
-            imagePlayer.classList.remove('paused');
+            // ★修正: paused クラスの除去先を imageWrapper に変更
+            if (imageWrapper) imageWrapper.classList.remove('paused');
             
             playPauseBtn.textContent = '▶️';
             playPauseBtn.classList.remove('paused-active');
@@ -7742,10 +7750,7 @@ function updateMediaPlayerDisplay() {
     const isAudio = currentMediaType === 'audio';
     const isImage = currentMediaType === 'image';
 
-    videoPlayerElement.style.display = 'none';
-    audioPlayer.style.display = 'none';
-    imagePlayer.style.display = 'none';
-    // 動画プレイヤーの表示切替（音声・画像の場合は非表示）
+    // 動画プレイヤーの表示切替
     if (videoPlayerElement) {
         videoPlayerElement.style.display = (isAudio || isImage) ? 'none' : 'block';
     }
@@ -7755,7 +7760,10 @@ function updateMediaPlayerDisplay() {
         audioPlayer.style.display = isAudio ? 'block' : 'none';
     }
 
-    // 画像プレイヤーの表示切替
+    // ★修正: 画像ラッパーおよび画像要素の表示切替
+    if (imageWrapper) {
+        imageWrapper.style.display = isImage ? 'block' : 'none';
+    }
     if (imagePlayer) {
         imagePlayer.style.display = isImage ? 'block' : 'none';
     }
@@ -8281,21 +8289,22 @@ async function manageBgmState() {
 
 // 画像にエフェクトクラスを適用する関数
 function applyImageEffect() {
-    if (!imagePlayer) return;
+    const imageWrapper = document.getElementById('imageWrapper');
+    if (!imageWrapper || !imagePlayer) return;
 
-    // ★追加: ポーズ用クラスの解除
-    imagePlayer.classList.remove('paused');
-    // 定義済みのエフェクト用CSSクラスをすべて除去
+    // ★修正: ポーズ用・エフェクト用クラスの着脱対象を imageWrapper に変更
+    imageWrapper.classList.remove('paused');
+
     Object.values(IMAGEEFFECTBGM_NODES).forEach(node => {
         if (node.className) {
-            imagePlayer.classList.remove(node.className);
+            imageWrapper.classList.remove(node.className);
         }
     });
-    imagePlayer.classList.add('image-effect');
+    imageWrapper.classList.add('image-effect');
 
     let activeKey = imageEffectBgmMode || 'none';
 
-    // 「（ランダム）」時の処理（'none' 除外・連続回避）
+    // 「（ランダム）」時の処理
     if (activeKey === 'random') {
         const availableEffectKeys = Object.keys(IMAGEEFFECTBGM_NODES).filter(
             key => IMAGEEFFECTBGM_NODES[key].className && key !== 'none'
@@ -8324,16 +8333,16 @@ function applyImageEffect() {
     const targetNode = IMAGEEFFECTBGM_NODES[activeKey];
     const cssClass = targetNode?.className || IMAGEEFFECTBGM_NODES['none'].className;
 
-    // ★追加: IMAGE_DURATION（秒）に合わせてアニメーション時間を自動調整
+    // ★修正: animationDuration の適用先も imageWrapper に変更
     if (typeof IMAGE_DURATION !== 'undefined' && activeKey !== 'none') {
         const rate = currentPlaybackRate || 1.0;
         const durationSec = IMAGE_DURATION / rate;
-        imagePlayer.style.animationDuration = `${durationSec}s`;
+        imageWrapper.style.animationDuration = `${durationSec}s`;
     } else {
-        imagePlayer.style.animationDuration = '';
+        imageWrapper.style.animationDuration = '';
     }
 
     // リフローを発生させてアニメーションを再発火
-    void imagePlayer.offsetWidth;
-    imagePlayer.classList.add(cssClass);
+    void imageWrapper.offsetWidth;
+    imageWrapper.classList.add(cssClass);
 }
