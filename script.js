@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.45.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.46.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -58,6 +58,8 @@ const settingsFilePath = getUserSettingsPath();
 const pid = getPid();
 const IMAGE_DURATION = 5;      // 画像の再生時間（秒）
 const bgmAudio = new Audio();
+const THUMBNAIL_DIR = path.join(os.homedir(), 'xPlayerThumbnail');		// サムネイル保存用ディレクトリと縮小化ヘルパー
+const imageThumbnailCache = new Map();		// 画像サムネイル用キャッシュ（Mapオブジェクト）
 
 const SORT_MODES = {
     none:       { label: '（なし）',     fn: () => getPlaylistInOriginalOrder() },
@@ -880,6 +882,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // プレイリストと再生状態の復元
     (async () => {
+        // サムネイル保存用ディレクトリの自動生成
+        try {
+            await fs.mkdir(THUMBNAIL_DIR, { recursive: true });
+        } catch (e) {
+            console.error('xPlayerThumbnail ディレクトリ作成失敗:', e);
+        }
         // リロード判定（PerformanceNavigationTiming API）
         const navEntries = performance.getEntriesByType('navigation');
         const isReload = navEntries.length > 0 && navEntries[0].type === 'reload';
@@ -5262,12 +5270,12 @@ async function updateFilterList() {
                 return typeof AUDIO_EXTENSIONS !== 'undefined' ? AUDIO_EXTENSIONS.includes(ext) : ['.mp3', '.wav', '.flac', '.aac', '.m4a', '.ogg'].includes(ext);
             };
 
-            // 画像ファイルの判定関数を追加
+            // 画像ファイルの判定関数
             const isImageFile = (filePath) => {
                 if (!filePath) return false;
                 const cleanPath = filePath.split('?')[0];
                 const ext = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
-                return ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].includes(ext);
+                return IMAGE_EXTENSIONS.includes(ext);
             };
             
             try {
@@ -5275,8 +5283,14 @@ async function updateFilterList() {
                     setMusicThumb();
                 } else if (isImageFile(item.file?.path)) {
                     // 画像ファイルの場合はローカルファイルをそのままURL化してセット（高速化 & そのままサムネ化）
-                    const imageUrl = `file://${item.file.path.replace(/\\/g, '/')}`;
-                    thumb.src = imageUrl;
+                    const imageUrl = await getOrGenerateImageThumbnail(item.file.path, thumbDims.width);
+                    if (myUpdateId !== currentUpdateId) return;
+
+                    if (imageUrl) {
+                        thumb.src = imageUrl;
+                    } else {
+                        setFallbackThumb();
+                    }
                 } else {
                     // 動画等の場合
                     const thumbUrl = await getPlaylistThumbnailDataUrl(item.file?.path, thumbDims.width);
@@ -8481,4 +8495,64 @@ function applyImageEffect() {
     // リフローを発生させてアニメーションを再発火
     void imageWrapper.offsetWidth;
     imageWrapper.classList.add(cssClass);
+}
+
+// 簡易ハッシュ関数（ファイルパスから一意なファイル名を生成）
+function hashString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+    }
+    return Math.abs(hash).toString(36);
+}
+
+// 画像を指定サイズにリサイズ（圧縮）し、メモリキャッシュに保持する関数
+async function getOrGenerateImageThumbnail(filePath, targetWidth = 180) {
+    if (!filePath) return '';
+    const cacheKey = `${filePath}|${targetWidth}`;
+
+    // 1. メモリキャッシュが存在する場合は即座に返却
+    if (imageThumbnailCache.has(cacheKey)) {
+        const cached = imageThumbnailCache.get(cacheKey);
+        if (cached) return cached;
+    }
+
+    try {
+        // 2. HTMLImageElement を使って非同期ロード
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        const imageLoaded = new Promise((resolve, reject) => {
+            img.onload = () => resolve();
+            img.onerror = (err) => reject(err);
+        });
+        img.src = `file://${filePath.replace(/\\/g, '/')}`;
+        await imageLoaded;
+
+        // アスペクト比を維持して縦横サイズを計算
+        const aspectRatio = img.naturalHeight / img.naturalWidth;
+        const targetHeight = Math.round(targetWidth * aspectRatio);
+
+        // 3. Canvas を使用して画像を縮小描画
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+        // 4. Canvasから軽量なDataURL (PNG) を取得
+        const dataUrl = canvas.toDataURL('image/png');
+
+        // 5. メモリキャッシュに保存して返却
+        if (dataUrl) {
+            imageThumbnailCache.set(cacheKey, dataUrl);
+            return dataUrl;
+        } else {
+            return '';
+        }
+    } catch (err) {
+        console.warn('[image-thumbnail] renderer fallback failed:', filePath, err.message);
+        // 失敗時はキャッシュに登録せず空文字を返す（次回表示時などに再試行可能）
+        return '';
+    }
 }
