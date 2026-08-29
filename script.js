@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.42.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.43.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1776,6 +1776,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 seekBar.value = 0;
                 updateMessageOverlay('🔄️ 変換完了');
             }
+            currentVideoIndex = -1;  // 停止状態を明示
+            selectedPlaylistIndex = currentVideoIndex;
             playStopBtn.click(); // プレイリストの最後で停止
         }
         savePlaylistAndPlaybackState();
@@ -5583,29 +5585,31 @@ async function toggleurlInputPanel(show = null) {
 
 // 次のプレイリストアイテムを再生する汎用フォールバック関数
 async function playNextPlaylistItem() {
-        videoPlayer.currentTime = 0;
-        localSturageSetItemAndFile('currentTime', 0);
+    videoPlayer.currentTime = 0;
+    localSturageSetItemAndFile('currentTime', 0);
 
-        // 一時ファイル削除
-        await deleteTempVideo();
+    // 一時ファイル削除
+    await deleteTempVideo();
 
-        // 常にgetNextVideoIndex()を呼び、次があれば再生
-        // （ランダムOFF・repeat 'none' でも次に進む）
-        const nextIndex = getNextVideoIndex();
-        if (nextIndex >= 0) {
-            currentVideoIndex = nextIndex;
-            await playVideo(playlist[currentVideoIndex].file, 0);
-        } else {
-            if (modeChange === 'convert') {
-                seekBar.value = 0;
-                updateMessageOverlay('🔄️ 変換完了');
-            }
-            playStopBtn.click(); // プレイリストの最後で停止
+    // 常にgetNextVideoIndex()を呼び、次があれば再生
+    // （ランダムOFF・repeat 'none' でも次に進む）
+    const nextIndex = getNextVideoIndex();
+    if (nextIndex >= 0) {
+        currentVideoIndex = nextIndex;
+        await playVideo(playlist[currentVideoIndex].file, 0);
+    } else {
+        if (modeChange === 'convert') {
+            seekBar.value = 0;
+            updateMessageOverlay('🔄️ 変換完了');
         }
-        savePlaylistAndPlaybackState();
+        currentVideoIndex = -1;  // 停止状態を明示
+        selectedPlaylistIndex = currentVideoIndex;
+        playStopBtn.click(); // プレイリストの最後で停止
+    }
+    savePlaylistAndPlaybackState();
 
-        showControlsAndFilename();
-        updateIconOverlay();
+    showControlsAndFilename();
+    updateIconOverlay();
 }
 
 // メディア再生
