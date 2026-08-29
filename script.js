@@ -2306,27 +2306,96 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    // 📩並び替えボタンクリックイベント（トグル実装）
+    sortPlaylistBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        const existingMenu = document.querySelector('.sort-playlist-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+            return;
+        }
+
+        // メニュー非表示
+        hideMenus();
+
+        const targetContainer = document.fullscreenElement || mainContainer;
+        const menu = createSortMenu();
+
+        const containerRect = targetContainer.getBoundingClientRect();
+        const btnRect = sortPlaylistBtn.getBoundingClientRect();
+
+        menu.style.left = `${btnRect.left - containerRect.left}px`;
+        menu.style.top  = `${btnRect.bottom - containerRect.top + 4}px`;
+
+        targetContainer.appendChild(menu);
+
+        function closeMenu(ev) {
+            if (!menu.contains(ev.target) && ev.target !== sortPlaylistBtn) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        }
+
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu, { once: true });
+        }, 0);
+    });
+
+    // 📚表示形式ボタン
+    playlistDisplayBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        const existingMenu = document.querySelector('.playlist-display-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+            document.removeEventListener('click', closeMenu);
+            return;
+        }
+
+        // メニュー非表示
+        hideMenus();
+
+        const targetContainer = document.fullscreenElement || mainContainer;
+        const menu = createPlaylistDisplayMenu();
+
+        const containerRect = targetContainer.getBoundingClientRect();
+        const btnRect = playlistDisplayBtn.getBoundingClientRect();
+
+        menu.style.left = `${btnRect.left - containerRect.left}px`;
+        menu.style.top  = `${btnRect.bottom - containerRect.top + 4}px`;
+
+        targetContainer.appendChild(menu);
+
+        function closeMenu(ev) {
+            if (!menu.contains(ev.target) && ev.target !== playlistDisplayBtn) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        }
+
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu, { once: true });
+        }, 0);
+    });
+
     // 🔼上へボタン
     upMovePlaylistBtn.addEventListener('click', () => {
-        // clearPlaylistFilter();
-        if (isFilterPanelVisible) debouncedUpdateFilterList();
-        debouncedScrollCurrentFilterItem();
+        clearPlaylistFilter();
         upMovePlaylist();
     });
 
     // 🔽下へボタン
     downMovePlaylistBtn.addEventListener('click', () => {
-        // clearPlaylistFilter();
-        if (isFilterPanelVisible) debouncedUpdateFilterList();
-        debouncedScrollCurrentFilterItem();
+        clearPlaylistFilter();
         downMovePlaylist();
     });
 
     // ＋追加ボタン
     addPlaylistBtn.addEventListener('click', (e) => {
-        // clearPlaylistFilter();
         e.stopPropagation();
 
+        clearPlaylistFilter();
         // 1. 既に表示されていれば閉じて終了
         const existingMenu = document.querySelector('.add-playlist-menu');
         if (existingMenu) {
@@ -2371,7 +2440,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // －削除ボタン
     removePlaylistBtn.addEventListener('click', () => {
-        // clearPlaylistFilter();
+        clearPlaylistFilter();
         const selectedIndex = selectedPlaylistIndex >= 0 && selectedPlaylistIndex < playlist.length ? selectedPlaylistIndex : currentVideoIndex;
         if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= playlist.length) return;
 
@@ -2408,9 +2477,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 💾保存ボタン
     savePlaylistBtn.addEventListener('click', () => {
-        // clearPlaylistFilter();
-        if (isFilterPanelVisible) debouncedUpdateFilterList();
-        debouncedScrollCurrentFilterItem();
         savePlaylist();
     });
 
@@ -2667,84 +2733,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             inMarkDisplay.textContent = '--:--:--';
             outMarkDisplay.textContent = '--:--:--';
         }
-    });
-
-    // 📩並び替えボタンクリックイベント（トグル実装）
-    sortPlaylistBtn.addEventListener('click', (e) => {
-        if (isFilterPanelVisible) debouncedUpdateFilterList();
-        debouncedScrollCurrentFilterItem();
-        e.stopPropagation();
-
-        const existingMenu = document.querySelector('.sort-playlist-menu');
-        if (existingMenu) {
-            existingMenu.remove();
-            return;
-        }
-
-        // メニュー非表示
-        hideMenus();
-
-        const targetContainer = document.fullscreenElement || mainContainer;
-        const menu = createSortMenu();
-
-        const containerRect = targetContainer.getBoundingClientRect();
-        const btnRect = sortPlaylistBtn.getBoundingClientRect();
-
-        menu.style.left = `${btnRect.left - containerRect.left}px`;
-        menu.style.top  = `${btnRect.bottom - containerRect.top + 4}px`;
-
-        targetContainer.appendChild(menu);
-
-        function closeMenu(ev) {
-            if (!menu.contains(ev.target) && ev.target !== sortPlaylistBtn) {
-                menu.remove();
-                document.removeEventListener('click', closeMenu);
-            }
-        }
-
-        setTimeout(() => {
-            document.addEventListener('click', closeMenu, { once: true });
-        }, 0);
-    });
-
-    // 📚表示形式ボタン
-    playlistDisplayBtn.addEventListener('click', (e) => {
-        // clearPlaylistFilter();
-        if (isFilterPanelVisible) debouncedUpdateFilterList();
-        debouncedScrollCurrentFilterItem();
-        e.stopPropagation();
-
-        const existingMenu = document.querySelector('.playlist-display-menu');
-        if (existingMenu) {
-            existingMenu.remove();
-            document.removeEventListener('click', closeMenu);
-            return;
-        }
-
-        // メニュー非表示
-        hideMenus();
-
-        const targetContainer = document.fullscreenElement || mainContainer;
-        const menu = createPlaylistDisplayMenu();
-
-        const containerRect = targetContainer.getBoundingClientRect();
-        const btnRect = playlistDisplayBtn.getBoundingClientRect();
-
-        menu.style.left = `${btnRect.left - containerRect.left}px`;
-        menu.style.top  = `${btnRect.bottom - containerRect.top + 4}px`;
-
-        targetContainer.appendChild(menu);
-
-        function closeMenu(ev) {
-            if (!menu.contains(ev.target) && ev.target !== playlistDisplayBtn) {
-                menu.remove();
-                document.removeEventListener('click', closeMenu);
-            }
-        }
-
-        setTimeout(() => {
-            document.addEventListener('click', closeMenu, { once: true });
-        }, 0);
     });
 
     // 編集モード時にシークバーを同期
