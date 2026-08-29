@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.44.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.45.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -4384,6 +4384,7 @@ function buildImageEffectBgmMenuContent(menu) {
             const isSelected = Array.isArray(imageBgmPaths) && imageBgmPaths.length > 0;
             const bgm = document.createElement('div');
             bgm.className = 'menu-item';
+            bgm.style.position = 'relative'; // ポップアップの基準位置設定
             
             const getFileName = (target) => {
                 if (!target) return '';
@@ -4391,7 +4392,7 @@ function buildImageEffectBgmMenuContent(menu) {
             };
         
             // 件数または最初のファイル名を表示
-            let labelText = `　　${mode.label}`;
+            let labelText = `  ${mode.label}`;
             if (isSelected) {
                 if (imageBgmPaths.length === 1) {
                     labelText = `🎺 ${mode.label}（${getFileName(imageBgmPaths[0])}）`;
@@ -4408,11 +4409,15 @@ function buildImageEffectBgmMenuContent(menu) {
                 const selectedBgms = await openBgmDialog();
                 
                 if (selectedBgms && selectedBgms.length > 0) {
-                    // 選択されたパスの配列を抽出
-                    imageBgmPaths = selectedBgms.map(b => b.path);
+                    // 新しく選択されたパスの配列を抽出
+                    const newPaths = selectedBgms.map(b => b.path);
+                    
+                    // 既存の配列に追加（安全のため初期化判定と重複の除外を実施）
+                    const currentPaths = Array.isArray(imageBgmPaths) ? imageBgmPaths : [];
+                    imageBgmPaths = Array.from(new Set([...currentPaths, ...newPaths]));
                 } else {
-                    // キャンセル選択時は全BGMファイルをクリア
-                    imageBgmPaths = [];
+                    // キャンセル選択時（または選択なし時）は処理中断
+                    return;
                 }
         
                 currentBgmIndex = 0;
@@ -4430,11 +4435,142 @@ function buildImageEffectBgmMenuContent(menu) {
                 buildImageEffectBgmMenuContent(menu);
             });
         
-            bgm.addEventListener('mouseover', () => {
+            // ポップアップ用変数の保持
+            let tooltip = null;
+
+            bgm.addEventListener('mouseenter', () => {
                 bgm.style.background = 'rgba(0,123,255,0.2)';
+
+                // すでに表示中の場合は作成しない
+                if (tooltip) return;
+
+                // 設定されているファイルが存在する場合のみポップアップを生成 (length > 0)
+                if (Array.isArray(imageBgmPaths) && imageBgmPaths.length > 0) {
+                    tooltip = document.createElement('div');
+                    tooltip.className = 'bgm-popup-menu';
+
+                    // ポップアップ上でのクリックイベント伝播を防止
+                    tooltip.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                    });
+
+                    // 各アイテム要素をDOM生成して追加
+                    imageBgmPaths.forEach((path, idx) => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.style.display = 'flex';
+                        itemDiv.style.justifyContent = 'space-between';
+                        itemDiv.style.alignItems = 'center';
+                        itemDiv.style.padding = '4px 6px';
+                        itemDiv.style.gap = '12px';
+                        itemDiv.style.cursor = 'pointer';
+                        itemDiv.style.borderRadius = '3px';
+
+                        // 現在再生中のアイテムを強調
+                        const isPlaying = idx === currentBgmIndex;
+                        if (isPlaying) {
+                            itemDiv.style.color = '#00ccff';
+                        }
+
+                        // 行ホバー時の背景切り替え
+                        itemDiv.addEventListener('mouseenter', () => {
+                            itemDiv.style.background = 'rgba(255, 255, 255, 0.1)';
+                        });
+                        itemDiv.addEventListener('mouseleave', () => {
+                            itemDiv.style.background = 'transparent';
+                        });
+
+                        const titleSpan = document.createElement('span');
+                        const icon = isPlaying ? '▶️' : '🎵';
+                        titleSpan.textContent = `${icon} ${idx + 1}. ${getFileName(path)}`;
+                        titleSpan.style.flex = '1';
+
+                        // --- アイテム（タイトル）クリック時に該当BGMを再生する処理 ---
+                        titleSpan.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+
+                            // 選択インデックスの更新
+                            currentBgmIndex = idx;
+
+                            // オーディオのリセットと再生状態更新
+                            currentLoadedBgmPath = null;
+                            bgmAudio.removeAttribute('src');
+                            bgmAudio.load();
+                            await manageBgmState();
+
+                            updateImageEffectBgm();
+
+                            // メニュー・ポップアップを閉じて画面を更新
+                            if (tooltip) {
+                                tooltip.remove();
+                                tooltip = null;
+                            }
+                            menu.remove();
+                        });
+
+                        const deleteBtn = document.createElement('span');
+                        deleteBtn.textContent = '🗑️';
+                        deleteBtn.style.cursor = 'pointer';
+                        deleteBtn.style.opacity = '0.7';
+                        deleteBtn.title = '削除';
+
+                        deleteBtn.addEventListener('mouseenter', (e) => {
+                            e.stopPropagation();
+                            deleteBtn.style.opacity = '1';
+                        });
+                        deleteBtn.addEventListener('mouseleave', (e) => {
+                            e.stopPropagation();
+                            deleteBtn.style.opacity = '0.7';
+                        });
+
+                        // ゴミ箱アイコンクリックで該当アイテムを削除
+                        deleteBtn.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+
+                            // 配列から削除
+                            imageBgmPaths.splice(idx, 1);
+
+                            // currentBgmIndex の範囲調整
+                            if (imageBgmPaths.length === 0) {
+                                currentBgmIndex = 0;
+                            } else if (currentBgmIndex >= imageBgmPaths.length) {
+                                currentBgmIndex = imageBgmPaths.length - 1;
+                            }
+
+                            // ストレージへ保存
+                            await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
+
+                            // 状態リセットと再読み込み
+                            currentLoadedBgmPath = null;
+                            bgmAudio.removeAttribute('src');
+                            bgmAudio.load();
+                            await manageBgmState();
+
+                            updateImageEffectBgm();
+
+                            // ツールチップ消去と親メニューの再描画
+                            if (tooltip) {
+                                tooltip.remove();
+                                tooltip = null;
+                            }
+                            buildImageEffectBgmMenuContent(menu);
+                        });
+
+                        itemDiv.appendChild(titleSpan);
+                        itemDiv.appendChild(deleteBtn);
+                        tooltip.appendChild(itemDiv);
+                    });
+                    
+                    bgm.appendChild(tooltip);
+                }
             });
-            bgm.addEventListener('mouseout', () => {
-                bgm.style.background = 'none';
+
+            bgm.addEventListener('mouseleave', (event) => {
+                // カーソルの移動先がポップアップ内であれば消さない
+                if (tooltip && !bgm.contains(event.relatedTarget)) {
+                    bgm.style.background = 'none';
+                    tooltip.remove();
+                    tooltip = null;
+                }
             });
         
             menu.appendChild(bgm);
@@ -4446,7 +4582,7 @@ function buildImageEffectBgmMenuContent(menu) {
         const item = document.createElement('div');
         item.className = 'menu-item';
         item.style.color = isSelected ? '#00ccff' : '#eee';
-        item.innerHTML = (isSelected ? '✅ ' : '　　') + mode.label;
+        item.innerHTML = (isSelected ? '✅ ' : '  ') + mode.label;
 
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
