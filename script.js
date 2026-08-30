@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.49.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.50.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -6142,7 +6142,7 @@ async function setVideoSrc(file) {
         imagePlayer.removeAttribute('src');
         videoPlayerElement.style.display = 'block';
 
-        if (isAudio) {
+        if (isVIDEO_EXTENSIONS(ext) && isAudio) {
             isConverting = false;
             const mediaUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
             videoPlayerElement.src = mediaUrl;

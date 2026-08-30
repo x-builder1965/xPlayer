@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.49.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.50.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -574,6 +574,41 @@ ipcMain.handle('process-command-line-file', async (event, filePath) => {
 
 // FFmpeg 変換ハンドラ（ファイルパス返却）＋ 日本語音声優先 + 日本語字幕優先（なければ無視）
 ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAudioIndex = 0) => {
+    // 1. ffprobe でメタデータ取得
+    let metadata;
+    try {
+        metadata = await new Promise((res, rej) => {
+            ffmpeg.ffprobe(filePath, (err, data) => {
+                if (err) rej(err);
+                else res(data);
+            });
+        });
+    } catch (probeErr) {
+        mainWindow.webContents.send('convert-error', 'メタデータ取得失敗: ' + probeErr.message);
+        throw probeErr;
+    }
+
+    // ストリーム存在確認（アタッチされた画像を除外した動画ストリームの存在で判定）
+    const hasVideo = metadata.streams.some(s => s.codec_type === 'video' && !s.disposition?.attached_pic);
+    const hasAudio = metadata.streams.some(s => s.codec_type === 'audio');
+
+    // 2. 判定・分岐処理
+    if (hasVideo) {
+        // 動画変換へ
+        return convertVideo(filePath, modeChange, preferredAudioIndex, metadata);
+    } else if (hasAudio) {
+        // 音声変換へ
+        return convertAudio(filePath, metadata);
+    } else {
+        // 動画・音声ストリームがいずれも存在しない場合
+        const errMessage = '変換不能な形式エラー';
+        mainWindow.webContents.send('convert-error', errMessage);
+        throw new Error(errMessage);
+    }
+});
+
+// 動画変換ヘルパー関数
+function convertVideo(filePath, modeChange, preferredAudioIndex, metadata) {
     return new Promise(async (resolve, reject) => {
         const fileName = path.basename(filePath);
         const baseName = path.parse(fileName).name;
@@ -583,27 +618,9 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
         const outPath = path.join(outDir, outName);
 
         const isMp4Input = ext === '.mp4';
-
         currentOutputPath = null;
 
-        // ffprobe でメタデータ取得（省略・変更なし）
-        let metadata;
-        try {
-            metadata = await new Promise((res, rej) => {
-                ffmpeg.ffprobe(filePath, (err, data) => {
-                    if (err) rej(err);
-                    else res(data);
-                });
-            });
-        } catch (probeErr) {
-            mainWindow.webContents.send('convert-error', 'メタデータ取得失敗: ' + probeErr.message);
-            return reject(probeErr);
-        }
-
-        // 音声・字幕処理部分（変更なし）
         const audioStreams = metadata.streams.filter(s => s.codec_type === 'audio');
-        const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
-
         const targetAudioIdx = Math.max(0, Math.min(preferredAudioIndex, audioStreams.length - 1));
 
         const videoStreamIndex = metadata.streams.findIndex(s => 
@@ -637,7 +654,6 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
             .outputOptions(mapOptions)
             .outputOptions(dispositionOptions);
 
-        // コーデック分岐（変更なし）
         if (isMp4Input) {
             ff.outputOptions([
                 '-c:v', 'copy',
@@ -665,10 +681,9 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
             ]);
         }
 
-        // Tempフォルダをユーザーの %AppData\Local\Temp に設定
+        // Tempフォルダ準備
         const tempBaseDir = path.join(os.tmpdir(), 'xPlayer');
         try {
-            // フォルダが存在しない場合は再帰的に作成
             await fs.mkdir(tempBaseDir, { recursive: true });
         } catch (mkdirErr) {
             console.error('xPlayer tempフォルダ作成失敗:', mkdirErr);
@@ -678,17 +693,11 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
         const tempPath = path.join(tempBaseDir, `${baseName}_temp_${Date.now()}.mp4`);
         currentOutputPath = tempPath;
 
-        mainWindow.webContents.send('convert-progress', { 
-            percent: 0,
-            step: 1
-        });
+        mainWindow.webContents.send('convert-progress', { percent: 0, step: 1 });
 
         ff.on('progress', (progress) => {
             if (progress.percent !== undefined) {
-                mainWindow.webContents.send('convert-progress', { 
-                    percent: progress.percent,
-                    step: 1
-                });
+                mainWindow.webContents.send('convert-progress', { percent: progress.percent, step: 1 });
             }
         })
         .on('end', async () => {
@@ -696,15 +705,10 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
             currentOutputPath = null;
 
             try {
-                mainWindow.webContents.send('convert-progress', { 
-                    percent: 100,
-                    step: 2
-                });
-                // Temp → 出力先へ「安全に移動」（rename → copy + unlink）
+                mainWindow.webContents.send('convert-progress', { percent: 100, step: 2 });
                 await fs.copyFile(tempPath, outPath);
                 await fs.unlink(tempPath);
 
-                // 字幕ファイル出力
                 if (modeChange === 'convert') {
                     await extractSubtitlesOnly(outPath, baseName, outDir, metadata);
                 }
@@ -730,7 +734,76 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
 
         currentFFmpeg = ff;
     });
-});
+}
+
+// 音声変換ヘルパー関数
+// （MP3エンコーダ、192kbps、48kHz、2ch ステレオへ変換）
+function convertAudio(filePath, metadata) {
+    return new Promise(async (resolve, reject) => {
+        const fileName = path.basename(filePath);
+        const baseName = path.parse(fileName).name;
+        const outDir = path.dirname(filePath);
+        const outName = `${baseName}.mp3`;
+        const outPath = path.join(outDir, outName);
+
+        currentOutputPath = null;
+
+        // Tempフォルダ準備
+        const tempBaseDir = path.join(os.tmpdir(), 'xPlayer');
+        try {
+            await fs.mkdir(tempBaseDir, { recursive: true });
+        } catch (mkdirErr) {
+            console.error('xPlayer tempフォルダ作成失敗:', mkdirErr);
+            mainWindow.webContents.send('convert-error', '一時フォルダ作成失敗: ' + mkdirErr.message);
+            return reject(mkdirErr);
+        }
+        const tempPath = path.join(tempBaseDir, `${baseName}_temp_${Date.now()}.mp3`);
+        currentOutputPath = tempPath;
+
+        const ff = ffmpeg(filePath)
+            .audioCodec('libmp3lame') // MP3エンコーダ
+            .audioBitrate('192k')     // ビットレート 192kbps
+            .audioFrequency(48000)    // サンプリングレート 48kHz
+            .audioChannels(2);        // ステレオ (2ch)
+
+        mainWindow.webContents.send('convert-progress', { percent: 0, step: 1 });
+
+        ff.on('progress', (progress) => {
+            if (progress.percent !== undefined) {
+                mainWindow.webContents.send('convert-progress', { percent: progress.percent, step: 1 });
+            }
+        })
+        .on('end', async () => {
+            currentFFmpeg = null;
+            currentOutputPath = null;
+
+            try {
+                mainWindow.webContents.send('convert-progress', { percent: 100, step: 2 });
+                await fs.copyFile(tempPath, outPath);
+                await fs.unlink(tempPath);
+
+                resolve(outPath);
+            } catch (moveErr) {
+                mainWindow.webContents.send('convert-error', '後処理エラー: ' + moveErr.message);
+                reject(moveErr);
+            }
+        })
+        .on('error', (err, stdout, stderr) => {
+            if (err.message.includes('ffmpeg was killed')) {
+                console.log('変換中断:', filePath);
+                return;
+            }
+            console.error('FFmpegエラー:', stderr);
+            mainWindow.webContents.send('convert-error', err.message + '\n' + stderr);
+            currentFFmpeg = null;
+            currentOutputPath = null;
+            reject(err);
+        })
+        .save(tempPath);
+
+        currentFFmpeg = ff;
+    });
+}
 
 // 変換キャンセル（ロック待機 + リトライ）
 ipcMain.handle('cancel-conversion', async () => {
