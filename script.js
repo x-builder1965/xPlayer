@@ -329,7 +329,6 @@ const languageMap = {
     'tel': 'テルグ語',
     'gre': 'ギリシャ語',
     'rum': 'ルーマニア語',
-    // 追加：地域バリアント例（必要に応じて）
     'zh-cn': '中国語（簡体字）',
     'zh-tw': '中国語（繁体字）',
     'pt-br': 'ポルトガル語（ブラジル）',
@@ -1021,9 +1020,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             localSturageSetItemAndFile('modeChange', modeChange);
         } else {
             if (modeChange === 'convert') {
-                updateMessageOverlay('🎬 変換中は再生モード切替不可');
+                updateMessageOverlay('🎬 変換中は再生モード切替できません');
             } else {
-                updateMessageOverlay('🔄️ 再生中は変換モード切替不可');
+                updateMessageOverlay('🔄️ 再生中は変換モード切替できません');
             }
         }
         updateTrackButtonsVisibility();
@@ -1881,7 +1880,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             translateY += deltaY;
             const scale = (100 + zoomValue) / 100;
             
-            // ★修正: 画像の場合も imagePlayer 本体に transform を適用（親の imageWrapper のアニメーションと分離）
+            // 画像の場合も imagePlayer 本体に transform を適用（親の imageWrapper のアニメーションと分離）
             const targetElement = (currentMediaType === 'image' && typeof imagePlayer !== 'undefined') ? imagePlayer : videoPlayer;
             targetElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
             
@@ -4177,7 +4176,7 @@ function hideControlsAndFilename() {
     disabledControls(true);
     disabledfilename(true);
     // messageOverlay.classList.remove('active');
-    hideMenus(false); // 追加：コントロール非表示時にメニューも強制非表示
+    hideMenus(false); // コントロール非表示時にメニューも強制非表示
     clearTimeout(timeout);
     // setTimeout(() => {
     //     messageOverlay.style.display = 'none';
@@ -5974,7 +5973,7 @@ async function togglePlayPause() {
             clearTimeout(imageTimer);
             imageTimer = null;
             stopImageProgress();
-            // ★修正: paused クラスの追加先を imageWrapper に変更
+            // paused クラスの追加先を imageWrapper に変更
             if (imageWrapper) imageWrapper.classList.add('paused');
             
             playPauseBtn.textContent = '⏸️';
@@ -5984,7 +5983,7 @@ async function togglePlayPause() {
         } else {
             // 【一時停止中 → 再開】
             isPlaying = true;
-            // ★修正: paused クラスの除去先を imageWrapper に変更
+            // paused クラスの除去先を imageWrapper に変更
             if (imageWrapper) imageWrapper.classList.remove('paused');
             
             playPauseBtn.textContent = '▶️';
@@ -6940,7 +6939,7 @@ function renderCutRanges() {
         // モード判定
         let modeText = "高速モード";
         let longestCutDuration = 0;
-        let longestCutIndex = -1;           // ← 追加：最長のカット番号（0ベース）
+        let longestCutIndex = -1;           // 最長のカット番号（0ベース）
 
         // 最後のカット範囲をチェック
         const lastRange = cutRanges[cutRanges.length - 1];
@@ -8043,7 +8042,7 @@ function updateMediaPlayerDisplay() {
         audioPlayer.style.display = isAudio ? 'block' : 'none';
     }
 
-    // ★修正: 画像ラッパーおよび画像要素の表示切替
+    // 画像ラッパーおよび画像要素の表示切替
     if (imageWrapper) {
         imageWrapper.style.display = isImage ? 'block' : 'none';
     }
@@ -8575,7 +8574,7 @@ function applyImageEffect() {
     const imageWrapper = document.getElementById('imageWrapper');
     if (!imageWrapper || !imagePlayer) return;
 
-    // ★修正: ポーズ用・エフェクト用クラスの着脱対象を imageWrapper に変更
+    // ポーズ用・エフェクト用クラスの着脱対象を imageWrapper に変更
     imageWrapper.classList.remove('paused');
 
     Object.values(IMAGEEFFECTBGM_NODES).forEach(node => {
@@ -8616,7 +8615,7 @@ function applyImageEffect() {
     const targetNode = IMAGEEFFECTBGM_NODES[activeKey];
     const cssClass = targetNode?.className || IMAGEEFFECTBGM_NODES['none'].className;
 
-    // ★修正: animationDuration の適用先も imageWrapper に変更
+    // animationDuration の適用先も imageWrapper に変更
     if (typeof IMAGE_DURATION !== 'undefined' && activeKey !== 'none') {
         const rate = currentPlaybackRate || 1.0;
         const durationSec = IMAGE_DURATION / rate;
