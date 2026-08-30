@@ -60,43 +60,42 @@ const settingsFilePath = getUserSettingsPath();
 const pid = getPid();
 const IMAGE_DURATION = 5;      // 画像の再生時間（秒）
 const bgmAudio = new Audio();
-const THUMBNAIL_DIR = path.join(os.homedir(), 'xPlayerThumbnail');		// サムネイル保存用ディレクトリと縮小化ヘルパー
 const imageThumbnailCache = new Map();		// 画像サムネイル用キャッシュ（Mapオブジェクト）
 
 const SORT_MODES = {
-    none:       { label: '（なし）',     fn: () => getPlaylistInOriginalOrder() },
-    path_asc:   { label: 'ファイル▲',   fn: () => [...playlist].sort((a, b) => (a.file?.path || '').localeCompare(b.file?.path || '')) },
-    path_desc:  { label: 'ファイル▼',   fn: () => [...playlist].sort((a, b) => (b.file?.path || '').localeCompare(a.file?.path || '')) },
-    type_asc:   { label: '種類▲',       fn: () => [...playlist].sort((a, b) => {
+    'none':       { label: '（なし）',     fn: () => getPlaylistInOriginalOrder() },
+    'path_asc':   { label: 'ファイル▲',   fn: () => [...playlist].sort((a, b) => (a.file?.path || '').localeCompare(b.file?.path || '')) },
+    'path_desc':  { label: 'ファイル▼',   fn: () => [...playlist].sort((a, b) => (b.file?.path || '').localeCompare(a.file?.path || '')) },
+    'type_asc':   { label: '種類▲',       fn: () => [...playlist].sort((a, b) => {
         const extA = getFileExtension(a.file?.path);
         const extB = getFileExtension(b.file?.path);
         const comp = extA.localeCompare(extB);
         return comp !== 0 ? comp : (a.file?.path || '').localeCompare(b.file?.path || '');
     })},
-    type_desc:  { label: '種類▼',       fn: () => [...playlist].sort((a, b) => {
+    'type_desc':  { label: '種類▼',       fn: () => [...playlist].sort((a, b) => {
         const extA = getFileExtension(a.file?.path);
         const extB = getFileExtension(b.file?.path);
         const comp = extB.localeCompare(extA);
         return comp !== 0 ? comp : (a.file?.path || '').localeCompare(b.file?.path || '');
     })},
-    ctime_asc:  { label: '作成日時▲',   fn: async () => await sortByCreationTime(true) },
-    ctime_desc: { label: '作成日時▼',   fn: async () => await sortByCreationTime(false)},
-    random:     { label: '（ランダム）', fn: () => sortRandomPlaylist() }
+    'ctime_asc':  { label: '作成日時▲',   fn: async () => await sortByCreationTime(true) },
+    'ctime_desc': { label: '作成日時▼',   fn: async () => await sortByCreationTime(false)},
+    'random':     { label: '（ランダム）', fn: () => sortRandomPlaylist() }
 };
 const ADD_MODES = {
-    Folder: {
+    'Folder': {
         label: '📁 フォルダ選択',
         fn: async () => await addFilesToPlaylist(openFolderDialog, getFolderVideoFiles),
         isAction: true // モード変更ではなく即時実行アクションであることを示すフラグ
     },
-    File: {
+    'File': {
         label: '🗒️ ファイル選択',
         fn: async () => await addFilesToPlaylist(openVideoDialog, getFileVideoFiles),
         isAction: true
     },
-    Separator: { isSeparator: true }, // セパレータ要素
-    Add0: { label: '選択行に追加' },
-    Add1: { label: '選択行の下に追加' }
+    'Separator': { isSeparator: true }, // セパレータ要素
+    'Add0': { label: '選択行に追加' },
+    'Add1': { label: '選択行の下に追加' }
 };
 const ASPECT_NODES = {
     'none': { label: '（なし）', value: null },
@@ -888,12 +887,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // プレイリストと再生状態の復元
     (async () => {
-        // サムネイル保存用ディレクトリの自動生成
-        try {
-            await fs.mkdir(THUMBNAIL_DIR, { recursive: true });
-        } catch (e) {
-            console.error('xPlayerThumbnail ディレクトリ作成失敗:', e);
-        }
         // リロード判定（PerformanceNavigationTiming API）
         const navEntries = performance.getEntriesByType('navigation');
         const isReload = navEntries.length > 0 && navEntries[0].type === 'reload';
@@ -5331,7 +5324,7 @@ async function updateFilterList() {
             const isAudioFile = (filePath) => {
                 if (!filePath) return false;
                 const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
-                return typeof AUDIO_EXTENSIONS !== 'undefined' ? AUDIO_EXTENSIONS.includes(ext) : ['.mp3', '.wav', '.flac', '.aac', '.m4a', '.ogg'].includes(ext);
+                return typeof AUDIO_EXTENSIONS !== 'undefined' ? AUDIO_EXTENSIONS.includes(ext) : AUDIO_EXTENSIONS.includes(ext);
             };
 
             // 画像ファイルの判定関数
