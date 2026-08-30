@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.50.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.51.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -11,14 +11,14 @@ const path = require('path');
 const { promises: fs } = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
-const ffprobeStatic = require('ffprobe-static'); // 👈 追加
+const ffprobeStatic = require('ffprobe-static');
 const os = require('os');
 const { spawn, exec } = require('child_process');
 const trashModule = require('trash');
 
 // 固定値設定
 const ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
-const ffprobePath = ffprobeStatic.path.replace('app.asar', 'app.asar.unpacked'); // 👈 追加
+const ffprobePath = ffprobeStatic.path.replace('app.asar', 'app.asar.unpacked');
 const VIDEO_EXTENSIONS = [
     'mp4', 'mkv', 'webm', 'avi', 'flv', 'mov', 'wmv', 'mpg', 'mpeg',
     'ts', 'mts', 'm2ts', 'vob', 'ogv', '3gp', 'm4v', 'asf'
@@ -76,7 +76,7 @@ try {
 
 // === FFmpeg パス設定（asarUnpack 対応）===
 ffmpeg.setFfmpegPath(ffmpegPath);
-ffmpeg.setFfprobePath(ffprobePath); // 👈 修正 (ffmpegStatic.path から変更)
+ffmpeg.setFfprobePath(ffprobePath);
 
 // 正しい trash の取得方法（ESM対応）
 try {
@@ -113,7 +113,7 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            webSecurity: true,           // ← 追加（または削除して app.commandLine に任せる）
+            webSecurity: true,
             additionalArguments: [
                 '--disable-web-security',  // 開発中だけ false
                 '--content-security-policy="default-src \'self\'; script-src \'self\'; object-src \'none\';"'  // eval 禁止
@@ -126,7 +126,7 @@ function createWindow() {
     });
     win.loadFile('index.html');
     win.maximize();
-    win.once('ready-to-show', () => win.show());  // ← これで完璧
+    win.once('ready-to-show', () => win.show());
     return win;
 }
 
@@ -298,12 +298,17 @@ async function extractSubtitlesOnly(inputPath, baseName, outDir, metadata) {
         const lang = sub.tags?.language || sub.tags?.lang || 'und';
         const vttPath = path.join(outDir, `${baseName}_track${idx}_${lang}.vtt`);
 
-        // （中略：進捗通知など）
+        mainWindow.webContents.send('subtitle-extraction-progress', {
+            filePath: inputPath,
+            subtitleCount: subtitleStreams.length,
+            subtitleIndex: idx,
+            message: `字幕抽出中...（${idx + 1}/${subtitleStreams.length}）`
+        });
 
         await new Promise((res) => {
             ffmpeg(inputPath)
                 .outputOptions([
-                    // 【修正点】0:s:${idx} ではなく、ストリームの絶対インデックス（sub.index）を使用する
+                    // 0:s:${idx} ではなく、ストリームの絶対インデックス（sub.index）を使用する
                     `-map 0:${sub.index}`, 
                     '-vn', '-an',
                     '-c:s', 'webvtt'
@@ -525,10 +530,10 @@ ipcMain.handle('open-wallpaper-dialog', async () => {
 
 // BGM選択（単ファイル選択）
 ipcMain.handle('open-bgm-dialog', async () => {
-    /* ★BGM設定変更★ 複数ファイル選択(multiSelections)に対応 */
+    /* 複数ファイル選択(multiSelections)に対応 */
     const result = await dialog.showOpenDialog({
         title: 'BGMを選択',
-        properties: ['openFile', 'multiSelections'], // ★BGM設定変更★ 複数選択を許可
+        properties: ['openFile', 'multiSelections'], // 複数選択を許可
         filters: [
             { 
                 name: '音声ファイル', 
@@ -541,12 +546,12 @@ ipcMain.handle('open-bgm-dialog', async () => {
         ]
     });
 
-    /* ★BGM設定変更★ キャンセル時または未選択時は null を返す（クリア判定用） */
+    /* キャンセル時または未選択時は null を返す（クリア判定用） */
     if (result.canceled || result.filePaths.length === 0) {
         return null;
     }
 
-    /* ★BGM設定変更★ 選択された全ファイルの情報を配列で返す */
+    /* 選択された全ファイルの情報を配列で返す */
     return result.filePaths.map(filePath => ({
         name: path.basename(filePath),
         path: filePath
