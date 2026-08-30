@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.47.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.48.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2134,7 +2134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (controls.style.opacity !== '1') return;
         const duration = getMediaDuration();
         if (!duration) return;
-    
+
         const time = duration * (seekBar.value / 100);
         setMediaCurrentTime(time);
     
@@ -2161,11 +2161,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     // シークバー マウスクリック
     seekBar.addEventListener('mousedown', (e) => {
         if (controls.style.opacity !== '1') return;
+        
         const duration = getMediaDuration();
         if (e.button === 0 && duration) {
+            // クリック位置から時間を直接計算
+            const rect = seekBar.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const time = duration * percent;
+
             if (currentMediaType !== 'image') {
-                videoPlayer.currentTime = videoPreview.currentTime;
+                // videoPreview ではなく、計算した time をメディアに適用
+                setMediaCurrentTime(time);
+                if (currentMediaType === 'video' && videoPreview) {
+                    videoPreview.currentTime = time;
+                }
             }
+
             isDragging = true;
             isSeekDragging = true;
             darkOverlay.style.display = 'block';
@@ -2180,8 +2191,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (controls.style.opacity !== '1') return;
         const duration = getMediaDuration();
         if (!duration || playlist.length === 0) return;
+        
         isMouseOverSeekBar = true;
-    
         const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
         const ext = path.extname(currentSrc).toLowerCase();
         if (!isVideoFile(ext)) return;
@@ -2194,7 +2205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (controls.style.opacity !== '1') return;
         const duration = getMediaDuration();
         if (!duration || !isMouseOverSeekBar) return;
-    
+        
         const rect = seekBar.getBoundingClientRect();
         const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         const time = duration * percent;
@@ -2218,6 +2229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // シークバー マウスアウト
     seekBar.addEventListener('mouseout', () => {
         if (controls.style.opacity !== '1') return;
+        
         isMouseOverSeekBar = false;
         videoPreview.style.display = 'none';
     
@@ -2235,6 +2247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // シークバー マウスリーブ
     seekBar.addEventListener('mouseleave', () => {
         if (controls.style.opacity !== '1') return;
+        
         if (isSeekDragging && !seekBar.matches(':active')) {
             if (typeof editSeekBar !== 'undefined' && editSeekBar) {
                 editSeekBar.value = seekBar.value;
@@ -3401,11 +3414,19 @@ document.addEventListener('keydown', async (event) => {
 document.addEventListener('mouseup', (e) => {
     if (isSeekDragging) {
         if (controls.style.opacity !== '1') return;
+        
+        // 単一クリックで mousemove が走らなかった場合でも、現在の seekBar.value から再生位置を確定する処理
+        const duration = getMediaDuration();
+        if (duration) {
+            const time = duration * (seekBar.value / 100);
+            setMediaCurrentTime(time);
+        }
+
         isSeekDragging = false;
         isDragging = false;
         darkOverlay.style.display = 'none';
         hideMessageOverlay();
-        // 動画以外（音声ファイル等）の場合はプレビューを表示しない
+
         const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
         const ext = path.extname(currentSrc).toLowerCase();
         if (isMouseOverSeekBar && isVideoFile(ext)) {
