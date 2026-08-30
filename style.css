@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver5.45.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver5.47.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -1072,7 +1072,8 @@ button#modeChangeBtn.convert-active:hover,
 .sort-playlist-menu,
 .add-playlist-menu,
 .audio-motion-menu,
-.image-effectbgm-menu {
+.image-effectbgm-menu,
+.join-playlist-menu {
     position: absolute;
     background: rgba(30, 30, 30, 0.95);
     border: 1px solid #444;

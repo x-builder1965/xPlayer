@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.41.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.47.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1801,4 +1801,184 @@ ipcMain.handle('get-video-tracks', async (event, filePath) => {
             error: err.message || '処理に失敗しました'
         };
     }
+});
+
+// 保存ダイアログ（音声結合用 - MP3固定）
+ipcMain.handle('show-save-audio-join-dialog', async (event, { fileName }) => {
+    // 拡張子が .mp3 でない場合は .mp3 に変更
+    let defaultName = fileName || 'joined_audio.mp3';
+    if (!defaultName.toLowerCase().endsWith('.mp3')) {
+        defaultName = defaultName.replace(/\.[^/.]+$/, "") + '.mp3';
+    }
+
+    const result = await dialog.showSaveDialog(mainWindow, {
+        title: '結合した音声を保存',
+        defaultPath: defaultName,
+        filters: [
+            { name: 'MP3 音声ファイル', extensions: ['mp3'] },
+            { name: 'すべてのファイル', extensions: ['*'] }
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation']
+    });
+
+    return result; // { canceled: boolean, filePath?: string }
+});
+
+// 音声結合処理（全音声をMP3に統一変換 → concatで結合）
+ipcMain.handle('join-audios', async (event, { inputPaths, outputPath }) => {
+    if (!inputPaths || !Array.isArray(inputPaths) || inputPaths.length < 2) {
+        throw new Error('結合する音声が2つ以上必要です');
+    }
+    if (!outputPath) {
+        throw new Error('出力パスが指定されていません');
+    }
+
+    currentJoinTempFiles = [];      // リセット
+    currentJoinConcatTxt = null;
+    isJoinCancelled = false;          // キャンセル状態をリセット
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            mainWindow.webContents.send('join-progress', { 
+                stage: 'join-prepare', 
+                percent: 0,
+                totalVideos: inputPaths.length,
+                message: '全音声を同一フォーマット(MP3)に変換中…'
+            });
+
+            // MP3フォーマット統一用の共通オプション
+            const commonAudioOptions = [
+                '-vn',                  // 映像ストリームを除外
+                '-c:a', 'libmp3lame',   // MP3エンコーダ
+                '-b:a', '192k',         // ビットレート 192kbps
+                '-ar', '48000',         // サンプリングレート 48kHz
+                '-ac', '2',             // ステレオ(2ch)
+                '-fflags', '+genpts'
+            ];
+
+            // 1. 変換フェーズ (全音声を標準的な一時MP3ファイルに変換)
+            for (let i = 0; i < inputPaths.length; i++) {
+                if (isJoinCancelled) break;
+
+                const input = inputPaths[i];
+                const tempOut = path.join(os.tmpdir(), `join_audio_temp_${Date.now()}_${i}.mp3`);
+                currentJoinTempFiles.push(tempOut);
+
+                await new Promise((res, rej) => {
+                    const ff = ffmpeg(input)
+                        .outputOptions(commonAudioOptions)
+                        .on('start', () => {
+                            if (isJoinCancelled) {
+                                ff.kill('SIGKILL');
+                                res();
+                                return;
+                            }
+                            currentFFmpeg = ff;
+                            currentOutputPath = outputPath;
+                        })
+                        .on('progress', (progress) => {
+                            if (isJoinCancelled) return;
+                            const filePercent = progress.percent || 0;
+                            const overall = ((i + filePercent / 100) / inputPaths.length) * 100;
+                            mainWindow.webContents.send('join-progress', {
+                                stage: 'convert-pre',
+                                percent: overall,
+                                currentFile: i + 1,
+                                totalFiles: inputPaths.length
+                            });
+                        })
+                        .on('end', res)
+                        .on('error', (err) => {
+                            if (err.message.includes('killed with signal SIGKILL') || isJoinCancelled) {
+                                res();
+                                return;
+                            }
+                            rej(err);
+                        })
+                        .save(tempOut);
+                });
+
+                if (isJoinCancelled) break;
+            }
+
+            mainWindow.webContents.send('join-progress', { 
+                stage: 'join-start', 
+                percent: 0,
+                message: '変換完了 → 結合中…'
+            });
+
+            // キャンセルチェック
+            if (isJoinCancelled) {
+                cleanupJoinTempFiles();
+                currentFFmpeg = null;
+                currentOutputPath = null;
+                
+                mainWindow.webContents.send('join-progress', { 
+                    stage: 'cancelled', 
+                    message: 'ユーザーにより音声結合が中断されました' 
+                });
+                
+                resolve({ cancelled: true, message: 'ユーザーによりキャンセルされました' });
+                return;
+            }
+
+            // 2. 結合フェーズ (concat demuxer による高速・無劣化結合)
+            const concatList = currentJoinTempFiles.map(p => `file '${p.replace(/'/g, "\\'")}'`);
+            currentJoinConcatTxt = path.join(os.tmpdir(), `join_audio_concat_${Date.now()}.txt`);
+
+            await fs.writeFile(currentJoinConcatTxt, concatList.join('\n'), 'utf8');
+
+            const ff = ffmpeg()
+                .input(currentJoinConcatTxt)
+                .inputOptions('-f', 'concat', '-safe', '0')
+                .outputOptions([
+                    '-c', 'copy' // 一時MP3ファイルを無劣化ストリームコピー結合
+                ])
+                .on('start', () => {
+                    currentFFmpeg = ff;
+                    currentOutputPath = outputPath;
+                })
+                .on('progress', (progress) => {
+                    if (progress.percent !== undefined) {
+                        mainWindow.webContents.send('join-progress', {
+                            stage: 'join',
+                            percent: progress.percent
+                        });
+                    }
+                })
+                .on('end', () => {
+                    cleanupJoinTempFiles();
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    mainWindow.webContents.send('join-progress', { 
+                        stage: 'join-done', 
+                        percent: 100, 
+                        outputPath 
+                    });
+                    resolve({ outputPath });
+                })
+                .on('error', (err) => {
+                    cleanupJoinTempFiles();
+                    if (err.message.includes('ffmpeg was killed') || 
+                        err.message.includes('killed with signal SIGKILL')) {
+                        currentFFmpeg = null;
+                        currentOutputPath = null;
+                        resolve({ cancelled: true, message: 'ユーザーによりキャンセル' });
+                        return;
+                    }
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    reject(err);
+                })
+                .save(outputPath);
+
+        } catch (err) {
+            cleanupJoinTempFiles();
+            currentFFmpeg = null;
+            currentOutputPath = null;
+            reject(err);
+        } finally {
+            isJoinCancelled = false;
+        }
+    });
 });

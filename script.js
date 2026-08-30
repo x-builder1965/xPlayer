@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.46.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.47.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -38,7 +38,9 @@ const {
     openWallpaperDialog,
     openBgmDialog,
     checkIsSecondaryInstance,
-    getPid
+    getPid,
+    showSaveAudioJoinDialog,
+    joinAudios
 } = window.electronAPI;
 
 // 固定値設定
@@ -259,6 +261,10 @@ const IMAGEEFFECTBGM_NODES = {
     'random':  { label: '（ランダム）' },
     'separator': { isSeparator: true },
     'bgm':     { label: 'BGM設定' }
+};
+const JOIN_MODES = {
+    'joinVideos': { label: '🎞️ 動画結合', fn: () => joinPlaylistVideos() },
+    'joinAudios': { label: '🎵 音声結合', fn: () => joinPlaylistAudios() }
 };
 const languageMap = {
     'jpn': '日本語',
@@ -1663,8 +1669,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 🎞️結合編集ボタンクリック
-    joinPlaylistBtn.addEventListener('click', () => {
-        joinPlaylistVideos();
+    joinPlaylistBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        // 1. 既に表示されていれば閉じて終了
+        const existingMenu = document.querySelector('.join-playlist-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+            return;
+        }
+
+        // 2. 他のメニューを掃除
+        hideMenus();
+
+        // 3. メニュー生成と配置
+        const targetContainer = document.fullscreenElement || mainContainer;
+        const menu = createJoinMenu();
+
+        const containerRect = targetContainer.getBoundingClientRect();
+        const btnRect = joinPlaylistBtn.getBoundingClientRect();
+
+        menu.style.left = `${btnRect.left - containerRect.left}px`;
+        menu.style.top  = `${btnRect.bottom - containerRect.top + 4}px`;
+
+        targetContainer.appendChild(menu);
+
+        // 4. 外側クリックで閉じる処理
+        function closeMenu(ev) {
+            // ボタン自体またはメニュー内部のクリックなら無視
+            if (menu.contains(ev.target) || joinPlaylistBtn.contains(ev.target)) {
+                return;
+            }
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+        }
+
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu);
+        }, 0);
     });
 
     // 🎬メディアエラー（共通化・安全・モード対応）
@@ -6682,15 +6724,27 @@ async function cleanupTempFiles() {
 
 // 全動画結合処理
 async function joinPlaylistVideos() {
-    if (playlist.length < 2) {
-        updateMessageOverlay(playlist.length === 0 ? '🎞️ プレイリストが空です' : '動画が1つだけなので結合不要です');
+    // プレイリストから動画ファイルのみを抽出（拡張子を抽出して判定）
+    const videoFiles = playlist.filter(item => {
+        const filePath = item.file?.path || item.name || '';
+        const ext = filePath.substring(filePath.lastIndexOf('.'));
+        return VIDEO_EXTENSIONS.includes(ext);
+    });
+
+    // 動画ファイルの数で判定
+    if (videoFiles.length < 2) {
+        updateMessageOverlay(
+            videoFiles.length === 0 
+                ? '🎞️ 動画ファイルが含まれていません' 
+                : '🎞️ 動画が1つだけなので結合不要です'
+        );
         return;
     }
 
-    // デフォルトファイル名（最初の動画名 + _join.mp4）
-    const firstFile = playlist[0].file.path;
+    // デフォルトファイル名（最初の「動画」名 + _join.mp4）
+    const firstFile = videoFiles[0].file.path;
     const baseName = path.parse(path.basename(firstFile)).name;
-    const fileCount = playlist.length;
+    const fileCount = videoFiles.length; // 動画ファイルの数を使用
     const defaultName = `${baseName}_join×${fileCount}.mp4`;
 
     // 保存ダイアログ
@@ -6705,10 +6759,11 @@ async function joinPlaylistVideos() {
     // 結合開始
     isJoinEditing = true;           // 中断ボタン制御用に流用
     cutCancelBtn.style.display = 'inline-block';
-    updateMessageOverlay('🎞️ 結合準備中…', 0);
+    updateMessageOverlay('🎞️ 動画結合準備中…', 0);
 
     try {
-        const videoPaths = playlist.map(item => item.file.path);
+        // 動画ファイルのみのパスリストを作成
+        const videoPaths = videoFiles.map(item => item.file.path);
 
         const result = await joinVideos({
             inputPaths: videoPaths,
@@ -6717,13 +6772,74 @@ async function joinPlaylistVideos() {
         });
 
         if (result && result.outputPath) {
-            updateMessageOverlay(`🎞️ 結合完了`);
+            updateMessageOverlay(`🎞️ 動画結合完了`);
         } else {
-            updateMessageOverlay('🎞️ 結合が中断されました');
+            updateMessageOverlay('🎞️ 動画結合が中断されました');
         }
     } catch (err) {
         console.error('結合エラー:', err);
-        updateMessageOverlay(`🎞️ 結合失敗: ${err.message || '不明なエラー'}`, 6000);
+        updateMessageOverlay(`🎞️ 動画結合失敗: ${err.message || '不明なエラー'}`, 6000);
+    } finally {
+        isJoinEditing = false;
+        cutCancelBtn.style.display = 'none';
+    }
+}
+
+// 全音声結合処理
+async function joinPlaylistAudios() {
+    // プレイリストから音声ファイルのみを抽出
+    const audioFiles = playlist.filter(item => {
+        const filePath = item.file?.path || item.name || '';
+        const ext = filePath.substring(filePath.lastIndexOf('.'));
+        return AUDIO_EXTENSIONS.includes(ext); // 音声用判定関数
+    });
+
+    // 音声ファイルの数で判定
+    if (audioFiles.length < 2) {
+        updateMessageOverlay(
+            audioFiles.length === 0 
+                ? '🎵 音声ファイルが含まれていません' 
+                : '🎵 音声が1つだけなので結合不要です'
+        );
+        return;
+    }
+
+    // デフォルトファイル名（最初の音声名 + _join×件数.m4a）
+    const firstFile = audioFiles[0].file.path;
+    const baseName = path.parse(path.basename(firstFile)).name;
+    const fileCount = audioFiles.length;
+    const defaultName = `${baseName}_join×${fileCount}.m4a`;
+
+    // 保存ダイアログを表示
+    const saveResult = await showSaveAudioJoinDialog({ fileName: defaultName });
+
+    if (saveResult.canceled || !saveResult.filePath) {
+        return;
+    }
+
+    const outputPath = saveResult.filePath;
+
+    // 結合開始
+    isJoinEditing = true;           // 中断ボタン制御用
+    cutCancelBtn.style.display = 'inline-block';
+    updateMessageOverlay('🎵 音声結合準備中…', 0);
+
+    try {
+        const audioPaths = audioFiles.map(item => item.file.path);
+
+        const result = await joinAudios({
+            inputPaths: audioPaths,
+            outputPath: outputPath
+        });
+
+        if (result && result.outputPath) {
+            updateMessageOverlay(`🎵 音声結合完了`);
+        } else {
+            updateMessageOverlay('🎵 結合が中断されました');
+        }
+    } catch (err) {
+        console.error('音声結合エラー:', err);
+        updateMessageOverlay(`🎵 音声結合失敗: ${err.message || '不明なエラー'}`, 6000);
     } finally {
         isJoinEditing = false;
         cutCancelBtn.style.display = 'none';
@@ -8543,4 +8659,52 @@ async function getOrGenerateImageThumbnail(filePath, targetWidth = 180) {
         // 失敗時はキャッシュに登録せず空文字を返す（次回表示時などに再試行可能）
         return '';
     }
+}
+
+// 結合ポップアップメニュー作成関数
+function createJoinMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'join-playlist-menu'; // クラス名は結合メニュー用に変更
+
+    buildJoinMenuContent(menu);
+    return menu;
+}
+
+// 結合ポップアップメニューコンテンツ構築関数
+function buildJoinMenuContent(menu) {
+    menu.innerHTML = '';
+
+    const createMenuItem = (label, onClick = null) => {
+        const item = document.createElement('div');
+        item.className = 'menu-item';
+        item.style.color = '#eee';
+        item.style.padding = '6px 12px';
+        item.style.cursor = 'pointer';
+        item.innerHTML = label;
+
+        if (onClick) {
+            item.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                await onClick();
+            });
+        }
+
+        item.addEventListener('mouseover', () => {
+            item.style.background = 'rgba(0,123,255,0.2)';
+        });
+        item.addEventListener('mouseout', () => {
+            item.style.background = 'none';
+        });
+
+        return item;
+    };
+
+    // JOIN_MODES をループしてメニューアイテムを一括生成
+    Object.entries(JOIN_MODES).forEach(([key, mode]) => {
+        const item = createMenuItem(mode.label, async () => {
+            menu.remove(); // 実行時にメニューを閉じる
+            await mode.fn();
+        });
+        menu.appendChild(item);
+    });
 }
