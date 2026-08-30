@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.48.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.49.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2578,6 +2578,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
+	    // 再生中メディアの拡張子判定処理を追加
+	    const currentFile = playlist[currentVideoIndex];
+	    if (currentFile && currentFile.file && currentFile.file.path) {
+	        const ext = path.extname(currentFile.file.path).toLowerCase();
+	        const isVideo = VIDEO_EXTENSIONS.includes(ext);
+	        const isAudio = AUDIO_EXTENSIONS.includes(ext);
+	
+	        if (!isVideo && !isAudio) {
+	            updateMessageOverlay('✂️ 動画・音声以外はカット編集できません');
+	            return;
+	        }
+	    }
+
         isEditMode = !isEditMode;
         if (isEditMode) {
             // 編集モード開始時はプレイリストパネルを閉じる（同時表示抑止）
@@ -2709,86 +2722,82 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderCutRanges();
     });
 
-    // 💾動画保存（設定した複数範囲を削除して保存）
-    saveVideoBtn.addEventListener('click', async () => {
-        if (!videoPlayer.src) {
-            updateMessageOverlay('✂️ 動画が読み込まれていません');
-            return;
-        }
-        if (!cutRanges || cutRanges.length === 0) {
-            updateMessageOverlay('✂️ 保存するためのカット範囲が設定されていません');
-            return;
-        }
-
-        try {
-            const currentFile = playlist[currentVideoIndex];
-            if (!currentFile) return;
-
-            const fileName = path.basename(currentFile.file.path);
-            const baseNameWithoutExt = path.parse(fileName).name;
-            const ext = path.extname(fileName);
-            const defaultOutName = `${baseNameWithoutExt}_trimmed${ext}`;
-
-            const saveResult = await showSaveCutDialog({ fileName: defaultOutName });
-            if (saveResult.canceled) {
-                hideMessageOverlay();
-                return;
-            }
-
-            isCutEditing = true;
-            updateMessageOverlay('✂️ カット中… 0%', 0);
-
-            // フレーム単位へ丸めたレンジを作成して main.js に送る
-            const alignedRanges = (cutRanges || []).map(r => {
-                const startFrame = Math.round(r.in * editFrameRate);
-                const endFrame = Math.round(r.out * editFrameRate);
-                const start = startFrame / editFrameRate;
-                const end = endFrame / editFrameRate;
-                return { in: start, out: end };
-            });
-
-            // 判定結果を渡す
-            const requestedMode = window.currentEditMode || 'copy';  // fallback
-
-            // main.js に複数範囲削除のハンドラを呼ぶ
-            const result = await cutVideoMultiple({
-                inputPath: currentFile.file.path,
-                ranges: alignedRanges,
-                outputPath: saveResult.filePath,
-                frameRate: editFrameRate,
-                mode: requestedMode          // ← 追加！
-            });
-
-            if (!result || !result.outputPath) {
-                updateMessageOverlay('✂️ 中断または失敗しました', 6000);
-                console.log('カット編集中断またはエラー');
-            } else {
-                const { outputPath, mode } = result;
-
-                if (mode === 'reencode') {
-                    updateMessageOverlay('✂️ 保存完了（精細モード）');
-                    console.log('カット編集完了（再エンコード）:', outputPath);
-                } else if (mode === 'copy') {
-                    updateMessageOverlay('✂️ 保存完了（高速モード）');
-                    console.log('カット編集完了（ストリームコピー）:', outputPath);
-                } else {
-                    // 予期せぬ mode の場合
-                    updateMessageOverlay('✂️ 保存完了');
-                    console.log('カット編集完了（モード不明）:', outputPath);
-                }
-            }
-        } catch (err) {
-            console.error('カット（複数）処理エラー:', err);
-            updateMessageOverlay(`✂️ カット失敗: ${err.message}`, 6000);
-        } finally {
-            isCutEditing = false;
-            cutCancelBtn.style.display = 'none';
-            editInMark = -1;
-            editOutMark = -1;
-            inMarkDisplay.textContent = '--:--:--';
-            outMarkDisplay.textContent = '--:--:--';
-        }
-    });
+	// 💾カット保存（動画・音声対応）
+	saveVideoBtn.addEventListener('click', async () => {
+	    if (!videoPlayer.src) {
+	        updateMessageOverlay('✂️ メディアが読み込まれていません');
+	        return;
+	    }
+	    if (!cutRanges || cutRanges.length === 0) {
+	        updateMessageOverlay('✂️ 保存するためのカット範囲が設定されていません');
+	        return;
+	    }
+	
+	    try {
+	        const currentFile = playlist[currentVideoIndex];
+	        if (!currentFile) return;
+	
+	        const fileName = path.basename(currentFile.file.path);
+	        const baseNameWithoutExt = path.parse(fileName).name;
+	        const ext = path.extname(fileName);
+	        const defaultOutName = `${baseNameWithoutExt}_trimmed${ext}`;
+	
+	        // 保存ダイアログ表示
+	        const saveResult = await showSaveCutDialog({ 
+	            fileName: defaultOutName,
+	            ext: ext
+	        });
+	        if (saveResult.canceled) {
+	            hideMessageOverlay();
+	            return;
+	        }
+	
+	        isCutEditing = true;
+	        updateMessageOverlay('✂️ カット中… 0%', 0);
+	
+	        // フレーム・秒単位のレンジ調整
+	        const alignedRanges = (cutRanges || []).map(r => {
+	            const startFrame = Math.round(r.in * editFrameRate);
+	            const endFrame = Math.round(r.out * editFrameRate);
+	            const start = startFrame / editFrameRate;
+	            const end = endFrame / editFrameRate;
+	            return { in: start, out: end };
+	        });
+	
+	        const requestedMode = window.currentEditMode || 'copy';
+	
+	        // メインプロセスで動画/音声を自動判定して処理
+	        const result = await cutVideoMultiple({
+	            inputPath: currentFile.file.path,
+	            ranges: alignedRanges,
+	            outputPath: saveResult.filePath,
+	            frameRate: editFrameRate,
+	            mode: requestedMode
+	        });
+	
+	        if (!result || !result.outputPath) {
+	            updateMessageOverlay('✂️ 中断または失敗しました', 6000);
+	            console.log('カット編集中断またはエラー');
+	        } else {
+	            const { outputPath, mode, isAudio } = result;
+	            const modeText = mode === 'reencode' ? '精細モード' : '高速モード';
+	            const mediaType = isAudio ? '音声' : '動画';
+	
+	            updateMessageOverlay(`✂️ ${mediaType}保存完了（${modeText}）`);
+	            console.log(`${mediaType}カット編集完了（${modeText}）:`, outputPath);
+	        }
+	    } catch (err) {
+	        console.error('カット処理エラー:', err);
+	        updateMessageOverlay(`✂️ カット失敗: ${err.message}`, 6000);
+	    } finally {
+	        isCutEditing = false;
+	        cutCancelBtn.style.display = 'none';
+	        editInMark = -1;
+	        editOutMark = -1;
+	        inMarkDisplay.textContent = '--:--:--';
+	        outMarkDisplay.textContent = '--:--:--';
+	    }
+	});
 
     // 編集モード時にシークバーを同期
     videoPlayer.addEventListener('timeupdate', () => {
@@ -3365,32 +3374,36 @@ document.addEventListener('keydown', async (event) => {
     // 5秒戻る／5秒進む（←／→）
     if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
         try { event.preventDefault(); } catch (e) {}
-    
-        if (videoPlayer.duration) {
+
+        const duration = videoPlayer.duration;
+        if (duration && !isNaN(duration) && duration > 0) {
             const editPanelExist = typeof editPanel !== 'undefined' && editPanel;
             const editVisible = editPanelExist && window.getComputedStyle(editPanel).display !== 'none';
             const zoomModeActive = typeof isZoomMode !== 'undefined' && isZoomMode === true;
-    
+
             // フレーム単位シークが必要か？
             const needsFrameStep = isEditMode || editVisible || zoomModeActive;
-    
             const frameRate = (typeof editFrameRate === 'number' && editFrameRate > 0) ? editFrameRate : 30;
             const stepSeconds = needsFrameStep ? (1 / frameRate) : 5;
-    
             const delta = event.key === 'ArrowLeft' ? -stepSeconds : stepSeconds;
             let newTime = videoPlayer.currentTime + delta;
-            newTime = Math.max(0, Math.min(videoPlayer.duration, newTime));
 
+            // 終端は duration よりほんの僅かに手前に制限（微小な数値を引くことで ended 発火等による挙動不審を防ぐ）
+            const maxTime = Math.max(0, duration - 0.1);
+            newTime = Math.max(0, Math.min(maxTime, newTime));
             videoPlayer.currentTime = newTime;
-            seekBar.value = (100 / videoPlayer.duration) * newTime;
+            
+            // シークバー同期（0〜100%にクランプ）
+            const percent = Math.max(0, Math.min(100, (newTime / duration) * 100));
+            seekBar.value = percent;
 
             // 編集用シークバー同期（編集モードまたはズームモード時も含む）
             if (needsFrameStep && typeof editSeekBar !== 'undefined' && editSeekBar) {
-                editSeekBar.value = (newTime / videoPlayer.duration) * 100;
+                editSeekBar.value = percent;
             }
 
             updateTimeDisplay();
-        
+
             if (needsFrameStep) {
                 const frameNum = Math.round(newTime * frameRate);
                 updateMessageOverlay(`🕓 ${formatTime(newTime)} (${frameNum}f)`);
@@ -7042,58 +7055,60 @@ function renderCutRanges() {
             div.appendChild(del);
             cutRangesList.appendChild(div);
         });
-
-        // タイムラインバー部分
-        if (!cutTimelineContainer || !cutTimelineBar) return;
-
-        cutTimelineBar.innerHTML = ''; // クリア
-        if (!videoPlayer.duration || cutRanges.length === 0) {
-            return;
-        }
-
-        const duration = videoPlayer.duration;
-        cutRanges.forEach((range) => {
-            const leftPercent  = (range.in  / duration) * 100;
-            const widthPercent = ((range.out - range.in) / duration) * 100;
-
-            const bar = document.createElement('div');
-            bar.className = 'cut-range-bar';
-            bar.style.left   = `${leftPercent}%`;
-            bar.style.width  = `${widthPercent}%`;
-
-            cutTimelineBar.appendChild(bar);
-        });
     }
 
-    // 2. Inマーク（白い縦線）
-    if (typeof editInMark === 'number' && editInMark >= 0 && editInMark <= videoPlayer.duration) {
-        const inLeft = (editInMark / videoPlayer.duration) * 100;
-        
-        const inMarker = document.createElement('div');
-        inMarker.className = 'edit-in-marker';
-        inMarker.style.left = `${inLeft}%`;
-        
-        const inLine = document.createElement('div');
-        inLine.className = 'marker-line';
-        inMarker.appendChild(inLine);
-        
-        cutTimelineBar.appendChild(inMarker);
-    }
-    
-    // 3. Outマーク（白い縦線）
-    if (typeof editOutMark === 'number' && editOutMark >= 0 && editOutMark <= videoPlayer.duration) {
-        const outLeft = (editOutMark / videoPlayer.duration) * 100;
-        
-        const outMarker = document.createElement('div');
-        outMarker.className = 'edit-out-marker';
-        outMarker.style.left = `${outLeft}%`;
-        
-        const outLine = document.createElement('div');
-        outLine.className = 'marker-line';
-        outMarker.appendChild(outLine);
-        
-        cutTimelineBar.appendChild(outMarker);
-    }
+	// タイムラインバー部分
+	if (!cutTimelineContainer || !cutTimelineBar) return;
+	
+	cutTimelineBar.innerHTML = ''; // クリア
+	
+	// 動画の総再生時間（duration）がない場合はここで終了
+	if (!videoPlayer.duration) return;
+	
+	const duration = videoPlayer.duration;
+	
+	// 1. カット範囲（赤バー）の描画（cutRanges が存在する場合のみ実行）
+	if (cutRanges && cutRanges.length > 0) {
+	    cutRanges.forEach((range) => {
+	        const leftPercent  = (range.in  / duration) * 100;
+	        const widthPercent = ((range.out - range.in) / duration) * 100;
+	
+	        const bar = document.createElement('div');
+	        bar.className = 'cut-range-bar';
+	        bar.style.left  = `${leftPercent}%`;
+	        bar.style.width = `${widthPercent}%`;
+	
+	        cutTimelineBar.appendChild(bar);
+	    });
+	}
+
+	// 2. Inマーク（白い縦線）
+	if (typeof editInMark === 'number' && editInMark >= 0 && editInMark <= duration) {
+	    const inLeft = (editInMark / duration) * 100;
+	    const inMarker = document.createElement('div');
+	    inMarker.className = 'edit-in-marker';
+	    inMarker.style.left = `${inLeft}%`;
+	    
+	    const inLine = document.createElement('div');
+	    inLine.className = 'marker-line';
+	    inMarker.appendChild(inLine);
+	    
+	    cutTimelineBar.appendChild(inMarker);
+	}
+	
+	// 3. Outマーク（白い縦線）
+	if (typeof editOutMark === 'number' && editOutMark >= 0 && editOutMark <= duration) {
+	    const outLeft = (editOutMark / duration) * 100;
+	    const outMarker = document.createElement('div');
+	    outMarker.className = 'edit-out-marker';
+	    outMarker.style.left = `${outLeft}%`;
+	    
+	    const outLine = document.createElement('div');
+	    outLine.className = 'marker-line';
+	    outMarker.appendChild(outLine);
+	    
+	    cutTimelineBar.appendChild(outMarker);
+	}
 }
 
 // 作成日時で並び替える非同期関数（fs.stat を使って取得）
