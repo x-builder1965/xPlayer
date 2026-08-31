@@ -944,41 +944,6 @@ caption {
     background: rgba(255, 0, 0, 0.2);
 }
 
-.sort-menu div {
-    transition: background-color 0.15s;
-}
-.sort-menu div:hover {
-    background: rgba(0, 123, 255, 0.35);
-}
-.sort-menu div:active {
-    background: rgba(0, 80, 180, 0.6);
-}
-.playlist-display-menu {
-    position: absolute;
-    background: rgba(30,30,30,0.95);
-    border: 1px solid #999;
-    border-radius: 6px;
-    padding: 6px 0;
-    z-index: 1001;
-    min-width: 180px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-    white-space: pre;
-    font-family: monospace;
-    line-height: 1.0;
-    font-size: 16px;
-}
-.playlist-display-menu div {
-    padding: 8px 16px;
-    cursor: pointer;
-    white-space: nowrap;
-    color: #eee;
-}
-.playlist-display-menu div:hover {
-    background: rgba(0,123,255,0.2);
-}
-.playlist-display-menu div:active {
-    background: rgba(0,80,180,0.6);
-}
 /* モードアクティブ時の赤を最優先で適用 */
 .mode-active,
 #randomPlayBtn.active,
