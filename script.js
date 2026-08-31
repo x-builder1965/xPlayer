@@ -8844,7 +8844,7 @@ function updateCenterControlsVisibility(compulsion = false) {
     if (isAllowed && isMediaReady && isPlaylistHidden) {
         centerControls.style.display = 'flex';
     } else {
-        if (!isControlsVisible) {
+        if (!isControlsVisible || !isPlaylistHidden) {
             centerControls.style.display = 'none';
         }
     }
