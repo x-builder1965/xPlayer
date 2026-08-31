@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver5.52.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver5.53.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -962,7 +962,6 @@ button#modeChangeBtn.convert-active,
 #sortPlaylistBtn.sorted-active,
 #subtitleSelectBtn.subtitles-active,
 #wallpaperBtn.wallpaper-active,
-#pauseShowBtn.pause-active,
 #alwaysOnTopBtn.always-on-top-active,
 #audioMotionBtn.audio-motion-active,
 #imageEffectBgmBtn.image-effectbgm-active {
@@ -992,7 +991,6 @@ button#modeChangeBtn.convert-active:hover,
 #sortPlaylistBtn.sorted-active:hover,
 #subtitleSelectBtn.subtitles-active:hover,
 #wallpaperBtn.wallpaper-active:hover,
-#pauseShowBtn.pause-active:hover,
 #alwaysOnTopBtn.always-on-top-active:hover,
 #audioMotionBtn.audio-motion-active:hover,
 #imageEffectBgmBtn.image-effectbgm-active:hover {
@@ -1073,7 +1071,8 @@ button#modeChangeBtn.convert-active:hover,
 .add-playlist-menu,
 .audio-motion-menu,
 .image-effectbgm-menu,
-.join-playlist-menu {
+.join-playlist-menu,
+.control-menu {
     position: absolute;
     background: rgba(30, 30, 30, 0.95);
     border: 1px solid #444;
@@ -1371,4 +1370,45 @@ button#modeChangeBtn.convert-active:hover,
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* センターコントロールのスタイル設定 */
+.center-controls {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    /* ボタン同士の間隔も3倍に変更 */
+    gap: clamp(45px, 9vw, 120px);
+    z-index: 950;
+    pointer-events: auto;
+}
+.center-btn {
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    object-fit: contain;
+}
+.center-btn:hover {
+    transform: scale(1.1);
+}
+.center-btn:active {
+    transform: scale(0.95);
+}
+/* 中央の再生／一時停止イメージ（3倍サイズ） */
+.center-btn-main {
+    width: min(24vw, 30vh, 300px);
+    height: min(24vw, 30vh, 300px);
+    min-width: 132px;  /* 44px × 3 */
+    min-height: 132px;
+}
+/* 前曲・次曲イメージ（3倍サイズ） */
+.center-btn-side {
+    width: min(16.5vw, 21vh, 210px);
+    height: min(16.5vw, 21vh, 210px);
+    min-width: 90px;   /* 30px × 3 */
+    min-height: 90px;
 }

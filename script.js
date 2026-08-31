@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.52.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.53.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -265,6 +265,10 @@ const JOIN_MODES = {
     'joinVideos': { label: '🎞️ 動画結合', fn: () => joinPlaylistVideos() },
     'joinAudios': { label: '🎵 音声結合', fn: () => joinPlaylistAudios() }
 };
+const CONTROL_MODES = {
+    'display-disable': { label: 'コントロール自動表示抑止', fn: () => togglePauseShowControls() },
+    'center-disable':  { label: 'センターコントロール無効', fn: () => toggleHideCenterControls() }
+};
 const languageMap = {
     'jpn': '日本語',
     'eng': '英語',
@@ -441,6 +445,10 @@ let tableContainer = null;
 let mediaContainer = null;
 let imagePlayer = null;
 let imageWrapper = null;
+let centerControls = null;
+let centerPrevBtn = null;
+let centerPlayPauseBtn = null;
+let centerNextBtn = null;
 
 // localStorage から復得
 let savedVolume = null;
@@ -467,6 +475,7 @@ let savedSelectedSubtitleTrack = null;
 let savedWallpaperPath = null;
 let savedAlwaysOnTop = null;
 let savedPauseShowControls = null;
+let savedHideCenterControls = null;
 let savedAudioMotionMode = null;
 let savedImageEffectBgmMode = null;
 let savedFilterHistory = null;
@@ -558,6 +567,7 @@ let imageTimer = null;
 let imageCurrentTime = 0;      // 0〜5秒
 let imageProgressInterval = null;
 let pauseShowControls = false;
+let hideCenterControls = false;
 let imageBgmPaths = []; 		// 複数BGMパスの配列管理変数を追加
 let currentBgmIndex = 0;		// 複数BGMパスのインデックス管理を追加
 let currentLoadedBgmPath = null;    // BGM設定用の変数（パス管理）
@@ -627,7 +637,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
         pauseShowControls = false;
     }
-    togglePauseShowControls();
+
+    // センターコントロール無効の復元
+    if (savedHideCenterControls === 'true') {
+        hideCenterControls = true;
+    } else {
+        hideCenterControls = false;
+    }
 
     // ボリューム復元
     if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
@@ -1584,14 +1600,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
     
-    // 👁️コントロール表示抑止
-    pauseShowBtn.addEventListener('click', async () => {
-        hideMessageOverlay();
-        pauseShowControls = !pauseShowControls;
-        togglePauseShowControls();
-        localSturageSetItemAndFile('pauseShowControls', pauseShowControls);
-        updateIconOverlay();
-    });
+	// 👁️ コントロール制御ボタンのクリックイベント
+	pauseShowBtn.addEventListener('click', async (event) => {
+	    event.stopPropagation();
+	    hideMessageOverlay();
+	
+	    // 既存の control-menu がある場合は閉じる（トグル表示）
+	    const existingMenu = document.querySelector('.control-menu');
+	    if (existingMenu) {
+	        existingMenu.remove();
+	        return;
+	    }
+	
+        // メニュー非表示
+        hideMenus();
+
+        const targetContainer = document.fullscreenElement || mainContainer;
+        const menu = createControlMenu();
+	    document.body.appendChild(menu);
+        const containerRect = targetContainer.getBoundingClientRect();
+        const btnRect = pauseShowBtn.getBoundingClientRect();
+
+        menu.style.left = `${Math.max(8, btnRect.right - containerRect.left + 2)}px`;
+        menu.style.top = `${Math.max(8, btnRect.top - containerRect.top + 2)}px`;
+	
+	    updateIconOverlay();
+	});
 
     // 🔝常に前面設定
     alwaysOnTopBtn.addEventListener('click', () => {
@@ -2836,6 +2870,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+	// クリックイベントの伝播（コントロールパネルの各ボタンclickを実行）
+	centerPrevBtn.addEventListener('click', () => {
+	    if (prevVideoBtn) prevVideoBtn.click();
+	});
+	
+	centerPlayPauseBtn.addEventListener('click', () => {
+	    if (playPauseBtn) playPauseBtn.click();
+	});
+	
+	centerNextBtn.addEventListener('click', () => {
+	    if (nextVideoBtn) nextVideoBtn.click();
+	});
+
     Initializing = false;
 });
 
@@ -3756,6 +3803,10 @@ function allDOMsetting() {
     mediaContainer = document.getElementById('mediaContainer');
     imagePlayer = document.getElementById('imagePlayer');
     imageWrapper = document.getElementById('imageWrapper');
+    centerControls = document.getElementById('centerControls');
+    centerPrevBtn = document.getElementById('centerPrevBtn');
+    centerPlayPauseBtn = document.getElementById('centerPlayPauseBtn');
+    centerNextBtn = document.getElementById('centerNextBtn');
 }
 
 // ユーザーフォルダ内の設定ファイルパスを取得
@@ -3834,6 +3885,7 @@ async function allLocalStorageSetting() {
         savedWallpaperPath = localStorage.getItem('wallpaperPath');
         savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
         savedPauseShowControls = localStorage.getItem('pauseShowControls');
+        savedHideCenterControls = localStorage.getItem('hideCenterControls');
         savedAudioMotionMode = localStorage.getItem('audioMotionMode');
         savedImageEffectBgmMode = localStorage.getItem('imageEffectBgmMode');
         savedFilterHistory = localStorage.getItem('filterHistory');
@@ -3916,6 +3968,8 @@ async function allLocalStorageSetting() {
             savedAlwaysOnTop = String(rawAlwaysOnTop);
             const rawPauseShowControls = getVal('pauseShowControls', savedPauseShowControls, 'false');
             savedPauseShowControls = String(rawPauseShowControls);
+            const rawHideCenterControls = getVal('hideCenterControls', savedHideCenterControls, 'false');
+            savedHideCenterControls = String(rawHideCenterControls);
             savedAudioMotionMode = getVal('audioMotionMode', savedAudioMotionMode);
             savedImageEffectBgmMode = getVal('imageEffectBgmMode', savedImageEffectBgmMode);
             savedFilterHistory = getVal('filterHistory', savedFilterHistory);
@@ -3975,6 +4029,7 @@ async function allLocalStorageSetting() {
     await localSturageSetItemAndFile('wallpaperPath', savedWallpaperPath);
     await localSturageSetItemAndFile('alwaysOnTop', savedAlwaysOnTop);
     await localSturageSetItemAndFile('pauseShowControls', savedPauseShowControls);
+    await localSturageSetItemAndFile('hideCenterControls', savedHideCenterControls);
     await localSturageSetItemAndFile('audioMotionMode', savedAudioMotionMode);
     await localSturageSetItemAndFile('imageEffectBgmMode', savedImageEffectBgmMode);
     await localSturageSetItemAndFile('filterHistory', savedFilterHistory);
@@ -4157,6 +4212,9 @@ function showControlsAndFilename(compulsion = false) {
             messageOverlay.style.display = 'block';
             messageOverlay.classList.add('active');
         }
+        // コントロールパネルが表示されるタイミングでセンターコントロールも更新・表示
+        updateCenterPlayPauseIcon();
+        updateCenterControlsVisibility(compulsion);
     }
 
     clearTimeout(timeout);
@@ -4169,6 +4227,10 @@ function showControlsAndFilename(compulsion = false) {
     }
     resetCursorTimer(compulsion);
     updateIconOverlay();
+
+    // センターコントロールの表示更新（強制表示フラグを渡す）
+    updateCenterPlayPauseIcon();
+    updateCenterControlsVisibility(compulsion);
 }
 
 // コントロール＋ファイル名非表示
@@ -4188,6 +4250,11 @@ function hideControlsAndFilename() {
     if (filterPanel) filterPanel.style.display = 'none';
 
     updateIconOverlay();
+
+    // コントロールパネル非表示時はセンターコントロールも非表示にする
+    if (centerControls) {
+        centerControls.style.display = 'none';
+    }
 }
 
 // 編集パネル非表示
@@ -4211,7 +4278,8 @@ function hideMenus(hideAll = true) {
         '.playlist-display-menu',
         ...(!isZoomMode || hideAll ? ['.aspect-ratio-menu'] : []),
         ...(!isSettingsPanelOpen || hideAll ? ['.audio-motion-menu'] : []),
-        ...(!isSettingsPanelOpen || hideAll ? ['.image-effectbgm-menu'] : [])
+        ...(!isSettingsPanelOpen || hideAll ? ['.image-effectbgm-menu'] : []),
+        ...(!isSettingsPanelOpen || hideAll ? ['.control-menu'] : [])
     ];
 
     document.querySelectorAll(classes.join(', ')).forEach(m => m.remove());
@@ -8534,18 +8602,18 @@ function syncDisplaySettingsToCurrentMedia() {
     }
 }
 
-// コントロール表示抑止の表示
+// コントロール自動表示抑止の切り替え（現在の状態を返す）
 function togglePauseShowControls() {
-    if (pauseShowControls) {
-        if (pauseShowBtn) {
-            pauseShowBtn.classList.add('pause-active');
-            pauseShowBtn.style.background = '';
-        }
-    } else {
-        if (pauseShowBtn) {
-            pauseShowBtn.classList.remove('pause-active');
-        }
-    }
+    pauseShowControls = !pauseShowControls;
+    localSturageSetItemAndFile('pauseShowControls', pauseShowControls);
+    return pauseShowControls;
+}
+
+// センターコントロール無効の切り替え（現在の状態を返す）
+function toggleHideCenterControls() {
+    hideCenterControls = !hideCenterControls;
+    localSturageSetItemAndFile('hideCenterControls', hideCenterControls);
+    return hideCenterControls;
 }
 
 // BGMの再生状態を一括制御する関数（複数BGM・継続再生対応版）
@@ -8749,6 +8817,98 @@ function buildJoinMenuContent(menu) {
         const item = createMenuItem(mode.label, async () => {
             menu.remove(); // 実行時にメニューを閉じる
             await mode.fn();
+        });
+        menu.appendChild(item);
+    });
+}
+
+// センターコントロールの表示更新関数
+function updateCenterControlsVisibility(compulsion = false) {
+    // 1. センターコントロールが無効化されている場合は即非表示
+    if (typeof hideCenterControls !== 'undefined' && hideCenterControls) {
+        if (centerControls) centerControls.style.display = 'none';
+        return;
+    }
+
+    // 2. メディア準備状態チェック
+    const isImageReady = imagePlayer && imagePlayer.complete && imagePlayer.naturalWidth > 0 && imageWrapper && window.getComputedStyle(imageWrapper).display !== 'none';
+    const isMediaReady = videoPlayer.readyState > 0 || audioPlayer.readyState > 0 || isImageReady;
+    // 3. プレイリスト（filterPanel）非表示チェック
+    const isPlaylistHidden = !filterPanel || window.getComputedStyle(filterPanel).display === 'none';
+    // 4. コントロールパネルが実際に表示されているか（opacityが0でないか）
+    const isControlsVisible = controls && window.getComputedStyle(controls).opacity !== '0';
+    // 5. 表示許可判定（強制表示 OR （自動抑止OFF かつ コントロールパネル表示中））
+    const isAllowed = compulsion || (!pauseShowControls && isControlsVisible);
+
+    // すべての条件を満たした場合のみ表示
+    if (isAllowed && isMediaReady && isPlaylistHidden) {
+        centerControls.style.display = 'flex';
+    } else {
+        if (!isControlsVisible) {
+            centerControls.style.display = 'none';
+        }
+    }
+}
+
+// 再生/一時停止アイコンの同期切り替え関数
+function updateCenterPlayPauseIcon() {
+    if (playPauseBtn.textContent === '▶️') {
+        centerPlayPauseBtn.src = 'control_play.png';
+    } else {
+        centerPlayPauseBtn.src = 'control_puase.png';
+    }
+}
+
+// コントロール制御ポップアップメニュー作成関数
+function createControlMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'control-menu';
+
+    buildControlMenuContent(menu);
+    return menu;
+}
+
+// コントロール制御ポップアップメニューコンテンツ構築関数
+function buildControlMenuContent(menu) {
+    menu.innerHTML = '';
+
+    const createMenuItem = (label, isChecked, onClick = null) => {
+        const item = document.createElement('div');
+        item.className = 'menu-item';
+        item.style.color = '#eee';
+        item.style.padding = '6px 12px';
+        item.style.cursor = 'pointer';
+
+        // 有効時は先頭に ✅ を付与
+        const checkMark = isChecked ? '✅ ' : '　　'; // 幅を揃えるための全角スペース
+        item.innerHTML = `${checkMark}${label}`;
+
+        if (onClick) {
+            item.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                await onClick();
+            });
+        }
+
+        item.addEventListener('mouseover', () => {
+            item.style.background = 'rgba(0,123,255,0.2)';
+        });
+        item.addEventListener('mouseout', () => {
+            item.style.background = 'none';
+        });
+
+        return item;
+    };
+
+    // CONTROL_MODES をループしてメニューアイテムを生成
+    Object.entries(CONTROL_MODES).forEach(([key, mode]) => {
+        // 現在の状態判定（各フラグの判定）
+        const isChecked = key === 'display-disable' ? pauseShowControls : hideCenterControls;
+
+        const item = createMenuItem(mode.label, isChecked, async () => {
+            menu.remove(); // 実行時にメニューを閉じる
+            await mode.fn();
+            updateIconOverlay();
         });
         menu.appendChild(item);
     });

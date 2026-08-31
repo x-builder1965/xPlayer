@@ -1,7 +1,7 @@
 <!-- -- index.html ------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -メディアプレイヤー- Ver5.52.0'; -->
+<!-- const appName = 'xPlayer -メディアプレイヤー- Ver5.53.0'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -31,6 +31,11 @@
                 <div id="darkOverlay"></div>
             </div>
             <video id="videoPreview" src="" muted></video>
+            <div id="centerControls" class="center-controls">
+                <img id="centerPrevBtn" src="control_prev.png" alt="前へ" class="center-btn center-btn-side" />
+                <img id="centerPlayPauseBtn" src="control_puase.png" alt="再生/一時停止" class="center-btn center-btn-main" />
+                <img id="centerNextBtn" src="control_next.png" alt="次へ" class="center-btn center-btn-side" />
+            </div>
             <div id="messageOverlay"></div>
             <div id="iconOverlay" class="icon-overlay"></div>
             <div class="filename">
@@ -313,6 +318,34 @@
                                 <td class="note">・クリック：プレイリスト内のメディアを選択。／ダブルクリック：選択したメディアを再生。</td>
                             </tr>
                             <tr>
+                                <td class="sub-title">▶️ センターコントロール</td>
+                                <td class="icon sub-title"></td>
+                                <td class="key sub-title"></td>
+                                <td class="mouse sub-title"></td>
+                                <td class="note sub-title"></td>
+                            </tr>
+                            <tr>
+                                <td>　・前へ</td>
+                                <td class="icon">⏮️</td>
+                                <td class="key">PgUp<br>Home</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの再生中メディアの前メディアを再生。Homeで先頭へ移動。</td>
+                            </tr>
+                            <tr>
+                                <td>　・再生／一時停止</td>
+                                <td class="icon">▶️／⏸️</td>
+                                <td class="key">Space</td>
+                                <td class="mouse">Right Click</td>
+                                <td class="note">・プレイリストで選択中のメディアを▶️再生（再開）（青）または再生中のメディアを⏸️一時停止（赤）。</td>
+                            </tr>
+                            <tr>
+                                <td>　・次へ</td>
+                                <td class="icon">⏭️</td>
+                                <td class="key">PgDw<br>End</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイリストの再生中メディアの次メディアを再生。Endで最後へ移動。</td>
+                            </tr>
+                            <tr>
                                 <td class="sub-title">🛠️ コントロールパネル</td>
                                 <td class="icon sub-title"></td>
                                 <td class="key sub-title"></td>
@@ -537,11 +570,11 @@
                                 <td class="note">・画像再生時のトラジションエフェクトの切替および再生BGMの設定。</td>
                             </tr>
                             <tr>
-                                <td>　・コントロール表示抑止</td>
+                                <td>　・コントロール制御</td>
                                 <td class="icon">👁️</td>
                                 <td class="key">Ctrl+y</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・メディア切り替わり時のコントロールパネル・再生中パスパネルの表示を抑止。</td>
+                                <td class="mouse">Popup Menu</td>
+                                <td class="note">・コントロールパネル自動表示抑止、センターコントロール無効の設定・解除</td>
                             </tr>
                             <tr>
                                 <td>　・フルスクリーン表示／解除</td>
@@ -683,6 +716,7 @@
             <div id="changelogBtn" class="changelog-toggle">▶ 変更履歴</div>
             <div id="changelogContent" class="changelog-container">
                 <ul class="changelog-list">
+                    <li>2026-09-01 Ver5.53.0 センターコントロール表示機能の追加。</li>
                     <li>2026-08-31 Ver5.52.0 BGM設定の設定・削除操作の改善。</li>
                     <li>2026-08-31 Ver5.51.0 字幕抽出中メッセージ出力不良の対応。</li>
                     <li>2026-08-30 Ver5.50.0 音声の自動変換・手動変換の対応。</li>
