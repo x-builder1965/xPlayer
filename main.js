@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.51.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.52.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -528,16 +528,65 @@ ipcMain.handle('open-wallpaper-dialog', async () => {
     };
 });
 
-// BGM選択（単ファイル選択）
+// 音声ファイルの拡張子チェック用
+const isAudioFile = (filePath) => {
+    const ext = path.extname(filePath).slice(1).toLowerCase();
+    return AUDIO_EXTENSIONS.includes(ext);
+};
+
+// ampplファイルを解析して音声ファイルのみを取得する関数
+const parseAmpplFile = async (playlistPath) => {
+    try {
+        // fs が promises そのもののため、fs.readFile で直接呼び出し
+        const content = await fs.readFile(playlistPath, 'utf-8');
+        const lines = content.split(/\r?\n/);
+        
+        const audioPaths = [];
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) continue;
+
+            const absolutePath = path.isAbsolute(trimmed)
+                ? trimmed
+                : path.resolve(path.dirname(playlistPath), trimmed);
+
+            try {
+                // fs.stat も直接呼び出し
+                const stat = await fs.stat(absolutePath);
+                
+                if (stat.isDirectory()) {
+                    // フォルダの場合は既存の getVideoFilesRecursively を呼び出して内部を探索
+                    const filesInFolder = await getVideoFilesRecursively(absolutePath);
+                    for (const file of filesInFolder) {
+                        // 取得したファイルの中から音声ファイルのみを抽出
+                        if (isAudioFile(file.path)) {
+                            audioPaths.push(file.path);
+                        }
+                    }
+                } else if (stat.isFile() && isAudioFile(absolutePath)) {
+                    // 単一の音声ファイルの場合
+                    audioPaths.push(absolutePath);
+                }
+            } catch (err) {
+                // ファイルまたはフォルダが存在しない場合はスキップ
+                console.warn(`File or directory not found: ${absolutePath}`);
+            }
+        }
+        return audioPaths;
+    } catch (error) {
+        console.error(`Failed to parse playlist: ${playlistPath}`, error);
+        return [];
+    }
+};
+
 ipcMain.handle('open-bgm-dialog', async () => {
-    /* 複数ファイル選択(multiSelections)に対応 */
     const result = await dialog.showOpenDialog({
         title: 'BGMを選択',
-        properties: ['openFile', 'multiSelections'], // 複数選択を許可
+        properties: ['openFile', 'multiSelections'],
         filters: [
             { 
-                name: '音声ファイル', 
-                extensions: AUDIO_EXTENSIONS
+                name: '音声・プレイリストファイル', 
+                extensions: [...AUDIO_EXTENSIONS, 'amppl'] 
             },
             { 
                 name: 'すべてのファイル', 
@@ -546,13 +595,25 @@ ipcMain.handle('open-bgm-dialog', async () => {
         ]
     });
 
-    /* キャンセル時または未選択時は null を返す（クリア判定用） */
     if (result.canceled || result.filePaths.length === 0) {
         return null;
     }
 
-    /* 選択された全ファイルの情報を配列で返す */
-    return result.filePaths.map(filePath => ({
+    const resolvedPaths = new Set();
+
+    for (const filePath of result.filePaths) {
+        const ext = path.extname(filePath).slice(1).toLowerCase();
+
+        if (ext === 'amppl') {
+            // amppl 内のパスを展開
+            const playlistAudioPaths = await parseAmpplFile(filePath);
+            playlistAudioPaths.forEach(p => resolvedPaths.add(p));
+        } else if (isAudioFile(filePath)) {
+            resolvedPaths.add(filePath);
+        }
+    }
+
+    return Array.from(resolvedPaths).map(filePath => ({
         name: path.basename(filePath),
         path: filePath
     }));

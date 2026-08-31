@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver5.49.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver5.52.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -1322,4 +1322,41 @@ button#modeChangeBtn.convert-active:hover,
 }
 .bgm-popup-menu::-webkit-scrollbar-thumb:hover {
     background: #777;
+}
+/* ポップアップ内のすべての削除ボタン */
+.bgm-clear-all-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #555;
+    cursor: pointer;
+    color: #ff6b6b;
+    font-weight: bold;
+    border-radius: 3px;
+    background: transparent;
+    transition: background-color 0.2s ease;
+}
+.bgm-clear-all-item:hover {
+    background: rgba(255, 0, 0, 0.2);
+}
+/* ポップアップ内の各BGMアイテム */
+.bgm-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px;
+    gap: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    background: transparent;
+    transition: background-color 0.2s ease;
+}
+.bgm-list-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+/* 再生中の強調スタイル */
+.bgm-list-item.is-playing {
+    color: #00ccff;
 }
