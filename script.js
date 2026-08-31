@@ -4492,156 +4492,159 @@ function buildImageEffectBgmMenuContent(menu) {
         
             let tooltip = null;
 
-            // ホバー時に一覧ポップアップを生成
-            bgm.addEventListener('mouseenter', () => {
-                bgm.style.background = 'rgba(0,123,255,0.2)';
-
-                if (tooltip) return;
-
-                if (Array.isArray(imageBgmPaths) && imageBgmPaths.length > 0) {
-                    tooltip = document.createElement('div');
-                    tooltip.className = 'bgm-popup-menu';
-
-                    tooltip.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                    });
-
-                    // --- [ポップアップ内] すべて削除ボタン ---
-                    const clearAllDiv = document.createElement('div');
-                    clearAllDiv.className = 'bgm-clear-all-item';
-                    clearAllDiv.innerHTML = '<span>🗑️ すべて削除</span>';
-
-                    clearAllDiv.addEventListener('mouseenter', () => {
-                        clearAllDiv.style.background = 'rgba(255, 0, 0, 0.2)';
-                    });
-                    clearAllDiv.addEventListener('mouseleave', () => {
-                        clearAllDiv.style.background = 'transparent';
-                    });
-
-                    clearAllDiv.addEventListener('click', async (e) => {
-                        e.stopPropagation();
-
-                        imageBgmPaths = [];
-                        currentBgmIndex = 0;
-
-                        await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
-
-                        currentLoadedBgmPath = null;
-                        bgmAudio.removeAttribute('src');
-                        bgmAudio.load();
-                        await manageBgmState();
-
-                        updateImageEffectBgm();
-
-                        // 再描画（リストが0件になるためポップアップは自動消去される）
-                        buildImageEffectBgmMenuContent(menu);
-                    });
-
-                    tooltip.appendChild(clearAllDiv);
-
-                    // --- 各BGMファイルのリスト生成 ---
-                    imageBgmPaths.forEach((path, idx) => {
-                        const itemDiv = document.createElement('div');
-                        itemDiv.className = 'bgm-list-item';
-
-                        const isPlaying = idx === currentBgmIndex;
-                        if (isPlaying) {
-                            itemDiv.classList.add('is-playing');
-                        }
-
-                        itemDiv.addEventListener('mouseenter', () => {
-                            itemDiv.style.background = 'rgba(255, 255, 255, 0.1)';
-                        });
-                        itemDiv.addEventListener('mouseleave', () => {
-                            itemDiv.style.background = 'transparent';
-                        });
-
-                        const titleSpan = document.createElement('span');
-                        const icon = isPlaying ? '▶️' : '🎵';
-                        titleSpan.textContent = `${icon} ${idx + 1}. ${getFileName(path)}`;
-                        titleSpan.style.flex = '1';
-
-                        // 曲選択時
-                        titleSpan.addEventListener('click', async (e) => {
-                            e.stopPropagation();
-
-                            currentBgmIndex = idx;
-
-                            currentLoadedBgmPath = null;
-                            bgmAudio.removeAttribute('src');
-                            bgmAudio.load();
-                            await manageBgmState();
-
-                            updateImageEffectBgm();
-
-                            if (tooltip) {
-                                tooltip.remove();
-                                tooltip = null;
-                            }
-                            menu.remove();
-                        });
-
-                        // 個別削除（ゴミ箱）
-                        const deleteBtn = document.createElement('span');
-                        deleteBtn.textContent = '🗑️';
-                        deleteBtn.style.cursor = 'pointer';
-                        deleteBtn.style.opacity = '0.7';
-                        deleteBtn.title = '削除';
-
-                        deleteBtn.addEventListener('mouseenter', (e) => {
-                            e.stopPropagation();
-                            deleteBtn.style.opacity = '1';
-                        });
-                        deleteBtn.addEventListener('mouseleave', (e) => {
-                            e.stopPropagation();
-                            deleteBtn.style.opacity = '0.7';
-                        });
-
-                        deleteBtn.addEventListener('click', async (e) => {
-                            e.stopPropagation();
-
-                            imageBgmPaths.splice(idx, 1);
-
-                            if (imageBgmPaths.length === 0) {
-                                currentBgmIndex = 0;
-                            } else if (currentBgmIndex >= imageBgmPaths.length) {
-                                currentBgmIndex = imageBgmPaths.length - 1;
-                            }
-
-                            await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
-
-                            currentLoadedBgmPath = null;
-                            bgmAudio.removeAttribute('src');
-                            bgmAudio.load();
-                            await manageBgmState();
-
-                            updateImageEffectBgm();
-
-                            // メニュー再描画
-                            buildImageEffectBgmMenuContent(menu);
-
-                            // 残りファイルが存在する場合は mouseenter を再発火してポップアップを維持
-                            if (imageBgmPaths.length > 0) {
-                                const targetBgmItem = menu.querySelector('.bgm-menu-item');
-                                if (targetBgmItem) {
-                                    const mouseEnterEvent = new MouseEvent('mouseenter', {
-                                        bubbles: true,
-                                        cancelable: true,
-                                        view: window
-                                    });
-                                    targetBgmItem.dispatchEvent(mouseEnterEvent);
-                                }
-                            }
-                        });
-
-                        itemDiv.appendChild(titleSpan);
-                        itemDiv.appendChild(deleteBtn);
-                        tooltip.appendChild(itemDiv);
-                    });
-                    
-                    bgm.appendChild(tooltip);
-                }
-            });
+			// ホバー時に一覧ポップアップを生成
+			bgm.addEventListener('mouseenter', () => {
+			    bgm.style.background = 'rgba(0,123,255,0.2)';
+			
+			    if (tooltip) return;
+			
+			    if (Array.isArray(imageBgmPaths) && imageBgmPaths.length > 0) {
+			        tooltip = document.createElement('div');
+			        tooltip.className = 'bgm-popup-menu';
+			
+			        tooltip.addEventListener('click', (e) => {
+			            e.stopPropagation();
+			        });
+			
+			        // --- [ポップアップ内] すべて削除ボタン ---
+			        const clearAllDiv = document.createElement('div');
+			        clearAllDiv.className = 'bgm-clear-all-item';
+			        clearAllDiv.innerHTML = '<span>🗑️ すべて削除</span>';
+			
+			        clearAllDiv.addEventListener('click', async (e) => {
+			            e.stopPropagation();
+			
+			            imageBgmPaths = [];
+			            currentBgmIndex = 0;
+			
+			            await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
+			
+			            currentLoadedBgmPath = null;
+			            bgmAudio.removeAttribute('src');
+			            bgmAudio.load();
+			            await manageBgmState();
+			
+			            updateImageEffectBgm();
+			
+			            buildImageEffectBgmMenuContent(menu);
+			        });
+			
+			        tooltip.appendChild(clearAllDiv);
+			
+			        // --- 各BGMファイルのリスト生成 ---
+			        imageBgmPaths.forEach((path, idx) => {
+			            const itemDiv = document.createElement('div');
+			            itemDiv.className = 'bgm-list-item';
+			
+			            const isPlaying = idx === currentBgmIndex;
+			            if (isPlaying) {
+			                itemDiv.classList.add('is-playing');
+			            }
+			
+			            const titleSpan = document.createElement('span');
+			            // 【追加】CSSのテキスト省略用クラスを適用し、フルパスを title 属性に設定（ホバー時確認用）
+			            titleSpan.className = 'bgm-item-title';
+			            const icon = isPlaying ? '▶️' : '🎵';
+			            titleSpan.textContent = `${icon} ${idx + 1}. ${getFileName(path)}`;
+			            titleSpan.title = path;
+			
+			            // 曲選択時
+			            titleSpan.addEventListener('click', async (e) => {
+			                e.stopPropagation();
+			
+			                currentBgmIndex = idx;
+			
+			                currentLoadedBgmPath = null;
+			                bgmAudio.removeAttribute('src');
+			                bgmAudio.load();
+			                await manageBgmState();
+			
+			                updateImageEffectBgm();
+			
+			                if (tooltip) {
+			                    tooltip.remove();
+			                    tooltip = null;
+			                }
+			                menu.remove();
+			            });
+			
+			            // 個別削除（ゴミ箱）
+			            const deleteBtn = document.createElement('span');
+			            deleteBtn.textContent = '🗑️';
+			            deleteBtn.style.cursor = 'pointer';
+			            deleteBtn.style.opacity = '0.7';
+			            deleteBtn.title = '削除';
+			
+			            deleteBtn.addEventListener('mouseenter', (e) => {
+			                e.stopPropagation();
+			                deleteBtn.style.opacity = '1';
+			            });
+			            deleteBtn.addEventListener('mouseleave', (e) => {
+			                e.stopPropagation();
+			                deleteBtn.style.opacity = '0.7';
+			            });
+			
+			            deleteBtn.addEventListener('click', async (e) => {
+			                e.stopPropagation();
+			
+			                imageBgmPaths.splice(idx, 1);
+			
+			                if (imageBgmPaths.length === 0) {
+			                    currentBgmIndex = 0;
+			                } else if (currentBgmIndex >= imageBgmPaths.length) {
+			                    currentBgmIndex = imageBgmPaths.length - 1;
+			                }
+			
+			                await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
+			
+			                currentLoadedBgmPath = null;
+			                bgmAudio.removeAttribute('src');
+			                bgmAudio.load();
+			                await manageBgmState();
+			
+			                updateImageEffectBgm();
+			
+			                buildImageEffectBgmMenuContent(menu);
+			
+			                if (imageBgmPaths.length > 0) {
+			                    const targetBgmItem = menu.querySelector('.bgm-menu-item');
+			                    if (targetBgmItem) {
+			                        const mouseEnterEvent = new MouseEvent('mouseenter', {
+			                            bubbles: true,
+			                            cancelable: true,
+			                            view: window
+			                        });
+			                        targetBgmItem.dispatchEvent(mouseEnterEvent);
+			                    }
+			                }
+			            });
+			
+			            itemDiv.appendChild(titleSpan);
+			            itemDiv.appendChild(deleteBtn);
+			            tooltip.appendChild(itemDiv);
+			        });
+			        
+			        // 1. 一旦DOMに追加（位置計算のため）
+			        bgm.appendChild(tooltip);
+			
+			        // --- 2. 【位置補正処理】画面はみ出し判定と配置の自動調整 ---
+			        const rect = tooltip.getBoundingClientRect();
+			        const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+			        const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+			
+			        // 右側にはみ出す場合は左側に配置を反転 (left: auto, right: 100%)
+			        if (rect.right > viewportWidth) {
+			            tooltip.style.left = 'auto';
+			            tooltip.style.right = '100%';
+			        }
+			
+			        // 下側にはみ出す場合は上方向に押し上げる
+			        if (rect.bottom > viewportHeight) {
+			            const overflowY = rect.bottom - viewportHeight;
+			            tooltip.style.top = `-${overflowY + 8}px`; // 余白(8px)を持たせて位置を上へずらす
+			        }
+			    }
+			});
 
             bgm.addEventListener('mouseleave', (event) => {
                 if (tooltip && !bgm.contains(event.relatedTarget)) {

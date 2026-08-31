@@ -1286,6 +1286,7 @@ button#modeChangeBtn.convert-active:hover,
     animation-play-state: paused !important;
 }
 
+/* BGMリスト */
 .bgm-popup-menu {
     position: absolute;
     left: 100%;
@@ -1301,15 +1302,19 @@ button#modeChangeBtn.convert-active:hover,
     white-space: nowrap;
     z-index: 1000;
     max-height: 240px;
+    /* 横幅・縦幅が画面を超えないように制限を追加 */
+    max-width: 54vw;
+    box-sizing: border-box;
     overflow-y: auto;
+    overflow-x: hidden;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
     pointer-events: auto;
 }
-/* ポップアップ内の各行スタイル（必要に応じて記述） */
+/* ポップアップ内の各行スタイル */
 .bgm-popup-menu > div {
     padding: 4px 0;
 }
-/* 必須：スクロールバー全体の幅を指定しないと標準スタイルに戻ってしまいます */
+/* スクロールバー設定 */
 .bgm-popup-menu::-webkit-scrollbar {
     width: 8px;
 }
@@ -1359,4 +1364,11 @@ button#modeChangeBtn.convert-active:hover,
 /* 再生中の強調スタイル */
 .bgm-list-item.is-playing {
     color: #00ccff;
+}
+/* 長いファイル名を「...」で省略表示するためのタイトルクラス */
+.bgm-item-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
