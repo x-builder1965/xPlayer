@@ -4456,7 +4456,7 @@ function buildImageEffectBgmMenuContent(menu) {
             };
         
             // 件数または最初のファイル名を表示
-            let labelText = `  ${mode.label}`;
+            let labelText = `　　${mode.label}`;
             if (isSelected) {
                 if (imageBgmPaths.length === 1) {
                     labelText = `🎺 ${mode.label}（${getFileName(imageBgmPaths[0])}）`;
@@ -4646,7 +4646,7 @@ function buildImageEffectBgmMenuContent(menu) {
         const item = document.createElement('div');
         item.className = 'menu-item';
         item.style.color = isSelected ? '#00ccff' : '#eee';
-        item.innerHTML = (isSelected ? '✅ ' : '  ') + mode.label;
+        item.innerHTML = (isSelected ? '✅ ' : '　　') + mode.label;
 
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
