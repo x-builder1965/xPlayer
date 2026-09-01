@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.61.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.62.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1164,7 +1164,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     playStopBtn.addEventListener('click', () => {
         videoPlayer.pause();
         isPlaying = false;
-        currentVideoIndex = -1;  // 停止状態を明示
+        currentVideoIndex = -1; // 停止状態を明示
 
         // 画像表示用タイマーを停止
         if (currentMediaType === 'image') {
@@ -5953,7 +5953,7 @@ function getNextVideoIndex() {
                     return -1;
                 }
             } else {
-                shufflePosition = shuffleOrder.length - 1;
+                shufflePosition = 0;
                 saveShuffleState(); // 現在のシャッフル位置を保存
                 return -1;
             }
