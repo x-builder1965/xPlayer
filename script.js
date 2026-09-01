@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.60.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.61.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1182,6 +1182,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (imageWrapper) {
             imageWrapper.style.display = 'none';
             imageWrapper.className = ''; // アニメーション・pausedクラス等をすべてクリア
+        }
+
+        // 【追加】イメージ壁紙を非表示にする
+        if (imageWallpaper) {
+            imageWallpaper.style.display = 'none';
+            imageWallpaper.removeAttribute('src'); // srcを利用している場合はクリア
+            imageWallpaper.className = '';         // 必要に応じてクラスもクリア
         }
 
         // 3. srcを完全にクリア（これが大事！）
@@ -5888,24 +5895,25 @@ function getPrevVideoIndex() {
             return -1;
         }
     }
-    if (isRandomPlayMode && currentSortMode !== 'random') {
-        // ランダムモード
-        shufflePosition--;
-        if (shufflePosition < 0) {
-            if (isRepeatPlayMode === 'all') {
-                if (modeChange === 'video') {
-                    shufflePosition = shuffleOrder.length - 1;
-                } else {
-                    return -1;
-                }
-            } else {
-                shufflePosition = 0;
-                saveShuffleState(); // 現在のシャッフル位置を保存
-                return -1;
-            }
-        }
-        saveShuffleState(); // 現在のシャッフル位置を保存
-        return shuffleOrder[shufflePosition];
+	if (isRandomPlayMode && currentSortMode !== 'random') {
+	    // ランダムモード
+	    shufflePosition++;
+	    if (shufflePosition >= shuffleOrder.length) {
+	        if (isRepeatPlayMode === 'all') {
+	            if (modeChange === 'video') {
+	                shufflePosition = 0;
+	            } else {
+	                return -1;
+	            }
+	        } else {
+	            // 終端に達した場合：位置を最後まで進めた状態にしておき、-1を返す
+	            // （または次回先頭から再生させたい場合は shufflePosition = 0 にリセット）
+	            saveShuffleState(); 
+	            return -1;
+	        }
+	    }
+	    saveShuffleState(); // 現在のシャッフル位置を保存
+	    return shuffleOrder[shufflePosition];
     } else {
         // 通常順
         let normalPosition = currentVideoIndex - 1;
@@ -7443,13 +7451,17 @@ function sortRandomPlaylist() {
         return [...playlist];
     }
 
-    const currentPath = playlist[currentVideoIndex]?.file?.path;
+    // 変更前が停止状態（-1）かどうか保持
+    const isStopped = (currentVideoIndex === -1);
+    const currentPath = !isStopped ? playlist[currentVideoIndex]?.file?.path : null;
     const newPlaylist = shuffleOrder.map(idx => ({ ...playlist[idx] }));
 
     // 現在の再生位置を維持
     if (currentPath) {
         const newIndex = newPlaylist.findIndex(item => item.file.path === currentPath);
         currentVideoIndex = newIndex >= 0 ? newIndex : 0;
+    } else if (isStopped) {
+        currentVideoIndex = -1; // ★停止状態なら -1 を維持する
     } else {
         currentVideoIndex = 0;
     }
