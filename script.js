@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.56.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.57.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -257,7 +257,11 @@ const IMAGEEFFECTBGM_NODES = {
     'effect3':       { label: 'スライド（右→左）',  className: 'effect-slide-rl' },
     'effect4':       { label: 'スライド（上→下）',  className: 'effect-slide-tb' },
     'effect5':       { label: 'スライド（下→上）',  className: 'effect-slide-bt' },
-    'effect6':       { label: 'ズーム',            className: 'effect-zoom' },
+    'effect6':       { label: 'ズームイン＆アウト', className: 'effect-zoom-in' },
+    'effect7':       { label: 'ポップアップ',       className: 'effect-pop' },
+    'effect8':       { label: '回転フェード',       className: 'effect-rotate' },
+    'effect9':       { label: 'ブラー',            className: 'effect-blur' },
+    'effect10':      { label: 'フリップ',           className: 'effect-flip' },
     'random':        { label: '（ランダム）' },
     'separator1':    { isSeparator: true },
     'wallpaper-set': { label: '背景生成' },
@@ -489,6 +493,7 @@ let savedOriginalOrder = null;
 let savedAudioMotionOptions = null;
 let savedAudioMotionNodes = null;
 let savedImageBgmPaths = null;	// 複数BGMパスの保持用変数を追加
+let savedCurrentBgmIndex = null;	// 複数BGMパスのインデックス保持用変数を追加
 
 // グローバル（共通）変数
 let localSettings = {};     // localSettingsをオブジェクトとして初期化
@@ -727,6 +732,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     } else {
         imageBgmPaths = [];
+    }
+
+    // イメージBGM演奏曲の復元
+    if (savedCurrentBgmIndex !== null && !isNaN(savedCurrentBgmIndex)) {
+        currentBgmIndex = parseInt(savedCurrentBgmIndex);
+    } else {
+        currentBgmIndex = 0;
     }
 
     // 音量バーの入力変更をBGM音量に同期
@@ -1608,6 +1620,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (Array.isArray(imageBgmPaths) && imageBgmPaths.length > 0) {
             // 次の曲のインデックスに加算（末尾まで行ったら 0 に戻るリストループ）
             currentBgmIndex = (currentBgmIndex + 1) % imageBgmPaths.length;
+            await localSturageSetItemAndFile('currentBgmIndex', currentBgmIndex);
             
             // パス変更を検知させるため一度クリアして再生状態を更新
             currentLoadedBgmPath = null;
@@ -3914,6 +3927,7 @@ async function allLocalStorageSetting() {
         savedAudioMotionOptions = localStorage.getItem('audioMotionOptions');
         savedAudioMotionNodes = localStorage.getItem('audioMotionNodes');
         savedImageBgmPaths = localStorage.getItem('imageBgmPaths');
+        savedCurrentBgmIndex = localStorage.getItem('currentBgmIndex');
         // 2. 取得情報をユーザーフォルダの xPlayerSettings.json に保存
         await exportSettingsToFile(settingsFilePath);
     } else {
@@ -3999,6 +4013,7 @@ async function allLocalStorageSetting() {
             savedAudioMotionOptions = getVal('audioMotionOptions', savedAudioMotionOptions);
             savedAudioMotionNodes = getVal('audioMotionNodes', savedAudioMotionNodes);
             savedImageBgmPaths = getVal('imageBgmPaths', savedImageBgmPaths);		// 設定ファイルからの複数パス復元
+            savedCurrentBgmIndex = getVal('currentBgmIndex', savedCurrentBgmIndex, '0');
 
             // JSONファイルから DEFAULT_AUDIO_MOTION_OPTIONS を復元
             if (loadedSettings['audioMotionOptions']) {
@@ -4060,6 +4075,7 @@ async function allLocalStorageSetting() {
     await localSturageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
     await localSturageSetItemAndFile('audioMotionNodes', savedAudioMotionNodes);
     await localSturageSetItemAndFile('imageBgmPaths', savedImageBgmPaths);
+    await localSturageSetItemAndFile('currentBgmIndex', savedCurrentBgmIndex);
 }
 
 // 音声トラック・字幕トラック更新
@@ -4604,7 +4620,6 @@ function buildImageEffectBgmMenuContent(menu) {
                     return;
                 }
         
-                currentBgmIndex = 0;
                 await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
                 
                 currentLoadedBgmPath = null;
@@ -4644,17 +4659,15 @@ function buildImageEffectBgmMenuContent(menu) {
 			            currentBgmIndex = 0;
 			
 			            await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
+			            await localSturageSetItemAndFile('currentBgmIndex', currentBgmIndex);
 			
 			            currentLoadedBgmPath = null;
 			            bgmAudio.removeAttribute('src');
 			            bgmAudio.load();
 			            await manageBgmState();
-			
 			            updateImageEffectBgm();
-			
 			            buildImageEffectBgmMenuContent(menu);
 			        });
-			
 			        tooltip.appendChild(clearAllDiv);
 			
 			        // --- 各BGMファイルのリスト生成 ---
@@ -4679,6 +4692,7 @@ function buildImageEffectBgmMenuContent(menu) {
 			                e.stopPropagation();
 			
 			                currentBgmIndex = idx;
+                            await localSturageSetItemAndFile('currentBgmIndex', currentBgmIndex);
 			
 			                currentLoadedBgmPath = null;
 			                bgmAudio.removeAttribute('src');
@@ -4722,14 +4736,12 @@ function buildImageEffectBgmMenuContent(menu) {
 			                }
 			
 			                await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
-			
+			                await localSturageSetItemAndFile('currentBgmIndex', currentBgmIndex);
 			                currentLoadedBgmPath = null;
 			                bgmAudio.removeAttribute('src');
 			                bgmAudio.load();
 			                await manageBgmState();
-			
 			                updateImageEffectBgm();
-			
 			                buildImageEffectBgmMenuContent(menu);
 			
 			                if (imageBgmPaths.length > 0) {

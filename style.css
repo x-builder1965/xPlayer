@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver5.56.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver5.57.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -1259,15 +1259,61 @@ button#modeChangeBtn.convert-active:hover,
     80%  { opacity: 1; transform: translateY(0); }
     100% { opacity: 0; transform: translateY(-100%); }
 }
-/* ズーム (Ken Burns風) */
-.effect-zoom {
-    animation: effectZoom 3s ease-in-out forwards;
+/* ズームイン＆アウト（中央から引き込まれるような拡大効果） */
+.effect-zoom-in {
+    animation: effectZoomIn 3s ease-in-out forwards;
 }
-@keyframes effectZoom {
-    0%   { opacity: 0; transform: scale(1.15); }
-    20%  { opacity: 1; transform: scale(1.05); }
+@keyframes effectZoomIn {
+    0%   { opacity: 0; transform: scale(0.8); }
+    20%  { opacity: 1; transform: scale(1.0); }
+    80%  { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 0; transform: scale(1.2); }
+}
+
+/* ポップアップ（バウンドしながら大きく出現） */
+.effect-pop {
+    animation: effectPop 3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes effectPop {
+    0%   { opacity: 0; transform: scale(0.5); }
+    20%  { opacity: 1; transform: scale(1.0); }
     80%  { opacity: 1; transform: scale(1.0); }
-    100% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 0; transform: scale(0.8); }
+}
+
+/* 回転フェード（3Dっぽく少し回転しながら切り替わる） */
+.effect-rotate {
+    animation: effectRotate 3s ease-in-out forwards;
+}
+@keyframes effectRotate {
+    0%   { opacity: 0; transform: scale(0.7) rotate(-5deg); }
+    20%  { opacity: 1; transform: scale(1) rotate(0deg); }
+    80%  { opacity: 1; transform: scale(1) rotate(0deg); }
+    100% { opacity: 0; transform: scale(0.7) rotate(5deg); }
+}
+
+/* ブラー（ぼかし解除からぼかして消える） */
+.effect-blur {
+    will-change: transform, opacity, filter; /* filterを追加 */
+    animation: effectBlur 3s ease-in-out forwards;
+}
+@keyframes effectBlur {
+    0%   { opacity: 0; filter: blur(12px); transform: scale(1.05); }
+    20%  { opacity: 1; filter: blur(0px);  transform: scale(1); }
+    80%  { opacity: 1; filter: blur(0px);  transform: scale(1); }
+    100% { opacity: 0; filter: blur(12px); transform: scale(0.95); }
+}
+
+/* フリップ（コインのように横回転してめくる） */
+.effect-flip {
+    animation: effectFlip 3s ease-in-out forwards;
+    backface-visibility: hidden;
+}
+@keyframes effectFlip {
+    0%   { opacity: 0; transform: perspective(400px) rotateY(90deg); }
+    20%  { opacity: 1; transform: perspective(400px) rotateY(0deg); }
+    80%  { opacity: 1; transform: perspective(400px) rotateY(0deg); }
+    100% { opacity: 0; transform: perspective(400px) rotateY(-90deg); }
 }
 /* 一時停止時にアニメーションをその場で固定するクラス */
 .image-effect.paused {
@@ -1433,11 +1479,11 @@ button#modeChangeBtn.convert-active:hover,
     pointer-events: none;
     z-index: 0;
 }
-/* 壁紙画像（ぼかし10px・拡大処理） */
+/* 壁紙画像（ぼかし10px・拡大処理＋暗く調整） */
 #imageWallpaperImg {
     object-fit: cover;
-    filter: blur(10px);
-    transform: scale(1.05); /* ぼかしによる端の白にじみ防止のため少し拡大 */
+    filter: blur(10px) brightness(0.6); /* ← brightness() を追加（1以下で暗くなる） */
+    transform: scale(1.05); 			/* ぼかしによる端の白にじみ防止のため少し拡大 */
 }
 /* メイン画像ラッパー */
 #imageWrapper {
