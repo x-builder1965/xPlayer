@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.53.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.54.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2337,54 +2337,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // コントロールマウスオーバー
     controls.addEventListener('mouseover', () => {
-        if (controls.style.opacity === '1' || filename.style.opacity === '1') {
-            isMouseOverControls = true;
-            clearTimeout(timeout);
-            controls.style.opacity = '1';
-            filename.style.opacity = '1';
-            controls.style.cursor = 'auto';
-            filename.style.cursor = 'auto';
-            if (messageOverlay.classList.contains('active')) {
-                messageOverlay.style.display = 'block';
-                messageOverlay.classList.add('active');
-            }
-            updateIconOverlay();
-        }
+        disableAutoHideControls();
     });
 
     // コントロールマウスリーブ
     controls.addEventListener('mouseleave', () => {
-        if (controls.style.opacity === '1' || filename.style.opacity === '1') {
-            isMouseOverControls = false;
-            showControlsAndFilename();
-            updateIconOverlay();
-        }
+        enableAutoHideControls();
     });
 
     // ファイル名マウスオーバー
     filename.addEventListener('mouseover', () => {
-        if (controls.style.opacity === '1' || filename.style.opacity === '1') {
-            isMouseOverControls = true;
-            clearTimeout(timeout);
-            controls.style.opacity = '1';
-            filename.style.opacity = '1';
-            controls.style.cursor = 'auto';
-            filename.style.cursor = 'auto';
-            if (messageOverlay.classList.contains('active')) {
-                messageOverlay.style.display = 'block';
-                messageOverlay.classList.add('active');
-            }
-            updateIconOverlay();
-        }
+        disableAutoHideControls();
     });
 
     // ファイル名マウスリーブ
     filename.addEventListener('mouseleave', () => {
-        if (controls.style.opacity === '1' || filename.style.opacity === '1') {
-            isMouseOverControls = false;
-            showControlsAndFilename();
-            updateIconOverlay();
-        }
+        enableAutoHideControls();
     });
 
     // 📩並び替えボタンクリックイベント（トグル実装）
@@ -2870,17 +2838,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-	// クリックイベントの伝播（コントロールパネルの各ボタンclickを実行）
+	// センターコントロールのクリックイベント
 	centerPrevBtn.addEventListener('click', () => {
 	    if (prevVideoBtn) prevVideoBtn.click();
 	});
-	
 	centerPlayPauseBtn.addEventListener('click', () => {
 	    if (playPauseBtn) playPauseBtn.click();
 	});
-	
 	centerNextBtn.addEventListener('click', () => {
 	    if (nextVideoBtn) nextVideoBtn.click();
+	});
+	
+	// センターコントロールのマウスオーバーイベント
+	centerPrevBtn.addEventListener('mouseover', () => {
+	    disableAutoHideControls();
+	});
+	centerPlayPauseBtn.addEventListener('mouseover', () => {
+	    disableAutoHideControls();
+	});
+	centerNextBtn.addEventListener('mouseover', () => {
+	    disableAutoHideControls();
+	});
+
+	// センターコントロールのマウスリーブイベント
+	centerPrevBtn.addEventListener('mouseleave', () => {
+	    enableAutoHideControls();
+	});
+	centerPlayPauseBtn.addEventListener('mouseleave', () => {
+	    enableAutoHideControls();
+	});
+	centerNextBtn.addEventListener('mouseleave', () => {
+	    enableAutoHideControls();
 	});
 
     Initializing = false;
@@ -8915,4 +8903,30 @@ function buildControlMenuContent(menu) {
         });
         menu.appendChild(item);
     });
+}
+
+// コントロールパネル＆再生中パスパネル自動非表示無効
+function disableAutoHideControls() {
+    if (controls.style.opacity === '1' || filename.style.opacity === '1') {
+        isMouseOverControls = true;
+        clearTimeout(timeout);
+        controls.style.opacity = '1';
+        filename.style.opacity = '1';
+        controls.style.cursor = 'auto';
+        filename.style.cursor = 'auto';
+        if (messageOverlay.classList.contains('active')) {
+            messageOverlay.style.display = 'block';
+            messageOverlay.classList.add('active');
+        }
+        updateIconOverlay();
+    }
+}
+
+// コントロールパネル＆再生中パスパネル自動非表示有効
+function enableAutoHideControls() {
+    if (controls.style.opacity === '1' || filename.style.opacity === '1') {
+        isMouseOverControls = false;
+        showControlsAndFilename();
+        updateIconOverlay();
+    }
 }
