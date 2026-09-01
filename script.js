@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.55.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.56.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -4496,6 +4496,7 @@ function createAudioMotionMenu() {
 
     return menu;
 }
+
 // オーディオモーシュン設定メニューコンテンツ作成・再描画関数
 function buildImageEffectBgmMenuContent(menu) {
     menu.innerHTML = '';
