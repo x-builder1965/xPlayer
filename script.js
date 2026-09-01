@@ -251,16 +251,18 @@ const AUDIOMOTION_NODES = {
 };
 // イメージエフェクト＆BGM設定のNODE定義
 const IMAGEEFFECTBGM_NODES = {
-    'none':    { label: '（なし）',          className: 'effect-none' },
-    'effect1': { label: 'フェード',          className: 'effect-fade' },
-    'effect2': { label: 'スライド（左→右）',  className: 'effect-slide-lr' },
-    'effect3': { label: 'スライド（右→左）',  className: 'effect-slide-rl' },
-    'effect4': { label: 'スライド（上→下）',  className: 'effect-slide-tb' },
-    'effect5': { label: 'スライド（下→上）',  className: 'effect-slide-bt' },
-    'effect6': { label: 'ズーム',            className: 'effect-zoom' },
-    'random':  { label: '（ランダム）' },
-    'separator': { isSeparator: true },
-    'bgm-set':   { label: 'BGM設定' }
+    'none':          { label: '（なし）',          className: 'effect-none' },
+    'effect1':       { label: 'フェード',          className: 'effect-fade' },
+    'effect2':       { label: 'スライド（左→右）',  className: 'effect-slide-lr' },
+    'effect3':       { label: 'スライド（右→左）',  className: 'effect-slide-rl' },
+    'effect4':       { label: 'スライド（上→下）',  className: 'effect-slide-tb' },
+    'effect5':       { label: 'スライド（下→上）',  className: 'effect-slide-bt' },
+    'effect6':       { label: 'ズーム',            className: 'effect-zoom' },
+    'random':        { label: '（ランダム）' },
+    'separator1':    { isSeparator: true },
+    'wallpaper-set': { label: '背景生成' },
+    'separator2':    { isSeparator: true },
+    'bgm-set':       { label: 'BGM設定' }
 };
 const JOIN_MODES = {
     'joinVideos': { label: '🎞️ 動画結合', fn: () => joinPlaylistVideos() },
@@ -450,6 +452,8 @@ let centerControls = null;
 let centerPrevBtn = null;
 let centerPlayPauseBtn = null;
 let centerNextBtn = null;
+let imageWallpaper = null;
+let imageWallpaperImg = null;
 
 // localStorage から復得
 let savedVolume = null;
@@ -479,6 +483,7 @@ let savedPauseShowControls = null;
 let savedHideCenterControls = null;
 let savedAudioMotionMode = null;
 let savedImageEffectBgmMode = null;
+let savedIsImageWallpaperEnabled = null;
 let savedFilterHistory = null;
 let savedOriginalOrder = null;
 let savedAudioMotionOptions = null;
@@ -561,6 +566,7 @@ let currentMediaType = 'video';
 let audioMotion = null;
 let audioMotionMode = null;
 let imageEffectBgmMode = null;
+let isImageWallpaperEnabled = null;
 let lastRandomPreset = null;		// 直前にランダムで選ばれたプリセットを保持する変数（関数の外に定義）
 let isSecondary = null;
 let disableMessageOverlay = false;
@@ -700,6 +706,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         imageEffectBgmMode = savedImageEffectBgmMode;
     } else {
         imageEffectBgmMode = 'effect1';
+    }
+
+    // イメージ壁紙表示の復元
+    if (savedIsImageWallpaperEnabled) {
+        isImageWallpaperEnabled = savedIsImageWallpaperEnabled;
+    } else {
+        isImageWallpaperEnabled = 'false';
     }
 
     // イメージBGM復元
@@ -3812,6 +3825,8 @@ function allDOMsetting() {
     centerPrevBtn = document.getElementById('centerPrevBtn');
     centerPlayPauseBtn = document.getElementById('centerPlayPauseBtn');
     centerNextBtn = document.getElementById('centerNextBtn');
+    imageWallpaper = document.getElementById('imageWallpaper');
+    imageWallpaperImg = document.getElementById('imageWallpaperImg');
 }
 
 // ユーザーフォルダ内の設定ファイルパスを取得
@@ -3893,6 +3908,7 @@ async function allLocalStorageSetting() {
         savedHideCenterControls = localStorage.getItem('hideCenterControls');
         savedAudioMotionMode = localStorage.getItem('audioMotionMode');
         savedImageEffectBgmMode = localStorage.getItem('imageEffectBgmMode');
+        savedIsImageWallpaperEnabled = localStorage.getItem('isImageWallpaperEnabled');
         savedFilterHistory = localStorage.getItem('filterHistory');
         savedOriginalOrder = localStorage.getItem('originalLoadOrder');
         savedAudioMotionOptions = localStorage.getItem('audioMotionOptions');
@@ -3977,6 +3993,7 @@ async function allLocalStorageSetting() {
             savedHideCenterControls = String(rawHideCenterControls);
             savedAudioMotionMode = getVal('audioMotionMode', savedAudioMotionMode);
             savedImageEffectBgmMode = getVal('imageEffectBgmMode', savedImageEffectBgmMode);
+            savedIsImageWallpaperEnabled = getVal('isImageWallpaperEnabled', savedIsImageWallpaperEnabled);
             savedFilterHistory = getVal('filterHistory', savedFilterHistory);
             savedOriginalOrder = getVal('originalLoadOrder', savedOriginalOrder);
             savedAudioMotionOptions = getVal('audioMotionOptions', savedAudioMotionOptions);
@@ -4037,6 +4054,7 @@ async function allLocalStorageSetting() {
     await localSturageSetItemAndFile('hideCenterControls', savedHideCenterControls);
     await localSturageSetItemAndFile('audioMotionMode', savedAudioMotionMode);
     await localSturageSetItemAndFile('imageEffectBgmMode', savedImageEffectBgmMode);
+    await localSturageSetItemAndFile('isImageWallpaperEnabled', savedIsImageWallpaperEnabled);
     await localSturageSetItemAndFile('filterHistory', savedFilterHistory);
     await localSturageSetItemAndFile('originalLoadOrder', savedOriginalOrder);
     await localSturageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
@@ -4511,7 +4529,45 @@ function buildImageEffectBgmMenuContent(menu) {
             return;
         }
 
-        // --- BGM設定（ファイル追加・ポップアップ表示）処理 ---
+	    // 壁紙描画 設定/解除（トグル）処理
+	    if (key === 'wallpaper-set') {
+	        const item = document.createElement('div');
+	        item.className = 'menu-item';
+	        item.innerHTML = (isImageWallpaperEnabled ? '✅ ' : '　　') + mode.label;
+	    
+	        item.addEventListener('click', async (event) => {
+	            event.stopPropagation();
+	            
+	            // トグル切り替え
+	            isImageWallpaperEnabled = !isImageWallpaperEnabled;
+	            
+	            // localStorageに保存
+	            if (typeof localSturageSetItemAndFile === 'function') {
+	                await localSturageSetItemAndFile('imageWallpaperEnabled', isImageWallpaperEnabled);
+	            } else {
+	                localStorage.setItem('imageWallpaperEnabled', isImageWallpaperEnabled);
+	            }
+	    
+	            // 背景壁紙の表示状態を即時更新
+	            updateWallpaperDisplay();
+	    
+	            // メニューの再描画・閉じる処理
+	            menu.remove();
+	            updateMessageOverlay(`🖼️ 背景生成: ${isImageWallpaperEnabled ? 'ON' : 'OFF'}`);
+	        });
+	    
+	        item.addEventListener('mouseover', () => {
+	            item.style.background = 'rgba(0,123,255,0.2)';
+	        });
+	        item.addEventListener('mouseout', () => {
+	            item.style.background = 'none';
+	        });
+	    
+	        menu.appendChild(item);
+	        return;
+	    }
+
+        // BGM設定（ファイル追加・ポップアップ表示）処理
         if (key === 'bgm-set') {
             const isSelected = Array.isArray(imageBgmPaths) && imageBgmPaths.length > 0;
             const bgm = document.createElement('div');
@@ -6203,7 +6259,7 @@ async function setVideoSrc(file) {
         
         // 表示要素切り替え
         imagePlayer.src = imageUrl;
-
+        updateWallpaperDisplay();       // 壁紙（背景画像）の描画更新
         // video/audio はリセットして停止
         videoPlayerElement.pause();
         videoPlayerElement.removeAttribute('src');
@@ -6216,9 +6272,10 @@ async function setVideoSrc(file) {
         baseConvertFile = null;
         tempConvertFile = null;
     } else {
-        // 画像以外を表示する場合は img を非表示にして video を表示
+        // 画像以外を表示する場合は img および 壁紙を非表示に
         imagePlayer.style.display = 'none';
         imagePlayer.removeAttribute('src');
+        updateWallpaperDisplay();       // 壁紙の非表示更新
         videoPlayerElement.style.display = 'block';
 
         if (isVIDEO_EXTENSIONS(ext) && isAudio) {
@@ -8946,5 +9003,18 @@ function enableAutoHideControls() {
         isMouseOverControls = false;
         showControlsAndFilename();
         updateIconOverlay();
+    }
+}
+
+// 壁紙の表示状態と画像を更新する関数
+function updateWallpaperDisplay() {
+    if (!imageWallpaper || !imageWallpaperImg) return;
+
+    if (currentMediaType === 'image' && isImageWallpaperEnabled && imagePlayer.src) {
+        imageWallpaperImg.src = imagePlayer.src;
+        imageWallpaper.style.display = 'block';
+    } else {
+        imageWallpaper.style.display = 'none';
+        imageWallpaperImg.removeAttribute('src');
     }
 }

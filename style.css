@@ -1190,17 +1190,6 @@ button#modeChangeBtn.convert-active:hover,
     position: relative;
     /* プレイヤー全体の領域 */
 }
-#mediaContainer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1; /* 最下層（操作の受け皿） */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
 #videoPlayer {
     width: 100%;
     height: 100%;
@@ -1413,6 +1402,18 @@ button#modeChangeBtn.convert-active:hover,
     min-height: 90px;
 }
 
+/* メディアコンテナのスタイル設定 */
+#mediaContainer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* 最下層（操作の受け皿） */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 /* 共通スタイル: 100%表示 */
 #imageWallpaper,
 #imageWrapper,
@@ -1432,11 +1433,11 @@ button#modeChangeBtn.convert-active:hover,
     pointer-events: none;
     z-index: 0;
 }
-/* 壁紙画像（ぼかし・拡大処理） */
+/* 壁紙画像（ぼかし10px・拡大処理） */
 #imageWallpaperImg {
     object-fit: cover;
-    filter: blur(500px);
-    transform: scale(1.1);
+    filter: blur(10px);
+    transform: scale(1.05); /* ぼかしによる端の白にじみ防止のため少し拡大 */
 }
 /* メイン画像ラッパー */
 #imageWrapper {
