@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.58.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.60.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -257,11 +257,10 @@ const IMAGEEFFECTBGM_NODES = {
     'effect3':       { label: 'スライド（右→左）',  className: 'effect-slide-rl' },
     'effect4':       { label: 'スライド（上→下）',  className: 'effect-slide-tb' },
     'effect5':       { label: 'スライド（下→上）',  className: 'effect-slide-bt' },
-    'effect6':       { label: 'ズームイン＆アウト', className: 'effect-zoom-in' },
+    'effect6':       { label: 'ズームイン＆アウト', className: 'effect-zoom' },
     'effect7':       { label: 'ポップアップ',       className: 'effect-pop' },
     'effect8':       { label: '回転フェード',       className: 'effect-rotate' },
-    'effect9':       { label: 'ブラー',            className: 'effect-blur' },
-    'effect10':      { label: 'フリップ',           className: 'effect-flip' },
+    'effect9':       { label: 'フリップ',          className: 'effect-flip' },
     'random':        { label: '（ランダム）' },
     'separator1':    { isSeparator: true },
     'wallpaper-set': { label: '背景生成' },
