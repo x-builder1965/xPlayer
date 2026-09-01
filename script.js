@@ -4237,12 +4237,8 @@ function showControlsAndFilename(compulsion = false) {
 function hideControlsAndFilename() {
     disabledControls(true);
     disabledfilename(true);
-    // messageOverlay.classList.remove('active');
     hideMenus(false); // コントロール非表示時にメニューも強制非表示
     clearTimeout(timeout);
-    // setTimeout(() => {
-    //     messageOverlay.style.display = 'none';
-    // }, 300);
     videoPlayer.style.cursor = 'none';
     videoContainer.style.cursor = 'none';
 
@@ -8830,24 +8826,31 @@ function updateCenterControlsVisibility(compulsion = false) {
         return;
     }
 
-    // 2. メディア準備状態チェック
-    const isImageReady = imagePlayer && imagePlayer.complete && imagePlayer.naturalWidth > 0 && imageWrapper && window.getComputedStyle(imageWrapper).display !== 'none';
-    const isMediaReady = videoPlayer.readyState > 0 || audioPlayer.readyState > 0 || isImageReady;
-    // 3. プレイリスト（filterPanel）非表示チェック
-    const isPlaylistHidden = !filterPanel || window.getComputedStyle(filterPanel).display === 'none';
-    // 4. コントロールパネルが実際に表示されているか（opacityが0でないか）
-    const isControlsVisible = controls && window.getComputedStyle(controls).opacity !== '0';
-    // 5. 表示許可判定（強制表示 OR （自動抑止OFF かつ コントロールパネル表示中））
-    const isAllowed = compulsion || (!pauseShowControls && isControlsVisible);
+    // コントロールパネルの表示／非表示状態が確定するまで待つ
+    setTimeout(() => {
+        // 2. メディア準備状態チェック
+        const isImageReady = imagePlayer && imagePlayer.complete && imagePlayer.naturalWidth > 0 && imageWrapper && window.getComputedStyle(imageWrapper).display !== 'none';
+        const isMediaReady = videoPlayer.readyState > 0 || audioPlayer.readyState > 0 || isImageReady;
+        // 3. プレイリスト（filterPanel）非表示チェック
+        const isPlaylistHidden = !filterPanel || window.getComputedStyle(filterPanel).display === 'none';
+        // 3. プレイリスト（filterPanel）非表示チェック
+        const isEditHidden = !editPanel || window.getComputedStyle(editPanel).display === 'none';
+        // 4. コントロールパネルが実際に表示されているか（opacityが0でないか）
+        const isControlsVisible = controls && window.getComputedStyle(controls).opacity !== '0';
+        // 5. 表示許可判定（強制表示 OR （自動抑止OFF かつ コントロールパネル表示中））
+        const isAllowed = compulsion || (!pauseShowControls && isControlsVisible);
 
-    // すべての条件を満たした場合のみ表示
-    if (isAllowed && isMediaReady && isPlaylistHidden) {
-        centerControls.style.display = 'flex';
-    } else {
-        if (!isControlsVisible || !isPlaylistHidden) {
-            centerControls.style.display = 'none';
+        // すべての条件を満たした場合のみ表示
+        if (isAllowed && isMediaReady && isPlaylistHidden && isEditHidden) {
+            centerControls.style.display = 'flex';
+        } else {
+            if (!isControlsVisible || !isPlaylistHidden || !isEditHidden) {
+                centerControls.style.display = 'none';
+            } else {
+                centerControls.style.display = 'flex';
+            }
         }
-    }
+    }, 100);
 }
 
 // 再生/一時停止アイコンの同期切り替え関数
