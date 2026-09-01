@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.54.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.55.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -61,6 +61,7 @@ const pid = getPid();
 const IMAGE_DURATION = 5;      // 画像の再生時間（秒）
 const bgmAudio = new Audio();
 const imageThumbnailCache = new Map();		// 画像サムネイル用キャッシュ（Mapオブジェクト）
+const dragThreshold = 5;    // ドラッグ判定用の移動閾値（手ぶれ考慮: 5ピクセル）
 
 const SORT_MODES = {
     'none':       { label: '（なし）',     fn: () => getPlaylistInOriginalOrder() },
@@ -572,6 +573,7 @@ let imageBgmPaths = []; 		// 複数BGMパスの配列管理変数を追加
 let currentBgmIndex = 0;		// 複数BGMパスのインデックス管理を追加
 let currentLoadedBgmPath = null;    // BGM設定用の変数（パス管理）
 let lastEffectKey = null;		// 直前に適用されたエフェクトキーを記憶する変数
+let hasMoved = false;           // ドラッグ中にマウスが移動したかどうかのフラグ
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -1887,6 +1889,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // マウス押下
     mediaContainer.addEventListener('mousedown', (event) => {
         if (event.button === 0) {
+            hasMoved = false; // 移動フラグをリセット
+
             if (isZoomMode) {
                 // ズーム時はパン（画像移動）開始
                 isPanning = true;
@@ -1908,6 +1912,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isPanning) {
             const deltaX = event.clientX - panStartX;
             const deltaY = event.clientY - panStartY;
+            
+            // 閾値判定
+            if (Math.hypot(event.clientX - panStartX, event.clientY - panStartY) > dragThreshold) {
+                hasMoved = true;
+            }
+
             panStartX = event.clientX;
             panStartY = event.clientY;
             translateX += deltaX;
@@ -1920,18 +1930,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             localSturageSetItemAndFile('translateX', translateX.toString());
             localSturageSetItemAndFile('translateY', translateY.toString());
-    
+
             updateIconOverlay();
             return;
         }
-    
+
         const duration = getMediaDuration();
         if (isDragging && duration) {
+            // 押下位置からの総移動距離でマウス移動（ドラッグ）発生を判定
+            const totalDistanceFromStart = Math.hypot(event.clientX - dragStartX, event.clientY - dragStartY);
+            if (totalDistanceFromStart > dragThreshold) {
+                hasMoved = true;
+            }
+
             const deltaX = event.clientX - dragStartX;
             const deltaY = event.clientY - dragStartY;
             const absDeltaX = Math.abs(deltaX);
             const absDeltaY = Math.abs(deltaY);
-    
+
             if (absDeltaX > absDeltaY && absDeltaX > 5) {
                 isVolumeDragging = false;
                 const seekStep = duration / 1000;
@@ -1954,7 +1970,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 1000);
                 localSturageSetItemAndFile('volume', videoPlayer.volume);
             }
-    
+
             dragStartX = event.clientX;
             dragStartY = event.clientY;
             updateIconOverlay();
@@ -1968,14 +1984,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.button === 0) {
             const wasDragging = isDragging;
             const wasVolumeDragging = isVolumeDragging;
-            const wasPanning = isPanning;
-    
+
             isDragging = false;
             isVolumeDragging = false;
             isPanning = false;
             darkOverlay.style.display = 'none';
             resetCursorTimer();
-    
+
             if (wasDragging || wasVolumeDragging) {
                 updateIconOverlay();
             }
@@ -1986,16 +2001,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     mediaContainer.addEventListener('mouseleave', () => {
         isDragging = false;
         isVolumeDragging = false;
+        isPanning = false;
         updateIconOverlay();
     });
 
     // マウス左クリックで表示/非表示をトグル
     mediaContainer.addEventListener('click', (e) => {
         if (e.button === 0) {
-            if (!isDragging && !isVolumeDragging) {
+            // ドラッグ中・ボリュームドラッグ中・一定ピクセル以上の移動がない純粋なクリック時のみ実行
+            if (!isDragging && !isVolumeDragging && !hasMoved) {
                 const isVisible = 
-                    window.getComputedStyle(controls).opacity  === '1' ||
-                    window.getComputedStyle(filename).opacity  === '1';
+                    window.getComputedStyle(controls).opacity === '1' ||
+                    window.getComputedStyle(filename).opacity === '1';
                 if (isVisible) {
                     hideControlsAndFilename();
                     hideEditPanel();
