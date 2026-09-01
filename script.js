@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.57.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.58.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1595,13 +1595,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const targetContainer = document.fullscreenElement || mainContainer;
         const menu = createImageEffectBgmMenu();
+        
+        // 位置計算のために一度DOMに追加
+        targetContainer.appendChild(menu);
+
         const containerRect = targetContainer.getBoundingClientRect();
         const btnRect = imageEffectBgmBtn.getBoundingClientRect();
 
-        menu.style.left = `${Math.max(8, btnRect.right - containerRect.left + 2)}px`;
-        menu.style.top = `${Math.max(8, btnRect.top - containerRect.top + 2)}px`;
+        // メニューの実際の幅と高さを取得
+        const menuWidth = menu.offsetWidth;
+        const menuHeight = menu.offsetHeight;
 
-        targetContainer.appendChild(menu);
+        // 基本位置：ボタンの右側・上揃え（コンテナ相対座標）
+        let left = btnRect.right - containerRect.left + 2;
+        let top = btnRect.top - containerRect.top + 2;
+
+        // 右側にはみ出る場合 -> ボタンの左側に配置
+        if (left + menuWidth > containerRect.width) {
+            left = btnRect.left - containerRect.left - menuWidth - 2;
+        }
+
+        // 下側にはみ出る場合 -> ボタンの下端に寄せる（または画面内に収まるよう調整）
+        if (top + menuHeight > containerRect.height) {
+            top = containerRect.height - menuHeight - 8;
+        }
+
+        // 画面左端・上端からはみ出ないよう最小値を制御
+        menu.style.left = `${Math.max(8, left)}px`;
+        menu.style.top = `${Math.max(8, top)}px`;
 
         function closeMenu(ev) {
             if (!menu.contains(ev.target) && ev.target !== imageEffectBgmBtn) {
@@ -1611,7 +1632,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         setTimeout(() => {
-            document.addEventListener('click', closeMenu, { once: true });
+            document.addEventListener('click', closeMenu);
         }, 0);
     });
 
