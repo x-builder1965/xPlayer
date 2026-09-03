@@ -5250,9 +5250,10 @@ function setPlaylistDisplayMode(mode) {
     if (!['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].includes(mode)) return;
     playlistDisplayMode = mode;
     localStorageSetItemAndFile('playlistDisplayMode', mode);
-    if (isPlaylistCreationInProgress && isFilterPanelVisible) {
+    if (isFilterPanelVisible) {
+        // 表示形式変更時は、作成完了後でもサムネイル再生成の進捗を計測する
+        showPlaylistProgress(true);
         displayFormatUpdateRequested = true;
-        showPlaylistProgress();
     }
     if (filterList) {
         filterList.classList.remove('playlist-grid', 'playlist-grid-small', 'playlist-grid-medium', 'playlist-grid-large');
