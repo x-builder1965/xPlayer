@@ -836,8 +836,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // コントロールサイズ適用
     let controlSizeX = calculateControlSizeX();
     let controlSizeY = calculateControlSizeY();
-    localSturageSetItemAndFile('controlSizeX', controlSizeX);
-    localSturageSetItemAndFile('controlSizeY', controlSizeY);
+    localStorageSetItemAndFile('controlSizeX', controlSizeX);
+    localStorageSetItemAndFile('controlSizeY', controlSizeY);
     updateControlSize(controlSizeX, controlSizeY);
     adjustFilterPanelHeight();
     applyAspectRatioSetting();
@@ -1063,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             modeChangeBtn.textContent = modeChange === 'video' ? '🎬' : '🔄️';
             modeChangeBtn.setAttribute('data-tooltip', modeChange === 'video' ? '視聴モード（Ctrl+v）' : '変換モード（Ctrl+v）');
-            localSturageSetItemAndFile('modeChange', modeChange);
+            localStorageSetItemAndFile('modeChange', modeChange);
         } else {
             if (modeChange === 'convert') {
                 updateMessageOverlay('🎬 変換中は再生モード切替できません');
@@ -1201,7 +1201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         videoPreview.removeAttribute('src');
         videoPreview.load();
         imagePlayer.removeAttribute('src');
-        localSturageSetItemAndFile('currentTime', 0);
+        localStorageSetItemAndFile('currentTime', 0);
 
         // 4. UI更新（停止状態を強制）
         playPauseBtn.textContent = '▶️';
@@ -1300,7 +1300,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateVolumeDisplay();
         updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
         volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
-        localSturageSetItemAndFile('volume', videoPlayer.volume);
+        localStorageSetItemAndFile('volume', videoPlayer.volume);
         updateIconOverlay();
     });
 
@@ -1544,7 +1544,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     wallpaperBtn.style.background = '';
                 }
             }
-            localSturageSetItemAndFile('wallpaperPath', videoContainer.style.backgroundImage);
+            localStorageSetItemAndFile('wallpaperPath', videoContainer.style.backgroundImage);
             updateIconOverlay();
         } catch (e) {
             updateMessageOverlay('🖼️ 背景壁紙選択エラー', 6000);
@@ -1651,7 +1651,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (Array.isArray(imageBgmPaths) && imageBgmPaths.length > 0) {
             // 次の曲のインデックスに加算（末尾まで行ったら 0 に戻るリストループ）
             currentBgmIndex = (currentBgmIndex + 1) % imageBgmPaths.length;
-            await localSturageSetItemAndFile('currentBgmIndex', currentBgmIndex);
+            await localStorageSetItemAndFile('currentBgmIndex', currentBgmIndex);
             
             // パス変更を検知させるため一度クリアして再生状態を更新
             currentLoadedBgmPath = null;
@@ -1914,7 +1914,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // メディア終了、次へ
     videoPlayer.addEventListener('ended', async () => {
         videoPlayer.currentTime = 0;
-        localSturageSetItemAndFile('currentTime', 0);
+        localStorageSetItemAndFile('currentTime', 0);
 
         // 一時ファイル削除
         await deleteTempVideo();
@@ -1998,8 +1998,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const targetElement = (currentMediaType === 'image' && typeof imagePlayer !== 'undefined') ? imagePlayer : videoPlayer;
             targetElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
             
-            localSturageSetItemAndFile('translateX', translateX.toString());
-            localSturageSetItemAndFile('translateY', translateY.toString());
+            localStorageSetItemAndFile('translateX', translateX.toString());
+            localStorageSetItemAndFile('translateY', translateY.toString());
 
             updateIconOverlay();
             return;
@@ -2038,7 +2038,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
                 updateVolumeDisplay();
                 updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 1000);
-                localSturageSetItemAndFile('volume', videoPlayer.volume);
+                localStorageSetItemAndFile('volume', videoPlayer.volume);
             }
 
             dragStartX = event.clientX;
@@ -2142,7 +2142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
         updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`, 1000);
-        localSturageSetItemAndFile('volume', videoPlayer.volume);
+        localStorageSetItemAndFile('volume', videoPlayer.volume);
         showControlsAndFilename();
         updateIconOverlay();
     });
@@ -2164,7 +2164,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!videoPlayer.duration) return;
         // 最後にユーザーがセットした値を優先して使う
         updateTimeDisplay();                       // 正しい時間で更新
-        localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
+        localStorageSetItemAndFile('currentTime', videoPlayer.currentTime);
     });
 
     // カット編集シークバー マウスクリック
@@ -2268,7 +2268,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!duration) return;
         
         updateTimeDisplay();
-        localSturageSetItemAndFile('currentTime', getMediaCurrentTime());
+        localStorageSetItemAndFile('currentTime', getMediaCurrentTime());
     });
 
     // シークバー マウスクリック
@@ -2381,7 +2381,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
         updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
-        localSturageSetItemAndFile('volume', videoPlayer.volume);
+        localStorageSetItemAndFile('volume', videoPlayer.volume);
         updateIconOverlay();
     });
 
@@ -3462,7 +3462,7 @@ document.addEventListener('keydown', async (event) => {
         volumeMuteBtn.setAttribute('data-tooltip', videoPlayer.volume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
         updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
-        localSturageSetItemAndFile('volume', videoPlayer.volume);
+        localStorageSetItemAndFile('volume', videoPlayer.volume);
         showControlsAndFilename();
         updateIconOverlay();
         return;
@@ -3603,8 +3603,8 @@ window.addEventListener('resize', () => {
     
     const controlSizeX = calculateControlSizeX();
     const controlSizeY = calculateControlSizeY();
-    localSturageSetItemAndFile('controlSizeX', controlSizeX);
-    localSturageSetItemAndFile('controlSizeY', controlSizeY);
+    localStorageSetItemAndFile('controlSizeX', controlSizeX);
+    localStorageSetItemAndFile('controlSizeY', controlSizeY);
     updateControlSize(controlSizeX, controlSizeY);
     adjustFilterPanelHeight();
     applyAspectRatioSetting();
@@ -4086,40 +4086,40 @@ async function allLocalStorageSetting() {
     }
 
     // 各設定値の localStorageと設定ファイルを同期（主に多重起動用）
-    await localSturageSetItemAndFile('volume', savedVolume);
-    await localSturageSetItemAndFile('playbackSpeed', savedPlaybackSpeed);
-    await localSturageSetItemAndFile('playlist', savedPlaylist);
-    await localSturageSetItemAndFile('currentVideoIndex', savedCurrentVideoIndex);
-    await localSturageSetItemAndFile('currentTime', savedCurrentTime);
-    await localSturageSetItemAndFile('fitMode', savedFitMode);
-    await localSturageSetItemAndFile('zoom', savedZoom);
-    await localSturageSetItemAndFile('translateX', savedTranslateX);
-    await localSturageSetItemAndFile('translateY', savedTranslateY);
-    await localSturageSetItemAndFile('editFrameRate', savedEditFrameRate);
-    await localSturageSetItemAndFile('isRandomPlayMode', savedIsRandomPlayMode);
-    await localSturageSetItemAndFile('isRepeatPlayMode', savedIsRepeatPlayMode);
-    await localSturageSetItemAndFile('shuffleOrder', savedShuffleOrder);
-    await localSturageSetItemAndFile('shufflePosition', savedShufflePosition);
-    await localSturageSetItemAndFile('aspectRatio', savedAspectRatio);
-    await localSturageSetItemAndFile('playlistSortMode', savedCurrentSortMode);
-    await localSturageSetItemAndFile('playlistDisplayMode', savedPlaylistDisplayMode);
-    await localSturageSetItemAndFile('selectedAudioLabel', savedSelectedAudioLabel);
-    await localSturageSetItemAndFile('selectedAudioTrack', savedSelectedAudioTrack);
-    await localSturageSetItemAndFile('selectedSubtitleLabel', savedSelectedSubtitleLabel);
-    await localSturageSetItemAndFile('selectedSubtitleTrack', savedSelectedSubtitleTrack);
-    await localSturageSetItemAndFile('wallpaperPath', savedWallpaperPath);
-    await localSturageSetItemAndFile('alwaysOnTop', savedAlwaysOnTop);
-    await localSturageSetItemAndFile('pauseShowControls', savedPauseShowControls);
-    await localSturageSetItemAndFile('hideCenterControls', savedHideCenterControls);
-    await localSturageSetItemAndFile('audioMotionMode', savedAudioMotionMode);
-    await localSturageSetItemAndFile('imageEffectBgmMode', savedImageEffectBgmMode);
-    await localSturageSetItemAndFile('isImageWallpaperEnabled', savedIsImageWallpaperEnabled);
-    await localSturageSetItemAndFile('filterHistory', savedFilterHistory);
-    await localSturageSetItemAndFile('originalLoadOrder', savedOriginalOrder);
-    await localSturageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
-    await localSturageSetItemAndFile('audioMotionNodes', savedAudioMotionNodes);
-    await localSturageSetItemAndFile('imageBgmPaths', savedImageBgmPaths);
-    await localSturageSetItemAndFile('currentBgmIndex', savedCurrentBgmIndex);
+    await localStorageSetItemAndFile('volume', savedVolume);
+    await localStorageSetItemAndFile('playbackSpeed', savedPlaybackSpeed);
+    await localStorageSetItemAndFile('playlist', savedPlaylist);
+    await localStorageSetItemAndFile('currentVideoIndex', savedCurrentVideoIndex);
+    await localStorageSetItemAndFile('currentTime', savedCurrentTime);
+    await localStorageSetItemAndFile('fitMode', savedFitMode);
+    await localStorageSetItemAndFile('zoom', savedZoom);
+    await localStorageSetItemAndFile('translateX', savedTranslateX);
+    await localStorageSetItemAndFile('translateY', savedTranslateY);
+    await localStorageSetItemAndFile('editFrameRate', savedEditFrameRate);
+    await localStorageSetItemAndFile('isRandomPlayMode', savedIsRandomPlayMode);
+    await localStorageSetItemAndFile('isRepeatPlayMode', savedIsRepeatPlayMode);
+    await localStorageSetItemAndFile('shuffleOrder', savedShuffleOrder);
+    await localStorageSetItemAndFile('shufflePosition', savedShufflePosition);
+    await localStorageSetItemAndFile('aspectRatio', savedAspectRatio);
+    await localStorageSetItemAndFile('playlistSortMode', savedCurrentSortMode);
+    await localStorageSetItemAndFile('playlistDisplayMode', savedPlaylistDisplayMode);
+    await localStorageSetItemAndFile('selectedAudioLabel', savedSelectedAudioLabel);
+    await localStorageSetItemAndFile('selectedAudioTrack', savedSelectedAudioTrack);
+    await localStorageSetItemAndFile('selectedSubtitleLabel', savedSelectedSubtitleLabel);
+    await localStorageSetItemAndFile('selectedSubtitleTrack', savedSelectedSubtitleTrack);
+    await localStorageSetItemAndFile('wallpaperPath', savedWallpaperPath);
+    await localStorageSetItemAndFile('alwaysOnTop', savedAlwaysOnTop);
+    await localStorageSetItemAndFile('pauseShowControls', savedPauseShowControls);
+    await localStorageSetItemAndFile('hideCenterControls', savedHideCenterControls);
+    await localStorageSetItemAndFile('audioMotionMode', savedAudioMotionMode);
+    await localStorageSetItemAndFile('imageEffectBgmMode', savedImageEffectBgmMode);
+    await localStorageSetItemAndFile('isImageWallpaperEnabled', savedIsImageWallpaperEnabled);
+    await localStorageSetItemAndFile('filterHistory', savedFilterHistory);
+    await localStorageSetItemAndFile('originalLoadOrder', savedOriginalOrder);
+    await localStorageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
+    await localStorageSetItemAndFile('audioMotionNodes', savedAudioMotionNodes);
+    await localStorageSetItemAndFile('imageBgmPaths', savedImageBgmPaths);
+    await localStorageSetItemAndFile('currentBgmIndex', savedCurrentBgmIndex);
 }
 
 // 音声トラック・字幕トラック更新
@@ -4423,10 +4423,10 @@ function applyZoom(zoomPercent) {
     targetElement.style.transformOrigin = 'center center';
     targetElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
 
-    localSturageSetItemAndFile('translateX', translateX.toString());
-    localSturageSetItemAndFile('translateY', translateY.toString());
+    localStorageSetItemAndFile('translateX', translateX.toString());
+    localStorageSetItemAndFile('translateY', translateY.toString());
     zoomValue = zoomPercent;
-    localSturageSetItemAndFile('zoom', zoomValue.toString());
+    localStorageSetItemAndFile('zoom', zoomValue.toString());
     
     if (zoomDisplay) {
         zoomDisplay.textContent = `${zoomValue > 0 ? '+' : ''}${zoomValue}%`;
@@ -4459,7 +4459,7 @@ function applyFitModeSetting(setFitMode) {
     const targetElement = getMediaElement();
     targetElement.style.objectFit = fitMode;
 
-    localSturageSetItemAndFile('fitMode', fitMode);
+    localStorageSetItemAndFile('fitMode', fitMode);
     applyAspectRatioSetting();
 }
 
@@ -4503,7 +4503,7 @@ function applyAspectRatioSetting() {
 
     videoContainer.style.justifyContent = 'center';
     videoContainer.style.alignItems = 'center';
-    localSturageSetItemAndFile('aspectRatio', currentAspectRatio);
+    localStorageSetItemAndFile('aspectRatio', currentAspectRatio);
 
     if (aspectRatioBtn) {
         aspectRatioBtn.classList.toggle('aspectRatio-active', currentAspectRatio !== 'none');
@@ -4602,8 +4602,8 @@ function buildImageEffectBgmMenuContent(menu) {
                 isImageWallpaperEnabled = !isImageWallpaperEnabled;
                 
                 // localStorageに保存
-                if (typeof localSturageSetItemAndFile === 'function') {
-                    await localSturageSetItemAndFile('imageWallpaperEnabled', isImageWallpaperEnabled);
+                if (typeof localStorageSetItemAndFile === 'function') {
+                    await localStorageSetItemAndFile('imageWallpaperEnabled', isImageWallpaperEnabled);
                 } else {
                     localStorage.setItem('imageWallpaperEnabled', isImageWallpaperEnabled);
                 }
@@ -4670,7 +4670,7 @@ function buildImageEffectBgmMenuContent(menu) {
                     return;
                 }
         
-                await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
+                await localStorageSetItemAndFile('imageBgmPaths', imageBgmPaths);
                 
                 currentLoadedBgmPath = null;
                 bgmAudio.removeAttribute('src');
@@ -4708,8 +4708,8 @@ function buildImageEffectBgmMenuContent(menu) {
                         imageBgmPaths = [];
                         currentBgmIndex = 0;
             
-                        await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
-                        await localSturageSetItemAndFile('currentBgmIndex', currentBgmIndex);
+                        await localStorageSetItemAndFile('imageBgmPaths', imageBgmPaths);
+                        await localStorageSetItemAndFile('currentBgmIndex', currentBgmIndex);
             
                         currentLoadedBgmPath = null;
                         bgmAudio.removeAttribute('src');
@@ -4742,7 +4742,7 @@ function buildImageEffectBgmMenuContent(menu) {
 
                             // 1. 再生曲インデックスの更新と保存
                             currentBgmIndex = idx;
-                            await localSturageSetItemAndFile('currentBgmIndex', currentBgmIndex);
+                            await localStorageSetItemAndFile('currentBgmIndex', currentBgmIndex);
 
                             // 2. オーディオ再生状態の更新
                             currentLoadedBgmPath = null;
@@ -4810,8 +4810,8 @@ function buildImageEffectBgmMenuContent(menu) {
 						    }
 						
 						    // ストレージを更新
-						    await localSturageSetItemAndFile('imageBgmPaths', imageBgmPaths);
-						    await localSturageSetItemAndFile('currentBgmIndex', currentBgmIndex);
+						    await localStorageSetItemAndFile('imageBgmPaths', imageBgmPaths);
+						    await localStorageSetItemAndFile('currentBgmIndex', currentBgmIndex);
 						
 						    // 現在再生中の曲が削除された、またはリストが空になった場合のみオーディオを再ロード
 						    if (isDeletingCurrent || imageBgmPaths.length === 0) {
@@ -4889,7 +4889,7 @@ function buildImageEffectBgmMenuContent(menu) {
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
             imageEffectBgmMode = key;
-            await localSturageSetItemAndFile('imageEffectBgmMode', imageEffectBgmMode);
+            await localStorageSetItemAndFile('imageEffectBgmMode', imageEffectBgmMode);
             updateImageEffectBgm();
             menu.remove();
             updateMessageOverlay(`💃 ${mode.label}`);
@@ -4996,9 +4996,9 @@ async function importSettingsFromFile(targetFilePath = null) {
                     localSturageClearAndFile();
                     Object.entries(settings).forEach(([key, value]) => {
                         if (typeof value === 'object' && value !== null) {
-                            localSturageSetItemAndFile(key, JSON.stringify(value));
+                            localStorageSetItemAndFile(key, JSON.stringify(value));
                         } else {
-                            localSturageSetItemAndFile(key, String(value));
+                            localStorageSetItemAndFile(key, String(value));
                         }
                     });
                 } else {
@@ -5103,7 +5103,7 @@ function startPeriodicSave() {
     if (saveInterval) clearInterval(saveInterval);
     saveInterval = setInterval(() => {
         if (!videoPlayer.paused && playlist.length > 0) {
-            localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
+            localStorageSetItemAndFile('currentTime', videoPlayer.currentTime);
         }
     }, 1000);
 }
@@ -5120,9 +5120,9 @@ function stopPeriodicSave() {
 function savePlaylistAndPlaybackState() {
     if (playlist.length > 0) {
         const playlistPaths = playlist.map(item => item.file.path);
-        localSturageSetItemAndFile('playlist', JSON.stringify(playlistPaths));
-        localSturageSetItemAndFile('currentVideoIndex', currentVideoIndex);
-        localSturageSetItemAndFile('currentTime', videoPlayer.currentTime || 0);
+        localStorageSetItemAndFile('playlist', JSON.stringify(playlistPaths));
+        localStorageSetItemAndFile('currentVideoIndex', currentVideoIndex);
+        localStorageSetItemAndFile('currentTime', videoPlayer.currentTime || 0);
     } else {
         localSturageRemoveItemAndFile('playlist');
         localSturageRemoveItemAndFile('currentVideoIndex');
@@ -5239,7 +5239,7 @@ function adjustFilterPanelHeight() {
 function setPlaylistDisplayMode(mode) {
     if (!['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].includes(mode)) return;
     playlistDisplayMode = mode;
-    localSturageSetItemAndFile('playlistDisplayMode', mode);
+    localStorageSetItemAndFile('playlistDisplayMode', mode);
     if (filterList) {
         filterList.classList.remove('playlist-grid', 'playlist-grid-small', 'playlist-grid-medium', 'playlist-grid-large');
         if (['thumb-small', 'thumb-medium', 'thumb-large'].includes(mode)) {
@@ -5673,7 +5673,7 @@ function getFilteredIndices() {
 async function applySortFiltered(modeKey = currentSortMode) {
     if (!SORT_MODES[modeKey]) return;
     currentSortMode = modeKey;
-    localSturageSetItemAndFile('playlistSortMode', modeKey);
+    localStorageSetItemAndFile('playlistSortMode', modeKey);
 
     // ボタンのスタイル更新
     sortPlaylistBtn.classList.remove('sorted-active', 'random-sorted-active');
@@ -5804,7 +5804,7 @@ function updateRandomButtonUI() {
 function toggleRandomPlay() {
     const wasRandom = isRandomPlayMode;
     isRandomPlayMode = !isRandomPlayMode;
-    localSturageSetItemAndFile('isRandomPlayMode', isRandomPlayMode);
+    localStorageSetItemAndFile('isRandomPlayMode', isRandomPlayMode);
     updateRandomButtonUI();
 
     if (isRandomPlayMode && !wasRandom) {
@@ -5829,7 +5829,7 @@ function toggleRandomPlay() {
                 }
             }
 
-            // shuffle関数によりcurrentVideoIndexが先頭(0)に移動しているため、初期位置は0になります
+            // 現在再生メディアのシャッフルオーダーの位置を取得
             shufflePosition = shuffleOrder.indexOf(currentVideoIndex);
             if (shufflePosition < 0) shufflePosition = 0;
 
@@ -5984,8 +5984,8 @@ function getNextVideoIndex() {
 // ランダム再生の状態を保存
 function saveShuffleState() {
     if (isRandomPlayMode) {
-        localSturageSetItemAndFile('shuffleOrder', JSON.stringify(shuffleOrder));
-        localSturageSetItemAndFile('shufflePosition', shufflePosition.toString());
+        localStorageSetItemAndFile('shuffleOrder', JSON.stringify(shuffleOrder));
+        localStorageSetItemAndFile('shufflePosition', shufflePosition.toString());
     } else {
         // ランダムOFFならクリア
         localSturageRemoveItemAndFile('shuffleOrder');
@@ -6038,7 +6038,7 @@ async function toggleurlInputPanel(show = null) {
 // 次のプレイリストアイテムを再生する汎用フォールバック関数
 async function playNextPlaylistItem() {
     videoPlayer.currentTime = 0;
-    localSturageSetItemAndFile('currentTime', 0);
+    localStorageSetItemAndFile('currentTime', 0);
 
     // 一時ファイル削除
     await deleteTempVideo();
@@ -6261,7 +6261,7 @@ async function playVideo(file, currentTime) {
         } else {
             if (!isNaN(currentTime) && currentTime >= 0) {
                 videoPlayer.currentTime = currentTime;
-                localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
+                localStorageSetItemAndFile('currentTime', videoPlayer.currentTime);
             }
         }
 
@@ -6426,7 +6426,7 @@ async function togglePlayPause() {
         playPauseBtn.textContent = '▶️';
         playPauseBtn.classList.add('paused-active');
         playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
-        localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
+        localStorageSetItemAndFile('currentTime', videoPlayer.currentTime);
         stopPeriodicSave();
     }
 
@@ -6669,7 +6669,7 @@ async function playlistAdd(videoFiles) {
     // 元の読み込み順（originalLoadOrder）にも追加パスを記録
     const newPaths = uniqueVideoFiles.map(file => file.path);
     originalLoadOrder.push(...newPaths);
-    localSturageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
+    localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
 
     // もし元々リストが空だった場合は先頭の曲を再生
     if (isFirstTime) {
@@ -6695,7 +6695,7 @@ async function playlistSet(videoFiles) {
     // 元の読み込み順（Base順）を保存
     const currentPaths = videoFiles.map(file => file.path);
     originalLoadOrder = [...currentPaths];
-    localSturageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
+    localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
 
     // playlist を初期状態（ファイル取得順）でセット
     playlist = videoFiles.map(file => ({
@@ -6779,7 +6779,7 @@ function updateEditModeButtonUI() {
             playPauseBtn.textContent = '▶️';
             playPauseBtn.classList.add('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
-            localSturageSetItemAndFile('currentTime', videoPlayer.currentTime);
+            localStorageSetItemAndFile('currentTime', videoPlayer.currentTime);
             stopPeriodicSave();
         }
         editSeekBar.value = seekBar.value;
@@ -6847,7 +6847,7 @@ function insertFilesIntoPlaylist(files, addPosition = 0) {
     // 追加後も「現在のプレイリスト順」を「なし」の基準とする
     const currentPaths = playlist.map(item => item.file.path);
     originalLoadOrder = [...currentPaths];
-    localSturageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
+    localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
 
     // shuffleOrder の最後に追加
     if (shuffleOrder && shuffleOrder.length > 0) {
@@ -6883,7 +6883,7 @@ async function removeFromPlaylist() {
     // --- originalLoadOrder から削除対象パスを除去して localStorage に保存 ---
     if (removedItem && Array.isArray(originalLoadOrder)) {
         originalLoadOrder = originalLoadOrder.filter(path => path !== removedItem.file.path);
-        localSturageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
+        localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
     }
     // ---------------------------------------------------------------------------------
 
@@ -7159,7 +7159,7 @@ function setPlaybackRate(rate, showOverlay = true) {
     videoPlayer.playbackRate = rate;
 
     if (speedSelect) speedSelect.value = parseFloat(rate).toFixed(2);
-    localSturageSetItemAndFile('playbackSpeed', rate);
+    localStorageSetItemAndFile('playbackSpeed', rate);
 
     if (showOverlay) {
         updateMessageOverlay(`🏃‍♂️‍➡️ ${rate}x`);
@@ -7454,7 +7454,7 @@ function getPlaylistInOriginalOrder() {
         originalLoadOrder = storedOriginalOrder;
     } else if (!Array.isArray(originalLoadOrder) || originalLoadOrder.length !== playlist.length) {
         originalLoadOrder = playlist.map(item => item.file.path);
-        localSturageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
+        localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
     }
 
     // パス → アイテムのマッピングを作成（高速検索用）
@@ -7523,7 +7523,7 @@ async function applySort(modeKey = currentSortMode) {
     if (!SORT_MODES[modeKey]) return;
 
     currentSortMode = modeKey;
-    localSturageSetItemAndFile('playlistSortMode', modeKey);
+    localStorageSetItemAndFile('playlistSortMode', modeKey);
 
     // 変更前の再生位置（ファイルパス）を取得（自動停止時 -1 の場合は null）
     const prevCurrentPath = currentVideoIndex >= 0 ? playlist[currentVideoIndex]?.file?.path : null;
@@ -7618,7 +7618,7 @@ if (isRepeatPlayMode === 'none') {
     } else {
         isRepeatPlayMode = 'none';
     }
-    localSturageSetItemAndFile('isRepeatPlayMode', isRepeatPlayMode);
+    localStorageSetItemAndFile('isRepeatPlayMode', isRepeatPlayMode);
     updateRepeatButtonUI();
 }
 
@@ -8058,15 +8058,15 @@ function selectTrackMenu(type, menu, fullLabel, trackObj = null) {
         currentSubtitleTrack = trackObj;
         selectedSubtitleLabel = trackObj ? getCleanLabel(fullLabel) : '（なし）';
         selectedSubtitleLabel !== '（なし）' ? subtitleSelectBtn.classList.add('subtitles-active') : null;
-        localSturageSetItemAndFile('selectedSubtitleTrack', JSON.stringify(currentSubtitleTrack));
-        localSturageSetItemAndFile('selectedSubtitleLabel', selectedSubtitleLabel);
+        localStorageSetItemAndFile('selectedSubtitleTrack', JSON.stringify(currentSubtitleTrack));
+        localStorageSetItemAndFile('selectedSubtitleLabel', selectedSubtitleLabel);
     } else {
         updateVideoAudio(trackObj, currentTracks);
         
         currentAudioTrack = trackObj;
         selectedAudioLabel = trackObj ? getCleanLabel(fullLabel) : '日本語';
-        localSturageSetItemAndFile('selectedAudioTrack', JSON.stringify(currentSubtitleTrack));
-        localSturageSetItemAndFile('selectedAudioLabel', selectedAudioLabel);
+        localStorageSetItemAndFile('selectedAudioTrack', JSON.stringify(currentSubtitleTrack));
+        localStorageSetItemAndFile('selectedAudioLabel', selectedAudioLabel);
     }
 
     // メニュー閉じる処理など
@@ -8171,7 +8171,7 @@ function loadFilterHistory() {
 
 // フィルタ履歴をlocalStorageに保存
 function saveFilterHistory() {
-    localSturageSetItemAndFile('filterHistory', JSON.stringify(filterHistory));
+    localStorageSetItemAndFile('filterHistory', JSON.stringify(filterHistory));
 }
 
 // フィルタ履歴に項目を追加
@@ -8302,7 +8302,7 @@ function updateAlwaysOnTopButtonUI() {
 async function toggleAlwaysOnTop() {
     isAlwaysOnTop = !isAlwaysOnTop;
     await setAlwaysOnTop(isAlwaysOnTop);
-    localSturageSetItemAndFile('alwaysOnTop', isAlwaysOnTop ? 'true' : 'false');
+    localStorageSetItemAndFile('alwaysOnTop', isAlwaysOnTop ? 'true' : 'false');
     updateAlwaysOnTopButtonUI();
 }
 
@@ -8457,7 +8457,7 @@ function updateAudioMotion() {
         }
     }
     
-    localSturageSetItemAndFile('audioMotionMode', audioMotionMode);
+    localStorageSetItemAndFile('audioMotionMode', audioMotionMode);
 
     const visualizerContainer = document.getElementById('visualizerContainer');
     const audioPlayer = document.getElementById('audioPlayer');
@@ -8528,7 +8528,7 @@ function toggleVisualizer(show) {
 // DEFAULT_AUDIO_MOTION_OPTIONS を localStorage に保存する
 function saveAudioMotionOptions() {
     try {
-        localSturageSetItemAndFile('audioMotionOptions', JSON.stringify(DEFAULT_AUDIO_MOTION_OPTIONS));
+        localStorageSetItemAndFile('audioMotionOptions', JSON.stringify(DEFAULT_AUDIO_MOTION_OPTIONS));
     } catch (err) {
         console.error('DEFAULT_AUDIO_MOTION_OPTIONS の保存に失敗しました:', err);
     }
@@ -8556,7 +8556,7 @@ function loadAudioMotionOptions() {
 // AUDIOMOTION_NODES を localStorage に保存する
 function saveAudioMotionNodes() {
     try {
-        localSturageSetItemAndFile('audioMotionNodes', JSON.stringify(AUDIOMOTION_NODES));
+        localStorageSetItemAndFile('audioMotionNodes', JSON.stringify(AUDIOMOTION_NODES));
     } catch (err) {
         console.error('AUDIOMOTION_NODES の保存に失敗しました:', err);
     }
@@ -8594,7 +8594,7 @@ function updateImageEffectBgm() {
 }
 
 // localStorageバックアップファイル更新付きlocalStrage.setItem
-async function localSturageSetItemAndFile(key, value) {
+async function localStorageSetItemAndFile(key, value) {
     let parsedValue = value;
     let stringValue = value;
 
@@ -8748,7 +8748,7 @@ function setMediaCurrentTime(time) {
         updateTimeDisplay();
     }
 
-    localSturageSetItemAndFile('currentTime', clampedTime);
+    localStorageSetItemAndFile('currentTime', clampedTime);
 }
 
 // 画像の100ms周期プログレス更新タイマー
@@ -8812,14 +8812,14 @@ function syncDisplaySettingsToCurrentMedia() {
 // コントロール自動表示抑止の切り替え（現在の状態を返す）
 function togglePauseShowControls() {
     pauseShowControls = !pauseShowControls;
-    localSturageSetItemAndFile('pauseShowControls', pauseShowControls);
+    localStorageSetItemAndFile('pauseShowControls', pauseShowControls);
     return pauseShowControls;
 }
 
 // センターコントロール無効の切り替え（現在の状態を返す）
 function toggleHideCenterControls() {
     hideCenterControls = !hideCenterControls;
-    localSturageSetItemAndFile('hideCenterControls', hideCenterControls);
+    localStorageSetItemAndFile('hideCenterControls', hideCenterControls);
     return hideCenterControls;
 }
 
