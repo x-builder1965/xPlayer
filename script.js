@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.65.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.66.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -587,6 +587,7 @@ let currentBgmIndex = 0;		// 複数BGMパスのインデックス管理を追加
 let currentLoadedBgmPath = null;    // BGM設定用の変数（パス管理）
 let lastEffectKey = null;		// 直前に適用されたエフェクトキーを記憶する変数
 let hasMoved = false;           // ドラッグ中にマウスが移動したかどうかのフラグ
+let forceStop = true;           // 起動時の再生一時停止判定用（アプリ起動：true、設定インポート：false）
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -979,8 +980,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     await debouncedScrollCurrentFilterItem();
 					// 復元メディアの再生
 					await playVideo(playlist[currentVideoIndex].file, savedCurrentTime);
-					// 起動時は一時停止状態にする
-                    await togglePlayPause();
+                    if (forceStop) {
+                        // 起動時は一時停止状態にする
+                        await togglePlayPause();
+                    }
                     
                     hideMessageOverlay(true);
                     updateIconOverlay();
@@ -2639,11 +2642,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const files = Array.from(e.dataTransfer.files);
         if (files.length === 0) return;
 
-        // Ctrlキー（MacのCmdキー含む）が押されているか判定
-        const isAppend = e.ctrlKey || e.metaKey;
-        const actionText = isAppend ? '追加' : '作成';
-        updateMessageOverlay(`📚 プレイリスト${actionText}中...`, 0, false);
-
         const fullPaths = [];
         for (const file of files) {
             try {
@@ -2654,10 +2652,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        if (fullPaths.length > 0) {
-            // isAppend フラグを渡す
-            await addFilesFromPaths(fullPaths, isAppend);
-        }
+		const jsonPath = fullPaths.find(path => /\.json$/i.test(path));
+		if (jsonPath) {
+			dropImportSettingsFromFile(jsonPath);
+		} else {
+            // Ctrlキー（MacのCmdキー含む）が押されているか判定
+            const isAppend = e.ctrlKey || e.metaKey;
+            const actionText = isAppend ? '追加' : '作成';
+            updateMessageOverlay(`📚 プレイリスト${actionText}中...`, 0, false);
+            
+            if (fullPaths.length > 0) {
+	            // isAppend フラグを渡す
+	            await addFilesFromPaths(fullPaths, isAppend);
+	        }
+		}
         hideMessageOverlay(true);
     });
 
@@ -3999,6 +4007,7 @@ async function allLocalStorageSetting() {
         } catch {
             hasPidFile = false;
         }
+        forceStop = !hasPidFile;
 
         let loadedSettings = null;
         if (hasPidFile) {
@@ -5042,6 +5051,35 @@ async function importSettingsFromFile(targetFilePath = null) {
             updateMessageOverlay(errorMsg, 6000);
             return null;
         }
+    }
+}
+
+// ドラッグ＆ドロップの設定インポート
+async function dropImportSettingsFromFile(filePath) {
+    try {
+        const content = await fs.readFile(filePath, 'utf8');
+        const settings = JSON.parse(content);
+        if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+            throw new Error('設定ファイルの形式が正しくありません');
+        }
+
+        const pidSettingsFilePath = settingsFilePath.replace(/\.json$/, `_${pid}.json`);
+        await fs.writeFile(pidSettingsFilePath, JSON.stringify(settings, null, 2), 'utf8');
+
+        // 強制リロード
+        const fileName = filePath.split(/[/\\]/).pop();
+        updateMessageOverlay(`📥 インポート: ${fileName}`);
+        setTimeout(() => {
+            location.reload();
+        }, 300);
+    } catch (error) {
+        console.error(`設定インポート失敗 (${attempt}/${maxRetries}回目):`, error);
+
+        const errorMsg = (error instanceof SyntaxError)
+            ? '📥 設定ファイルの形式（JSON）が破損しています'
+            : '📥 設定のインポートに失敗しました';
+        
+        updateMessageOverlay(errorMsg, 6000);
     }
 }
 
