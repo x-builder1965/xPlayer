@@ -8711,6 +8711,7 @@ function updateMessageOverlay(content, autoHideAfter = overlayTimeout, isShowCon
     }
 }
 
+// プレイリスト作成中の進捗バー表示
 function showPlaylistProgress() {
     isPlaylistCreationInProgress = true;
     if (playlistProgressBar) {
@@ -8720,6 +8721,7 @@ function showPlaylistProgress() {
     }
 }
 
+// プレイリスト作成中の進捗バー更新
 function setPlaylistProgress(percent) {
     if (!playlistProgressBar) return;
     const progress = Math.max(0, Math.min(100, Math.round(percent)));
@@ -8727,12 +8729,14 @@ function setPlaylistProgress(percent) {
     playlistProgressBar.setAttribute('aria-valuenow', String(progress));
 }
 
+// プレイリスト作成完了時の処理
 function finishPlaylistCreation() {
     setPlaylistProgress(100);
     isPlaylistCreationInProgress = false;
     hidePlaylistProgress();
 }
 
+// プレイリスト作成中の進捗バー非表示
 function hidePlaylistProgress() {
     if (playlistProgressBar) {
         playlistProgressBar.style.display = 'none';
