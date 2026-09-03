@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.64.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.65.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -437,6 +437,8 @@ let filterPanel = null;
 let playlistFilterInput = null;
 let filterClearBtn = null;
 let filterList = null;
+let playlistProgressBar = null;
+let isPlaylistCreationInProgress = false;
 let darkOverlay = null;
 let voiceSelectBtn = null;
 let subtitleSelectBtn = null;
@@ -3864,6 +3866,7 @@ function allDOMsetting() {
     playlistFilterInput = document.getElementById('playlistFilterInput');
     filterClearBtn = document.getElementById('filterClearBtn');
     filterList = document.getElementById('filterList');
+    playlistProgressBar = document.getElementById('playlistProgressBar');
     darkOverlay = document.getElementById('darkOverlay');
     voiceSelectBtn = document.getElementById('voiceSelectBtn');
     subtitleSelectBtn = document.getElementById('subtitleSelectBtn');
@@ -5347,11 +5350,15 @@ async function updateFilterList() {
     if (!filterList) return;
 
     const myUpdateId = ++currentUpdateId;
+    const isCreationRender = isPlaylistCreationInProgress;
+    let createdItemCount = 0;
 
     filterList.innerHTML = '';
     if (playlist.length === 0) {
         filterList.innerHTML = '<div class="filter-empty">プレイリストが空です。</div>';
         updateItemCount(0, 0);
+        if (isCreationRender) finishPlaylistCreation();
+        else hidePlaylistProgress();
         return;
     }
 
@@ -5379,6 +5386,8 @@ async function updateFilterList() {
 
     if (results.length === 0) {
         filterList.innerHTML = '<div class="filter-empty">一致するメディアがありません。</div>';
+        if (isCreationRender) finishPlaylistCreation();
+        else hidePlaylistProgress();
         return;
     }
 
@@ -5631,11 +5640,15 @@ async function updateFilterList() {
         });
 
         targetContainer.appendChild(button);
+        createdItemCount += 1;
+        setPlaylistProgress((createdItemCount / playlist.length) * 100);
     }
     updateItemCount(results.length, playlist.length);
 
     if (myUpdateId === currentUpdateId) {
         adjustFilterPanelHeight();
+        if (isCreationRender) finishPlaylistCreation();
+        else hidePlaylistProgress();
     }
 }
 
@@ -6687,6 +6700,8 @@ async function playlistAdd(videoFiles) {
 // プレイリストのファイル設定
 async function playlistSet(videoFiles) {
     if (!videoFiles || videoFiles.length === 0) {
+        isPlaylistCreationInProgress = false;
+        hidePlaylistProgress();
         hideMessageOverlay();
         return;
     }
@@ -6713,6 +6728,7 @@ async function playlistSet(videoFiles) {
     resetShuffle();
     saveShuffleState();
     updateIconOverlay();
+    setPlaylistProgress(100);
 }
 
 // HTML5対応拡張子判定
@@ -7012,6 +7028,8 @@ async function addFilesFromPaths(fullPaths, isAppend = false) {
         }
         debouncedUpdateFilterList();
         debouncedScrollCurrentFilterItem();
+    } else {
+        hidePlaylistProgress();
     }
 }
 
@@ -8645,6 +8663,9 @@ async function localSturageClearAndFile() {
 
 // オーバーレイ表示
 function updateMessageOverlay(content, autoHideAfter = overlayTimeout, isShowControls = true) {
+    if (content.includes('プレイリスト作成中')) {
+        showPlaylistProgress();
+    }
     messageOverlay.textContent = content;
     const overlayFontSize = parseFloat(messageOverlay.style.fontSize) || 90;
     // 1. 実際の文字サイズ（横幅）を計算する関数
@@ -8687,6 +8708,34 @@ function updateMessageOverlay(content, autoHideAfter = overlayTimeout, isShowCon
         disableMessageOverlay = false;
     } else {
         disableMessageOverlay = true;
+    }
+}
+
+function showPlaylistProgress() {
+    isPlaylistCreationInProgress = true;
+    if (playlistProgressBar) {
+        playlistProgressBar.style.width = '0%';
+        playlistProgressBar.setAttribute('aria-valuenow', '0');
+        playlistProgressBar.style.display = 'block';
+    }
+}
+
+function setPlaylistProgress(percent) {
+    if (!playlistProgressBar) return;
+    const progress = Math.max(0, Math.min(100, Math.round(percent)));
+    playlistProgressBar.style.width = `${progress}%`;
+    playlistProgressBar.setAttribute('aria-valuenow', String(progress));
+}
+
+function finishPlaylistCreation() {
+    setPlaylistProgress(100);
+    isPlaylistCreationInProgress = false;
+    hidePlaylistProgress();
+}
+
+function hidePlaylistProgress() {
+    if (playlistProgressBar) {
+        playlistProgressBar.style.display = 'none';
     }
 }
 

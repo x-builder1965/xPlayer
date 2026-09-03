@@ -1,7 +1,7 @@
 <!-- -- index.html ------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -メディアプレイヤー- Ver5.64.0'; -->
+<!-- const appName = 'xPlayer -メディアプレイヤー- Ver5.65.0'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -58,7 +58,7 @@
             </div>
             <div id="filterPanel" class="filter-panel">
                 <div class="filter-panel-header">
-                    <span id="itemCount" data-tooltip="絞込数/総数）">00,000 / 00,000</span>
+                    <span id="itemCount" data-tooltip="（絞込数/総数）">00,000 / 00,000</span>
                     <div class="filter-container">
                         <input id="playlistFilterInput" type="text" autocomplete="off" placeholder="フィルタ条件（AND:スペース区切り、OR:カンマ区切り）" data-tooltip="プレイリストを絞り込み（例：aaaa bbbb, cccc dddd）">
                         <ul id="filterHistoryList" class="filter-history-dropdown hidden"></ul>
@@ -74,6 +74,7 @@
                     <button id="clearPlaylistBtn" data-tooltip="クリア（Shift+c）">🆑</button>
                     <button id="savePlaylistBtn" data-tooltip="保存（Shift+s）">💾</button>
                 </div>
+                <div id="playlistProgressBar" class="playlist-progress-bar" role="progressbar" aria-label="プレイリスト作成中" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
                 <div id="filterList" class="filter-list"></div>
             </div>
             <div id="editPanel" class="edit-panel">
@@ -719,6 +720,7 @@
             <div id="changelogBtn" class="changelog-toggle">▶ 変更履歴</div>
             <div id="changelogContent" class="changelog-container">
                 <ul class="changelog-list">
+                    <li>2026-09-03 Ver5.65.0 プレイリスト作成進捗ゲージの追加。</li>
                     <li>2026-09-03 Ver5.64.0 自動・手動停止後の再開に関する課題の対応。</li>
                     <li>2026-09-02 Ver5.63.0 ランダム再生時の再生位置同期を強化。</li>
                     <li>2026-09-02 Ver5.62.0 ランダム再生時の再生終了後の挙動を改善。</li>

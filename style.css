@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver5.60.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver5.65.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -105,6 +105,14 @@ video {
     gap: 8px;
     align-items: center;
     overflow: visible;
+}
+.playlist-progress-bar {
+    display: none;
+    width: 0%;
+    height: 5px;
+    flex: 0 0 5px;
+    background: #e53935;
+    transition: width 0.12s ease-out;
 }
 .filter-list {
     overflow-y: auto;
