@@ -553,6 +553,7 @@ let currentSortMode = '（なし）';
 let currentAddMode = 'Add0';
 let playlistDisplayMode = null;
 let playlistThumbnailCache = new Map();
+let displayFormatUpdateRequested = false;
 let selectedAudioLabel = '日本語';
 let selectedAudioTrack = [];
 let selectedSubtitleLabel = '（なし）';
@@ -1374,6 +1375,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // プレイリストフィルタ入力
     playlistFilterInput.addEventListener('input', () => {
         filterText = playlistFilterInput.value || '';
+        if (isPlaylistCreationInProgress) {
+            showPlaylistProgress(false);
+        }
         if (isFilterPanelVisible) debouncedUpdateFilterList();
         debouncedScrollCurrentFilterItem();
         
@@ -1403,6 +1407,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 🔘フィルタ条件クリアボタン
     filterClearBtn.addEventListener('click', () => {
         clearPlaylistFilter();
+        if (isPlaylistCreationInProgress) {
+            showPlaylistProgress(false);
+        }
         try { playlistFilterInput?.focus(); } catch (e) {}
         if (isFilterPanelVisible) debouncedUpdateFilterList();
         debouncedScrollCurrentFilterItem();
@@ -5243,6 +5250,10 @@ function setPlaylistDisplayMode(mode) {
     if (!['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].includes(mode)) return;
     playlistDisplayMode = mode;
     localStorageSetItemAndFile('playlistDisplayMode', mode);
+    if (isPlaylistCreationInProgress && isFilterPanelVisible) {
+        displayFormatUpdateRequested = true;
+        showPlaylistProgress();
+    }
     if (filterList) {
         filterList.classList.remove('playlist-grid', 'playlist-grid-small', 'playlist-grid-medium', 'playlist-grid-large');
         if (['thumb-small', 'thumb-medium', 'thumb-large'].includes(mode)) {
@@ -5350,15 +5361,16 @@ async function updateFilterList() {
     if (!filterList) return;
 
     const myUpdateId = ++currentUpdateId;
-    const isCreationRender = isPlaylistCreationInProgress;
+    const isDisplayFormatRender = displayFormatUpdateRequested;
+    displayFormatUpdateRequested = false;
+    const isCreationRender = isPlaylistCreationInProgress && (!filterText.trim() || isDisplayFormatRender);
     let createdItemCount = 0;
 
     filterList.innerHTML = '';
     if (playlist.length === 0) {
         filterList.innerHTML = '<div class="filter-empty">プレイリストが空です。</div>';
         updateItemCount(0, 0);
-        if (isCreationRender) finishPlaylistCreation();
-        else hidePlaylistProgress();
+        finalizePlaylistProgress(isCreationRender);
         return;
     }
 
@@ -5386,8 +5398,7 @@ async function updateFilterList() {
 
     if (results.length === 0) {
         filterList.innerHTML = '<div class="filter-empty">一致するメディアがありません。</div>';
-        if (isCreationRender) finishPlaylistCreation();
-        else hidePlaylistProgress();
+        finalizePlaylistProgress(isCreationRender);
         return;
     }
 
@@ -5641,14 +5652,15 @@ async function updateFilterList() {
 
         targetContainer.appendChild(button);
         createdItemCount += 1;
-        setPlaylistProgress((createdItemCount / playlist.length) * 100);
+        if (isCreationRender) {
+            setPlaylistProgress((createdItemCount / playlist.length) * 100);
+        }
     }
     updateItemCount(results.length, playlist.length);
 
     if (myUpdateId === currentUpdateId) {
         adjustFilterPanelHeight();
-        if (isCreationRender) finishPlaylistCreation();
-        else hidePlaylistProgress();
+        finalizePlaylistProgress(isCreationRender);
     }
 }
 
@@ -8712,11 +8724,13 @@ function updateMessageOverlay(content, autoHideAfter = overlayTimeout, isShowCon
 }
 
 // プレイリスト作成中の進捗バー表示
-function showPlaylistProgress() {
+function showPlaylistProgress(resetProgress = true) {
     isPlaylistCreationInProgress = true;
     if (playlistProgressBar) {
-        playlistProgressBar.style.width = '0%';
-        playlistProgressBar.setAttribute('aria-valuenow', '0');
+        if (resetProgress) {
+            playlistProgressBar.style.width = '0%';
+            playlistProgressBar.setAttribute('aria-valuenow', '0');
+        }
         playlistProgressBar.style.display = 'block';
     }
 }
@@ -8734,6 +8748,18 @@ function finishPlaylistCreation() {
     setPlaylistProgress(100);
     isPlaylistCreationInProgress = false;
     hidePlaylistProgress();
+}
+
+function finalizePlaylistProgress(isCreationRender) {
+    if (isPlaylistCreationInProgress && filterText.trim()) {
+        showPlaylistProgress(false);
+        return;
+    }
+    if (isCreationRender) {
+        finishPlaylistCreation();
+    } else if (!isPlaylistCreationInProgress) {
+        hidePlaylistProgress();
+    }
 }
 
 // プレイリスト作成中の進捗バー非表示
