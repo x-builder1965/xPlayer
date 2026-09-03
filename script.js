@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.63.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.64.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -854,6 +854,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // メタデータ更新（タスクバー／ロック画面に表示させるおまけ）
         const updateMetadata = () => {
             if (playlist.length === 0) return;
+            if (!playlist || playlist.length === 0) return;
+            if (currentVideoIndex < 0 || currentVideoIndex >= playlist.length) return;
+            
             const current = playlist[currentVideoIndex];
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: path.basename(current.name || current.file.path),
@@ -957,7 +960,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const parsedPlaylist = typeof savedPlaylist === 'string' 
                     ? safeJSONParse(savedPlaylist, []) 
                     : savedPlaylist;
-                const parsedCurrentVideoIndex = parseInt(savedCurrentVideoIndex, 10);
+                const parsedIndex = parseInt(savedCurrentVideoIndex, 10);
+                const parsedCurrentVideoIndex = (!isNaN(parsedIndex) && parsedIndex >= 0) ? parsedIndex : 0;                
                 if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0 && 
                     !isNaN(parsedCurrentVideoIndex) && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
                     // プレイリスト復元
@@ -5738,10 +5742,10 @@ function updatePlaylistDisplay() {
     }
 
     // 3. インデックスの有効範囲補正
-    if (selectedPlaylistIndex < 0 || selectedPlaylistIndex >= playlist.length) {
-        const isValidCurrent = currentVideoIndex >= 0 && currentVideoIndex < playlist.length;
-        selectedPlaylistIndex = isValidCurrent ? currentVideoIndex : 0;
-    }
+    // if (selectedPlaylistIndex < 0 || selectedPlaylistIndex >= playlist.length) {
+    //    const isValidCurrent = currentVideoIndex >= 0 && currentVideoIndex < playlist.length;
+    //    selectedPlaylistIndex = isValidCurrent ? currentVideoIndex : 0;
+    // }
 
     // 4. UI・表示の同期
     if (isFilterPanelVisible) debouncedUpdateFilterList();
@@ -6051,7 +6055,8 @@ async function playNextPlaylistItem() {
             updateMessageOverlay('🔄️ 変換完了');
         }
         currentVideoIndex = -1;  // 停止状態を明示
-        setPlaybackPosition(currentVideoIndex);
+        selectedPlaylistIndex = -1;  // 停止状態を明示
+        // setPlaybackPosition(currentVideoIndex);
         playStopBtn.click(); // プレイリストの最後で停止
     }
     savePlaylistAndPlaybackState();
@@ -6215,6 +6220,7 @@ async function playVideo(file, currentTime) {
     stopImageProgress();
 
     isPlaying = true;
+    selectedPlaylistIndex = currentVideoIndex;
     await setVideoSrc(file);
 
     // 【追加】動画・画像切り替え時に相互の設定（アスペクト比・描画モード・ズーム・パン）を適用
@@ -6283,12 +6289,25 @@ async function playVideo(file, currentTime) {
 async function togglePlayPause() {
     // 停止後の再生開始インデックスを取得するヘルパー関数
     const getStartIndex = () => {
-        // 手動停止時：currentVideoIndex が再生メディアの位置を保持しているため、そこから再開
+        // 一時停止からの再開
         if (currentVideoIndex >= 0) {
             return currentVideoIndex;
         }
 
-        // 自動停止（終端再生終了）時：currentVideoIndex === -1 の場合
+        // 手動停止からの再開
+        if (currentVideoIndex === -1 && selectedPlaylistIndex >= 0) {
+            if (isRandomPlayMode) {
+                if (currentSortMode === 'random') {
+                    return selectedPlaylistIndex;
+                } else {
+                    return (shuffleOrder && shuffleOrder.length > 0) ? shuffleOrder[selectedPlaylistIndex] : 0;
+                }
+            } else {
+                return selectedPlaylistIndex;
+            }
+        }
+
+        // 自動停止（終端再生終了）からの再開
         if (isRandomPlayMode) {
             // ランダム再生中
             if (currentSortMode === 'random') {
@@ -6298,6 +6317,9 @@ async function togglePlayPause() {
                 // 並び順：（ランダム）以外
                 return (shuffleOrder && shuffleOrder.length > 0) ? shuffleOrder[0] : 0;
             }
+        } else {
+            // 通常再生モード（ランダム再生OFF）
+            return 0;
         }
         
         // 通常再生モード（ランダム再生OFF）
@@ -9151,6 +9173,8 @@ function updateWallpaperDisplay() {
 // currentVideoIndex を基準に selectedPlaylistIndex と shufflePosition を一括設定するヘルパー関数
 // @param {number} targetIndex - 設定対象のインデックス
 function setPlaybackPosition(targetIndex) {
+    return;
+
     currentVideoIndex = targetIndex;
     selectedPlaylistIndex = targetIndex;
 
