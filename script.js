@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.66.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.67.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -662,7 +662,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ボリューム復元
-    if (savedVolume && !isNaN(savedVolume) && savedVolume >= 0 && savedVolume <= 1) {
+    if (savedVolume >= 0 && savedVolume <= 1) {
         volumeBar.value = savedVolume;
         lastVolume = savedVolume;
         volumeMuteBtn.textContent = savedVolume === 0 ? '🔇' : '🔊';
@@ -5754,22 +5754,60 @@ async function applySortFiltered(modeKey = currentSortMode) {
 
 // フィルタリングされたアイテムをシャッフルして適用
 function shuffleFiltered() {
-    const indices = getFilteredIndices();
-    if (indices.length === 0) return;
-    const items = indices.map(i => playlist[i]);
-    shuffle(items);
-    const newPlaylist = playlist.slice();
-    indices.forEach((idx, i) => {
-        newPlaylist[idx] = items[i];
+    const filteredIndices = getFilteredIndices(); // 現在の playlist 内でのインデックス配列
+    if (filteredIndices.length === 0) return;
+
+    // 1. オリジナル順のリストを取得
+    const originalPlaylist = getPlaylistInOriginalOrder();
+
+    // 2. フィルタ対象の「オリジナル順におけるインデックス」を取得
+    const filteredPaths = new Set(filteredIndices.map(i => playlist[i]?.file?.path));
+    const targetOriginalIndices = [];
+    originalPlaylist.forEach((item, origIdx) => {
+        if (filteredPaths.has(item?.file?.path)) {
+            targetOriginalIndices.push(origIdx);
+        }
     });
-    const prevPath = playlist[currentVideoIndex]?.file?.path;
-    playlist = newPlaylist;
-    if (prevPath) {
-        const newIndex = playlist.findIndex(item => item.file.path === prevPath);
-        currentVideoIndex = newIndex >= 0 ? newIndex : 0;
+
+    // 3. フィルタ対象のインデックスのみを偏りなくシャッフル（SecureRandomInt 使用）
+    const shuffledTargetIndices = [...targetOriginalIndices];
+    for (let i = shuffledTargetIndices.length - 1; i > 0; i--) {
+        const j = SecureRandomInt(i + 1);
+        [shuffledTargetIndices[i], shuffledTargetIndices[j]] = [shuffledTargetIndices[j], shuffledTargetIndices[i]];
     }
+
+    // 4. 現在再生中の曲をフィルタ内シャッフルの先頭に持ち上げる処理（選択的）
+    const prevPath = currentVideoIndex >= 0 ? playlist[currentVideoIndex]?.file?.path : null;
+    if (prevPath && filteredPaths.has(prevPath)) {
+        const currentOrigIndex = originalPlaylist.findIndex(item => item?.file?.path === prevPath);
+        const posInShuffled = shuffledTargetIndices.indexOf(currentOrigIndex);
+        if (posInShuffled > -1) {
+            shuffledTargetIndices.splice(posInShuffled, 1);
+            shuffledTargetIndices.unshift(currentOrigIndex);
+        }
+    }
+
+    // 5. 既存の shuffleOrder をベースに、フィルタ対象箇所のみを新しいランダム順で差し替える
+    // (shuffleOrder が未定義またはサイズ不整合の場合は全件で再生成)
+    if (!shuffleOrder || shuffleOrder.length !== originalPlaylist.length) {
+        shuffleOrder = createShuffleOrder();
+    } else {
+        // shuffleOrder 内でフィルタ対象だった位置を、シャッフル後の値に順番に置換
+        let fillIdx = 0;
+        shuffleOrder = shuffleOrder.map(origIdx => {
+            if (targetOriginalIndices.includes(origIdx)) {
+                return shuffledTargetIndices[fillIdx++];
+            }
+            return origIdx;
+        });
+    }
+
+    // 6. アプローチBに基づいて、（ランダム）状態のプレイリスト表示を適用・更新
+    playlist = sortRandomPlaylist();
+
     updatePlaylistDisplay();
     savePlaylistAndPlaybackState();
+    saveShuffleState();
 }
 
 // 件数表示更新用ヘルパー関数（新設）
@@ -5877,25 +5915,33 @@ function toggleRandomPlay() {
             shuffleFiltered();
         } else {
             // 通常 → ランダム に変更（ケース1・3）
-            if (!shuffleOrder || shuffleOrder.length !== playlist.length) {
-                shuffleOrder = [...Array(playlist.length).keys()];
-                shuffle(shuffleOrder);
-            }
+            
+            // 1. 新しくシャッフルオーダーを作成（この時点で再生中アイテムは shuffleOrder[0] に配置される）
+            shuffleOrder = createShuffleOrder();
 
-            // ケース3対応：（ランダム）が選択中なら表示に適用
+            // 2. 現在の並び順モードが「（ランダム）」の場合は表示（playlist）を更新
             if (currentSortMode === 'random') {
-                const currentPath = playlist[currentVideoIndex]?.file?.path;
-                playlist = shuffleOrder.map(i => ({ ...playlist[i] }));
+                // アプローチB：常にオリジナル順に対して shuffleOrder を適用
+                const originalPlaylist = getPlaylistInOriginalOrder();
+                playlist = shuffleOrder.map(i => ({ ...originalPlaylist[i] }));
 
+                // 先頭に再生中アイテムが来ているため、インデックスは 0 になる
+                currentVideoIndex = 0;
+            } else {
+                // （ランダム）表示以外のモードの場合、現在再生中の曲が shuffleOrder の何番目にあるかを計算
+                const currentPath = playlist[currentVideoIndex]?.file?.path;
                 if (currentPath) {
-                    currentVideoIndex = playlist.findIndex(p => p.file.path === currentPath);
-                    if (currentVideoIndex < 0) currentVideoIndex = 0;
+                    const originalPlaylist = getPlaylistInOriginalOrder();
+                    const origIdx = originalPlaylist.findIndex(item => item?.file?.path === currentPath);
+                    const pos = shuffleOrder.indexOf(origIdx);
+                    shufflePosition = pos >= 0 ? pos : 0;
                 }
             }
 
-            // 現在再生メディアのシャッフルオーダーの位置を取得
-            shufflePosition = shuffleOrder.indexOf(currentVideoIndex);
-            if (shufflePosition < 0) shufflePosition = 0;
+            // （ランダム）表示中の場合、再生中の位置は先頭（0）
+            if (currentSortMode === 'random') {
+                shufflePosition = 0;
+            }
 
             updatePlaylistDisplay();
             savePlaylistAndPlaybackState();
@@ -5903,37 +5949,14 @@ function toggleRandomPlay() {
         }
     } else if (!isRandomPlayMode && wasRandom) {
         // ランダム → 通常 に変更（ケース2・4）
-        // playlist は現在の順序を維持する
         shuffleOrder = [];
         shufflePosition = -1;
         saveShuffleState();
-
-        // 表示はそのまま、次回 next/prev が通常順になるだけ
     }
 
-    // フィルタ条件をクリアし、再生メディアの行位置にスクロール
     setPlaybackPosition(currentVideoIndex);
-    // clearPlaylistFilter();
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     debouncedScrollCurrentFilterItem();
-}
-
-// シンプルなFisher-Yatesシャッフル
-function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-
-    // 2. 再生中メディア(currentVideoIndex)が存在する場合、配列の先頭に移動
-    if (typeof currentVideoIndex !== 'undefined' && currentVideoIndex !== null && currentVideoIndex >= 0) {
-        const indexInArray = array.indexOf(currentVideoIndex);
-        if (indexInArray > -1) {
-            // 配列から一度削除し、先頭(0番目)に挿入
-            array.splice(indexInArray, 1);
-            array.unshift(currentVideoIndex);
-        }
-    }
 }
 
 // 再シャッフル
@@ -5941,7 +5964,7 @@ function resetShuffle() {
     if (isRandomPlayMode) {
         // ランダムモードONになった → シャッフル順を今生成
         shuffleOrder = [...Array(playlist.length).keys()]; // 0〜length-1 の配列
-        shuffle(shuffleOrder);                             // シャッフル
+        shuffleOrder = createShuffleOrder(); // シャッフル
 
         // 先頭に移動した再生中メディアからスタートするため、ポジションを 0 に設定
         shufflePosition = 0; 
@@ -5956,34 +5979,51 @@ function resetShuffle() {
 // 前再生メディア取得
 function getPrevVideoIndex() {
     if (playlist.length === 0) return -1;
+
+    // 1. 1曲リピート時
     if (isRepeatPlayMode === 'single') {
-        if (modeChange === 'video') {
-            return currentVideoIndex;
-        } else {
-            return -1;
-        }
+        return modeChange === 'video' ? currentVideoIndex : -1;
     }
-	if (isRandomPlayMode && currentSortMode !== 'random') {
-	    // ランダムモード
-	    shufflePosition++;
-	    if (shufflePosition >= shuffleOrder.length) {
-	        if (isRepeatPlayMode === 'all') {
-	            if (modeChange === 'video') {
-	                shufflePosition = playlist.length - 1;
-	            } else {
-	                return -1;
-	            }
-	        } else {
-                shufflePosition = playlist.length - 1;
-	            saveShuffleState(); 
-	            return -1;
-	        }
-	    }
-	    saveShuffleState(); // 現在のシャッフル位置を保存
-	    return shuffleOrder[shufflePosition];
+
+    // 2. ランダム再生 ON ＆ 並び順が「（ランダム）」以外（ファイル▲等）の場合
+    if (isRandomPlayMode && currentSortMode !== 'random') {
+        // 位置を 1 つ戻す
+        shufflePosition--;
+
+        // 先頭より前に行こうとした場合のループ／停止処理
+        if (shufflePosition < 0) {
+            if (isRepeatPlayMode === 'all') {
+                if (modeChange === 'video') {
+                    // 全曲リピート時は末尾へ移動
+                    shufflePosition = shuffleOrder.length - 1;
+                } else {
+                    return -1;
+                }
+            } else {
+                // リピートOFF時は先頭（0）に戻して停止
+                shufflePosition = 0;
+                saveShuffleState();
+                return -1;
+            }
+        }
+        saveShuffleState(); // 現在のシャッフル位置を保存
+
+        // shuffleOrder が指す「オリジナル順のアイテム」を取得
+        const originalPlaylist = getPlaylistInOriginalOrder();
+        const targetOriginalIndex = shuffleOrder[shufflePosition];
+        const targetItem = originalPlaylist[targetOriginalIndex];
+
+        // 現在表示中の playlist 内で、そのアイテムが何番目にあるかを検索して返す
+        if (targetItem) {
+            const prevIndex = playlist.findIndex(item => item?.file?.path === targetItem.file?.path);
+            return prevIndex >= 0 ? prevIndex : 0;
+        }
+        return 0;
+
     } else {
-        // 通常順
+        // 3. 通常順（または表示自体が「（ランダム）」の場合）
         let normalPosition = currentVideoIndex - 1;
+
         if (normalPosition < 0) {
             if (isRepeatPlayMode === 'all') {
                 if (modeChange === 'video') {
@@ -6003,14 +6043,11 @@ function getPrevVideoIndex() {
 function getNextVideoIndex() {
     if (playlist.length === 0) return -1;
     if (isRepeatPlayMode === 'single') {
-        if (modeChange === 'video') {
-            return currentVideoIndex;
-        } else {
-            return -1;
-        }
+        return modeChange === 'video' ? currentVideoIndex : -1;
     }
+
     if (isRandomPlayMode && currentSortMode !== 'random') {
-        // ランダムモード
+        // 1. 位置を更新
         shufflePosition++;
         if (shufflePosition >= shuffleOrder.length) {
             if (isRepeatPlayMode === 'all') {
@@ -6021,22 +6058,29 @@ function getNextVideoIndex() {
                 }
             } else {
                 shufflePosition = 0;
-                saveShuffleState(); // 現在のシャッフル位置を保存
+                saveShuffleState();
                 return -1;
             }
         }
-        saveShuffleState(); // 現在のシャッフル位置を保存
-        return shuffleOrder[shufflePosition];
+        saveShuffleState();
+
+        // 2. shuffleOrder が指す「オリジナル順のアイテム」を取得
+        const originalPlaylist = getPlaylistInOriginalOrder();
+        const targetOriginalIndex = shuffleOrder[shufflePosition];
+        const targetItem = originalPlaylist[targetOriginalIndex];
+
+        // 3. 現在表示中の playlist 内で、そのアイテムが何番目にあるかを検索して返す
+        if (targetItem) {
+            const nextIndex = playlist.findIndex(item => item?.file?.path === targetItem.file?.path);
+            return nextIndex >= 0 ? nextIndex : 0;
+        }
+        return 0;
     } else {
-        // 通常順
+        // 通常順（または表示自体が「（ランダム）」の場合）
         let normalPosition = currentVideoIndex + 1;
         if (normalPosition >= playlist.length) {
             if (isRepeatPlayMode === 'all') {
-                if (modeChange === 'video') {
-                    normalPosition = 0;
-                } else {
-                    return -1;
-                }
+                return modeChange === 'video' ? 0 : -1;
             } else {
                 return -1;
             }
@@ -6285,6 +6329,21 @@ async function playVideo(file, currentTime) {
 
     isPlaying = true;
     selectedPlaylistIndex = currentVideoIndex;
+
+    // ★修正ポイント：ランダム再生 ON ＆ 並び順が「（ランダム）」以外（ファイル名▲等）の場合、
+    // 再生を開始したファイル（file.path）の shuffleOrder 内における位置（shufflePosition）を同期する
+    if (isRandomPlayMode && currentSortMode !== 'random') {
+        const originalPlaylist = getPlaylistInOriginalOrder();
+        const origIdx = originalPlaylist.findIndex(item => item?.file?.path === file.path);
+        
+        if (origIdx !== -1 && shuffleOrder && shuffleOrder.length > 0) {
+            const pos = shuffleOrder.indexOf(origIdx);
+            if (pos >= 0) {
+                shufflePosition = pos;
+                saveShuffleState(); // 同期したシャッフル位置を保存
+            }
+        }
+    }
     await setVideoSrc(file);
 
     // 【追加】動画・画像切り替え時に相互の設定（アスペクト比・描画モード・ズーム・パン）を適用
@@ -7550,41 +7609,45 @@ function getPlaylistInOriginalOrder() {
     return restored;
 }
 
-// 並び順メニュー「（ランダム）」選択時（ケース5・6対応）
+// 並び順メニュー「（ランダム）」選択時
 function sortRandomPlaylist() {
-    // ケース5：🔀 が OFF なら表示を一切変えない
+    // ケース5：🔀 が OFF なら表示を一切変えない（そのまま返す）
     if (!isRandomPlayMode) {
-        return [...playlist];  // そのまま返す（変更なし）
+        return [...playlist];
     }
 
     // ケース6：🔀 が ON なら既存の shuffleOrder を表示に適用
     if (!shuffleOrder || shuffleOrder.length !== playlist.length) {
-        // shuffleOrder が不整合の場合 → 変更せず元のまま返す
         console.warn('shuffleOrder が不整合のため、表示変更をスキップ');
         return [...playlist];
     }
 
-    // 変更前が停止状態（-1）かどうか保持
+    // 1. 常に「オリジナル（ソートなし）のプレイリスト」を取得
+    const originalPlaylist = getPlaylistInOriginalOrder();
+
+    // 2. オリジナル配列のインデックスに従ってランダム順の新しい配列を生成
+    const newPlaylist = shuffleOrder.map(idx => ({ ...originalPlaylist[idx] }));
+
+    // 3. 現在再生中のファイルパスを取得（変更前の再生位置保持用）
     const isStopped = (currentVideoIndex === -1);
     const currentPath = !isStopped ? playlist[currentVideoIndex]?.file?.path : null;
-    const newPlaylist = shuffleOrder.map(idx => ({ ...playlist[idx] }));
 
-    // 現在の再生位置を維持
+    // 4. 新しいリスト内での再生位置（currentVideoIndex）を計算
     if (currentPath) {
-        const newIndex = newPlaylist.findIndex(item => item.file.path === currentPath);
+        const newIndex = newPlaylist.findIndex(item => item.file?.path === currentPath);
         currentVideoIndex = newIndex >= 0 ? newIndex : 0;
     } else if (isStopped) {
-        currentVideoIndex = -1; // ★停止状態なら -1 を維持する
+        currentVideoIndex = -1; // 停止状態なら -1 を維持
     } else {
         currentVideoIndex = 0;
     }
 
-    shufflePosition = currentVideoIndex;  // 表示順の位置をshufflePositionとする
+    shufflePosition = currentVideoIndex; // 表示順の位置を shufflePosition とする
 
-    // playlist 本体を上書き（ケース6で定義されている挙動）
-    playlist = newPlaylist;
+    // ※ ここにあった `playlist = newPlaylist;` の直接上書きは削除します。
+    // （applySort 側の `playlist = await SORT_MODES[modeKey].fn();` で安全に反映されます）
 
-    return playlist;
+    return newPlaylist;
 }
 
 // 並び替え実行関数
@@ -7600,16 +7663,32 @@ async function applySort(modeKey = currentSortMode) {
     // リストを並び替え
     playlist = await SORT_MODES[modeKey].fn();
 
-    // --- 再生位置 (currentVideoIndex) の再調整 ---
+    // --- 再生位置 (currentVideoIndex) および shufflePosition の再調整 ---
     if (currentVideoIndex === -1) {
-        // 終端再生終了時で自動停止した場合は -1 を維持
+        // 終端再生終了時（自動停止中）
         currentVideoIndex = -1;
+        shufflePosition = 0;
     } else if (prevCurrentPath) {
-        // 手動停止中、または再生中の場合は新しい playList 内での位置に更新
+        // 手動停止中、または再生中の場合
         const newIndex = playlist.findIndex(item => item.file?.path === prevCurrentPath);
         currentVideoIndex = newIndex >= 0 ? newIndex : 0;
+
+        // ★修正ポイント：ランダム再生 ON ＆「（ランダム）」以外の表示モード時、
+        // 選択中の曲が shuffleOrder の何番目（インデックス）にあるかを計算して sync する
+        if (isRandomPlayMode && currentSortMode !== 'random') {
+            const originalPlaylist = getPlaylistInOriginalOrder();
+            const origIdx = originalPlaylist.findIndex(item => item?.file?.path === prevCurrentPath);
+            
+            if (origIdx !== -1 && shuffleOrder) {
+                const pos = shuffleOrder.indexOf(origIdx);
+                shufflePosition = pos >= 0 ? pos : 0;
+            } else {
+                shufflePosition = 0;
+            }
+        }
     } else {
         currentVideoIndex = 0;
+        shufflePosition = 0;
     }
 
     setPlaybackPosition(currentVideoIndex);
@@ -9302,4 +9381,62 @@ function setPlaybackPosition(targetIndex) {
     } else {
         shufflePosition = 0;
     }
+}
+
+// 偏りのない乱数を生成するヘルパー関数
+// Math.random() の偏りを避け、暗号学的に安全な乱数（0 ～ max - 1）を返します。
+function SecureRandomInt(max) {
+    if (max <= 1) return 0;
+    const array = new Uint32Array(1);
+    const maxUint32 = 0xFFFFFFFF;
+    const limit = maxUint32 - (maxUint32 % max); // モジュロバイアス（偏り）を完全に除去
+
+    let rand;
+    do {
+        crypto.getRandomValues(array);
+        rand = array[0];
+    } while (rand >= limit);
+
+    return rand % max;
+}
+
+// 【アプローチB対応 + ランダム性強化】
+// 常にオリジナル順のインデックス配列 [0, 1, ..., N-1] を生成してシャッフルします。
+// @returns {Array<number>} シャッフルされたオリジナル順インデックス配列（shuffleOrder）
+function createShuffleOrder() {
+    const originalPlaylist = getPlaylistInOriginalOrder();
+    const length = originalPlaylist.length;
+
+    if (length === 0) return [];
+
+    // 1. オリジナル順のインデックス配列を作成 [0, 1, 2, ..., N-1]
+    const indices = Array.from({ length }, (_, i) => i);
+
+    // 2. 高精度 Fisher-Yates シャッフル（ランダム性強化）
+    for (let i = length - 1; i > 0; i--) {
+        const j = SecureRandomInt(i + 1);
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+
+    // 3. 現在再生中メディアを先頭（0番目）に配置
+    if (typeof currentVideoIndex !== 'undefined' && currentVideoIndex !== null && currentVideoIndex >= 0) {
+        // 現在表示中の playlist から再生中アイテムのファイルパスを取得
+        const currentPath = playlist[currentVideoIndex]?.file?.path;
+
+        if (currentPath) {
+            // originalPlaylist 上でのインデックス（ID）を特定
+            const originalIndex = originalPlaylist.findIndex(item => item?.file?.path === currentPath);
+
+            if (originalIndex !== -1) {
+                // シャッフル後の配列から対象のインデックスを探して先頭へ移動
+                const posInIndices = indices.indexOf(originalIndex);
+                if (posInIndices > 0) { // 既に先頭(0)にある場合は移動不要
+                    indices.splice(posInIndices, 1);
+                    indices.unshift(originalIndex);
+                }
+            }
+        }
+    }
+
+    return indices;
 }
