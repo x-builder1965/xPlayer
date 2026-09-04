@@ -3666,22 +3666,22 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
 
 // 変換進捗受信
 ipcRenderer.on('convert-progress', (e, { percent, step }) => {
-    let playListCount = playlist.length;
-    let playListCurrent = currentVideoIndex;
+    let playlisyCount = playlist.length;
+    let playlisyCurrent = currentVideoIndex;
     if (modeChange === 'video') {
-        playListCount = 1;
-        playListCurrent = 0;
+        playlisyCount = 1;
+        playlisyCurrent = 0;
     }
 
     if (step === 1) {
         if (isRepeatPlayMode === 'single') {
             updateMessageOverlay(`🔄️ 変換中…（1/1） ${Math.round(percent)}%`, 0);
         } else {
-            updateMessageOverlay(`🔄️ 変換中…（${playListCurrent + 1}/${playListCount}） ${Math.round(percent)}%`, 0);
+            updateMessageOverlay(`🔄️ 変換中…（${playlisyCurrent + 1}/${playlisyCount}） ${Math.round(percent)}%`, 0);
         }
     }
     // シークバーに進捗を表示
-    let totalPercent = ((playListCurrent * 100) + percent) / (playListCount * 100) * 100;
+    let totalPercent = ((playlisyCurrent * 100) + percent) / (playlisyCount * 100) * 100;
     if (isRepeatPlayMode === 'single') {
         totalPercent = percent;
     }
@@ -3690,14 +3690,14 @@ ipcRenderer.on('convert-progress', (e, { percent, step }) => {
 
 // 字幕ファイル出力開始
 ipcRenderer.on('subtitle-extraction-progress', (e, data) => {
-    let playListCount = playlist.length;
-    let playListCurrent = currentVideoIndex;
+    let playlisyCount = playlist.length;
+    let playlisyCurrent = currentVideoIndex;
     if (modeChange === 'video') {
-        playListCount = 1;
-        playListCurrent = 0;
+        playlisyCount = 1;
+        playlisyCurrent = 0;
     }
 
-    updateMessageOverlay(`🔄️ 字幕作成中…（${playListCurrent + 1}/${playListCount}） 100%（${data.subtitleIndex}/${data.subtitleCount}）`, 0);
+    updateMessageOverlay(`🔄️ 字幕作成中…（${playlisyCurrent + 1}/${playlisyCount}） 100%（${data.subtitleIndex}/${data.subtitleCount}）`, 0);
 });
 
 // 変換エラー
@@ -7534,6 +7534,24 @@ async function sortByCreationTime(ascending = true) {
     return itemsWithTime;
 }
 
+// 安全に JSON パースを行うヘルパー関数
+// @param {any} input - パース対象の値
+// @param {any} fallback - エラー時または無効な場合のデフォルト値
+function safeJSONParse(input, fallback = []) {
+    if (!input) return fallback;
+    // 既に配列やオブジェクトの場合はそのまま返す
+    if (typeof input === 'object') return input;
+    
+    if (typeof input === 'string') {
+        try {
+            return JSON.parse(input);
+        } catch (e) {
+            return fallback;
+        }
+    }
+    return fallback;
+}
+
 // 元の順番を localStorage から復元するヘルパー関数
 function getStoredOriginalLoadOrder() {
     try {
@@ -7555,24 +7573,6 @@ function getStoredOriginalLoadOrder() {
         console.warn('originalLoadOrder の復元に失敗:', e);
         return [];
     }
-}
-
-// 安全に JSON パースを行うヘルパー関数
-// @param {any} input - パース対象の値
-// @param {any} fallback - エラー時または無効な場合のデフォルト値
-function safeJSONParse(input, fallback = []) {
-    if (!input) return fallback;
-    // 既に配列やオブジェクトの場合はそのまま返す
-    if (typeof input === 'object') return input;
-    
-    if (typeof input === 'string') {
-        try {
-            return JSON.parse(input);
-        } catch (e) {
-            return fallback;
-        }
-    }
-    return fallback;
 }
 
 // 元の順番でプレイリストを再構築するヘルパー関数
