@@ -63,6 +63,8 @@ const IMAGE_DURATION = 5;      // 画像の再生時間（秒）
 const bgmAudio = new Audio();
 const imageThumbnailCache = new Map();		// 画像サムネイル用キャッシュ（Mapオブジェクト）
 const dragThreshold = 5;    // ドラッグ判定用の移動閾値（手ぶれ考慮: 5ピクセル）
+const imageCache = new Map();		// 画像キャッシュストレージ（メモリ内）
+const MAX_CACHE_SIZE = 5; 			// メモリを圧迫しないよう保持数を制限
 
 const SORT_MODES = {
     'none':       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
@@ -6217,17 +6219,29 @@ async function setVideoSrc(file) {
     // 画像処理分岐
 	if (isImage) {
 	    isConverting = false;
-	    const imageUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
 	    
-	    // 画像の読み込み完了を保証する Promise
+	    // 1. キャッシュから読み込み済み Image を検索
+	    let cachedImg = imageCache.get(file.path);
+	    let imageUrl;
+	
+	    if (cachedImg && cachedImg.complete) {
+	        imageUrl = cachedImg.src;
+	    } else {
+	        imageUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
+	    }
+	
+	    // 2. 表示用 Image の読み込み完了を待機（キャッシュがあれば一瞬で完了）
 	    const loadImagePromise = new Promise((resolve) => {
+	        if (imagePlayer.src === imageUrl && imagePlayer.complete) {
+	            resolve();
+	            return;
+	        }
 	        imagePlayer.onload = () => resolve();
-	        imagePlayer.onerror = () => resolve(); // エラー時も停止しないよう resolve
+	        imagePlayer.onerror = () => resolve();
+	        imagePlayer.src = imageUrl;
 	    });
 	
-	    // 表示要素切り替え
-	    imagePlayer.src = imageUrl;
-	    updateWallpaperDisplay();
+	    updateWallpaperDisplay(); // 壁紙の更新
 	
 	    // 動画/音声の停止・リセット
 	    videoPlayerElement.pause();
@@ -6241,7 +6255,7 @@ async function setVideoSrc(file) {
 	    baseConvertFile = null;
 	    tempConvertFile = null;
 	
-	    // 画像読み込み完了を待機
+	    // 画像のデコード/ロード完了まで確実に待機
 	    await loadImagePromise;
     } else {
         // 画像以外を表示する場合は img および 壁紙を非表示に
@@ -6366,35 +6380,37 @@ async function playVideo(file, currentTime) {
     // 動画・画像切り替え時に相互の設定（アスペクト比・描画モード・ズーム・パン）を適用
     syncDisplaySettingsToCurrentMedia();
 
-    if (currentMediaType === 'image') {
-        // 選択（またはランダム指定）されたトランジションエフェクトを適用
-        applyImageEffect();
-
-        playPauseBtn.textContent = '⏸️';
-        playPauseBtn.classList.remove('paused-active');
-        playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-
-        imageCurrentTime = (!isNaN(currentTime) && currentTime >= 0) ? Math.min(IMAGE_DURATION, currentTime) : 0;
-        
-        seekBar.value = (100 / IMAGE_DURATION) * imageCurrentTime;
-        updateTimeDisplay();
-
-        // isPlaying が true の場合のみタイマーをセット
-        if (isPlaying) {
-            const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
-
-            startPeriodicSave();
-            startImageProgress();
-
-            imageTimer = setTimeout(async () => {
-                imageTimer = null;
-                stopImageProgress();
-                await playNextPlaylistItem();
-            }, remainingMs);
-        }
-
-		// 画像再生開始にBGMを追従
-        await manageBgmState();
+	if (currentMediaType === 'image') {
+	    // 選択されたトランジションエフェクトを適用
+	    applyImageEffect();
+	
+	    playPauseBtn.textContent = '⏸️';
+	    playPauseBtn.classList.remove('paused-active');
+	    playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+	
+	    imageCurrentTime = (!isNaN(currentTime) && currentTime >= 0) ? Math.min(IMAGE_DURATION, currentTime) : 0;
+	    
+	    seekBar.value = (100 / IMAGE_DURATION) * imageCurrentTime;
+	    updateTimeDisplay();
+	
+	    // 次の画像をバックグラウンドで先読み開始
+	    preloadNextPlaylistItem();
+	
+	    // isPlaying が true の場合のみタイマーをセット
+	    if (isPlaying) {
+	        const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
+	
+	        startPeriodicSave();
+	        startImageProgress();
+	
+	        imageTimer = setTimeout(async () => {
+	            imageTimer = null;
+	            stopImageProgress();
+	            await playNextPlaylistItem();
+	        }, remainingMs);
+	    }
+	
+	    await manageBgmState();
     } else {
         if (modeChange === 'convert') {
             setVideoDurationTime();
@@ -9458,4 +9474,57 @@ function createShuffleOrder() {
     }
 
     return indices;
+}
+
+// 画像をメモリ上に先読み・キャッシュする関数
+// @param {string} filePath - 画像ファイルのパス
+function preloadImage(filePath) {
+    if (!filePath || !isImageFilePath(filePath)) return;
+
+    const imageUrl = `file://${filePath.replace(/\\/g, '/')}?t=${Date.now()}`;
+
+    // すでにキャッシュ済みの場合は順番を最新に更新して終了
+    if (imageCache.has(filePath)) {
+        const cachedImg = imageCache.get(filePath);
+        imageCache.delete(filePath);
+        imageCache.set(filePath, cachedImg);
+        return;
+    }
+
+    // キャッシュサイズ上限に達した場合は古いものから削除（LRU風管理）
+    if (imageCache.size >= MAX_CACHE_SIZE) {
+        const oldestKey = imageCache.keys().next().value;
+        imageCache.delete(oldestKey);
+    }
+
+    // バックグラウンドで読み込み
+    const img = new Image();
+    img.src = imageUrl;
+    
+    // メモリキャッシュに保持
+    imageCache.set(filePath, img);
+}
+
+// 次の再生対象アイテムを取得して先読みを実行する関数
+function preloadNextPlaylistItem() {
+    if (!playlist || playlist.length <= 1) return;
+
+    // 現在のインデックスから次のインデックスを算出（シャッフル等も考慮）
+    let nextIndex = -1;
+
+    if (isRandomPlayMode) {
+        if (shuffleOrder && shuffleOrder.length > 0) {
+            const nextPos = (shufflePosition + 1) % shuffleOrder.length;
+            nextIndex = shuffleOrder[nextPos];
+        }
+    } else {
+        nextIndex = (currentVideoIndex + 1) % playlist.length;
+    }
+
+    if (nextIndex !== -1 && playlist[nextIndex]?.file?.path) {
+        const nextFile = playlist[nextIndex].file;
+        if (isImageFilePath(nextFile.path)) {
+            preloadImage(nextFile.path);
+        }
+    }
 }

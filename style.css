@@ -1229,7 +1229,7 @@ button#modeChangeBtn.convert-active:hover,
 }
 /* スライド（左→右） */
 .effect-slide-lr {
-    animation: effectSlideLR 3s ease-in-out forwards;
+    animation: effectSlideLR 5s ease-in-out forwards;
 }
 @keyframes effectSlideLR {
     0%   { opacity: 0; transform: translateX(-100%); }
@@ -1239,7 +1239,7 @@ button#modeChangeBtn.convert-active:hover,
 }
 /* スライド（右→左） */
 .effect-slide-rl {
-    animation: effectSlideRL 3s ease-in-out forwards;
+    animation: effectSlideRL 5s ease-in-out forwards;
 }
 @keyframes effectSlideRL {
     0%   { opacity: 0; transform: translateX(100%); }
@@ -1249,7 +1249,7 @@ button#modeChangeBtn.convert-active:hover,
 }
 /* スライド（上→下） */
 .effect-slide-tb {
-    animation: effectSlideTB 3s ease-in-out forwards;
+    animation: effectSlideTB 5s ease-in-out forwards;
 }
 @keyframes effectSlideTB {
     0%   { opacity: 0; transform: translateY(-100%); }
@@ -1259,7 +1259,7 @@ button#modeChangeBtn.convert-active:hover,
 }
 /* スライド（下→上） */
 .effect-slide-bt {
-    animation: effectSlideBT 3s ease-in-out forwards;
+    animation: effectSlideBT 5s ease-in-out forwards;
 }
 @keyframes effectSlideBT {
     0%   { opacity: 0; transform: translateY(100%); }
@@ -1269,7 +1269,7 @@ button#modeChangeBtn.convert-active:hover,
 }
 /* ズームイン＆アウト（中央から引き込まれるような拡大効果） */
 .effect-zoom-in {
-    animation: effectZoomIn 3s ease-in-out forwards;
+    animation: effectZoomIn 5s ease-in-out forwards;
 }
 @keyframes effectZoomIn {
     0%   { opacity: 0; transform: scale(0.4); }   /* 0.8 -> 0.4 に縮小して登場感を高める */
@@ -1279,7 +1279,7 @@ button#modeChangeBtn.convert-active:hover,
 }
 /* ズームアウト（引き（引き込み）から静止） */
 .effect-zoom-out {
-    animation: effectZoomOut 3s ease-in-out forwards;
+    animation: effectZoomOut 5s ease-in-out forwards;
 }
 @keyframes effectZoomOut {
     0%   { opacity: 0; transform: scale(1.8); }
@@ -1289,7 +1289,7 @@ button#modeChangeBtn.convert-active:hover,
 }
 /* ポップアップ（バウンドしながら大きく出現） */
 .effect-pop {
-    animation: effectPop 3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    animation: effectPop 5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 @keyframes effectPop {
     0%   { opacity: 0; transform: scale(0.5); }
@@ -1299,7 +1299,7 @@ button#modeChangeBtn.convert-active:hover,
 }
 /* 回転フェード（3Dっぽく少し回転しながら切り替わる：強調版） */
 .effect-rotate {
-    animation: effectRotate 3s ease-in-out forwards;
+    animation: effectRotate 5s ease-in-out forwards;
 }
 @keyframes effectRotate {
     0%   { opacity: 0; transform: scale(0.2) rotate(-100deg); } /* scale: 0.7->0.2, rotate: -5deg->-30deg */
@@ -1309,7 +1309,7 @@ button#modeChangeBtn.convert-active:hover,
 }
 /* スイング/振り子（風に揺れて出現） */
 .effect-swing-top {
-    animation: effectSwingTop 3s ease-in-out forwards;
+    animation: effectSwingTop 5s ease-in-out forwards;
     transform-origin: top center;
 }
 @keyframes effectSwingTop {
@@ -1320,7 +1320,7 @@ button#modeChangeBtn.convert-active:hover,
 }
 /* スイング/扇（下軸：起き上がり・倒れ込み） */
 .effect-swing-bottom {
-    animation: effectSwingBottom 3s ease-in-out forwards;
+    animation: effectSwingBottom 5s ease-in-out forwards;
     transform-origin: bottom center;
 }
 @keyframes effectSwingBottom {
@@ -1330,7 +1330,7 @@ button#modeChangeBtn.convert-active:hover,
     100% { opacity: 0; transform: rotate(-45deg); }
 }/* フリップ（左右）（コインのように横回転してめくる） */
 .effect-flip-lr {
-    animation: effectFlipLR 3s ease-in-out forwards;
+    animation: effectFlipLR 5s ease-in-out forwards;
     backface-visibility: hidden;
 }
 @keyframes effectFlipLR {
@@ -1341,7 +1341,7 @@ button#modeChangeBtn.convert-active:hover,
 }
 /* フリップ（上下）（縦方向に回転してめくる） */
 .effect-flip-tb {
-    animation: effectFlipTB 3s ease-in-out forwards;
+    animation: effectFlipTB 5s ease-in-out forwards;
     backface-visibility: hidden;
 }
 @keyframes effectFlipTB {
