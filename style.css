@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver5.65.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver5.72.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -1268,14 +1268,24 @@ button#modeChangeBtn.convert-active:hover,
     100% { opacity: 0; transform: translateY(-100%); }
 }
 /* ズームイン＆アウト（中央から引き込まれるような拡大効果） */
-.effect-zoom {
-    animation: effectZoom 3s ease-in-out forwards;
+.effect-zoom-in {
+    animation: effectZoomIn 3s ease-in-out forwards;
 }
-@keyframes effectZoom {
+@keyframes effectZoomIn {
     0%   { opacity: 0; transform: scale(0.4); }   /* 0.8 -> 0.4 に縮小して登場感を高める */
     20%  { opacity: 1; transform: scale(1.0); }
     80%  { opacity: 1; transform: scale(1.15); }  /* 1.05 -> 1.15 に拡大率をアップ */
     100% { opacity: 0; transform: scale(1.5); }   /* 1.2 -> 1.5 に大きく拡大してフェードアウト */
+}
+/* ズームアウト（引き（引き込み）から静止） */
+.effect-zoom-out {
+    animation: effectZoomOut 3s ease-in-out forwards;
+}
+@keyframes effectZoomOut {
+    0%   { opacity: 0; transform: scale(1.8); }
+    20%  { opacity: 1; transform: scale(1.0); }
+    80%  { opacity: 1; transform: scale(0.85); }
+    100% { opacity: 0; transform: scale(0.68); }
 }
 /* ポップアップ（バウンドしながら大きく出現） */
 .effect-pop {
@@ -1297,16 +1307,48 @@ button#modeChangeBtn.convert-active:hover,
     80%  { opacity: 1; transform: scale(1.0) rotate(0deg); }
     100% { opacity: 0; transform: scale(0.2) rotate(100deg); }   /* scale: 0.7->0.2, rotate: 5deg->30deg */
 }
-/* フリップ（コインのように横回転してめくる） */
-.effect-flip {
-    animation: effectFlip 3s ease-in-out forwards;
+/* スイング/振り子（風に揺れて出現） */
+.effect-swing-top {
+    animation: effectSwingTop 3s ease-in-out forwards;
+    transform-origin: top center;
+}
+@keyframes effectSwingTop {
+    0%   { opacity: 0; transform: rotate(-45deg); }
+    20%  { opacity: 1; transform: rotate(0deg); }
+    80%  { opacity: 1; transform: rotate(0deg); }
+    100% { opacity: 0; transform: rotate(45deg); }
+}
+/* スイング/扇（下軸：起き上がり・倒れ込み） */
+.effect-swing-bottom {
+    animation: effectSwingBottom 3s ease-in-out forwards;
+    transform-origin: bottom center;
+}
+@keyframes effectSwingBottom {
+    0%   { opacity: 0; transform: rotate(45deg); }
+    20%  { opacity: 1; transform: rotate(0deg); }
+    80%  { opacity: 1; transform: rotate(0deg); }
+    100% { opacity: 0; transform: rotate(-45deg); }
+}/* フリップ（左右）（コインのように横回転してめくる） */
+.effect-flip-lr {
+    animation: effectFlipLR 3s ease-in-out forwards;
     backface-visibility: hidden;
 }
-@keyframes effectFlip {
+@keyframes effectFlipLR {
     0%   { opacity: 0; transform: perspective(400px) rotateY(90deg); }
     20%  { opacity: 1; transform: perspective(400px) rotateY(0deg); }
     80%  { opacity: 1; transform: perspective(400px) rotateY(0deg); }
     100% { opacity: 0; transform: perspective(400px) rotateY(-90deg); }
+}
+/* フリップ（上下）（縦方向に回転してめくる） */
+.effect-flip-tb {
+    animation: effectFlipTB 3s ease-in-out forwards;
+    backface-visibility: hidden;
+}
+@keyframes effectFlipTB {
+    0%   { opacity: 0; transform: perspective(400px) rotateX(-90deg); }
+    20%  { opacity: 1; transform: perspective(400px) rotateX(0deg); }
+    80%  { opacity: 1; transform: perspective(400px) rotateX(0deg); }
+    100% { opacity: 0; transform: perspective(400px) rotateX(90deg); }
 }
 /* 一時停止時にアニメーションをその場で固定するクラス */
 .image-effect.paused {
@@ -1328,7 +1370,7 @@ button#modeChangeBtn.convert-active:hover,
     line-height: 1.4;
     white-space: nowrap;
     z-index: 1000;
-    max-height: 240px;
+    max-height: 480px;
     /* 横幅・縦幅が画面を超えないように制限を追加 */
     max-width: 54vw;
     box-sizing: border-box;

@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.71.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.72.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -252,21 +252,25 @@ const AUDIOMOTION_NODES = {
 };
 // イメージエフェクト＆BGM設定のNODE定義
 const IMAGEEFFECTBGM_NODES = {
+    'bgm-set':       { label: 'BGM設定' },
+    'separator1':    { isSeparator: true },
+    'wallpaper-set': { label: '背景生成' },
+    'separator2':    { isSeparator: true },
     'none':          { label: '（なし）',          className: 'effect-none' },
     'effect1':       { label: 'フェード',          className: 'effect-fade' },
     'effect2':       { label: 'スライド（左→右）',  className: 'effect-slide-lr' },
     'effect3':       { label: 'スライド（右→左）',  className: 'effect-slide-rl' },
     'effect4':       { label: 'スライド（上→下）',  className: 'effect-slide-tb' },
     'effect5':       { label: 'スライド（下→上）',  className: 'effect-slide-bt' },
-    'effect6':       { label: 'ズームイン＆アウト', className: 'effect-zoom' },
-    'effect7':       { label: 'ポップアップ',       className: 'effect-pop' },
-    'effect8':       { label: '回転フェード',       className: 'effect-rotate' },
-    'effect9':       { label: 'フリップ',          className: 'effect-flip' },
-    'random':        { label: '（ランダム）' },
-    'separator1':    { isSeparator: true },
-    'wallpaper-set': { label: '背景生成' },
-    'separator2':    { isSeparator: true },
-    'bgm-set':       { label: 'BGM設定' }
+    'effect6':       { label: 'ズームイン',        className: 'effect-zoom-in' },
+    'effect7':       { label: 'ズームアウト',       className: 'effect-zoom-out' },
+    'effect8':       { label: 'ポップアップ',       className: 'effect-pop' },
+    'effect9':       { label: '回転フェード',       className: 'effect-rotate' },
+    'effect10':      { label: 'スイング/振り子',    className: 'effect-swing-top' },
+    'effect11':      { label: 'スイング/扇',        className: 'effect-swing-bottom' },
+    'effect12':      { label: 'フリップ（左右）',   className: 'effect-flip-lr' },
+    'effect13':      { label: 'フリップ（上下）',   className: 'effect-flip-tb' },
+    'random':        { label: '（ランダム）' }
 };
 const JOIN_MODES = {
     'joinVideos': { label: '🎞️ 動画結合', fn: () => joinPlaylistVideos() },
@@ -6211,24 +6215,34 @@ async function setVideoSrc(file) {
     updateImageEffectBgm();
 
     // 画像処理分岐
-    if (isImage) {
-        isConverting = false;
-        const imageUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
-        
-        // 表示要素切り替え
-        imagePlayer.src = imageUrl;
-        updateWallpaperDisplay();       // 壁紙（背景画像）の描画更新
-        // video/audio はリセットして停止
-        videoPlayerElement.pause();
-        videoPlayerElement.removeAttribute('src');
-        videoPlayerElement.load();
-        audioPlayer.removeAttribute('src');
-        audioPlayer.load();
-        videoPreview.removeAttribute('src');
-        videoPreview.load();
-
-        baseConvertFile = null;
-        tempConvertFile = null;
+	if (isImage) {
+	    isConverting = false;
+	    const imageUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
+	    
+	    // 画像の読み込み完了を保証する Promise
+	    const loadImagePromise = new Promise((resolve) => {
+	        imagePlayer.onload = () => resolve();
+	        imagePlayer.onerror = () => resolve(); // エラー時も停止しないよう resolve
+	    });
+	
+	    // 表示要素切り替え
+	    imagePlayer.src = imageUrl;
+	    updateWallpaperDisplay();
+	
+	    // 動画/音声の停止・リセット
+	    videoPlayerElement.pause();
+	    videoPlayerElement.removeAttribute('src');
+	    videoPlayerElement.load();
+	    audioPlayer.removeAttribute('src');
+	    audioPlayer.load();
+	    videoPreview.removeAttribute('src');
+	    videoPreview.load();
+	
+	    baseConvertFile = null;
+	    tempConvertFile = null;
+	
+	    // 画像読み込み完了を待機
+	    await loadImagePromise;
     } else {
         // 画像以外を表示する場合は img および 壁紙を非表示に
         imagePlayer.style.display = 'none';
@@ -9080,19 +9094,18 @@ function applyImageEffect() {
     const imageWrapper = document.getElementById('imageWrapper');
     if (!imageWrapper || !imagePlayer) return;
 
-    // ポーズ用・エフェクト用クラスの着脱対象を imageWrapper に変更
+    // 1. 一旦アニメーション関連クラスをすべて除去し、CSSアニメーションをリセット
     imageWrapper.classList.remove('paused');
+    imageWrapper.style.animation = 'none'; // アニメーションを明示的に一時解除
 
     Object.values(IMAGEEFFECTBGM_NODES).forEach(node => {
         if (node.className) {
             imageWrapper.classList.remove(node.className);
         }
     });
-    imageWrapper.classList.add('image-effect');
 
     let activeKey = imageEffectBgmMode || 'none';
 
-    // 「（ランダム）」時の処理
     if (activeKey === 'random') {
         const availableEffectKeys = Object.keys(IMAGEEFFECTBGM_NODES).filter(
             key => IMAGEEFFECTBGM_NODES[key].className && key !== 'none'
@@ -9121,7 +9134,6 @@ function applyImageEffect() {
     const targetNode = IMAGEEFFECTBGM_NODES[activeKey];
     const cssClass = targetNode?.className || IMAGEEFFECTBGM_NODES['none'].className;
 
-    // animationDuration の適用先も imageWrapper に変更
     if (typeof IMAGE_DURATION !== 'undefined' && activeKey !== 'none') {
         const rate = currentPlaybackRate || 1.0;
         const durationSec = IMAGE_DURATION / rate;
@@ -9130,9 +9142,15 @@ function applyImageEffect() {
         imageWrapper.style.animationDuration = '';
     }
 
-    // リフローを発生させてアニメーションを再発火
+    // 2. 強制リフロー (スタイルリセットの適用)
     void imageWrapper.offsetWidth;
-    imageWrapper.classList.add(cssClass);
+
+    // 3. アニメーションプロパティを戻してからクラスを追加
+    imageWrapper.style.animation = '';
+    imageWrapper.classList.add('image-effect');
+    if (cssClass) {
+        imageWrapper.classList.add(cssClass);
+    }
 }
 
 // 簡易ハッシュ関数（ファイルパスから一意なファイル名を生成）
