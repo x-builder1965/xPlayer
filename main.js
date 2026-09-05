@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.52.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.71.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -34,6 +34,8 @@ const VIDEO_PLAYLIST = ['amppl'];
 const SUPPORTED_MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS];
 const SUPPORTED_MEDIA_EXTENSIONS_REGEX = new RegExp(`\\.(${SUPPORTED_MEDIA_EXTENSIONS.join('|')})$`, 'i');
 const VIDEO_PLAYLIST_REGEX = new RegExp(`\\.(${VIDEO_PLAYLIST.join('|')})$`, 'i');
+const SETTINGS_EXTENSIONS = ['json', 'xpj'];
+const SETTINGS_FILE_REGEX = new RegExp(`\\.(${SETTINGS_EXTENSIONS.join('|')})$`, 'i');
 const gotTheLock = app.requestSingleInstanceLock();     // 🔧 単一インスタンスロックの取得（重複起動の判定）
 
 // グローバル（共通）変数
@@ -340,9 +342,19 @@ app.whenReady().then(() => {
         try {
             const rawArgs = process.argv.slice(app.isPackaged ? 1 : 2);
             const args = rawArgs.filter(arg => !arg.startsWith('-'));
-            if (args.length === 0) return;
+            const settingsPath = args.find(filePath => SETTINGS_FILE_REGEX.test(filePath));
+            const mediaArgs = args.filter(filePath => !SETTINGS_FILE_REGEX.test(filePath));
 
-            const filePromises = args.map(async (filePath) => {
+            if (settingsPath) {
+                const exists = await fs.stat(settingsPath).then(() => true).catch(() => false);
+                if (exists) {
+                    event.sender.send('auto-import-settings', settingsPath);
+                    return;
+                }
+            }
+            if (mediaArgs.length === 0) return;
+
+            const filePromises = mediaArgs.map(async (filePath) => {
                 const exists = await fs.stat(filePath).then(() => true).catch(() => false);
                 if (!exists) return [];
                 return await processCommandLineFile(filePath);
@@ -469,9 +481,9 @@ ipcMain.handle('show-save-cut-dialog', async (event, { fileName, ext }) => {
 ipcMain.handle('show-save-settings-dialog', async (event, { defaultPath }) => {
     const result = await dialog.showSaveDialog({
         title: '設定をエクスポート',
-        defaultPath: defaultPath || 'xPlayerSettings.json',
+        defaultPath: defaultPath || 'xPlayerSettings.xpj',
         filters: [
-            { name: 'JSON ファイル', extensions: ['json'] },
+            { name: 'xPlayer 設定ファイル', extensions: ['xpj'] },
             { name: 'すべてのファイル', extensions: ['*'] }
         ],
         properties: ['createDirectory', 'showOverwriteConfirmation']
@@ -483,9 +495,9 @@ ipcMain.handle('show-save-settings-dialog', async (event, { defaultPath }) => {
 ipcMain.handle('show-open-settings-dialog', async () => {
     const result = await dialog.showOpenDialog({
         title: '設定をインポート',
-        defaultPath: 'xPlayerSettings.json',
+        defaultPath: 'xPlayerSettings.xpj',
         filters: [
-            { name: 'JSON ファイル', extensions: ['json'] },
+            { name: 'xPlayer 設定ファイル', extensions: ['xpj', 'json'] },
             { name: 'すべてのファイル', extensions: ['*'] }
         ],
         properties: ['openFile']

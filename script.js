@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.70.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.71.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -54,6 +54,7 @@ const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // 
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.opus', '.wma', '.aiff', '.aif', '.alac', '.ape'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'];
 const VIDEO_EXTENSIONS_CONVERT = [];  // 動画変換対象外拡張子
+const SETTINGS_FILE_REGEX = /\.(json|xpj)$/i;
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
 const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
 const settingsFilePath = getUserSettingsPath();
@@ -2635,9 +2636,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-		const jsonPath = fullPaths.find(path => /\.json$/i.test(path));
-		if (jsonPath) {
-			dropImportSettingsFromFile(jsonPath);
+        const settingsPath = fullPaths.find(filePath => SETTINGS_FILE_REGEX.test(filePath));
+        if (settingsPath) {
+    			dropImportSettingsFromFile(settingsPath);
 		} else {
             // Ctrlキー（MacのCmdキー含む）が押されているか判定
             const isAppend = e.ctrlKey || e.metaKey;
@@ -3645,6 +3646,21 @@ ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
     }
 });
 
+// main.js からの起動時設定インポート指示を受信
+ipcRenderer.on('auto-import-settings', async (event, filePath) => {
+    if (!filePath) return;
+
+    const runAutoImport = async () => {
+        await importSettingsFromFile(filePath, true);
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', runAutoImport, { once: true });
+    } else {
+        await runAutoImport();
+    }
+});
+
 // 変換進捗受信
 ipcRenderer.on('convert-progress', (e, { percent, step }) => {
     let playlisyCount = playlist.length;
@@ -3888,7 +3904,7 @@ function allDOMsetting() {
 // ユーザーフォルダ内の設定ファイルパスを取得
 function getUserSettingsPath() {
     // os.homedir() を使用してユーザーフォルダ直下のパスを生成
-    return path.join(os.homedir(), 'xPlayerSettings.json');
+    return path.join(os.homedir(), 'xPlayerSettings.xpj');
 }
 
 // 多重起動判定ヘルパー
@@ -3971,14 +3987,14 @@ async function allLocalStorageSetting() {
         savedAudioMotionNodes = localStorage.getItem('audioMotionNodes');
         savedImageBgmPaths = localStorage.getItem('imageBgmPaths');
         savedCurrentBgmIndex = localStorage.getItem('currentBgmIndex');
-        // 2. 取得情報をユーザーフォルダの xPlayerSettings.json に保存
+        // 2. 取得情報をユーザーフォルダの xPlayerSettings.xpj に保存
         await exportSettingsToFile(settingsFilePath);
     } else {
         // --- 多重起動時 ---
         appNameAndCopyright.textContent = `🚫${appNameAndCopyrightValue}`;
 
         // pid（プロセスID）を取得して個別の設定ファイルパスを生成
-        const pidSettingsFilePath = settingsFilePath.replace(/\.json$/, `_${pid}.json`);
+        const pidSettingsFilePath = settingsFilePath.replace(/\.xpj$/, `_${pid}.xpj`);
 
         // xPlayerSettings_(pid).json の存在確認
         let hasPidFile = false;
@@ -4921,12 +4937,12 @@ async function exportSettingsToFile(targetFilePath = null) {
         // 引数の保存先ファイルパスが Null の場合
         if (!filePath) {
             const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
-            const defaultName = `xPlayerSettings_${timestamp}.json`;
+            const defaultName = `xPlayerSettings_${timestamp}.xpj`;
             const result = await showSaveSettingsDialog(defaultName);
             if (result.canceled || !result.filePath) {
                 return;
             }
-            filePath = result.filePath;
+            filePath = result.filePath.replace(/\.json$/i, '.xpj');
         }
 
         let settings = {};
@@ -4976,7 +4992,7 @@ async function exportSettingsToFile(targetFilePath = null) {
 }
 
 // 設定のインポート
-async function importSettingsFromFile(targetFilePath = null) {
+async function importSettingsFromFile(targetFilePath = null, applySettings = !targetFilePath) {
     const maxRetries = targetFilePath ? 3 : 1;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -4999,8 +5015,8 @@ async function importSettingsFromFile(targetFilePath = null) {
                 throw new Error('設定ファイルの形式が正しくありません');
             }
 
-            // ファイル指定なし（手動インポート）の場合
-            if (!targetFilePath) {
+            // 手動インポートまたは起動引数指定の場合
+            if (applySettings) {
                 if (!isSecondary) {
                     // 初回起動時：設定ファイル→localStorage
                     localSturageClearAndFile();
@@ -5013,7 +5029,7 @@ async function importSettingsFromFile(targetFilePath = null) {
                     });
                 } else {
                     // 多重起動時：pidを取得して設定ファイル→xPlayerSettings_(pid).json出力
-                    const pidSettingsFilePath = settingsFilePath.replace(/\.json$/, `_${pid}.json`);
+                    const pidSettingsFilePath = settingsFilePath.replace(/\.xpj$/, `_${pid}.xpj`);
                     await fs.writeFile(pidSettingsFilePath, JSON.stringify(settings, null, 2), 'utf8');
                 }
 
@@ -5054,7 +5070,7 @@ async function dropImportSettingsFromFile(filePath) {
             throw new Error('設定ファイルの形式が正しくありません');
         }
 
-        const pidSettingsFilePath = settingsFilePath.replace(/\.json$/, `_${pid}.json`);
+        const pidSettingsFilePath = settingsFilePath.replace(/\.xpj$/, `_${pid}.xpj`);
         await fs.writeFile(pidSettingsFilePath, JSON.stringify(settings, null, 2), 'utf8');
 
         // 強制リロード
