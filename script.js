@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.72.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.73.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -480,6 +480,7 @@ let savedTranslateY = null;
 let savedEditFrameRate = null;
 let savedIsRandomPlayMode = null;
 let savedIsRepeatPlayMode = null;
+let savedAutoShuffle = null;            // 全曲リピート時に周回ごと再シャッフル
 let savedShuffleOrder = null;
 let savedShufflePosition = null;
 let savedAspectRatio = null;
@@ -548,6 +549,7 @@ let isurlInputPanelVisible = false;
 let isCutEditing = false;  // カット編集中フラグ
 let isJoinEditing = false;  // カット編集中フラグ
 let isRandomPlayMode = false;     // ランダム再生（シャッフル）
+let autoShuffle = true;            // 全曲リピート時に周回ごと再シャッフル
 let isRepeatPlayMode = 'none';  // 'none' | 'all' | 'single'
 let shuffleOrder = [];           // ランダムモード用の再生順リスト（インデックス配列）
 let shufflePosition = -1;        // 現在何番目を再生中か（-1=未開始）
@@ -818,6 +820,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         isRandomPlayMode = true;
     }
     updateRandomButtonUI();
+
+    // オートシャッフル復元
+    if (savedAutoShuffle === 'false') {
+        autoShuffle = false;
+    }
 
     // ランダム再生リスト復元
     if (savedShuffleOrder) {
@@ -3971,6 +3978,7 @@ async function allLocalStorageSetting() {
         savedEditFrameRate = localStorage.getItem('editFrameRate');
         savedIsRandomPlayMode = localStorage.getItem('isRandomPlayMode');
         savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode');
+        savedAutoShuffle = localStorage.getItem('autoShuffle');
         savedShuffleOrder = localStorage.getItem('shuffleOrder');
         savedShufflePosition = localStorage.getItem('shufflePosition');
         savedAspectRatio = localStorage.getItem('aspectRatio');
@@ -4055,6 +4063,8 @@ async function allLocalStorageSetting() {
             const rawRandomMode = getVal('isRandomPlayMode', savedIsRandomPlayMode, 'false');
             savedIsRandomPlayMode = String(rawRandomMode); // true (boolean) を "true" (string) に変換            
             savedIsRepeatPlayMode = getVal('isRepeatPlayMode', savedIsRepeatPlayMode, 'none');
+            const rawAutoShuffle = getVal('autoShuffle', savedAutoShuffle, 'true');
+            savedAutoShuffle = String(rawAutoShuffle);
             savedShuffleOrder = getVal('shuffleOrder', savedShuffleOrder);
             savedShufflePosition = getVal('shufflePosition', savedShufflePosition, '0');
             savedAspectRatio = getVal('aspectRatio', savedAspectRatio, 'none');
@@ -4120,6 +4130,7 @@ async function allLocalStorageSetting() {
     await localStorageSetItemAndFile('editFrameRate', savedEditFrameRate);
     await localStorageSetItemAndFile('isRandomPlayMode', savedIsRandomPlayMode);
     await localStorageSetItemAndFile('isRepeatPlayMode', savedIsRepeatPlayMode);
+    await localStorageSetItemAndFile('autoShuffle', savedAutoShuffle);
     await localStorageSetItemAndFile('shuffleOrder', savedShuffleOrder);
     await localStorageSetItemAndFile('shufflePosition', savedShufflePosition);
     await localStorageSetItemAndFile('aspectRatio', savedAspectRatio);
@@ -5986,6 +5997,18 @@ function resetShuffle() {
     }
 }
 
+// 全曲リピートの次周回用にシャッフル順を再生成
+function reshuffleForNextCycle() {
+    shuffleOrder = createShuffleOrder();
+    shufflePosition = 0;
+
+    // 「（ランダム）」表示中は、再シャッフル後の順序を表示にも反映する
+    if (currentSortMode === 'random') {
+        playlist = sortRandomPlaylist();
+        currentVideoIndex = 0;
+    }
+}
+
 // 前再生メディア取得
 function getPrevVideoIndex() {
     if (playlist.length === 0) return -1;
@@ -6062,7 +6085,12 @@ function getNextVideoIndex() {
         if (shufflePosition >= shuffleOrder.length) {
             if (isRepeatPlayMode === 'all') {
                 if (modeChange === 'video') {
-                    shufflePosition = 0;
+                    if (autoShuffle) {
+                        reshuffleForNextCycle();
+                        shufflePosition = shuffleOrder.length > 1 ? 1 : 0;
+                    } else {
+                        shufflePosition = 0;
+                    }
                 } else {
                     return -1;
                 }
@@ -6090,7 +6118,12 @@ function getNextVideoIndex() {
         let normalPosition = currentVideoIndex + 1;
         if (normalPosition >= playlist.length) {
             if (isRepeatPlayMode === 'all') {
-                return modeChange === 'video' ? 0 : -1;
+                if (modeChange !== 'video') return -1;
+                if (isRandomPlayMode && autoShuffle) {
+                    reshuffleForNextCycle();
+                    return playlist.length > 1 ? 1 : 0;
+                }
+                return 0;
             } else {
                 return -1;
             }
@@ -9435,9 +9468,7 @@ function SecureRandomInt(max) {
     return rand % max;
 }
 
-// 【アプローチB対応 + ランダム性強化】
-// 常にオリジナル順のインデックス配列 [0, 1, ..., N-1] を生成してシャッフルします。
-// @returns {Array<number>} シャッフルされたオリジナル順インデックス配列（shuffleOrder）
+// シャッフル再生用のオリジナル順インデックス配列を生成する関数
 function createShuffleOrder() {
     const originalPlaylist = getPlaylistInOriginalOrder();
     const length = originalPlaylist.length;
