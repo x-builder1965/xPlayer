@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.68.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.69.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -64,16 +64,16 @@ const imageThumbnailCache = new Map();		// 画像サムネイル用キャッシ�
 const dragThreshold = 5;    // ドラッグ判定用の移動閾値（手ぶれ考慮: 5ピクセル）
 
 const SORT_MODES = {
-    'none':       { label: '（なし）',     fn: () => getPlaylistInOriginalOrder() },
-    'path_asc':   { label: 'ファイル▲',   fn: () => [...playlist].sort((a, b) => (a.file?.path || '').localeCompare(b.file?.path || '')) },
-    'path_desc':  { label: 'ファイル▼',   fn: () => [...playlist].sort((a, b) => (b.file?.path || '').localeCompare(a.file?.path || '')) },
-    'type_asc':   { label: '種類▲',       fn: () => [...playlist].sort((a, b) => {
+    'none':       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
+    'path_asc':   { label: 'ファイル▲',   fn: () => [...getPlaylistInOriginalOrder()].sort((a, b) => (a.file?.path || '').localeCompare(b.file?.path || '')) },
+    'path_desc':  { label: 'ファイル▼',   fn: () => [...getPlaylistInOriginalOrder()].sort((a, b) => (b.file?.path || '').localeCompare(a.file?.path || '')) },
+    'type_asc':   { label: '種類▲',       fn: () => [...getPlaylistInOriginalOrder()].sort((a, b) => {
         const extA = a.file?.ext || '';
         const extB = b.file?.ext || '';
         const comp = extA.localeCompare(extB);
         return comp !== 0 ? comp : (a.file?.path || '').localeCompare(b.file?.path || '');
     })},
-    'type_desc':  { label: '種類▼',       fn: () => [...playlist].sort((a, b) => {
+    'type_desc':  { label: '種類▼',       fn: () => [...getPlaylistInOriginalOrder()].sort((a, b) => {
         const extA = a.file?.ext || '';
         const extB = b.file?.ext || '';
         const comp = extB.localeCompare(extA);
@@ -7528,7 +7528,7 @@ function renderCutRanges() {
 
 // 作成日時で並び替える非同期関数（fs.stat を使って取得）
 async function sortByCreationTime(ascending = true) {
-    const sorted = [...playlist];
+    const sorted = [...getPlaylistInOriginalOrder()];
     
     const itemsWithTime = sorted.map(item => ({ ...item, ctime: item.file?.time || 0 }));
 
