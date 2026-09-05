@@ -16,8 +16,8 @@ xPlayer は **ローカルメディア（動画・音声・画像）の再生お
   - プレイリストファイル（`.amppl`）の読み込みに対応  
   - **対応フォーマット:**  
     - 動画：`mp4`, `mkv`, `webm`, `avi`, `flv`, `mov`, `wmv`, `mpg`, `mpeg`, `ts`, `mts`, `m2ts`, `vob`, `ogv`, `3gp`, `m4v`, `asf`  
-    - 音声：`mp3`, `wav`, `flac`, `ogg`, `oga`, `m4a`, `aac`, `opus`, `wma`, `aiff`, `aif`, `alac`, `ape`
-    - 画像： `jpg`, `jpeg`, `png`, `gif`, `bmp`, `tiff`, `webp` など  
+    - 音声：`mp3`, `wav`, `flac`, `ogg`, `oga`, `m4a`, `aac`, `opus`, `wma`, `aiff`, `aif`, `alac`, `ape`, `m4b`, `mid`, `midi`  
+    - 画像：`jpg`, `jpeg`, `png`, `gif`, `bmp`, `tiff`, `webp` など  
   - HTML5 ネイティブ再生に対応する形式（`mp4`, `webm`, `ogg`, `mov`, `m4v`, 一部 `mkv`）はダイレクト再生  
   - 非対応形式は **FFmpeg** により自動変換（日本語音声・字幕を優先取得）
 
@@ -103,14 +103,15 @@ npm install
 npm start
 
 # アプリのビルド・パッケージング
-npm run dist           # x64 向け最大圧縮ビルド
 npm run build          # Windows インストーラー生成（dist-win/ に出力）
+npm run dist           # x64 向け最大圧縮ビルド
+npm run dist:32        # 32bit 版ビルド
 npm run dist:portable  # ポータブル版 (.exe) の生成
 npm run sign           # 署名付きビルド（環境変数 CSC_KEY_PASSWORD が必要）
 ```
 
 ### インストーラーから実行する場合
-1. リリースまたは `dist-win/` フォルダー内の `xPlayer Setup X.X.X.exe` を実行してインストールします。
+1. `Release/` または `dist-win/` フォルダー内の `xPlayer Setup X.X.X.exe` を実行してインストールします。
 2. デスクトップまたはスタートメニューから起動してください。  
    ※ メディアファイル（`.mp4`, `.mp3` 等）や `.amppl` ファイルのダブルクリック起動・関連付けにも対応しています。
 
