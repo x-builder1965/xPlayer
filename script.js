@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.67.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.68.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -68,14 +68,14 @@ const SORT_MODES = {
     'path_asc':   { label: 'ファイル▲',   fn: () => [...playlist].sort((a, b) => (a.file?.path || '').localeCompare(b.file?.path || '')) },
     'path_desc':  { label: 'ファイル▼',   fn: () => [...playlist].sort((a, b) => (b.file?.path || '').localeCompare(a.file?.path || '')) },
     'type_asc':   { label: '種類▲',       fn: () => [...playlist].sort((a, b) => {
-        const extA = getFileExtension(a.file?.path);
-        const extB = getFileExtension(b.file?.path);
+        const extA = a.file?.ext || '';
+        const extB = b.file?.ext || '';
         const comp = extA.localeCompare(extB);
         return comp !== 0 ? comp : (a.file?.path || '').localeCompare(b.file?.path || '');
     })},
     'type_desc':  { label: '種類▼',       fn: () => [...playlist].sort((a, b) => {
-        const extA = getFileExtension(a.file?.path);
-        const extB = getFileExtension(b.file?.path);
+        const extA = a.file?.ext || '';
+        const extB = b.file?.ext || '';
         const comp = extB.localeCompare(extA);
         return comp !== 0 ? comp : (a.file?.path || '').localeCompare(b.file?.path || '');
     })},
@@ -863,7 +863,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const current = playlist[currentVideoIndex];
             navigator.mediaSession.metadata = new MediaMetadata({
-                title: path.basename(current.name || current.file.path),
+                title: current.file.name,
                 artist: 'xPlayer'
             });
         };
@@ -970,10 +970,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     !isNaN(parsedCurrentVideoIndex) && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
                     // プレイリスト復元
                     updateMessageOverlay(`📚 プレイリスト作成中...`, 0, false);
-                    playlist = parsedPlaylist.map(path => ({
-                        file: { path },
-                        name: path
-                    }));
+                    playlist = await Promise.all(parsedPlaylist.map(file => createPlaylistItem(file)));
                     currentVideoIndex = parsedCurrentVideoIndex;
                     setPlaybackPosition(currentVideoIndex);
                     await debouncedUpdateFilterList();
@@ -1750,7 +1747,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // メディアメタデータ読み込み
-    videoPlayer.addEventListener('loadedmetadata', () => {
+    videoPlayer.addEventListener('loadedmetadata', async () => {
         // 変換ファイル削除
         if (isConverting) {
             // プレイリスト更新
@@ -1758,10 +1755,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const currentIndex = playlist.findIndex(item => item.file.path === baseConvertFile);
                 if (currentIndex !== -1) {
                     // プレイリストの該当エントリを更新
-                    playlist[currentIndex] = {
-                        file: { path: tempConvertFile },
-                        name: tempConvertFile
-                    };
+                    playlist[currentIndex] = await createPlaylistItem(tempConvertFile);
                     resetShuffle();
                     saveShuffleState(); // 現在のシャッフル位置を保存
                     updatePlaylistDisplay();
@@ -1855,20 +1849,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('エラー詳細:', errorDetails);
         }
 
-        const currentSrc = videoPlayer.src;
-        if (!currentSrc) {
+        const currentFile = playlist[currentVideoIndex]?.file;
+        if (!currentFile) {
             console.warn('src が空です');
             return;
         }
 
-        //拡張子抽出
-        let ext = '';
-        try {
-            ext = path.extname(currentSrc).toLowerCase();
-        } catch (err) {
-            console.warn('拡張子抽出失敗:', err);
-            return;
-        }
+        const ext = currentFile.ext || '';
 
         // 共通関数で判定
         if (isVIDEO_EXTENSIONS(ext)) {
@@ -2199,8 +2186,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!videoPlayer.duration || playlist.length === 0) return;
         isMouseOverEditSeekBar = true;
         // 動画以外（音声ファイル等）の場合はプレビューを表示しない
-        const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
-        const ext = path.extname(currentSrc).toLowerCase();
+        const ext = playlist[currentVideoIndex]?.file?.ext || '';
         if (!isVideoFile(ext)) return;
         videoPreview.style.display = 'block';
         // プレビュー位置更新
@@ -2318,8 +2304,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!duration || playlist.length === 0) return;
         
         isMouseOverSeekBar = true;
-        const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
-        const ext = path.extname(currentSrc).toLowerCase();
+        const ext = playlist[currentVideoIndex]?.file?.ext || '';
         if (!isVideoFile(ext)) return;
         videoPreview.style.display = 'block';
         updatePreviewPosition(e);
@@ -2679,7 +2664,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	    // 再生中メディアの拡張子判定処理を追加
 	    const currentFile = playlist[currentVideoIndex];
 	    if (currentFile && currentFile.file && currentFile.file.path) {
-	        const ext = path.extname(currentFile.file.path).toLowerCase();
+            const ext = currentFile.file.ext || '';
 	        const isVideo = VIDEO_EXTENSIONS.includes(ext);
 	        const isAudio = AUDIO_EXTENSIONS.includes(ext);
 	
@@ -2835,9 +2820,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 	        const currentFile = playlist[currentVideoIndex];
 	        if (!currentFile) return;
 	
-	        const fileName = path.basename(currentFile.file.path);
-	        const baseNameWithoutExt = path.parse(fileName).name;
-	        const ext = path.extname(fileName);
+            const fileName = currentFile.file.name;
+            const baseNameWithoutExt = path.parse(fileName).name;
+            const ext = currentFile.file.ext;
 	        const defaultOutName = `${baseNameWithoutExt}_trimmed${ext}`;
 	
 	        // 保存ダイアログ表示
@@ -3571,8 +3556,7 @@ document.addEventListener('mouseup', (e) => {
         darkOverlay.style.display = 'none';
         hideMessageOverlay();
 
-        const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
-        const ext = path.extname(currentSrc).toLowerCase();
+        const ext = playlist[currentVideoIndex]?.file?.ext || '';
         if (isMouseOverSeekBar && isVideoFile(ext)) {
             videoPreview.style.display = 'block';
         }
@@ -3584,8 +3568,7 @@ document.addEventListener('mouseup', (e) => {
         isDragging = false;
         darkOverlay.style.display = 'none';
         hideMessageOverlay();
-        const currentSrc = playlist[currentVideoIndex]?.file?.path || '';
-        const ext = path.extname(currentSrc).toLowerCase();
+        const ext = playlist[currentVideoIndex]?.file?.ext || '';
         if (isMouseOverEditSeekBar && isVideoFile(ext)) {
             videoPreview.style.display = 'block';
         }
@@ -4968,6 +4951,16 @@ async function exportSettingsToFile(targetFilePath = null) {
             settings = { ...localSettings };
         }
 
+        // 手動・自動を問わず playlist は file 情報を含むオブジェクト配列で保存する
+        if (Object.prototype.hasOwnProperty.call(settings, 'playlist')) {
+            const storedPlaylist = safeJSONParse(settings.playlist, []);
+            if (Array.isArray(storedPlaylist)) {
+                settings.playlist = (await Promise.all(
+                    storedPlaylist.map(item => createPlaylistItem(item))
+                )).filter(Boolean);
+            }
+        }
+
         // 指定されたパスにエクスポート（どちらの分岐を通っても正しいオブジェクト構造でシリアライズされる）
         await fs.writeFile(filePath, JSON.stringify(settings, null, 2), 'utf8');
 
@@ -5167,8 +5160,7 @@ function stopPeriodicSave() {
 // プレイリストと再生状態保存
 function savePlaylistAndPlaybackState() {
     if (playlist.length > 0) {
-        const playlistPaths = playlist.map(item => item.file.path);
-        localStorageSetItemAndFile('playlist', JSON.stringify(playlistPaths));
+        localStorageSetItemAndFile('playlist', JSON.stringify(playlist));
         localStorageSetItemAndFile('currentVideoIndex', currentVideoIndex);
         localStorageSetItemAndFile('currentTime', videoPlayer.currentTime || 0);
     } else {
@@ -5421,7 +5413,7 @@ async function updateFilterList() {
         .filter(({ item }) => {
             if (normalizedQuery === '') return true;
             
-            const name = (item.name || '').toLowerCase();
+            const name = (item.file?.path || '').toLowerCase();
             const pathText = (item.file?.path || '').toLowerCase();
             const fullText = name + ' ' + pathText;
             const orGroups = normalizedQuery.split(',').map(g => g.trim());
@@ -5483,8 +5475,7 @@ async function updateFilterList() {
                     let dateStr = '作成日不明';
                     if (item.file?.path) {
                         try {
-                            const stats = await fs.stat(item.file.path);
-                            const timeMs = (stats.birthtimeMs && stats.birthtimeMs > 0) ? stats.birthtimeMs : stats.ctimeMs;
+                            const timeMs = item.file?.time;
 
                             if (timeMs && !isNaN(timeMs)) {
                                 const d = new Date(timeMs);
@@ -5503,10 +5494,10 @@ async function updateFilterList() {
                     currentGroupKey = dateStr;
                 } else if (isTypeSort) {
                     // 種類▲・▼ の場合は拡張子でグループ化
-                    currentGroupKey = getFileExtension(item.file?.path).toUpperCase();
+                    currentGroupKey = (item.file?.ext || '拡張子なし').toUpperCase();
                 } else {
                     // ファイル▲・▼ などの場合はフォルダパスでグループ化
-                    const fullPath = item.file?.path || item.name || '無題';
+                    const fullPath = item.file?.path || '無題';
                     const currentFolderPath = path.dirname(fullPath);
                     currentGroupKey = currentFolderPath === '.' ? 'ルートフォルダ' : currentFolderPath;
                 }
@@ -5554,9 +5545,9 @@ async function updateFilterList() {
         if (index === currentVideoIndex) button.classList.add('current');
         if (index === selectedPlaylistIndex) button.classList.add('selected');
 
-        const displayText = item.file?.path || item.name || '無題';
+        const displayText = item.file?.path || '無題';
         const showPlaybackIcon = index === currentVideoIndex && !isVideoStopped();
-        const fileName = path.basename(item.file?.path || item.name || '無題');
+        const fileName = item.file?.name || '無題';
 
         if (playlistDisplayMode === 'list') {
             button.classList.add('filter-item-list');
@@ -5714,7 +5705,7 @@ function getFilteredIndices() {
     return playlist
         .map((item, idx) => ({ item, idx }))
         .filter(({ item }) => {
-            const name = (item.name || '').toLowerCase();
+            const name = (item.file?.path || '').toLowerCase();
             const pathText = (item.file?.path || '').toLowerCase();
             const fullText = name + ' ' + pathText;
             
@@ -6754,6 +6745,33 @@ function closeHelp() {
     updateIconOverlay();
 }
 
+// プレイリスト項目を共通形式へ正規化
+async function createPlaylistItem(file) {
+    const fileData = typeof file === 'string' ? {} : (file?.file || file || {});
+    const filePath = typeof file === 'string' ? file : fileData.path;
+    if (!filePath) return null;
+
+    let time = typeof fileData.time === 'number' ? fileData.time : 0;
+    if (!time) {
+        try {
+            const stats = await fs.stat(filePath);
+            time = stats.mtimeMs || 0;
+        } catch (error) {
+            console.warn(`ファイル情報取得失敗: ${filePath}`, error);
+        }
+    }
+
+    return {
+        file: {
+            ...fileData,
+            path: filePath,
+            name: fileData.name || path.basename(filePath),
+            ext: fileData.ext || path.extname(filePath).toLowerCase(),
+            time
+        }
+    };
+}
+
 // プレイリストのファイル追加
 async function playlistAdd(videoFiles) {
     if (!videoFiles || videoFiles.length === 0) {
@@ -6779,10 +6797,8 @@ async function playlistAdd(videoFiles) {
         return;
     }
 
-    const mappedNewFiles = uniqueVideoFiles.map(file => ({
-        file: { path: file.path },
-        name: file.path
-    }));
+    const mappedNewFiles = (await Promise.all(uniqueVideoFiles.map(file => createPlaylistItem(file))))
+        .filter(Boolean);
 
     const isFirstTime = playlist.length === 0;
 
@@ -6823,10 +6839,8 @@ async function playlistSet(videoFiles) {
     localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
 
     // playlist を初期状態（ファイル取得順）でセット
-    playlist = videoFiles.map(file => ({
-        file: { path: file.path },
-        name: file.path
-    }));
+    playlist = (await Promise.all(videoFiles.map(file => createPlaylistItem(file))))
+        .filter(Boolean);
 
     // 現状の並び替えモード（currentSortMode）を適用
     await applySort(currentSortMode);
@@ -6930,7 +6944,7 @@ function getCurrentAddModePosition() {
 }
 
 // プレイリストにファイルを挿入するヘルパー関数
-function insertFilesIntoPlaylist(files, addPosition = 0) {
+async function insertFilesIntoPlaylist(files, addPosition = 0) {
     if (!files || files.length === 0) {
         hideMessageOverlay();
         return;
@@ -6962,7 +6976,8 @@ function insertFilesIntoPlaylist(files, addPosition = 0) {
     }
 
     const insertIndex = getPlaylistInsertIndex(addPosition);
-    const formattedFiles = uniqueFiles.map(f => ({ file: { path: f.path }, name: f.name }));
+    const formattedFiles = (await Promise.all(uniqueFiles.map(file => createPlaylistItem(file))))
+        .filter(Boolean);
     playlist.splice(insertIndex, 0, ...formattedFiles);
     if (selectedPlaylistIndex < 0) selectedPlaylistIndex = insertIndex;
 
@@ -7160,7 +7175,7 @@ async function cleanupTempFiles() {
 async function joinPlaylistVideos() {
     // プレイリストから動画ファイルのみを抽出（拡張子を抽出して判定）
     const videoFiles = playlist.filter(item => {
-        const filePath = item.file?.path || item.name || '';
+        const filePath = item.file?.path || '';
         const ext = filePath.substring(filePath.lastIndexOf('.'));
         return VIDEO_EXTENSIONS.includes(ext);
     });
@@ -7223,7 +7238,7 @@ async function joinPlaylistVideos() {
 async function joinPlaylistAudios() {
     // プレイリストから音声ファイルのみを抽出
     const audioFiles = playlist.filter(item => {
-        const filePath = item.file?.path || item.name || '';
+        const filePath = item.file?.path || '';
         const ext = filePath.substring(filePath.lastIndexOf('.'));
         return AUDIO_EXTENSIONS.includes(ext); // 音声用判定関数
     });
@@ -7515,18 +7530,7 @@ function renderCutRanges() {
 async function sortByCreationTime(ascending = true) {
     const sorted = [...playlist];
     
-    // 各ファイルの作成日時を取得
-    const promises = sorted.map(async (item) => {
-        try {
-            const stats = await fs.stat(item.file.path);
-            return { ...item, ctime: stats.ctimeMs };  // ctimeMs = 作成日時のミリ秒
-        } catch (err) {
-            console.warn(`stat失敗: ${item.file.path}`, err);
-            return { ...item, ctime: 0 };  // 失敗したら古い扱い
-        }
-    });
-
-    const itemsWithTime = await Promise.all(promises);
+    const itemsWithTime = sorted.map(item => ({ ...item, ctime: item.file?.time || 0 }));
 
     // 昇順／降順でソート
     itemsWithTime.sort((a, b) => ascending ? a.ctime - b.ctime : b.ctime - a.ctime);
