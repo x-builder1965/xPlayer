@@ -144,11 +144,11 @@
                 <button id="wallpaperBtn" data-tooltip="背景壁紙（Ctrl+p）">🖼️</button>
                 <button id="audioMotionBtn" data-tooltip="オーディオモーション設定（Ctrl+m）">🏳️‍🌈</button>
                 <button id="imageEffectBgmBtn" data-tooltip="イメージエフェクト＆BGM設定（Ctrl+b）">💃</button>
+                <button id="autoShuffleBtn" data-tooltip="自動シャッフル設定（Ctrl+w）">🔀</button>
                 <button id="pauseShowBtn" data-tooltip="コントロール表示抑止（Ctrl+y）">👁️</button>
                 <button id="fullscreenBtn" data-tooltip="フルスクリーン表示（Ctrl+a／Double Click）">🖥️</button>
                 <button id="alwaysOnTopBtn" data-tooltip="常に最前面を設定（Ctrl+1）">🔝</button>
-                <button id="importSettingsBtn" data-tooltip="設定インポート（Ctrl+i）">📥</button>
-                <button id="exportSettingsBtn" data-tooltip="設定エクスポート（Ctrl+o）">📤</button>
+                <button id="importExportBtn" data-tooltip="設定インポート・エクスポート（Ctrl+i／Ctrl+o）">🍥</button>
                 <button id="settingsCloseBtn" data-tooltip="設定モード終了（Ctrl+q）">❌</button>
             </div>
             <div id="zoomPanel">
@@ -553,6 +553,20 @@
                                 <td class="note sub-title"></td>
                             </tr>
                             <tr>
+                                <td>　・フルスクリーン表示／解除</td>
+                                <td class="icon">🖥️</td>
+                                <td class="key">Ctrl+a</td>
+                                <td class="mouse">Double Click</td>
+                                <td class="note">・プレイヤーのフルスクリーン表示（青）またはウィンドウ表示（赤）を切り替える。</td>
+                            </tr>
+                            <tr>
+                                <td>　・常に最前面</td>
+                                <td class="icon">🔝</td>
+                                <td class="key">Ctrl+1</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・プレイヤーを常に最前面に表示／非表示する。</td>
+                            </tr>
+                            <tr>
                                 <td>　・背景壁紙設定</td>
                                 <td class="icon">🖼️</td>
                                 <td class="key">Ctrl+p</td>
@@ -574,6 +588,13 @@
                                 <td class="note">・画像再生時のトラジションエフェクトの切替および再生BGMの設定。</td>
                             </tr>
                             <tr>
+                                <td>　・自動シャッフル設定</td>
+                                <td class="icon">🔀</td>
+                                <td class="key">Ctrl+w</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・ランダム再生・全繰り返し再生中に自動でシャッフルする機能の有効・無効を設定。</td>
+                            </tr>
+                            <tr>
                                 <td>　・コントロール制御</td>
                                 <td class="icon">👁️</td>
                                 <td class="key">Ctrl+y</td>
@@ -581,32 +602,11 @@
                                 <td class="note">・コントロールパネル自動表示抑止、センターコントロール無効の設定・解除</td>
                             </tr>
                             <tr>
-                                <td>　・フルスクリーン表示／解除</td>
-                                <td class="icon">🖥️</td>
-                                <td class="key">Ctrl+a</td>
-                                <td class="mouse">Double Click</td>
-                                <td class="note">・プレイヤーのフルスクリーン表示（青）またはウィンドウ表示（赤）を切り替える。</td>
-                            </tr>
-                            <tr>
-                                <td>　・常に最前面</td>
-                                <td class="icon">🔝</td>
-                                <td class="key">Ctrl+1</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイヤーを常に最前面に表示／非表示する。</td>
-                            </tr>
-                            <tr>
-                                <td>　・設定インポート</td>
-                                <td class="icon">📥</td>
-                                <td class="key">Ctrl+i</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイヤーの設定をインポートし画面を復元する。</td>
-                            </tr>
-                            <tr>
-                                <td>　・設定エクスポート</td>
-                                <td class="icon">📤</td>
-                                <td class="key">Ctrl+o</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・プレイヤーの設定をエクスポートする。</td>
+                                <td>　・設定インポート・エクスポート</td>
+                                <td class="icon">🍥</td>
+                                <td class="key">Ctrl+i／Ctrl+o</td>
+                                <td class="mouse">popup menu</td>
+                                <td class="note">・プレイヤーの設定をインポートし画面を復元またはエクスポートする。</td>
                             </tr>
                             <tr>
                                 <td>　・設定モード終了</td>

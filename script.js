@@ -278,6 +278,10 @@ const JOIN_MODES = {
     'joinVideos': { label: '🎞️ 動画結合', fn: () => joinPlaylistVideos() },
     'joinAudios': { label: '🎵 音声結合', fn: () => joinPlaylistAudios() }
 };
+const IMPORT_EXPORT_MODES = {
+    'import': { label: '📥 設定インポート',   fn: () => importSettingsFromFile() },
+    'export': { label: '📤 設定エクスポート', fn: () => exportSettingsToFile() }
+};
 const CONTROL_MODES = {
     'display-disable': { label: 'コントロール自動表示抑止', fn: () => togglePauseShowControls() },
     'center-disable':  { label: 'センターコントロール無効', fn: () => toggleHideCenterControls() }
@@ -401,11 +405,11 @@ let messageOverlay = null;
 let iconOverlay = null;
 let appNameAndCopyright = null;
 let wallpaperBtn = null;
-let exportSettingsBtn = null;
-let importSettingsBtn = null;
+let importExportBtn = null;
 let alwaysOnTopBtn = null;
 let audioMotionBtn = null;
 let imageEffectBgmBtn = null;
+let autoShuffleBtn = null;
 let settingsBtn = null;
 let settingsPanel = null;
 let settingsCloseBtn = null;
@@ -821,10 +825,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     updateRandomButtonUI();
 
-    // オートシャッフル復元
+    // 自動シャッフル復元
     if (savedAutoShuffle === 'false') {
         autoShuffle = false;
     }
+    updateAutoShuffleButtonUI();
 
     // ランダム再生リスト復元
     if (savedShuffleOrder) {
@@ -1536,6 +1541,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         toggleSettingsPanel(!isSettingsPanelOpen);
     });
 
+    // 🔀自動シャッフル切替
+    autoShuffleBtn.addEventListener('click', () => {
+        toggleAutoShuffle();
+    });
+
     // 🖼️背景壁紙選択
     wallpaperBtn.addEventListener('click', async () => {
         hideMessageOverlay();
@@ -1726,14 +1736,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         toggleAlwaysOnTop();
     });
 
-    // 📥設定インポート
-    importSettingsBtn.addEventListener('click', async () => {
-        await importSettingsFromFile();
-    });
+    // 🍥インポート・エクスポート
+    importExportBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
 
-    // 📤設定エクスポート
-    exportSettingsBtn.addEventListener('click', async () => {
-        await exportSettingsToFile();
+        const existingMenu = document.querySelector('.import-export-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+            return;
+        }
+
+        hideMenus();
+
+        const targetContainer = document.fullscreenElement || mainContainer;
+        const menu = createImportExportMenu();
+        const containerRect = targetContainer.getBoundingClientRect();
+        const btnRect = importExportBtn.getBoundingClientRect();
+
+        menu.style.left = `${Math.max(8, btnRect.right - containerRect.left + 2)}px`;
+        menu.style.top = `${Math.max(8, btnRect.top - containerRect.top + 2)}px`;
+        targetContainer.appendChild(menu);
+
+        function closeMenu(ev) {
+            if (!menu.contains(ev.target) && ev.target !== importExportBtn) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        }
+
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu);
+        }, 0);
     });
 
     // ❌設定モード終了
@@ -3163,6 +3196,13 @@ document.addEventListener('keydown', async (event) => {
             return;
         }
 
+        // 🔀自動シャッフル設定（Ctrl+w）
+        if (event.ctrlKey && event.key === 'w') {
+            event.preventDefault();
+            autoShuffleBtn.click();
+            return;
+        }
+
         // 👁️コントロール表示抑止（Ctrl+y）
         if (event.ctrlKey && event.key === 'y') {
             event.preventDefault();
@@ -3187,14 +3227,14 @@ document.addEventListener('keydown', async (event) => {
         // 📥設定インポート（Ctrl+i）
         if (event.ctrlKey && event.key === 'i') {
             event.preventDefault();
-            importSettingsBtn.click();
+            await importSettingsFromFile();
             return;
         }
 
         // 📤設定エクスポート（Ctrl+o）
         if (event.ctrlKey && event.key === 'o') {
             event.preventDefault();
-            exportSettingsBtn.click();
+            await exportSettingsToFile();
             return;
         }
 
@@ -3848,11 +3888,11 @@ function allDOMsetting() {
     iconOverlay = document.getElementById('iconOverlay');
     appNameAndCopyright = document.getElementById('appNameAndCopyright');
     wallpaperBtn = document.getElementById('wallpaperBtn');
-    exportSettingsBtn = document.getElementById('exportSettingsBtn');
-    importSettingsBtn = document.getElementById('importSettingsBtn');
+    importExportBtn = document.getElementById('importExportBtn');
     alwaysOnTopBtn = document.getElementById('alwaysOnTopBtn');
     audioMotionBtn = document.getElementById('audioMotionBtn');
     imageEffectBgmBtn = document.getElementById('imageEffectBgmBtn');
+    autoShuffleBtn = document.getElementById('autoShuffleBtn');
     settingsBtn = document.getElementById('settingsBtn');
     settingsPanel = document.getElementById('settingsPanel');
     settingsCloseBtn = document.getElementById('settingsCloseBtn');
@@ -4391,7 +4431,8 @@ function hideMenus(hideAll = true) {
         ...(!isZoomMode || hideAll ? ['.aspect-ratio-menu'] : []),
         ...(!isSettingsPanelOpen || hideAll ? ['.audio-motion-menu'] : []),
         ...(!isSettingsPanelOpen || hideAll ? ['.image-effectbgm-menu'] : []),
-        ...(!isSettingsPanelOpen || hideAll ? ['.control-menu'] : [])
+        ...(!isSettingsPanelOpen || hideAll ? ['.control-menu'] : []),
+        '.import-export-menu'
     ];
 
     document.querySelectorAll(classes.join(', ')).forEach(m => m.remove());
@@ -5922,6 +5963,24 @@ function updateRandomButtonUI() {
     } else {
         randomPlayBtn.setAttribute('data-tooltip', 'ランダム再生無効（Ctrl+r）');
     }
+}
+
+// 自動シャッフルボタンのUI更新
+function updateAutoShuffleButtonUI() {
+    if (!autoShuffleBtn) return;
+
+    autoShuffleBtn.classList.toggle('auto-shuffle-active', autoShuffle);
+    autoShuffleBtn.setAttribute(
+        'data-tooltip',
+        autoShuffle ? '自動シャッフル有効（Ctrl+w）' : '自動シャッフル無効（Ctrl+w）'
+    );
+}
+
+// 自動シャッフル切替
+function toggleAutoShuffle() {
+    autoShuffle = !autoShuffle;
+    localStorageSetItemAndFile('autoShuffle', autoShuffle);
+    updateAutoShuffleButtonUI();
 }
 
 // ランダム再生トグル
@@ -9355,6 +9414,44 @@ function updateCenterPlayPauseIcon() {
             centerPlayPauseBtn.src = 'control_pause.png';
         }
     }, 100);
+}
+
+// インポート・エクスポートポップアップメニュー作成関数
+function createImportExportMenu() {
+    const menu = document.createElement('div');
+    menu.className = 'import-export-menu';
+
+    buildImportExportMenuContent(menu);
+    return menu;
+}
+
+// インポート・エクスポートポップアップメニューコンテンツ構築関数
+function buildImportExportMenuContent(menu) {
+    menu.innerHTML = '';
+
+    Object.entries(IMPORT_EXPORT_MODES).forEach(([key, mode]) => {
+        const item = document.createElement('div');
+        item.className = 'menu-item';
+        item.style.color = '#eee';
+        item.style.padding = '6px 12px';
+        item.style.cursor = 'pointer';
+        item.textContent = mode.label;
+
+        item.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            menu.remove();
+            await mode.fn();
+        });
+
+        item.addEventListener('mouseover', () => {
+            item.style.background = 'rgba(0,123,255,0.2)';
+        });
+        item.addEventListener('mouseout', () => {
+            item.style.background = 'none';
+        });
+
+        menu.appendChild(item);
+    });
 }
 
 // コントロール制御ポップアップメニュー作成関数

@@ -972,7 +972,8 @@ button#modeChangeBtn.convert-active,
 #wallpaperBtn.wallpaper-active,
 #alwaysOnTopBtn.always-on-top-active,
 #audioMotionBtn.audio-motion-active,
-#imageEffectBgmBtn.image-effectbgm-active {
+#imageEffectBgmBtn.image-effectbgm-active,
+#autoShuffleBtn.auto-shuffle-active {
     background: #e63946 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single,
@@ -1001,7 +1002,8 @@ button#modeChangeBtn.convert-active:hover,
 #wallpaperBtn.wallpaper-active:hover,
 #alwaysOnTopBtn.always-on-top-active:hover,
 #audioMotionBtn.audio-motion-active:hover,
-#imageEffectBgmBtn.image-effectbgm-active:hover {
+#imageEffectBgmBtn.image-effectbgm-active:hover,
+#autoShuffleBtn.auto-shuffle-active:hover {
     background: #e6394785 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single:hover,
@@ -1080,7 +1082,8 @@ button#modeChangeBtn.convert-active:hover,
 .audio-motion-menu,
 .image-effectbgm-menu,
 .join-playlist-menu,
-.control-menu {
+.control-menu,
+.import-export-menu {
     position: absolute;
     background: rgba(30, 30, 30, 0.95);
     border: 1px solid #444;
