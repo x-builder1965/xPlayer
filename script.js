@@ -723,6 +723,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     updateAlwaysOnTopButtonUI();
 
+    // オーディオモーションのオプション、ノード設定を復元
+    applyAudioMotionSettings();
+
     // オーディオモーション復元
     if (savedAudioMotionMode && AUDIOMOTION_NODES[savedAudioMotionMode]) {
         audioMotionMode = savedAudioMotionMode;
@@ -4056,11 +4059,8 @@ async function allLocalStorageSetting() {
     if (!isSecondary) {
         // --- 初回起動時 ---
         appNameAndCopyright.textContent = appNameAndCopyrightValue;
-        // 先に AUDIOMOTION_NODES を復元・初期化
-        loadAudioMotionOptions();
-        loadAudioMotionNodes();
 
-        // 1. localStorage から値を取得し対象変数に設定
+        // 1. localStorage から値を取得
         savedVolume = localStorage.getItem('volume');
         savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
         savedPlaylist = localStorage.getItem('playlist');
@@ -4098,16 +4098,15 @@ async function allLocalStorageSetting() {
         savedCurrentBgmIndex = localStorage.getItem('currentBgmIndex');
         savedMaxImageCacheSize = localStorage.getItem('maxImageCacheSize');
         savedMaxMediaCacheSize = localStorage.getItem('maxMediaCacheSize');
-        // 2. 取得情報をユーザーフォルダの xPlayerSettings.xpj に保存
+
+        // 2. 取得情報をユーザーフォルダの設定ファイルに保存
         await exportSettingsToFile(settingsFilePath);
     } else {
         // --- 多重起動時 ---
         appNameAndCopyright.textContent = `🚫${appNameAndCopyrightValue}`;
 
-        // pid（プロセスID）を取得して個別の設定ファイルパスを生成
+        // pidあり設定ファイルの存在確認
         const pidSettingsFilePath = settingsFilePath.replace(/\.xpj$/, `_${pid}.xpj`);
-
-        // xPlayerSettings_(pid).json の存在確認
         let hasPidFile = false;
         try {
             await fs.access(pidSettingsFilePath);
@@ -4115,27 +4114,27 @@ async function allLocalStorageSetting() {
         } catch {
             hasPidFile = false;
         }
+        // 自動インポート時の一時停止フラグ設定（pidあり設定ファイルあり＝手動インポート）
         forceStop = !hasPidFile;
 
+        // 設定ファイル読込
         let loadedSettings = null;
         if (hasPidFile) {
-            // 手動インポート：importSettingsFromFile(xPlayerSettings_(pid).json) で実行
+            // 手動インポート（pidあり設定ファイル）
             loadedSettings = await importSettingsFromFile(pidSettingsFilePath);
-            // xPlayerSettings_(pid).json を削除
             try {
                 await fs.unlink(pidSettingsFilePath);
             } catch (e) {
                 console.error(`ファイル削除失敗 (${pidSettingsFilePath}):`, e);
             }
         } else {
-            // 自動インポート：importSettingsFromFile(xPlayerSettings.json) で実行
+            // 自動インポート（pidなし設定ファイル）
             loadedSettings = await importSettingsFromFile(settingsFilePath);
         }
 
-        // 戻り値（importSettingsFromFile の設定オブジェクト）→ 各 saved変数
+        // 設定ファイルの設定値取得
         if (loadedSettings) {
-            // 安全な値取得ヘルパー
-            // loadedSettings に値があれば採用し、無ければ現在のメモリ変数(currentVal)を維持、それも無ければ defaultValue
+            // 設定値取得のヘルパー関数
             const getVal = (key, currentVal, defaultValue = null) => {
                 if (loadedSettings[key] !== undefined && loadedSettings[key] !== null) {
                     return loadedSettings[key];
@@ -4146,7 +4145,7 @@ async function allLocalStorageSetting() {
                 return defaultValue;
             };
 
-            // 各変数への代入（現在保持している変数値自体を第2引数に渡して保護）
+            // 設定ファイルからの値取得
             savedVolume = getVal('volume', savedVolume, '1.0');
             savedPlaybackSpeed = getVal('playbackSpeed', savedPlaybackSpeed, '1.0');
             savedPlaylist = getVal('playlist', savedPlaylist);
@@ -4157,11 +4156,9 @@ async function allLocalStorageSetting() {
             savedTranslateX = getVal('translateX', savedTranslateX, '0');
             savedTranslateY = getVal('translateY', savedTranslateY, '0');
             savedEditFrameRate = getVal('editFrameRate', savedEditFrameRate, '30');
-            const rawRandomMode = getVal('isRandomPlayMode', savedIsRandomPlayMode, 'false');
-            savedIsRandomPlayMode = String(rawRandomMode); // true (boolean) を "true" (string) に変換            
+            savedIsRandomPlayMode = String(getVal('isRandomPlayMode', savedIsRandomPlayMode, 'false'));
             savedIsRepeatPlayMode = getVal('isRepeatPlayMode', savedIsRepeatPlayMode, 'none');
-            const rawAutoShuffle = getVal('autoShuffle', savedAutoShuffle, 'true');
-            savedAutoShuffle = String(rawAutoShuffle);
+            savedAutoShuffle = String(getVal('autoShuffle', savedAutoShuffle, 'true'));
             savedShuffleOrder = getVal('shuffleOrder', savedShuffleOrder);
             savedShufflePosition = getVal('shufflePosition', savedShufflePosition, '0');
             savedAspectRatio = getVal('aspectRatio', savedAspectRatio, 'none');
@@ -4172,12 +4169,9 @@ async function allLocalStorageSetting() {
             savedSelectedSubtitleLabel = getVal('selectedSubtitleLabel', savedSelectedSubtitleLabel);
             savedSelectedSubtitleTrack = getVal('selectedSubtitleTrack', savedSelectedSubtitleTrack);
             savedWallpaperPath = getVal('wallpaperPath', savedWallpaperPath);
-            const rawAlwaysOnTop = getVal('alwaysOnTop', savedAlwaysOnTop, 'false');
-            savedAlwaysOnTop = String(rawAlwaysOnTop);
-            const rawPauseShowControls = getVal('pauseShowControls', savedPauseShowControls, 'false');
-            savedPauseShowControls = String(rawPauseShowControls);
-            const rawHideCenterControls = getVal('hideCenterControls', savedHideCenterControls, 'false');
-            savedHideCenterControls = String(rawHideCenterControls);
+            savedAlwaysOnTop = String(getVal('alwaysOnTop', savedAlwaysOnTop, 'false'));
+            savedPauseShowControls = String(getVal('pauseShowControls', savedPauseShowControls, 'false'));
+            savedHideCenterControls = String(getVal('hideCenterControls', savedHideCenterControls, 'false'));
             savedAudioMotionMode = getVal('audioMotionMode', savedAudioMotionMode);
             savedImageEffectBgmMode = getVal('imageEffectBgmMode', savedImageEffectBgmMode);
             savedIsImageWallpaperEnabled = getVal('isImageWallpaperEnabled', savedIsImageWallpaperEnabled);
@@ -4185,38 +4179,14 @@ async function allLocalStorageSetting() {
             savedOriginalOrder = getVal('originalLoadOrder', savedOriginalOrder);
             savedAudioMotionOptions = getVal('audioMotionOptions', savedAudioMotionOptions);
             savedAudioMotionNodes = getVal('audioMotionNodes', savedAudioMotionNodes);
-            savedImageBgmPaths = getVal('imageBgmPaths', savedImageBgmPaths);		// 設定ファイルからの複数パス復元
+            savedImageBgmPaths = getVal('imageBgmPaths', savedImageBgmPaths);
             savedCurrentBgmIndex = getVal('currentBgmIndex', savedCurrentBgmIndex, '0');
             savedMaxImageCacheSize = getVal('maxImageCacheSize', savedMaxImageCacheSize, '0');
             savedMaxMediaCacheSize = getVal('maxMediaCacheSize', savedMaxMediaCacheSize, '0');
-
-            // JSONファイルから DEFAULT_AUDIO_MOTION_OPTIONS を復元
-            if (loadedSettings['audioMotionOptions']) {
-                try {
-                    const parsed = typeof loadedSettings['audioMotionOptions'] === 'string'
-                        ? JSON.parse(loadedSettings['audioMotionOptions'])
-                        : loadedSettings['audioMotionOptions'];
-                    Object.assign(DEFAULT_AUDIO_MOTION_OPTIONS, parsed);
-                } catch (e) {
-                    console.error('audioMotionOptions の復元エラー:', e);
-                }
-            }
-            // JSONファイルから AUDIOMOTION_NODES を復元
-            if (loadedSettings['audioMotionNodes']) {
-                try {
-                    const parsed = typeof loadedSettings['audioMotionNodes'] === 'string' 
-                        ? JSON.parse(loadedSettings['audioMotionNodes']) 
-                        : loadedSettings['audioMotionNodes'];
-                    Object.keys(AUDIOMOTION_NODES).forEach(key => delete AUDIOMOTION_NODES[key]);
-                    Object.assign(AUDIOMOTION_NODES, parsed);
-                } catch (e) {
-                    console.error('audioMotionNodes の復元エラー:', e);
-                }
-            }
         }
     }
 
-    // 各設定値の localStorageと設定ファイルを同期（主に多重起動用）
+    // 各設定値を localStorage と同期
     await localStorageSetItemAndFile('volume', savedVolume);
     await localStorageSetItemAndFile('playbackSpeed', savedPlaybackSpeed);
     await localStorageSetItemAndFile('playlist', savedPlaylist);
@@ -4254,6 +4224,34 @@ async function allLocalStorageSetting() {
     await localStorageSetItemAndFile('currentBgmIndex', savedCurrentBgmIndex);
     await localStorageSetItemAndFile('maxImageCacheSize', savedMaxImageCacheSize);
     await localStorageSetItemAndFile('maxMediaCacheSize', savedMaxMediaCacheSize);
+}
+
+// オーディオモーションの設定を復元・適用するヘルパー関数
+function applyAudioMotionSettings() {
+    // オプションの復元
+    if (savedAudioMotionOptions) {
+        try {
+            const parsed = typeof savedAudioMotionOptions === 'string'
+                ? JSON.parse(savedAudioMotionOptions)
+                : savedAudioMotionOptions;
+            Object.assign(DEFAULT_AUDIO_MOTION_OPTIONS, parsed);
+        } catch (e) {
+            console.error('audioMotionOptions の復元エラー:', e);
+        }
+    }
+    
+    // ノード設定の復元
+    if (savedAudioMotionNodes) {
+        try {
+            const parsed = typeof savedAudioMotionNodes === 'string'
+                ? JSON.parse(savedAudioMotionNodes)
+                : savedAudioMotionNodes;
+            Object.keys(AUDIOMOTION_NODES).forEach(key => delete AUDIOMOTION_NODES[key]);
+            Object.assign(AUDIOMOTION_NODES, parsed);
+        } catch (e) {
+            console.error('audioMotionNodes の復元エラー:', e);
+        }
+    }
 }
 
 // 音声トラック・字幕トラック更新
@@ -5151,7 +5149,6 @@ async function importSettingsFromFile(targetFilePath = null, applySettings = !ta
         try {
             let filePath = targetFilePath;
 
-            // 引数の取得先ファイルパスが Null の場合
             if (!filePath) {
                 const result = await showOpenSettingsDialog();
                 if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
@@ -5167,25 +5164,23 @@ async function importSettingsFromFile(targetFilePath = null, applySettings = !ta
                 throw new Error('設定ファイルの形式が正しくありません');
             }
 
-            // 手動インポートまたは起動引数指定の場合
             if (applySettings) {
                 if (!isSecondary) {
                     // 初回起動時：設定ファイル→localStorage
                     localStorageClearAndFile();
                     Object.entries(settings).forEach(([key, value]) => {
-                        if (typeof value === 'object' && value !== null) {
-                            localStorageSetItemAndFile(key, JSON.stringify(value));
-                        } else {
-                            localStorageSetItemAndFile(key, String(value));
+                        if (value !== null && value !== undefined) {
+                            // オブジェクトや配列は JSON.stringify で保存
+                            const valToSet = typeof value === 'object' ? JSON.stringify(value) : String(value);
+                            localStorageSetItemAndFile(key, valToSet);
                         }
                     });
                 } else {
-                    // 多重起動時：pidを取得して設定ファイル→xPlayerSettings_(pid).json出力
+                    // 多重起動時
                     const pidSettingsFilePath = settingsFilePath.replace(/\.xpj$/, `_${pid}.xpj`);
                     await fs.writeFile(pidSettingsFilePath, JSON.stringify(settings, null, 2), 'utf8');
                 }
 
-                // 強制リロード
                 const fileName = filePath.split(/[/\\]/).pop();
                 updateMessageOverlay(`📥 インポート: ${fileName}`);
                 setTimeout(() => {
@@ -5193,7 +5188,6 @@ async function importSettingsFromFile(targetFilePath = null, applySettings = !ta
                 }, 300);
             }
 
-            // settings変数を返却
             return settings;
 
         } catch (error) {
@@ -5212,18 +5206,33 @@ async function importSettingsFromFile(targetFilePath = null, applySettings = !ta
         }
     }
 }
-
 // ドラッグ＆ドロップの設定インポート
 async function dropImportSettingsFromFile(filePath) {
     try {
         const content = await fs.readFile(filePath, 'utf8');
         const settings = JSON.parse(content);
+        
         if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
             throw new Error('設定ファイルの形式が正しくありません');
         }
 
-        const pidSettingsFilePath = settingsFilePath.replace(/\.xpj$/, `_${pid}.xpj`);
-        await fs.writeFile(pidSettingsFilePath, JSON.stringify(settings, null, 2), 'utf8');
+        if (!isSecondary) {
+            // --- 初回起動時（プライマリ） ---
+            // 既存の localStorage をクリアして設定を反省
+            localStorageClearAndFile();
+            Object.entries(settings).forEach(([key, value]) => {
+                if (value !== null && value !== undefined) {
+                    // オブジェクトや配列は JSON.stringify で文字列化して保存
+                    const valToSet = typeof value === 'object' ? JSON.stringify(value) : String(value);
+                    localStorageSetItemAndFile(key, valToSet);
+                }
+            });
+        } else {
+            // --- 多重起動時（セカンダリ） ---
+            // pid付きの設定ファイルを出力して次回の再読み込みに備える
+            const pidSettingsFilePath = settingsFilePath.replace(/\.xpj$/, `_${pid}.xpj`);
+            await fs.writeFile(pidSettingsFilePath, JSON.stringify(settings, null, 2), 'utf8');
+        }
 
         // 強制リロード
         const fileName = filePath.split(/[/\\]/).pop();
@@ -5231,8 +5240,9 @@ async function dropImportSettingsFromFile(filePath) {
         setTimeout(() => {
             location.reload();
         }, 300);
+
     } catch (error) {
-        console.error(`設定インポート失敗 (${attempt}/${maxRetries}回目):`, error);
+        console.error('設定インポート失敗:', error);
 
         const errorMsg = (error instanceof SyntaxError)
             ? '📥 設定ファイルの形式（JSON）が破損しています'
