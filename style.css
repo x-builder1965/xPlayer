@@ -1375,9 +1375,8 @@ button#modeChangeBtn.convert-active:hover,
     white-space: nowrap;
     z-index: 1000;
     max-height: 480px;
-    min-width: 760px;       /* 最小幅を広めに指定（お好みのサイズに調整可能） */
-    width: 54vw;          /* 固定幅、または min-width と合わせて使用 */
-    max-width: 54vw;
+    min-width: 720px;       /* 最小幅を広めに指定（お好みのサイズに調整可能） */
+    max-width: 58vw;
     box-sizing: border-box;
     overflow-y: auto;
     overflow-x: hidden;
