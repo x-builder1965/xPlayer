@@ -855,7 +855,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ランダム再生ポジション復元
-    if (savedShufflePosition !== null) {
+    if (savedShufflePosition !== 'null') {
         shufflePosition = parseInt(savedShufflePosition, 10);
         if (isNaN(shufflePosition) || shufflePosition < -1) {
             shufflePosition = -1;
@@ -863,18 +863,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 画像用キャッシュサイズ復元
-    if (savedMaxImageCacheSize) {
+    if (savedMaxImageCacheSize !== 'null') {
         maxImageCacheSize = savedMaxImageCacheSize;
     } else {
         maxImageCacheSize = MAX_IMAGE_CACHE_SIZE;
     }
+    localStorageSetItemAndFile('maxImageCacheSize', maxImageCacheSize);
     // 動画・音声用キャッシュサイズ復元
-    if (savedMaxMediaCacheSize) {
+    if (savedMaxMediaCacheSize !== 'null') {
         maxMediaCacheSize = savedMaxMediaCacheSize;
     } else {
         maxMediaCacheSize = MAX_MEDIA_CACHE_SIZE;
     }
-
+    localStorageSetItemAndFile('maxMediaCacheSize', maxMediaCacheSize);
+    
     // コントロールサイズ適用
     let controlSizeX = calculateControlSizeX();
     let controlSizeY = calculateControlSizeY();
