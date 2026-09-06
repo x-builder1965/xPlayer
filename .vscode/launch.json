@@ -12,7 +12,10 @@
       },
       "args": [
         ".",                          // カレントディレクトリのアプリを起動
-        // "D:/（試作中）/JavaApp/xPlayerテストデータ/沈黙の艦隊/沈黙の艦隊 - シーズン１【東京湾大海戦】/沈黙の艦隊 - シーズン１【東京湾大海戦】 第02話 「シーバット浮上」.mp4",
+        // "H:/Anime/Anime（放映中）/(4：木)_202607_★★★★☆_(TV)_片田舎のおっさん、剣聖になるⅡ",
+        // "H:/PlayList/NAS/手作り/Anime（再生履歴）.amppl",
+        // "H:/Docment/個人/画像/背景画像/ライブ壁紙 美少女12",
+        // "H:/Download/Image（背景画像）.xpj",
         "--remote-debugging-port=9223" // Rendererアタッチ用ポート（必須）
       ],
       "console": "integratedTerminal",

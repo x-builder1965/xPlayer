@@ -1,7 +1,7 @@
-// ---------------------------------------------------------------------
+// -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.75.2';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.71.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -11,19 +11,32 @@ const path = require('path');
 const { promises: fs } = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
+const ffprobeStatic = require('ffprobe-static');
 const os = require('os');
 const { spawn, exec } = require('child_process');
 const trashModule = require('trash');
 
 // 固定値設定
 const ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
+const ffprobePath = ffprobeStatic.path.replace('app.asar', 'app.asar.unpacked');
 const VIDEO_EXTENSIONS = [
     'mp4', 'mkv', 'webm', 'avi', 'flv', 'mov', 'wmv', 'mpg', 'mpeg',
     'ts', 'mts', 'm2ts', 'vob', 'ogv', '3gp', 'm4v', 'asf'
 ];
+const AUDIO_EXTENSIONS = [
+    'mp3', 'wav', 'flac', 'ogg', 'oga', 'm4a', 'aac', 'opus', 'wma', 
+    'aiff', 'aif', 'alac', 'ape', 'm4b', 'mid', 'midi'
+];
+const IMAGE_EXTENSIONS = [
+    'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp'
+];
 const VIDEO_PLAYLIST = ['amppl'];
-const VIDEO_EXTENSIONS_REGEX = new RegExp(`\\.(${VIDEO_EXTENSIONS.join('|')})$`, 'i');
+const SUPPORTED_MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS];
+const SUPPORTED_MEDIA_EXTENSIONS_REGEX = new RegExp(`\\.(${SUPPORTED_MEDIA_EXTENSIONS.join('|')})$`, 'i');
 const VIDEO_PLAYLIST_REGEX = new RegExp(`\\.(${VIDEO_PLAYLIST.join('|')})$`, 'i');
+const SETTINGS_EXTENSIONS = ['json', 'xpj'];
+const SETTINGS_FILE_REGEX = new RegExp(`\\.(${SETTINGS_EXTENSIONS.join('|')})$`, 'i');
+const gotTheLock = app.requestSingleInstanceLock();     // 🔧 単一インスタンスロックの取得（重複起動の判定）
 
 // グローバル（共通）変数
 let trash;
@@ -36,6 +49,7 @@ let currentJoinTempFiles = [];      // 結合用の一時変換ファイルリ�
 let currentJoinConcatTxt = null;    // concatリストのtxtパス
 let isJoinCancelled = false;        // ファイル先頭付近（他のグローバル変数の近く）に追加
 let thumbnailCacheDir = null;
+let isSecondaryInstance = false; // 重複起動フラグ
 
 // 🔲初期処理🔲
 // 開発中セキュリティオプション設定
@@ -64,14 +78,30 @@ try {
 
 // === FFmpeg パス設定（asarUnpack 対応）===
 ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(ffprobePath);
 
 // 正しい trash の取得方法（ESM対応）
 try {
     trash = trashModule.default || trashModule;  // default 優先
-    console.log('trash モジュール読み込み成功:', typeof trash); // → function
 } catch (err) {
     console.error('trash モジュール読み込み失敗:', err);
     trash = null;
+}
+
+// 初回起動判定
+if (!gotTheLock) {
+    // 2つ目以降の起動（重複起動）の場合
+    isSecondaryInstance = true;
+    // 重複起動時も一時的なバックグラウンド処理や設定同期のため即時quitせずフラグのみ保持するか、
+    // あるいは後続の処理で設定を同期させます。
+} else {
+    // 初回起動（プライマリインスタンス）の場合、2つ目が起動された際のイベントをキャッチ
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.focus();
+        }
+    });
 }
 
 // 🔲共通関数🔲
@@ -80,12 +110,12 @@ function createWindow() {
     const win = new BrowserWindow({
         width: 1280,
         height: 720,
-        title: 'xPlayer -動画プレイヤー-',
+        title: 'xPlayer -メディアプレイヤー-',
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             contextIsolation: true,
             nodeIntegration: false,
-            webSecurity: true,           // ← 追加（または削除して app.commandLine に任せる）
+            webSecurity: true,
             additionalArguments: [
                 '--disable-web-security',  // 開発中だけ false
                 '--content-security-policy="default-src \'self\'; script-src \'self\'; object-src \'none\';"'  // eval 禁止
@@ -98,7 +128,7 @@ function createWindow() {
     });
     win.loadFile('index.html');
     win.maximize();
-    win.once('ready-to-show', () => win.show());  // ← これで完璧
+    win.once('ready-to-show', () => win.show());
     return win;
 }
 
@@ -139,8 +169,8 @@ async function processListFile(filePath) {
             // 正規化（重複スラッシュなど除去）
             fullPath = path.normalize(fullPath);
 
-            // 動画ファイルかチェック
-            if (VIDEO_EXTENSIONS_REGEX.test(fullPath)) {
+            // 音声・動画ファイルかチェック
+            if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(fullPath)) {
                 try {
                     await fs.access(fullPath);
                     videoFiles.push({ name: path.basename(fullPath), path: fullPath });
@@ -159,11 +189,17 @@ async function getVideoFilesRecursively(folderPath) {
     try {
         const files = await fs.readdir(folderPath, { withFileTypes: true });
         for (const file of files) {
+            // 先頭が '.' で始まる隠しフォルダ・隠しファイルをスキップ
+            if (file.name.startsWith('.')) {
+                continue;
+            }
+
             const fullPath = path.join(folderPath, file.name);
+
             if (file.isDirectory()) {
                 const subFiles = await getVideoFilesRecursively(fullPath);
                 videoFiles.push(...subFiles);
-            } else if (VIDEO_EXTENSIONS_REGEX.test(file.name)) {
+            } else if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(file.name)) {
                 videoFiles.push({ name: file.name, path: fullPath });
             } else if (VIDEO_PLAYLIST_REGEX.test(file.name)) {
                 const listFiles = await processListFile(fullPath);
@@ -184,7 +220,7 @@ async function processCommandLineFile(filePath) {
             return await getVideoFilesRecursively(filePath);
         } else if (VIDEO_PLAYLIST_REGEX.test(filePath)) {
             return await processListFile(filePath);
-        } else if (VIDEO_EXTENSIONS_REGEX.test(filePath)) {
+        } else if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(filePath)) {
             return [{ name: path.basename(filePath), path: filePath }];
         }
     } catch (e) {
@@ -264,12 +300,17 @@ async function extractSubtitlesOnly(inputPath, baseName, outDir, metadata) {
         const lang = sub.tags?.language || sub.tags?.lang || 'und';
         const vttPath = path.join(outDir, `${baseName}_track${idx}_${lang}.vtt`);
 
-        // （中略：進捗通知など）
+        mainWindow.webContents.send('subtitle-extraction-progress', {
+            filePath: inputPath,
+            subtitleCount: subtitleStreams.length,
+            subtitleIndex: idx,
+            message: `字幕抽出中...（${idx + 1}/${subtitleStreams.length}）`
+        });
 
         await new Promise((res) => {
             ffmpeg(inputPath)
                 .outputOptions([
-                    // 【修正点】0:s:${idx} ではなく、ストリームの絶対インデックス（sub.index）を使用する
+                    // 0:s:${idx} ではなく、ストリームの絶対インデックス（sub.index）を使用する
                     `-map 0:${sub.index}`, 
                     '-vn', '-an',
                     '-c:s', 'webvtt'
@@ -296,27 +337,38 @@ async function extractSubtitlesOnly(inputPath, baseName, outDir, metadata) {
 app.whenReady().then(() => {
     mainWindow = createWindow();
 
-    mainWindow.webContents.once('did-finish-load', async () => {
+    // レンダラーからの準備完了通知を待つ
+    ipcMain.once('app-ready', async (event) => {
         try {
-            const args = process.argv.slice(app.isPackaged ? 1 : 2);
-            if (args.length === 0) return;
+            const rawArgs = process.argv.slice(app.isPackaged ? 1 : 2);
+            const args = rawArgs.filter(arg => !arg.startsWith('-'));
+            const settingsPath = args.find(filePath => SETTINGS_FILE_REGEX.test(filePath));
+            const mediaArgs = args.filter(filePath => !SETTINGS_FILE_REGEX.test(filePath));
 
-            const filePath = args[0];
-            const exists = await fs.stat(filePath).then(() => true).catch(() => false);
-            if (!exists) return;
+            if (settingsPath) {
+                const exists = await fs.stat(settingsPath).then(() => true).catch(() => false);
+                if (exists) {
+                    event.sender.send('auto-import-settings', settingsPath);
+                    return;
+                }
+            }
+            if (mediaArgs.length === 0) return;
 
-            const files = await processCommandLineFile(filePath);
-            if (files.length > 0) {
-                mainWindow.webContents.send('auto-play-files', files);
+            const filePromises = mediaArgs.map(async (filePath) => {
+                const exists = await fs.stat(filePath).then(() => true).catch(() => false);
+                if (!exists) return [];
+                return await processCommandLineFile(filePath);
+            });
+
+            const results = await Promise.all(filePromises);
+            const uniqueFiles = [...new Set(results.flat())];
+
+            if (uniqueFiles.length > 0) {
+                // 確実にリスナーが登録されている状態で送信
+                event.sender.send('auto-play-files', uniqueFiles);
             }
         } catch (err) {
             console.error('コマンドライン自動再生エラー:', err);
-        }
-    });
-
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            mainWindow = createWindow();
         }
     });
 });
@@ -327,36 +379,61 @@ app.on('window-all-closed', () => {
 });
 
 // 🔲IPC ハンドラ登録🔲
+// 初回起動判定結果返却
+ipcMain.handle('check-secondary-instance', async () => {
+    return isSecondaryInstance;
+});
+
 // フォルダ選択
 ipcMain.handle('open-folder-dialog', async () => {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
-    if (!result.canceled && result.filePaths.length > 0) {
-        return await getVideoFilesRecursively(result.filePaths[0]);
+    if (result.canceled || result.filePaths.length === 0) {
+        return null; // キャンセルされた場合は null を返す
     }
-    return [];
+    return result.filePaths[0]; // 選択されたフォルダパスを返す
 });
 
-// ファイル選択（動画 or .amppl）→ 追加用にも使用
+// フォルダ動画取得
+ipcMain.handle('get-folder-video-files', async (event, folderPath) => {
+    if (!folderPath) return [];
+    return await getVideoFilesRecursively(folderPath);
+});
+
+// ファイル選択
 ipcMain.handle('open-video-dialog', async () => {
     const result = await dialog.showOpenDialog({
-        properties: ['openFile', 'multiSelections'],  // 複数選択可能
+        properties: ['openFile', 'multiSelections'], // 複数選択可能
         filters: [
-            { 
-                name: 'すべての動画ファイルとプレイリスト', 
-                extensions: [...VIDEO_EXTENSIONS, ...VIDEO_PLAYLIST] 
+            {
+                name: '音声・動画・画像ファイルとプレイリスト',
+                extensions: [...SUPPORTED_MEDIA_EXTENSIONS, ...VIDEO_PLAYLIST]
             },
-            { name: 'すべての動画ファイル', extensions: VIDEO_EXTENSIONS },
-            { name: 'xPlayer プレイリスト', extensions: VIDEO_PLAYLIST }
+            { name: '動画ファイル', extensions: VIDEO_EXTENSIONS },
+            { name: '音声ファイル', extensions: AUDIO_EXTENSIONS },
+            { name: '画像ファイル', extensions: IMAGE_EXTENSIONS },
+            { name: 'プレイリスト', extensions: VIDEO_PLAYLIST }
         ]
     });
-    if (result.canceled || result.filePaths.length === 0) return [];
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return []; // キャンセル時または未選択時は空配列を返す
+    }
+
+    return result.filePaths; // 選択されたファイルパスの配列を返す
+});
+
+// ファイル動画取得（動画 or .amppl）→ 追加用にも使用
+ipcMain.handle('get-file-video-files', async (event, filePaths) => {
+    if (!Array.isArray(filePaths) || filePaths.length === 0) {
+        return [];
+    }
 
     const selectedFiles = [];
-    for (const filePath of result.filePaths) {
+    for (const filePath of filePaths) {
         if (VIDEO_PLAYLIST_REGEX.test(filePath)) {
             const listFiles = await processListFile(filePath);
             selectedFiles.push(...listFiles);
-        } else if (VIDEO_EXTENSIONS_REGEX.test(filePath)) {
+        } else if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(filePath)) {
             selectedFiles.push({ name: path.basename(filePath), path: filePath });
         }
     }
@@ -376,15 +453,25 @@ ipcMain.handle('save-playlist-dialog', async () => {
     return result;
 });
 
-// カット動画保存ダイアログ
-ipcMain.handle('show-save-cut-dialog', async (event, { fileName }) => {
-    const result = await dialog.showSaveDialog({
-        title: '動画をカット保存',
-        defaultPath: fileName,
-        filters: [
+// カット保存ダイアログ
+ipcMain.handle('show-save-cut-dialog', async (event, { fileName, ext }) => {
+    const audioExts = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg'];
+    const isAudio = audioExts.includes((ext || '').toLowerCase());
+
+    const filters = isAudio
+        ? [
+            { name: '音声ファイル', extensions: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg'] },
+            { name: 'すべてのファイル', extensions: ['*'] }
+          ]
+        : [
             { name: '動画ファイル', extensions: ['mp4', 'mkv', 'webm', 'avi', 'mov'] },
             { name: 'すべてのファイル', extensions: ['*'] }
-        ],
+          ];
+
+    const result = await dialog.showSaveDialog({
+        title: isAudio ? '音声をカット保存' : '動画をカット保存',
+        defaultPath: fileName,
+        filters: filters,
         properties: ['createDirectory', 'showOverwriteConfirmation']
     });
     return result;
@@ -394,9 +481,9 @@ ipcMain.handle('show-save-cut-dialog', async (event, { fileName }) => {
 ipcMain.handle('show-save-settings-dialog', async (event, { defaultPath }) => {
     const result = await dialog.showSaveDialog({
         title: '設定をエクスポート',
-        defaultPath: defaultPath || 'xPlayerSettings.json',
+        defaultPath: defaultPath || 'xPlayerSettings.xpj',
         filters: [
-            { name: 'JSON ファイル', extensions: ['json'] },
+            { name: 'xPlayer 設定ファイル', extensions: ['xpj'] },
             { name: 'すべてのファイル', extensions: ['*'] }
         ],
         properties: ['createDirectory', 'showOverwriteConfirmation']
@@ -408,9 +495,9 @@ ipcMain.handle('show-save-settings-dialog', async (event, { defaultPath }) => {
 ipcMain.handle('show-open-settings-dialog', async () => {
     const result = await dialog.showOpenDialog({
         title: '設定をインポート',
-        defaultPath: 'xPlayerSettings.json',
+        defaultPath: 'xPlayerSettings.xpj',
         filters: [
-            { name: 'JSON ファイル', extensions: ['json'] },
+            { name: 'xPlayer 設定ファイル', extensions: ['xpj', 'json'] },
             { name: 'すべてのファイル', extensions: ['*'] }
         ],
         properties: ['openFile']
@@ -433,7 +520,7 @@ ipcMain.handle('open-wallpaper-dialog', async () => {
         filters: [
             { 
                 name: '画像ファイル', 
-                extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'tiff', 'svg']
+                extensions: IMAGE_EXTENSIONS
             },
             { 
                 name: 'すべてのファイル', 
@@ -453,10 +540,109 @@ ipcMain.handle('open-wallpaper-dialog', async () => {
     };
 });
 
+// 音声ファイルの拡張子チェック用
+const isAudioFile = (filePath) => {
+    const ext = path.extname(filePath).slice(1).toLowerCase();
+    return AUDIO_EXTENSIONS.includes(ext);
+};
+
+// ampplファイルを解析して音声ファイルのみを取得する関数
+const parseAmpplFile = async (playlistPath) => {
+    try {
+        // fs が promises そのもののため、fs.readFile で直接呼び出し
+        const content = await fs.readFile(playlistPath, 'utf-8');
+        const lines = content.split(/\r?\n/);
+        
+        const audioPaths = [];
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) continue;
+
+            const absolutePath = path.isAbsolute(trimmed)
+                ? trimmed
+                : path.resolve(path.dirname(playlistPath), trimmed);
+
+            try {
+                // fs.stat も直接呼び出し
+                const stat = await fs.stat(absolutePath);
+                
+                if (stat.isDirectory()) {
+                    // フォルダの場合は既存の getVideoFilesRecursively を呼び出して内部を探索
+                    const filesInFolder = await getVideoFilesRecursively(absolutePath);
+                    for (const file of filesInFolder) {
+                        // 取得したファイルの中から音声ファイルのみを抽出
+                        if (isAudioFile(file.path)) {
+                            audioPaths.push(file.path);
+                        }
+                    }
+                } else if (stat.isFile() && isAudioFile(absolutePath)) {
+                    // 単一の音声ファイルの場合
+                    audioPaths.push(absolutePath);
+                }
+            } catch (err) {
+                // ファイルまたはフォルダが存在しない場合はスキップ
+                console.warn(`File or directory not found: ${absolutePath}`);
+            }
+        }
+        return audioPaths;
+    } catch (error) {
+        console.error(`Failed to parse playlist: ${playlistPath}`, error);
+        return [];
+    }
+};
+
+ipcMain.handle('open-bgm-dialog', async () => {
+    const result = await dialog.showOpenDialog({
+        title: 'BGMを選択',
+        properties: ['openFile', 'multiSelections'],
+        filters: [
+            { 
+                name: '音声・プレイリストファイル', 
+                extensions: [...AUDIO_EXTENSIONS, 'amppl'] 
+            },
+            { 
+                name: 'すべてのファイル', 
+                extensions: ['*'] 
+            }
+        ]
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return null;
+    }
+
+    const resolvedPaths = new Set();
+
+    for (const filePath of result.filePaths) {
+        const ext = path.extname(filePath).slice(1).toLowerCase();
+
+        if (ext === 'amppl') {
+            // amppl 内のパスを展開
+            const playlistAudioPaths = await parseAmpplFile(filePath);
+            playlistAudioPaths.forEach(p => resolvedPaths.add(p));
+        } else if (isAudioFile(filePath)) {
+            resolvedPaths.add(filePath);
+        }
+    }
+
+    return Array.from(resolvedPaths).map(filePath => ({
+        name: path.basename(filePath),
+        path: filePath
+    }));
+});
+
 // コマンドライン引数取得
 ipcMain.handle('get-command-line-args', () => {
-    const args = process.argv.slice(app.isPackaged ? 1 : 2);
-    return args.length > 0 ? args : null;
+    const rawArgs = process.argv.slice(app.isPackaged ? 1 : 2);
+    
+    // 特定のデバッグ引数やフラグを除外する
+    const filteredArgs = rawArgs.filter(arg => 
+        !arg.startsWith('--remote-debugging-port=') &&
+        !arg.startsWith('--inspect=') &&
+        !arg.startsWith('--inspect-brk=')
+    );
+
+    return filteredArgs.length > 0 ? filteredArgs : null;
 });
 
 // コマンドライン引数処理（レンダラー用）
@@ -466,6 +652,41 @@ ipcMain.handle('process-command-line-file', async (event, filePath) => {
 
 // FFmpeg 変換ハンドラ（ファイルパス返却）＋ 日本語音声優先 + 日本語字幕優先（なければ無視）
 ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAudioIndex = 0) => {
+    // 1. ffprobe でメタデータ取得
+    let metadata;
+    try {
+        metadata = await new Promise((res, rej) => {
+            ffmpeg.ffprobe(filePath, (err, data) => {
+                if (err) rej(err);
+                else res(data);
+            });
+        });
+    } catch (probeErr) {
+        mainWindow.webContents.send('convert-error', 'メタデータ取得失敗: ' + probeErr.message);
+        throw probeErr;
+    }
+
+    // ストリーム存在確認（アタッチされた画像を除外した動画ストリームの存在で判定）
+    const hasVideo = metadata.streams.some(s => s.codec_type === 'video' && !s.disposition?.attached_pic);
+    const hasAudio = metadata.streams.some(s => s.codec_type === 'audio');
+
+    // 2. 判定・分岐処理
+    if (hasVideo) {
+        // 動画変換へ
+        return convertVideo(filePath, modeChange, preferredAudioIndex, metadata);
+    } else if (hasAudio) {
+        // 音声変換へ
+        return convertAudio(filePath, metadata);
+    } else {
+        // 動画・音声ストリームがいずれも存在しない場合
+        const errMessage = '変換不能な形式エラー';
+        mainWindow.webContents.send('convert-error', errMessage);
+        throw new Error(errMessage);
+    }
+});
+
+// 動画変換ヘルパー関数
+function convertVideo(filePath, modeChange, preferredAudioIndex, metadata) {
     return new Promise(async (resolve, reject) => {
         const fileName = path.basename(filePath);
         const baseName = path.parse(fileName).name;
@@ -475,27 +696,9 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
         const outPath = path.join(outDir, outName);
 
         const isMp4Input = ext === '.mp4';
-
         currentOutputPath = null;
 
-        // ffprobe でメタデータ取得（省略・変更なし）
-        let metadata;
-        try {
-            metadata = await new Promise((res, rej) => {
-                ffmpeg.ffprobe(filePath, (err, data) => {
-                    if (err) rej(err);
-                    else res(data);
-                });
-            });
-        } catch (probeErr) {
-            mainWindow.webContents.send('convert-error', 'メタデータ取得失敗: ' + probeErr.message);
-            return reject(probeErr);
-        }
-
-        // 音声・字幕処理部分（変更なし）
         const audioStreams = metadata.streams.filter(s => s.codec_type === 'audio');
-        const subtitleStreams = metadata.streams.filter(s => s.codec_type === 'subtitle');
-
         const targetAudioIdx = Math.max(0, Math.min(preferredAudioIndex, audioStreams.length - 1));
 
         const videoStreamIndex = metadata.streams.findIndex(s => 
@@ -529,7 +732,6 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
             .outputOptions(mapOptions)
             .outputOptions(dispositionOptions);
 
-        // コーデック分岐（変更なし）
         if (isMp4Input) {
             ff.outputOptions([
                 '-c:v', 'copy',
@@ -557,10 +759,9 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
             ]);
         }
 
-        // Tempフォルダをユーザーの %AppData\Local\Temp に設定
+        // Tempフォルダ準備
         const tempBaseDir = path.join(os.tmpdir(), 'xPlayer');
         try {
-            // フォルダが存在しない場合は再帰的に作成
             await fs.mkdir(tempBaseDir, { recursive: true });
         } catch (mkdirErr) {
             console.error('xPlayer tempフォルダ作成失敗:', mkdirErr);
@@ -570,17 +771,11 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
         const tempPath = path.join(tempBaseDir, `${baseName}_temp_${Date.now()}.mp4`);
         currentOutputPath = tempPath;
 
-        mainWindow.webContents.send('convert-progress', { 
-            percent: 0,
-            step: 1
-        });
+        mainWindow.webContents.send('convert-progress', { percent: 0, step: 1 });
 
         ff.on('progress', (progress) => {
             if (progress.percent !== undefined) {
-                mainWindow.webContents.send('convert-progress', { 
-                    percent: progress.percent,
-                    step: 1
-                });
+                mainWindow.webContents.send('convert-progress', { percent: progress.percent, step: 1 });
             }
         })
         .on('end', async () => {
@@ -588,15 +783,10 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
             currentOutputPath = null;
 
             try {
-                mainWindow.webContents.send('convert-progress', { 
-                    percent: 100,
-                    step: 2
-                });
-                // Temp → 出力先へ「安全に移動」（rename → copy + unlink）
+                mainWindow.webContents.send('convert-progress', { percent: 100, step: 2 });
                 await fs.copyFile(tempPath, outPath);
                 await fs.unlink(tempPath);
 
-                // 字幕ファイル出力
                 if (modeChange === 'convert') {
                     await extractSubtitlesOnly(outPath, baseName, outDir, metadata);
                 }
@@ -622,7 +812,76 @@ ipcMain.handle('convert-video', async (event, filePath, modeChange, preferredAud
 
         currentFFmpeg = ff;
     });
-});
+}
+
+// 音声変換ヘルパー関数
+// （MP3エンコーダ、192kbps、48kHz、2ch ステレオへ変換）
+function convertAudio(filePath, metadata) {
+    return new Promise(async (resolve, reject) => {
+        const fileName = path.basename(filePath);
+        const baseName = path.parse(fileName).name;
+        const outDir = path.dirname(filePath);
+        const outName = `${baseName}.mp3`;
+        const outPath = path.join(outDir, outName);
+
+        currentOutputPath = null;
+
+        // Tempフォルダ準備
+        const tempBaseDir = path.join(os.tmpdir(), 'xPlayer');
+        try {
+            await fs.mkdir(tempBaseDir, { recursive: true });
+        } catch (mkdirErr) {
+            console.error('xPlayer tempフォルダ作成失敗:', mkdirErr);
+            mainWindow.webContents.send('convert-error', '一時フォルダ作成失敗: ' + mkdirErr.message);
+            return reject(mkdirErr);
+        }
+        const tempPath = path.join(tempBaseDir, `${baseName}_temp_${Date.now()}.mp3`);
+        currentOutputPath = tempPath;
+
+        const ff = ffmpeg(filePath)
+            .audioCodec('libmp3lame') // MP3エンコーダ
+            .audioBitrate('192k')     // ビットレート 192kbps
+            .audioFrequency(48000)    // サンプリングレート 48kHz
+            .audioChannels(2);        // ステレオ (2ch)
+
+        mainWindow.webContents.send('convert-progress', { percent: 0, step: 1 });
+
+        ff.on('progress', (progress) => {
+            if (progress.percent !== undefined) {
+                mainWindow.webContents.send('convert-progress', { percent: progress.percent, step: 1 });
+            }
+        })
+        .on('end', async () => {
+            currentFFmpeg = null;
+            currentOutputPath = null;
+
+            try {
+                mainWindow.webContents.send('convert-progress', { percent: 100, step: 2 });
+                await fs.copyFile(tempPath, outPath);
+                await fs.unlink(tempPath);
+
+                resolve(outPath);
+            } catch (moveErr) {
+                mainWindow.webContents.send('convert-error', '後処理エラー: ' + moveErr.message);
+                reject(moveErr);
+            }
+        })
+        .on('error', (err, stdout, stderr) => {
+            if (err.message.includes('ffmpeg was killed')) {
+                console.log('変換中断:', filePath);
+                return;
+            }
+            console.error('FFmpegエラー:', stderr);
+            mainWindow.webContents.send('convert-error', err.message + '\n' + stderr);
+            currentFFmpeg = null;
+            currentOutputPath = null;
+            reject(err);
+        })
+        .save(tempPath);
+
+        currentFFmpeg = ff;
+    });
+}
 
 // 変換キャンセル（ロック待機 + リトライ）
 ipcMain.handle('cancel-conversion', async () => {
@@ -651,7 +910,6 @@ ipcMain.handle('cancel-conversion', async () => {
                     elapsed += interval;
                     continue;
                 } else if (err.code === 'ENOENT') {
-                    console.log('中断: ファイルは既に存在しません:', currentOutputPath);
                     break;
                 } else {
                     console.error('削除エラー:', err);
@@ -728,7 +986,6 @@ ipcMain.handle('cancel-cut', async () => {
                         elapsed += interval;
                         continue;
                     } else if (err && err.code === 'ENOENT') {
-                        console.log('cut中断: ファイルは既に存在しません:', targetPath);
                         break;
                     } else {
                         console.error('cut中断: 削除エラー:', err);
@@ -799,7 +1056,6 @@ ipcMain.handle('capture-screenshot', async (event) => {
 });
 
 // 動画サムネイル生成
-// main.js
 ipcMain.handle('generate-video-thumbnail', async (event, { filePath, size = 180 }) => {
     if (!filePath) return null;
 
@@ -878,10 +1134,10 @@ ipcMain.handle('classify-path', async (event, fullPath) => {
             return { type: 'playlist', files };
         }
 
-        if (VIDEO_EXTENSIONS_REGEX.test(fullPath)) {
-            // 単体動画ファイル
+        if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(fullPath)) {
+            // 単体音声・動画ファイル
             return {
-                type: 'video',
+                type: 'media',
                 files: [{ name: path.basename(fullPath), path: fullPath }]
             };
         }
@@ -961,7 +1217,6 @@ ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPa
                 const msg = err && err.message ? err.message : String(err);
                 // ユーザーによる kill はエラー扱いにしない
                 if (msg.includes('ffmpeg was killed') || msg.includes('was killed with signal')) {
-                    console.log('カットがユーザーにより中断されました (single):', msg);
                     try { mainWindow.webContents.send('cut-progress', { stage: 'cancelled', message: 'ユーザーにより中断されました' }); } catch (e) {}
                     currentFFmpeg = null;
                     currentOutputPath = null;
@@ -996,14 +1251,12 @@ ipcMain.handle('open-folder', async (event, folderPath) => {
     }
 });
 
-// 複数範囲を削除して結合して保存する（ranges: [{in, out}, ...]）
+// カット編集のメインハンドラ
 ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPath, frameRate, mode: requestedMode }) => {
     return new Promise((resolve, reject) => {
         try {
             const MIN_KEEP_DURATION = 0.2;
             const DURATION_EPSILON = 0.05;
-
-            // 受け取った mode が有効かチェック（簡易）
             const validModes = ['copy', 'reencode'];
             const useCopyMode = validModes.includes(requestedMode) ? requestedMode === 'copy' : true;
 
@@ -1012,14 +1265,18 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                     console.error('ffprobe エラー:', err);
                     return reject(new Error('メタデータ取得失敗'));
                 }
-                const duration = metadata.format.duration || 0;
 
+                const duration = metadata.format.duration || 0;
+                // 映像ストリームが存在するか確認
+                const hasVideo = metadata.streams && metadata.streams.some(s => 
+                    s.codec_type === 'video' && (!s.disposition || s.disposition.attached_pic !== 1)
+                );
+                
                 // ranges の正規化・ソート・マージ
                 const normalized = (ranges || []).map(r => ({ 
                     in: Math.max(0, Math.min(duration, r.in)), 
                     out: Math.max(0, Math.min(duration, r.out)) 
                 }));
-
                 normalized.sort((a, b) => a.in - b.in || a.out - b.out);
 
                 const merged = [];
@@ -1045,228 +1302,42 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
                         keeps.push({ start: cursor, end: m.in });
                     }
                     cursor = Math.min(duration, m.out);
-                    if (duration - cursor < DURATION_EPSILON) {
-                        cursor = duration;
-                    }
+                    if (duration - cursor < DURATION_EPSILON) cursor = duration;
                 }
                 if (cursor < duration) {
                     keeps.push({ start: cursor, end: duration });
                 }
 
-                if (keeps.length === 0) {
-                    return reject(new Error('指定された範囲で動画が空になります'));
-                }
-
-                // 短いセグメント除外
                 const filteredKeeps = keeps.filter(k => (k.end - k.start) >= MIN_KEEP_DURATION);
                 if (filteredKeeps.length === 0) {
                     return reject(new Error('有効な保持範囲がありません'));
                 }
                 keeps = filteredKeeps;
 
-                const totalKeepDuration = keeps.reduce((sum, k) => sum + (k.end - k.start), 0);
-
-                // 出力パス決定
-                let outPath;
-                if (outputPath) {
-                    outPath = outputPath;
-                } else {
-                    const fileName = path.basename(inputPath);
-                    const baseNameWithoutExt = path.parse(fileName).name;
-                    const ext = path.extname(fileName);
-                    outPath = path.join(path.dirname(inputPath), `${baseNameWithoutExt}_trimmed${ext}`);
-                }
+                const outPath = outputPath || path.join(
+                    path.dirname(inputPath),
+                    `${path.parse(inputPath).name}_trimmed${path.extname(inputPath)}`
+                );
 
                 mainWindow.webContents.send('cut-progress', { 
                     stage: 'start', 
                     type: 'multiple', 
                     percent: 0, 
                     keeps: keeps.length, 
-                    duration: totalKeepDuration 
+                    duration: keeps.reduce((sum, k) => sum + (k.end - k.start), 0)
                 });
 
-                // 念のため0.1秒未満はスキップ
-                const validKeeps = keeps.filter(k => (k.end - k.start) >= 0.1);
-
-                if (validKeeps.length === 0) {
-                    return reject(new Error('有効なセグメントがありません'));
-                }
-
-                if (!useCopyMode) {
-                    // ── 再エンコードモード（精度優先） ──
-                    const filters = [];
-                    const concatInputs = [];
-
-                    validKeeps.forEach((k, i) => {
-                        filters.push(`[0:v]trim=start=${k.start}:end=${k.end},setpts=PTS-STARTPTS[v${i}]`);
-                        filters.push(`[0:a]atrim=start=${k.start}:end=${k.end},asetpts=PTS-STARTPTS[a${i}]`);
-                        concatInputs.push(`[v${i}][a${i}]`);
-                    });
-
-                    filters.push(`${concatInputs.join('')}concat=n=${validKeeps.length}:v=1:a=1[v][a]`);
-
-                    const cmd = ffmpeg(inputPath)
-                        .complexFilter(filters)
-                        .outputOptions([
-                            '-map', '[v]', '-map', '[a]',
-                            '-c:v', 'libx264',
-                            '-preset', 'veryfast',
-                            '-crf', '23',
-                            '-tune', 'fastdecode,zerolatency',
-                            '-x264-params', 'ref=1:bframes=0:vbv-bufsize=3000:vbv-maxrate=5000:keyint=120:min-keyint=60',
-                            '-movflags', '+faststart',
-                            '-max_muxing_queue_size', '1024'
-                        ])
-                        .on('start', () => {
-                            currentFFmpeg = cmd;
-                            currentOutputPath = outPath;
-                        })
-                        .on('progress', (progress) => {
-                            mainWindow.webContents.send('cut-progress', {
-                                stage: 'reencode',
-                                percent: progress.percent || 0,
-                                frames: progress.frames,
-                                currentFps: progress.currentFps,
-                                timemark: progress.timemark
-                            });
-                        })
-                        .on('end', () => {
-                            currentFFmpeg = null;
-                            currentOutputPath = null;
-                            mainWindow.webContents.send('cut-progress', { stage: 'done', percent: 100, outPath });
-                            resolve({ outputPath: outPath, mode: 'reencode' });
-                        })
-                        .on('error', (err, stdout, stderr) => {
-                            currentFFmpeg = null;
-                            currentOutputPath = null;
-
-                            // ★★★ ここが修正ポイント ★★★
-                            const isKilled = err.message?.includes('killed') || 
-                                            err.message?.includes('SIGKILL') || 
-                                            err.message?.includes('ffmpeg was killed');
-
-                            if (isKilled) {
-                                // reject せず、キャンセルとして扱う
-                                mainWindow.webContents.send('cut-progress', { 
-                                    stage: 'cancelled', 
-                                    message: 'ユーザーにより中断されました' 
-                                });
-                                resolve({ cancelled: true });  // または null でも可
-                                return;
-                            }
-
-                            // 本物のエラーだけ reject
-                            console.error('FFmpeg再エンコードエラー:', err);
-                            mainWindow.webContents.send('cut-progress', { 
-                                stage: 'error', 
-                                message: err.message || '再エンコード処理に失敗しました' 
-                            });
-                            reject(err);
-                        })
-                        .save(outPath);
-
-                } else {
-                    // ── コピーモード（高速・低メモリ） ──
-                    mainWindow.webContents.send('cut-progress', {
-                        stage: 'copy_start',
-                        percent: 0
-                    });
-
-                    const tmpFiles = [];
-                    const concatList = [];
-
-                    try {
-                        for (let i = 0; i < validKeeps.length; i++) {
-                            const k = validKeeps[i];
-                            const tmpPath = path.join(os.tmpdir(), `cut_tmp_${Date.now()}_${i}.mp4`);
-
-                            await new Promise((res, rej) => {
-                                ffmpeg(inputPath)
-                                    .seekInput(k.start)
-                                    .duration(k.end - k.start)
-                                    .outputOptions([
-                                        '-c', 'copy',
-                                        '-avoid_negative_ts', 'make_zero',
-                                        '-max_muxing_queue_size', '1024'
-                                    ])
-                                    .output(tmpPath)
-                                    .on('end', res)
-                                    .on('error', (err) => rej(err))
-                                    .run();
-                            });
-
-                            tmpFiles.push(tmpPath);
-                            concatList.push(`file '${tmpPath.replace(/'/g, "\\'")}'`);
-
-                            // 進捗（大まか）
-                            const percent = Math.round(((i + 1) / validKeeps.length) * 100);
-                            mainWindow.webContents.send('cut-progress', {
-                                stage: 'copy',
-                                percent
-                            });
-                        }
-
-                        // concatリスト作成
-                        const concatTxtPath = path.join(os.tmpdir(), `concat_${Date.now()}.txt`);
-                        await fs.writeFile(concatTxtPath, concatList.join('\n'), 'utf8');
-
-                        // 最終結合
-                        await new Promise((res, rej) => {
-                            ffmpeg()
-                                .input(concatTxtPath)
-                                .inputOptions('-f', 'concat')
-                                .inputOptions('-safe', '0')
-                                .outputOptions([
-                                    '-c', 'copy',
-                                    '-movflags', '+faststart'
-                                ])
-                                .output(outPath)
-                                .on('end', () => {
-                                    res();
-                                })
-                                .on('error', (err) => {
-                                    // ★★★ ここを追加・修正 ★★★
-                                    if (err.message && (
-                                        err.message.includes('killed') ||
-                                        err.message.includes('SIGKILL') ||
-                                        err.message.includes('ffmpeg was killed')
-                                    )) {
-                                        // reject せず正常終了扱い
-                                        res();  // ← これで Promise がフルフィルされる
-                                        return;
-                                    }
-
-                                    // 本物のエラーだけ reject
-                                    console.error('最終結合エラー:', err);
-                                    rej(err);
-                                })
-                                .run();
-                        });
-
-                        // 掃除
-                        await Promise.all(
-                            tmpFiles.map(file => fs.unlink(file).catch(() => {}))
-                        );
-                        await fs.unlink(concatTxtPath).catch(() => {});
-                        
-                        mainWindow.webContents.send('cut-progress', {
-                            stage: 'done',
-                            percent: 100,
-                            outPath
-                        });
-                        
-                        resolve({ outputPath: outPath, mode: 'copy' });
-
-                    } catch (copyErr) {
-                        // 掃除してからエラー
-                        await Promise.all(
-                            tmpFiles.map(file => fs.unlink(file).catch(() => {}))
-                        );
-                        await fs.unlink(concatTxtPath).catch(() => {});
-                    
-                        console.error('コピーモードエラー:', copyErr);
-                        reject(new Error('高速モードでの処理に失敗しました: ' + copyErr.message));
+                // 動画と音声でヘルパー関数を分離して実行
+                try {
+                    let result;
+                    if (hasVideo) {
+                        result = await cutVideoHelper(inputPath, keeps, outPath, useCopyMode);
+                    } else {
+                        result = await cutAudioHelper(inputPath, keeps, outPath, useCopyMode);
                     }
+                    resolve({ ...result, isAudio: !hasVideo });
+                } catch (procErr) {
+                    reject(procErr);
                 }
             });
         } catch (e) {
@@ -1274,6 +1345,210 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
         }
     });
 });
+
+// 動画カット編集ヘルパー関数
+async function cutVideoHelper(inputPath, validKeeps, outPath, useCopyMode) {
+    if (!useCopyMode) {
+        // ── 再エンコードモード（動画） ──
+        const filters = [];
+        const concatInputs = [];
+
+        validKeeps.forEach((k, i) => {
+            filters.push(`[0:v]trim=start=${k.start}:end=${k.end},setpts=PTS-STARTPTS[v${i}]`);
+            filters.push(`[0:a]atrim=start=${k.start}:end=${k.end},asetpts=PTS-STARTPTS[a${i}]`);
+            concatInputs.push(`[v${i}][a${i}]`);
+        });
+
+        filters.push(`${concatInputs.join('')}concat=n=${validKeeps.length}:v=1:a=1[v][a]`);
+
+        return new Promise((resolve, reject) => {
+            const cmd = ffmpeg(inputPath)
+                .complexFilter(filters)
+                .outputOptions([
+                    '-map', '[v]', '-map', '[a]',
+                    '-c:v', 'libx264',
+                    '-preset', 'veryfast',
+                    '-crf', '23',
+                    '-tune', 'fastdecode,zerolatency',
+                    '-x264-params', 'ref=1:bframes=0:vbv-bufsize=3000:vbv-maxrate=5000:keyint=120:min-keyint=60',
+                    '-movflags', '+faststart',
+                    '-max_muxing_queue_size', '1024'
+                ])
+                .on('start', () => {
+                    currentFFmpeg = cmd;
+                    currentOutputPath = outPath;
+                })
+                .on('progress', (progress) => {
+                    mainWindow.webContents.send('cut-progress', {
+                        stage: 'reencode',
+                        percent: progress.percent || 0,
+                        frames: progress.frames,
+                        currentFps: progress.currentFps,
+                        timemark: progress.timemark
+                    });
+                })
+                .on('end', () => {
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    mainWindow.webContents.send('cut-progress', { stage: 'done', percent: 100, outPath });
+                    resolve({ outputPath: outPath, mode: 'reencode' });
+                })
+                .on('error', (err) => {
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    const isKilled = err.message?.includes('killed') || err.message?.includes('SIGKILL') || err.message?.includes('ffmpeg was killed');
+                    if (isKilled) {
+                        mainWindow.webContents.send('cut-progress', { stage: 'cancelled', message: 'ユーザーにより中断されました' });
+                        resolve({ cancelled: true });
+                        return;
+                    }
+                    console.error('FFmpeg動画再エンコードエラー:', err);
+                    mainWindow.webContents.send('cut-progress', { stage: 'error', message: err.message || '再エンコード処理に失敗しました' });
+                    reject(err);
+                })
+                .save(outPath);
+        });
+    } else {
+        // ── コピーモード（動画） ──
+        return await cutCopyModeGeneric(inputPath, validKeeps, outPath, '.mp4');
+    }
+}
+
+// 音声カット編集ヘルパー関数
+async function cutAudioHelper(inputPath, validKeeps, outPath, useCopyMode) {
+    if (!useCopyMode) {
+        // ── 再エンコードモード（音声: MP3 / 192kbps / 48kHz / Stereo） ──
+        const filters = [];
+        const concatInputs = [];
+
+        validKeeps.forEach((k, i) => {
+            filters.push(`[0:a]atrim=start=${k.start}:end=${k.end},asetpts=PTS-STARTPTS[a${i}]`);
+            concatInputs.push(`[a${i}]`);
+        });
+
+        filters.push(`${concatInputs.join('')}concat=n=${validKeeps.length}:v=0:a=1[a]`);
+
+        return new Promise((resolve, reject) => {
+            const cmd = ffmpeg(inputPath)
+                .complexFilter(filters)
+                .outputOptions([
+                    '-map', '[a]',
+                    '-c:a', 'libmp3lame',
+                    '-b:a', '192k',
+                    '-ar', '48000',
+                    '-ac', '2'
+                ])
+                .on('start', () => {
+                    currentFFmpeg = cmd;
+                    currentOutputPath = outPath;
+                })
+                .on('progress', (progress) => {
+                    mainWindow.webContents.send('cut-progress', {
+                        stage: 'reencode',
+                        percent: progress.percent || 0,
+                        timemark: progress.timemark
+                    });
+                })
+                .on('end', () => {
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    mainWindow.webContents.send('cut-progress', { stage: 'done', percent: 100, outPath });
+                    resolve({ outputPath: outPath, mode: 'reencode' });
+                })
+                .on('error', (err) => {
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    const isKilled = err.message?.includes('killed') || err.message?.includes('SIGKILL') || err.message?.includes('ffmpeg was killed');
+                    if (isKilled) {
+                        mainWindow.webContents.send('cut-progress', { stage: 'cancelled', message: 'ユーザーにより中断されました' });
+                        resolve({ cancelled: true });
+                        return;
+                    }
+                    console.error('FFmpeg音声再エンコードエラー:', err);
+                    mainWindow.webContents.send('cut-progress', { stage: 'error', message: err.message || '音声エンコード処理に失敗しました' });
+                    reject(err);
+                })
+                .save(outPath);
+        });
+    } else {
+        // ── コピーモード（音声） ──
+        const ext = path.extname(outPath) || '.mp3';
+        return await cutCopyModeGeneric(inputPath, validKeeps, outPath, ext);
+    }
+}
+
+// ストリームコピー用共通処理
+async function cutCopyModeGeneric(inputPath, validKeeps, outPath, tmpExt) {
+    mainWindow.webContents.send('cut-progress', { stage: 'copy_start', percent: 0 });
+
+    const tmpFiles = [];
+    const concatList = [];
+
+    try {
+        for (let i = 0; i < validKeeps.length; i++) {
+            const k = validKeeps[i];
+            const tmpPath = path.join(os.tmpdir(), `cut_tmp_${Date.now()}_${i}${tmpExt}`);
+
+            await new Promise((res, rej) => {
+                ffmpeg(inputPath)
+                    .seekInput(k.start)
+                    .duration(k.end - k.start)
+                    .outputOptions([
+                        '-c', 'copy',
+                        '-avoid_negative_ts', 'make_zero'
+                    ])
+                    .output(tmpPath)
+                    .on('end', res)
+                    .on('error', (err) => rej(err))
+                    .run();
+            });
+
+            tmpFiles.push(tmpPath);
+            concatList.push(`file '${tmpPath.replace(/'/g, "\\'")}'`);
+
+            const percent = Math.round(((i + 1) / validKeeps.length) * 100);
+            mainWindow.webContents.send('cut-progress', { stage: 'copy', percent });
+        }
+
+        const concatTxtPath = path.join(os.tmpdir(), `concat_${Date.now()}.txt`);
+        await fs.writeFile(concatTxtPath, concatList.join('\n'), 'utf8');
+
+        await new Promise((res, rej) => {
+            ffmpeg()
+                .input(concatTxtPath)
+                .inputOptions('-f', 'concat')
+                .inputOptions('-safe', '0')
+                .outputOptions(['-c', 'copy'])
+                .output(outPath)
+                .on('end', () => res())
+                .on('error', (err) => {
+                    if (err.message && (
+                        err.message.includes('killed') ||
+                        err.message.includes('SIGKILL') ||
+                        err.message.includes('ffmpeg was killed')
+                    )) {
+                        res();
+                        return;
+                    }
+                    console.error('最終結合エラー:', err);
+                    rej(err);
+                })
+                .run();
+        });
+
+        // 一時ファイルの削除
+        await Promise.all(tmpFiles.map(file => fs.unlink(file).catch(() => {})));
+        await fs.unlink(concatTxtPath).catch(() => {});
+
+        mainWindow.webContents.send('cut-progress', { stage: 'done', percent: 100, outPath });
+        return { outputPath: outPath, mode: 'copy' };
+
+    } catch (copyErr) {
+        await Promise.all(tmpFiles.map(file => fs.unlink(file).catch(() => {})));
+        console.error('コピーモードエラー:', copyErr);
+        throw new Error('高速モードでの処理に失敗しました: ' + copyErr.message);
+    }
+}
 
 // 保存ダイアログ（結合用）
 ipcMain.handle('show-save-join-dialog', async (event, { fileName }) => {
@@ -1361,7 +1636,6 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
             // 変換フェーズ（以降は変更なし）
             for (let i = 0; i < inputPaths.length; i++) {
                 if (isJoinCancelled) {
-                    console.log(`キャンセル検知：残りの変換（${i+1}以降）をスキップ`);
                     break;  // 以降の変換を完全に止める
                 }
 
@@ -1414,7 +1688,6 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
 
             // ★★★ ここにフラグチェックを追加 ★★★
             if (isJoinCancelled) {
-                console.log('キャンセル済み：結合フェーズをスキップします');
                 cleanupJoinTempFiles();               // 一時ファイルを確実に掃除
                 currentFFmpeg = null;
                 currentOutputPath = null;
@@ -1474,7 +1747,6 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
                         // ユーザーキャンセルによる kill → reject せず静かに処理
                         currentFFmpeg = null;
                         currentOutputPath = null;
-                        console.log('結合処理がユーザーによりキャンセルされました');
                         // resolve するか、特別な値を返す（例: null や { cancelled: true }）
                         resolve({ cancelled: true, message: 'ユーザーによりキャンセル' });
                         return;
@@ -1531,7 +1803,6 @@ ipcMain.handle('cancel-join', async () => {
                     elapsed += interval;
                     continue;
                 } else if (err.code === 'ENOENT') {
-                    console.log('join中断: ファイルは既に存在しません:', currentOutputPath);
                     break;
                 } else {
                     console.error('join中断削除エラー:', err);
@@ -1558,55 +1829,74 @@ ipcMain.handle('cancel-join', async () => {
 
 // ブラウザ起動ハンドラ
 ipcMain.handle('open-video-in-browser', async (event, videoUrl) => {
-  try {
-    // Chromeのパスをメイン側で管理（セキュリティ向上・パス漏洩防止）
-    let chromePath;
+    try {
+        let browserPath;
+        let isEdge = false;
 
-    if (process.platform === 'win32') {
-      // Windowsの場合、複数の候補から最初に見つかったものを利用
-      const possiblePaths = [
-        'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-        'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-        process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
-        // 必要ならさらに追加
-      ];
+        if (process.platform === 'win32') {
+            // 1. Chromeのパス候補（優先度: 高）
+            const chromePaths = [
+                'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+                process.env.LOCALAPPDATA + '\\Google\\Chrome\\Application\\chrome.exe',
+            ];
 
-      for (const path of possiblePaths) {
-        try {
-          require('fs').accessSync(path);
-          chromePath = path;
-          break;
-        } catch {}
-      }
+            // 2. Edgeのパス候補（優先度: 低）
+            const edgePaths = [
+                'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+                'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+                process.env.LOCALAPPDATA + '\\Microsoft\\Edge\\Application\\msedge.exe',
+            ];
 
-      if (!chromePath) {
-        throw new Error('Chromeが見つかりません。インストールを確認してください。');
-      }
+            // Chromeの存在チェック
+            for (const path of chromePaths) {
+                try {
+                    require('fs').accessSync(path);
+                    browserPath = path;
+                    break;
+                } catch {}
+            }
 
-    } else if (process.platform === 'darwin') {
-      chromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-    } else {
-      // Linuxなど（適宜対応）
-      chromePath = 'google-chrome';
+            // Chromeが見つからなければEdgeをチェック
+            if (!browserPath) {
+                for (const path of edgePaths) {
+                    try {
+                        require('fs').accessSync(path);
+                        browserPath = path;
+                        isEdge = true;
+                        break;
+                    } catch {}
+                }
+            }
+
+            if (!browserPath) {
+                throw new Error('ChromeおよびEdgeが見つかりません。ブラウザのインストールを確認してください。');
+            }
+
+        } else if (process.platform === 'darwin') {
+            browserPath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+        } else {
+            // Linuxなど
+            browserPath = 'google-chrome';
+        }
+
+        // コマンド構築（Chrome / Edge 両方で --app オプションが利用可能）
+        const profileOpt = isEdge ? '--profile-directory="Default"' : '--profile-directory=Default';
+        const command = `"${browserPath}" ${profileOpt} --app="${videoUrl}" --new-window`;
+
+        // 実行（非同期でfire-and-forget）
+        exec(command, (error) => {
+            if (error) {
+                console.error('ブラウザ起動エラー:', error);
+            }
+        });
+
+        return { success: true, message: `起動コマンド: ${command}` };
+
+    } catch (err) {
+        console.error(err);
+        return { success: false, message: err.message };
     }
-
-    // コマンド構築（--app= でポップアップ風再生）
-    const command = `"${chromePath}" --profile-directory=Default --app="${videoUrl}" --new-window`;
-
-    // 実行（非同期でfire-and-forget）
-    exec(command, (error) => {
-      if (error) {
-        console.error('ブラウザ起動エラー:', error);
-        // 必要ならレンダラーにエラー通知IPCを送る
-      }
-    });
-
-    return { success: true, message: `起動コマンド: ${command}` };
-
-  } catch (err) {
-    console.error(err);
-    return { success: false, message: err.message };
-  }
 });
 
 // 音声トラック情報・字幕トラック情報取得
@@ -1692,4 +1982,184 @@ ipcMain.handle('get-video-tracks', async (event, filePath) => {
             error: err.message || '処理に失敗しました'
         };
     }
+});
+
+// 保存ダイアログ（音声結合用 - MP3固定）
+ipcMain.handle('show-save-audio-join-dialog', async (event, { fileName }) => {
+    // 拡張子が .mp3 でない場合は .mp3 に変更
+    let defaultName = fileName || 'joined_audio.mp3';
+    if (!defaultName.toLowerCase().endsWith('.mp3')) {
+        defaultName = defaultName.replace(/\.[^/.]+$/, "") + '.mp3';
+    }
+
+    const result = await dialog.showSaveDialog(mainWindow, {
+        title: '結合した音声を保存',
+        defaultPath: defaultName,
+        filters: [
+            { name: 'MP3 音声ファイル', extensions: ['mp3'] },
+            { name: 'すべてのファイル', extensions: ['*'] }
+        ],
+        properties: ['createDirectory', 'showOverwriteConfirmation']
+    });
+
+    return result; // { canceled: boolean, filePath?: string }
+});
+
+// 音声結合処理（全音声をMP3に統一変換 → concatで結合）
+ipcMain.handle('join-audios', async (event, { inputPaths, outputPath }) => {
+    if (!inputPaths || !Array.isArray(inputPaths) || inputPaths.length < 2) {
+        throw new Error('結合する音声が2つ以上必要です');
+    }
+    if (!outputPath) {
+        throw new Error('出力パスが指定されていません');
+    }
+
+    currentJoinTempFiles = [];      // リセット
+    currentJoinConcatTxt = null;
+    isJoinCancelled = false;          // キャンセル状態をリセット
+
+    return new Promise(async (resolve, reject) => {
+        try {
+            mainWindow.webContents.send('join-progress', { 
+                stage: 'join-prepare', 
+                percent: 0,
+                totalVideos: inputPaths.length,
+                message: '全音声を同一フォーマット(MP3)に変換中…'
+            });
+
+            // MP3フォーマット統一用の共通オプション
+            const commonAudioOptions = [
+                '-vn',                  // 映像ストリームを除外
+                '-c:a', 'libmp3lame',   // MP3エンコーダ
+                '-b:a', '192k',         // ビットレート 192kbps
+                '-ar', '48000',         // サンプリングレート 48kHz
+                '-ac', '2',             // ステレオ(2ch)
+                '-fflags', '+genpts'
+            ];
+
+            // 1. 変換フェーズ (全音声を標準的な一時MP3ファイルに変換)
+            for (let i = 0; i < inputPaths.length; i++) {
+                if (isJoinCancelled) break;
+
+                const input = inputPaths[i];
+                const tempOut = path.join(os.tmpdir(), `join_audio_temp_${Date.now()}_${i}.mp3`);
+                currentJoinTempFiles.push(tempOut);
+
+                await new Promise((res, rej) => {
+                    const ff = ffmpeg(input)
+                        .outputOptions(commonAudioOptions)
+                        .on('start', () => {
+                            if (isJoinCancelled) {
+                                ff.kill('SIGKILL');
+                                res();
+                                return;
+                            }
+                            currentFFmpeg = ff;
+                            currentOutputPath = outputPath;
+                        })
+                        .on('progress', (progress) => {
+                            if (isJoinCancelled) return;
+                            const filePercent = progress.percent || 0;
+                            const overall = ((i + filePercent / 100) / inputPaths.length) * 100;
+                            mainWindow.webContents.send('join-progress', {
+                                stage: 'convert-pre',
+                                percent: overall,
+                                currentFile: i + 1,
+                                totalFiles: inputPaths.length
+                            });
+                        })
+                        .on('end', res)
+                        .on('error', (err) => {
+                            if (err.message.includes('killed with signal SIGKILL') || isJoinCancelled) {
+                                res();
+                                return;
+                            }
+                            rej(err);
+                        })
+                        .save(tempOut);
+                });
+
+                if (isJoinCancelled) break;
+            }
+
+            mainWindow.webContents.send('join-progress', { 
+                stage: 'join-start', 
+                percent: 0,
+                message: '変換完了 → 結合中…'
+            });
+
+            // キャンセルチェック
+            if (isJoinCancelled) {
+                cleanupJoinTempFiles();
+                currentFFmpeg = null;
+                currentOutputPath = null;
+                
+                mainWindow.webContents.send('join-progress', { 
+                    stage: 'cancelled', 
+                    message: 'ユーザーにより音声結合が中断されました' 
+                });
+                
+                resolve({ cancelled: true, message: 'ユーザーによりキャンセルされました' });
+                return;
+            }
+
+            // 2. 結合フェーズ (concat demuxer による高速・無劣化結合)
+            const concatList = currentJoinTempFiles.map(p => `file '${p.replace(/'/g, "\\'")}'`);
+            currentJoinConcatTxt = path.join(os.tmpdir(), `join_audio_concat_${Date.now()}.txt`);
+
+            await fs.writeFile(currentJoinConcatTxt, concatList.join('\n'), 'utf8');
+
+            const ff = ffmpeg()
+                .input(currentJoinConcatTxt)
+                .inputOptions('-f', 'concat', '-safe', '0')
+                .outputOptions([
+                    '-c', 'copy' // 一時MP3ファイルを無劣化ストリームコピー結合
+                ])
+                .on('start', () => {
+                    currentFFmpeg = ff;
+                    currentOutputPath = outputPath;
+                })
+                .on('progress', (progress) => {
+                    if (progress.percent !== undefined) {
+                        mainWindow.webContents.send('join-progress', {
+                            stage: 'join',
+                            percent: progress.percent
+                        });
+                    }
+                })
+                .on('end', () => {
+                    cleanupJoinTempFiles();
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    mainWindow.webContents.send('join-progress', { 
+                        stage: 'join-done', 
+                        percent: 100, 
+                        outputPath 
+                    });
+                    resolve({ outputPath });
+                })
+                .on('error', (err) => {
+                    cleanupJoinTempFiles();
+                    if (err.message.includes('ffmpeg was killed') || 
+                        err.message.includes('killed with signal SIGKILL')) {
+                        currentFFmpeg = null;
+                        currentOutputPath = null;
+                        resolve({ cancelled: true, message: 'ユーザーによりキャンセル' });
+                        return;
+                    }
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    reject(err);
+                })
+                .save(outputPath);
+
+        } catch (err) {
+            cleanupJoinTempFiles();
+            currentFFmpeg = null;
+            currentOutputPath = null;
+            reject(err);
+        } finally {
+            isJoinCancelled = false;
+        }
+    });
 });

@@ -1,7 +1,7 @@
-// ---------------------------------------------------------------------
+// -- preload.js -------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -動画プレイヤー- Ver4.75.2';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.47.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -11,6 +11,9 @@ const { promises: fs } = require('fs');
 const os = require('os');
 const path = require('path');
 const { exec } = require('child_process');
+// 【追加】audioMotion-analyzer の読み込み
+const AudioMotionModule = require('audiomotion-analyzer');
+const AudioMotionAnalyzer = AudioMotionModule.default || AudioMotionModule;
 
 // 🔲初期処理🔲
 // 🔧 起動時対応: キャッシュディレクトリを事前に作成し、
@@ -53,11 +56,48 @@ const { exec } = require('child_process');
     }
 })();
 
+let audioMotionInstance = null; // 実体を preload 内部で管理
+contextBridge.exposeInMainWorld('AudioMotionAPI', {
+    // 初期化またはオプションの更新を一括で行う関数
+    initOrUpdate: (containerElement, audioSource, options) => {
+        if (audioMotionInstance) {
+            // 既存インスタンスが存在する場合は表示をオンにし、設定を更新
+            audioMotionInstance.isOn = true;
+            if (audioMotionInstance.canvas) {
+                audioMotionInstance.canvas.style.display = 'block';
+            }
+            // 内部実体の setOptions を直接呼び出す
+            audioMotionInstance.setOptions(options);
+        } else {
+            // 初回のみインスタンス生成
+            audioMotionInstance = new AudioMotionAnalyzer(containerElement, {
+                source: audioSource,
+                bgAlpha: 0,
+                showBgColor: false,
+                showScaleX: false,
+                showScaleY: false,
+                ...options
+            });
+        }
+    },
+
+    // 「（なし）」が選択された場合の非表示処理
+    disable: () => {
+        if (audioMotionInstance) {
+            audioMotionInstance.isOn = false;
+            if (audioMotionInstance.canvas) {
+                audioMotionInstance.canvas.style.display = 'none';
+            }
+        }
+    }
+});
+
 // 🔲基本API🔲
 contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer: {
         invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
-        on: (channel, listener) => ipcRenderer.on(channel, listener)
+        on: (channel, listener) => ipcRenderer.on(channel, listener),
+        send: (channel, ...args) => ipcRenderer.send(channel, ...args)
     },
     fs,
     os: { homedir: os.homedir },
@@ -75,7 +115,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     captureScreenshot: () => ipcRenderer.invoke('capture-screenshot'),
     generateVideoThumbnail: (filePath, size) => ipcRenderer.invoke('generate-video-thumbnail', { filePath, size }),
     openFolderDialog: () => ipcRenderer.invoke('open-folder-dialog'),
+    getFolderVideoFiles: (folderPath) => ipcRenderer.invoke('get-folder-video-files', folderPath),
     openVideoDialog: () => ipcRenderer.invoke('open-video-dialog'),
+	getFileVideoFiles: (filePaths) => ipcRenderer.invoke('get-file-video-files', filePaths),
     savePlaylistDialog: () => ipcRenderer.invoke('save-playlist-dialog'),
     showSaveCutDialog: (options) => ipcRenderer.invoke('show-save-cut-dialog', options),
     showSaveJoinDialog: (options) => ipcRenderer.invoke('show-save-join-dialog', options),
@@ -93,4 +135,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     cutVideoMultiple: (data) => ipcRenderer.invoke('cut-video-multiple', data),
     getVideoTracks: (filePath) => ipcRenderer.invoke('get-video-tracks', filePath),
     openWallpaperDialog: () => ipcRenderer.invoke('open-wallpaper-dialog'),
+    openBgmDialog: () => ipcRenderer.invoke('open-bgm-dialog'),
+    checkIsSecondaryInstance: () => ipcRenderer.invoke('check-secondary-instance'),
+    getPid: () => process.pid,
+    showSaveAudioJoinDialog: (options) => ipcRenderer.invoke('show-save-audio-join-dialog', options),
+    joinAudios: (data) => ipcRenderer.invoke('join-audios', data)
 });

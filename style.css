@@ -1,7 +1,7 @@
-/* --------------------------------------------------------------------- */
+/* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -動画プレイヤー- Ver4.77.2'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver5.75.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -105,6 +105,14 @@ video {
     gap: 8px;
     align-items: center;
     overflow: visible;
+}
+.playlist-progress-bar {
+    display: none;
+    width: 0%;
+    height: 5px;
+    flex: 0 0 5px;
+    background: #e53935;
+    transition: width 0.12s ease-out;
 }
 .filter-list {
     overflow-y: auto;
@@ -391,16 +399,6 @@ input[type="range"] {
 }
 input[type="range"]:hover {
     accent-color: #ffae00;
-}
-input[type="range"]#editSeekBar {
-    -webkit-appearance: none;     /* Chrome/Safari/Edgeのデフォルトをリセット */
-    appearance: none;             /* 最新ブラウザ対応 */
-    accent-color: #ffffff;
-    background-color: #333333;
-    border: 1px solid #ffffff;
-}
-input[type="range"]#editSeekBar:hover {
-    accent-color: #ff0000;
 }
 input[type="range"]#volumeBar {
     flex: none;
@@ -808,85 +806,130 @@ caption {
 
 /* 編集コントロール全体 (#editControls) */
 #editControls {
-  display: none; /* JSで表示切り替え。表示時は flex を想定 */
-  flex-direction: column;
-  align-items: stretch;
-  flex-wrap: wrap;
+    display: none; /* JSで表示切り替え。表示時は flex を想定 */
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: wrap;
 }
 /* ボタンやシークバーが並ぶ行 */
 .edit-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 /* インマーク / アウトマーク 表示 */
 #inMarkDisplay, 
 #outMarkDisplay {
-  width: 60px;
-  padding: 4px;
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.3);
-  color: #ffff00;
-  font-weight: bold;
-  font-family: monospace;
-  text-align: center;
+    width: 60px;
+    padding: 4px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.3);
+    color: #ffff00;
+    font-weight: bold;
+    font-family: monospace;
+    text-align: center;
 }
 
 /* シークバーとタイムラインの縦並びグループ */
 .seekbar-group {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 200px;
 }
 /* シークバー単体 */
 #editSeekBar {
-  width: 100%;
-  margin-bottom: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    accent-color: #ffffff;
+    background-color: #333333;
+    border: 1px solid #ffffff;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    display: block;
+}
+#editSeekBar:hover {
+    accent-color: #ff0000;
+}
+/* WebKitブラウザ(Electron/Chrome)向けつまみのスタイル設定 */
+#editSeekBar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;           /* つまみの幅を12pxに固定 */
+    height: 16px;
+    background: #ffffff;
+    cursor: pointer;
+    border-radius: 2px;
 }
 /* タイムラインの土台 */
 #cutTimelineContainer {
-  position: relative;
-  width: 100%;
-  height: 14px;
-  margin-top: 0;
-  border: 1px solid #555;
-  border-radius: 4px;
-  background: #2a2a2a;
-  overflow: hidden;
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    height: 18px;
+    margin: 0;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background: #2a2a2a;
+    /* overflow: hidden; を削除してマーカー端の見切れを防ぐ */
 }
 /* タイムラインバー全体 */
 #cutTimelineBar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #222;
+    position: absolute;
+    top: 0;
+    left: 6px;                           /* つまみ幅(12px)の半分 */
+    width: calc(100% - 12px) !important; /* 左右 6px ずつ引いた幅に固定 */
+    max-width: calc(100% - 12px) !important;
+    height: 100%;
+    background: #222;
+    box-sizing: border-box;              /* 幅計算に枠線・余白を含める */
 }
 /* タイムライン上のカット範囲ハイライト */
 .cut-range-bar {
-  position: absolute;
-  height: 100%;
-  border-inline: 1px solid #ff4444; /* border-left/right を統合 */
-  background: rgba(220, 50, 50, 0.75);
-  pointer-events: none;
-  transition: background 0.2s ease; /* ホバー時の変化を滑らかに */
+    position: absolute;
+    top: 0;                           /* cutTimelineBarと位置を合わせるため追加 */
+    height: 100%;
+    box-sizing: border-box;           /* ボーダーを含めた高さ計算を統一 */
+    border-inline: 1px solid #ff4444; /* border-left/right を統合 */
+    background: rgba(220, 50, 50, 0.75);
+    pointer-events: none;
+    transition: background 0.2s ease; /* ホバー時の変化を滑らかに */
 }
 .cut-range-bar:hover {
-  background: rgba(255, 80, 80, 0.9);
+    background: rgba(255, 80, 80, 0.9);
+}
+/* イン・アウトマーカーの親要素 */
+.edit-in-marker,
+.edit-out-marker {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 2px;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* マーカーの縦線（白い直線） */
+.marker-line {
+    width: 100%;
+    height: 100%;
+    background-color: #ffffff;    /* 白色の縦線 */
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.8); /* 見やすさ向上のための黒影 */
 }
 /* カット範囲（リスト・ハイライトバー） */
 #cutRangesContainer {
-  display: block;
-  width: 100%;
+    display: block;
+    width: 100%;
 }
 #cutRangesList {
-  overflow-y: auto;
-  background: rgba(18, 18, 18, 0.13);
+    overflow-y: auto;
+    background: rgba(18, 18, 18, 0.13);
 }
 /* スクロールバーのカスタマイズ（ダークテーマ用） */
 #cutRangesList::-webkit-scrollbar {
@@ -909,41 +952,6 @@ caption {
     background: rgba(255, 0, 0, 0.2);
 }
 
-.sort-menu div {
-    transition: background-color 0.15s;
-}
-.sort-menu div:hover {
-    background: rgba(0, 123, 255, 0.35);
-}
-.sort-menu div:active {
-    background: rgba(0, 80, 180, 0.6);
-}
-.playlist-display-menu {
-    position: absolute;
-    background: rgba(30,30,30,0.95);
-    border: 1px solid #999;
-    border-radius: 6px;
-    padding: 6px 0;
-    z-index: 1001;
-    min-width: 180px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-    white-space: pre;
-    font-family: monospace;
-    line-height: 1.0;
-    font-size: 16px;
-}
-.playlist-display-menu div {
-    padding: 8px 16px;
-    cursor: pointer;
-    white-space: nowrap;
-    color: #eee;
-}
-.playlist-display-menu div:hover {
-    background: rgba(0,123,255,0.2);
-}
-.playlist-display-menu div:active {
-    background: rgba(0,80,180,0.6);
-}
 /* モードアクティブ時の赤を最優先で適用 */
 .mode-active,
 #randomPlayBtn.active,
@@ -962,12 +970,17 @@ button#modeChangeBtn.convert-active,
 #sortPlaylistBtn.sorted-active,
 #subtitleSelectBtn.subtitles-active,
 #wallpaperBtn.wallpaper-active,
-#alwaysOnTopBtn.always-on-top-active {
+#alwaysOnTopBtn.always-on-top-active,
+#audioMotionBtn.audio-motion-active,
+#imageEffectBgmBtn.image-effectbgm-active,
+#autoShuffleBtn.auto-shuffle-active {
     background: #e63946 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single,
 #fitModeBtn.fitMode-fill,
-#sortPlaylistBtn.random-sorted-active {
+#sortPlaylistBtn.random-sorted-active,
+#audioMotionBtn.random-motion-active,
+#imageEffectBgmBtn.random-effectbgm-active {
     background: #f4d03f !important;   /* 黄系：１動画 */
 }
 .mode-active:hover,
@@ -987,12 +1000,17 @@ button#modeChangeBtn.convert-active:hover,
 #sortPlaylistBtn.sorted-active:hover,
 #subtitleSelectBtn.subtitles-active:hover,
 #wallpaperBtn.wallpaper-active:hover,
-#alwaysOnTopBtn.always-on-top-active:hover {
+#alwaysOnTopBtn.always-on-top-active:hover,
+#audioMotionBtn.audio-motion-active:hover,
+#imageEffectBgmBtn.image-effectbgm-active:hover,
+#autoShuffleBtn.auto-shuffle-active:hover {
     background: #e6394785 !important;   /* 赤系：有効 */
 }
 #repeatPlayBtn.repeat-single:hover,
 #fitModeBtn.fitMode-fill:hover,
-#sortPlaylistBtn.random-sorted-active:hover {
+#sortPlaylistBtn.random-sorted-active:hover,
+#audioMotionBtn.random-motion-active:hover,
+#imageEffectBgmBtn.random-effectbgm-active:hover {
     background: #f4d03f7a !important;   /* 黄系：１動画 */
 }
 
@@ -1060,41 +1078,56 @@ button#modeChangeBtn.convert-active:hover,
 .aspect-ratio-menu,
 .playlist-display-menu,
 .sort-playlist-menu,
-.add-playlist-menu {
-  position: absolute;
-  background: rgba(30, 30, 30, 0.95);
-  border: 1px solid #444;
-  border-radius: 6px;
-  padding: 6px 0;
-  z-index: 1001;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-  white-space: pre;
-  font-family: monospace;
-  font-size: 16px;
-  line-height: 1.0;
-  min-width: 120px;
+.add-playlist-menu,
+.audio-motion-menu,
+.image-effectbgm-menu,
+.join-playlist-menu,
+.control-menu,
+.import-export-menu {
+    position: absolute;
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 6px 0;
+    z-index: 1001;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    white-space: pre;
+    font-family: monospace;
+    font-size: 16px;
+    line-height: 1.0;
+    min-width: 120px;
 }
-.track-menu {
-    max-height: 600px;
+.track-menu,
+.audio-motion-menu,
+.image-effectbgm-menu {
+    max-height: min(600px, calc(100vh - 16px));
     overflow-y: auto;
 }
-.track-menu::-webkit-scrollbar {
+.track-menu::-webkit-scrollbar,
+.audio-motion-menu::-webkit-scrollbar,
+.image-effectbgm-menu::-webkit-scrollbar {
     width: 8px;
 }
-.track-menu::-webkit-scrollbar-track {
+.track-menu::-webkit-scrollbar-track,
+.audio-motion-menu::-webkit-scrollbar-track,
+.image-effectbgm-menu::-webkit-scrollbar-track {
     background: #121212;
 }
-.track-menu::-webkit-scrollbar-thumb {
+.track-menu::-webkit-scrollbar-thumb,
+.audio-motion-menu::-webkit-scrollbar-thumb,
+.image-effectbgm-menu::-webkit-scrollbar-thumb {
     background: #999;
     border-radius: 4px;
 }
-.track-menu::-webkit-scrollbar-thumb:hover {
+.track-menu::-webkit-scrollbar-thumb:hover,
+.audio-motion-menu::-webkit-scrollbar-thumb:hover,
+.image-effectbgm-menu::-webkit-scrollbar-thumb:hover {
     background: #777;
 }
 .menu-item {
-  padding: 8px 16px;
-  cursor: pointer;
-  white-space: nowrap;
+    padding: 8px 16px;
+    cursor: pointer;
+    white-space: nowrap;
 }
 
 /* 親コンテナの位置調整 */
@@ -1172,4 +1205,347 @@ button#modeChangeBtn.convert-active:hover,
 /* 非表示クラス */
 .hidden {
 	display: none !important;
+}
+/* メディアコンテナ */
+.video-container {
+    position: relative;
+    /* プレイヤー全体の領域 */
+}
+#videoPlayer {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+/* UIコントロール類は mediaContainer より上のレイヤーに配置 */
+.controls, .filename, .filter-panel, .edit-panel {
+    z-index: 10;
+}
+
+/* アニメーション共通（トランジション時間は画像の表示時間に合算されるため適宜調整） */
+.image-effect {
+    will-change: transform, opacity;
+}
+/* （なし） */
+.effect-none {
+    opacity: 1;
+    transform: none;
+}
+/* フェード（フェードイン ＆ フェードアウト） */
+.effect-fade {
+    animation: effectFade 3s ease-in-out forwards;
+}
+@keyframes effectFade {
+    0%   { opacity: 0; }
+    20%  { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+/* スライド（左→右） */
+.effect-slide-lr {
+    animation: effectSlideLR 5s ease-in-out forwards;
+}
+@keyframes effectSlideLR {
+    0%   { opacity: 0; transform: translateX(-100%); }
+    20%  { opacity: 1; transform: translateX(0); }
+    80%  { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(100%); }
+}
+/* スライド（右→左） */
+.effect-slide-rl {
+    animation: effectSlideRL 5s ease-in-out forwards;
+}
+@keyframes effectSlideRL {
+    0%   { opacity: 0; transform: translateX(100%); }
+    20%  { opacity: 1; transform: translateX(0); }
+    80%  { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(-100%); }
+}
+/* スライド（上→下） */
+.effect-slide-tb {
+    animation: effectSlideTB 5s ease-in-out forwards;
+}
+@keyframes effectSlideTB {
+    0%   { opacity: 0; transform: translateY(-100%); }
+    20%  { opacity: 1; transform: translateY(0); }
+    80%  { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(100%); }
+}
+/* スライド（下→上） */
+.effect-slide-bt {
+    animation: effectSlideBT 5s ease-in-out forwards;
+}
+@keyframes effectSlideBT {
+    0%   { opacity: 0; transform: translateY(100%); }
+    20%  { opacity: 1; transform: translateY(0); }
+    80%  { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-100%); }
+}
+/* ズームイン＆アウト（中央から引き込まれるような拡大効果） */
+.effect-zoom-in {
+    animation: effectZoomIn 5s ease-in-out forwards;
+}
+@keyframes effectZoomIn {
+    0%   { opacity: 0; transform: scale(0.4); }   /* 0.8 -> 0.4 に縮小して登場感を高める */
+    20%  { opacity: 1; transform: scale(1.0); }
+    80%  { opacity: 1; transform: scale(1.15); }  /* 1.05 -> 1.15 に拡大率をアップ */
+    100% { opacity: 0; transform: scale(1.5); }   /* 1.2 -> 1.5 に大きく拡大してフェードアウト */
+}
+/* ズームアウト（引き（引き込み）から静止） */
+.effect-zoom-out {
+    animation: effectZoomOut 5s ease-in-out forwards;
+}
+@keyframes effectZoomOut {
+    0%   { opacity: 0; transform: scale(1.8); }
+    20%  { opacity: 1; transform: scale(1.0); }
+    80%  { opacity: 1; transform: scale(0.85); }
+    100% { opacity: 0; transform: scale(0.68); }
+}
+/* ポップアップ（バウンドしながら大きく出現） */
+.effect-pop {
+    animation: effectPop 5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes effectPop {
+    0%   { opacity: 0; transform: scale(0.5); }
+    20%  { opacity: 1; transform: scale(1.0); }
+    80%  { opacity: 1; transform: scale(1.0); }
+    100% { opacity: 0; transform: scale(0.8); }
+}
+/* 回転フェード（3Dっぽく少し回転しながら切り替わる：強調版） */
+.effect-rotate {
+    animation: effectRotate 5s ease-in-out forwards;
+}
+@keyframes effectRotate {
+    0%   { opacity: 0; transform: scale(0.2) rotate(-120deg); } /* scale: 0.7->0.2, rotate: -5deg->-30deg */
+    20%  { opacity: 1; transform: scale(1.0) rotate(0deg); }
+    80%  { opacity: 1; transform: scale(1.0) rotate(0deg); }
+    100% { opacity: 0; transform: scale(0.2) rotate(120deg); }   /* scale: 0.7->0.2, rotate: 5deg->30deg */
+}
+/* スイング/振り子（風に揺れて出現） */
+.effect-swing-top {
+    animation: effectSwingTop 5s ease-in-out forwards;
+    transform-origin: top center;
+}
+@keyframes effectSwingTop {
+    0%   { opacity: 0; transform: rotate(-45deg); }
+    20%  { opacity: 1; transform: rotate(0deg); }
+    80%  { opacity: 1; transform: rotate(0deg); }
+    100% { opacity: 0; transform: rotate(45deg); }
+}
+/* スイング/扇（扇を開く動き） */
+.effect-swing-bottom {
+    animation: effectSwingBottom 5s ease-in-out forwards;
+    transform-origin: bottom center;
+}
+@keyframes effectSwingBottom {
+    0%   { opacity: 0; transform: rotate(-45deg); }
+    20%  { opacity: 1; transform: rotate(0deg); }
+    80%  { opacity: 1; transform: rotate(0deg); }
+    100% { opacity: 0; transform: rotate(45deg); }
+}
+/* フリップ（左右）（横方向に回転してめくる） */
+.effect-flip-lr {
+    animation: effectFlipLR 5s ease-in-out forwards;
+    backface-visibility: hidden;
+}
+@keyframes effectFlipLR {
+    0%   { opacity: 0; transform: perspective(400px) rotateY(90deg); }
+    20%  { opacity: 1; transform: perspective(400px) rotateY(0deg); }
+    80%  { opacity: 1; transform: perspective(400px) rotateY(0deg); }
+    100% { opacity: 0; transform: perspective(400px) rotateY(-90deg); }
+}
+/* フリップ（上下）（縦方向に回転してめくる） */
+.effect-flip-tb {
+    animation: effectFlipTB 5s ease-in-out forwards;
+    backface-visibility: hidden;
+}
+@keyframes effectFlipTB {
+    0%   { opacity: 0; transform: perspective(400px) rotateX(-90deg); }
+    20%  { opacity: 1; transform: perspective(400px) rotateX(0deg); }
+    80%  { opacity: 1; transform: perspective(400px) rotateX(0deg); }
+    100% { opacity: 0; transform: perspective(400px) rotateX(90deg); }
+}
+/* 一時停止時にアニメーションをその場で固定するクラス */
+.image-effect.paused {
+    animation-play-state: paused !important;
+}
+
+/* BGMリスト */
+.bgm-popup-menu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    margin-left: 0;
+    background: #222;
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 8px 12px;
+    color: #eee;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: nowrap;
+    z-index: 1000;
+    max-height: 480px;
+    min-width: 720px;       /* 最小幅を広めに指定（お好みのサイズに調整可能） */
+    max-width: 58vw;
+    box-sizing: border-box;
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    pointer-events: auto;
+}
+/* ポップアップ内の各行スタイル */
+.bgm-popup-menu > div {
+    padding: 4px 0;
+}
+/* スクロールバー設定 */
+.bgm-popup-menu::-webkit-scrollbar {
+    width: 8px;
+}
+.bgm-popup-menu::-webkit-scrollbar-track {
+    background: #121212;
+}
+.bgm-popup-menu::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 4px;
+}
+.bgm-popup-menu::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+/* ポップアップ内のすべての削除ボタン */
+.bgm-clear-all-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid #555;
+    cursor: pointer;
+    color: #ff6b6b;
+    font-weight: bold;
+    border-radius: 3px;
+    background: transparent;
+    transition: background-color 0.2s ease;
+}
+.bgm-clear-all-item:hover {
+    background: rgba(255, 0, 0, 0.2);
+}
+/* ポップアップ内の各BGMアイテム */
+.bgm-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px;
+    gap: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+    background: transparent;
+    transition: background-color 0.2s ease;
+}
+.bgm-list-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+/* 再生中の強調スタイル */
+.bgm-list-item.is-playing {
+    color: #00ccff;
+}
+/* 長いファイル名を「...」で省略表示するためのタイトルクラス */
+.bgm-item-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* センターコントロールのスタイル設定 */
+.center-controls {
+    position: absolute;
+    top: 46%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    /* ボタン同士の間隔も3倍に変更 */
+    gap: clamp(45px, 9vw, 120px);
+    z-index: 950;
+    pointer-events: auto;
+}
+.center-btn {
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    object-fit: contain;
+}
+.center-btn:hover {
+    transform: scale(1.1);
+}
+.center-btn:active {
+    transform: scale(0.95);
+}
+/* 中央の再生／一時停止イメージ (0.5倍に変更) */
+.center-btn-main {
+    width: min(12vw, 15vh, 150px);
+    height: min(12vw, 15vh, 150px);
+    min-width: 66px;  /* 132px × 0.5 */
+    min-height: 66px;
+}
+/* 前曲・次曲イメージ (0.5倍に変更) */
+.center-btn-side {
+    width: min(8.25vw, 10.5vh, 105px);
+    height: min(8.25vw, 10.5vh, 105px);
+    min-width: 45px;  /* 90px × 0.5 */
+    min-height: 45px;
+}
+
+/* メディアコンテナのスタイル設定 */
+#mediaContainer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* 最下層（操作の受け皿） */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+/* 共通スタイル: 100%表示 */
+#imageWallpaper,
+#imageWrapper,
+#visualizerContainer,
+#imageWallpaperImg,
+#imagePlayer {
+    width: 100%;
+    height: 100%;
+}
+/* 壁紙コンテナ */
+#imageWallpaper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    display: none;
+    pointer-events: none;
+    z-index: 0;
+}
+/* 壁紙画像（ぼかし10px・拡大処理＋暗く調整） */
+#imageWallpaperImg {
+    object-fit: cover;
+    filter: blur(10px) brightness(0.6); /* ← brightness() を追加（1以下で暗くなる） */
+    transform: scale(1.05); 			/* ぼかしによる端の白にじみ防止のため少し拡大 */
+}
+/* メイン画像ラッパー */
+#imageWrapper {
+    display: none;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+}
+/* メイン画像 */
+#imagePlayer {
+    object-fit: contain;
+}
+/* ビジュアライザー */
+#visualizerContainer {
+    display: none;
 }

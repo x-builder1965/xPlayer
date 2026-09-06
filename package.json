@@ -1,6 +1,6 @@
 {
   "name": "xplayer",
-  "version": "4.78.2",
+  "version": "5.78.0",
   "description": "xPlayer - Video Player",
   "main": "main.js",
   "author": "x-builder",
@@ -20,7 +20,9 @@
     "electron-builder": "^26.0.12"
   },
   "dependencies": {
+    "audiomotion-analyzer": "^4.5.4",
     "ffmpeg-static": "^5.2.0",
+    "ffprobe-static": "^3.1.0",
     "fluent-ffmpeg": "^2.1.3",
     "trash": "^10.0.0"
   },
@@ -112,6 +114,12 @@
         "schemes": [
           "xplayer"
         ]
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "extra/xPlayer_install.reg",
+        "to": "xPlayer_install.reg"
       }
     ]
   }
