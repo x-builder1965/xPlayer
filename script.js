@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.75.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.76.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -59,12 +59,14 @@ const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際�
 const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
 const settingsFilePath = getUserSettingsPath();
 const pid = getPid();
-const IMAGE_DURATION = 5;      // 画像の再生時間（秒）
+const IMAGE_DURATION = 5;                   // 画像の再生時間（秒）
 const bgmAudio = new Audio();
 const imageThumbnailCache = new Map();		// 画像サムネイル用キャッシュ（Mapオブジェクト）
-const dragThreshold = 5;    // ドラッグ判定用の移動閾値（手ぶれ考慮: 5ピクセル）
-const imageCache = new Map();		// 画像キャッシュストレージ（メモリ内）
-const MAX_CACHE_SIZE = 5; 			// メモリを圧迫しないよう保持数を制限
+const dragThreshold = 5;                    // ドラッグ判定用の移動閾値（手ぶれ考慮: 5ピクセル）
+const imageCache = new Map();		        // 画像キャッシュストレージ（メモリ内）
+const MAX_CACHE_SIZE = 0; 			        // メモリを圧迫しないよう保持数を制限（0は無効）
+const mediaPreloadCache = new Map();	    // 動画・音声の先読み要素キャッシュ
+const MAX_MEDIA_PRELOAD_SIZE = 0; 	        // メモリを圧迫しないよう保持数を制限（0は無効）
 
 const SORT_MODES = {
     'none':       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
@@ -6401,7 +6403,7 @@ async function setVideoSrc(file) {
 
         if (isVIDEO_EXTENSIONS(ext) && isAudio) {
             isConverting = false;
-            const mediaUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
+            const mediaUrl = `file://${file.path.replace(/\\/g, '/')}`;
             videoPlayerElement.src = mediaUrl;
             audioPlayer.src = mediaUrl;
             videoPreview.removeAttribute('src');
@@ -6410,7 +6412,7 @@ async function setVideoSrc(file) {
             tempConvertFile = null;
         } else if (isVIDEO_EXTENSIONS(ext)) {
             isConverting = false;
-            const videoUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
+            const videoUrl = `file://${file.path.replace(/\\/g, '/')}`;
             videoPlayerElement.src = videoUrl;
             audioPlayer.src = videoUrl;
             videoPreview.src = videoUrl;
@@ -6528,9 +6530,6 @@ async function playVideo(file, currentTime) {
 	    seekBar.value = (100 / IMAGE_DURATION) * imageCurrentTime;
 	    updateTimeDisplay();
 	
-	    // 次の画像をバックグラウンドで先読み開始
-	    preloadNextPlaylistItem();
-	
 	    // isPlaying が true の場合のみタイマーをセット
 	    if (isPlaying) {
 	        const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
@@ -6569,6 +6568,9 @@ async function playVideo(file, currentTime) {
         // 動画・音声再生時はBGMを自動一時停止
         await manageBgmState();
     }
+
+    // 次のメディアをバックグラウンドで先読み開始
+    preloadNextPlaylistItem();
 
     updatePlaylistDisplay();
     showControlsAndFilename();
@@ -9650,6 +9652,7 @@ function createShuffleOrder() {
 // 画像をメモリ上に先読み・キャッシュする関数
 // @param {string} filePath - 画像ファイルのパス
 function preloadImage(filePath) {
+    if (MAX_CACHE_SIZE <= 0) return; // 0以下なら処理をスキップ
     if (!filePath || !isImageFilePath(filePath)) return;
 
     const imageUrl = `file://${filePath.replace(/\\/g, '/')}?t=${Date.now()}`;
@@ -9676,6 +9679,43 @@ function preloadImage(filePath) {
     imageCache.set(filePath, img);
 }
 
+// 動画・音声をメモリ上のメディア要素で先読みする関数
+function preloadMedia(file) {
+    if (MAX_MEDIA_PRELOAD_SIZE <= 0) return; // 0以下なら処理をスキップ
+    if (!file?.path || isImageFilePath(file.path)) return;
+
+    const cleanPath = file.path.split('?')[0];
+    const ext = path.extname(cleanPath).toLowerCase();
+    const mediaType = isAudioFilePath(cleanPath) ? 'audio' : (isVIDEO_EXTENSIONS(ext) ? 'video' : null);
+    if (!mediaType) return;
+
+    const cacheKey = `${mediaType}:${file.path}`;
+    if (mediaPreloadCache.has(cacheKey)) {
+        const cachedMedia = mediaPreloadCache.get(cacheKey);
+        mediaPreloadCache.delete(cacheKey);
+        mediaPreloadCache.set(cacheKey, cachedMedia);
+        return;
+    }
+
+    if (mediaPreloadCache.size >= MAX_MEDIA_PRELOAD_SIZE) {
+        const oldestKey = mediaPreloadCache.keys().next().value;
+        const oldestMedia = mediaPreloadCache.get(oldestKey);
+        oldestMedia?.removeAttribute('src');
+        oldestMedia?.load();
+        mediaPreloadCache.delete(oldestKey);
+    }
+
+    const media = document.createElement(mediaType);
+    const mediaUrl = `file://${cleanPath.replace(/\\/g, '/')}`;
+    media.preload = 'auto';
+    media.addEventListener('error', () => {
+        mediaPreloadCache.delete(cacheKey);
+    }, { once: true });
+    media.src = mediaUrl;
+    media.load();
+    mediaPreloadCache.set(cacheKey, media);
+}
+
 // 次の再生対象アイテムを取得して先読みを実行する関数
 function preloadNextPlaylistItem() {
     if (!playlist || playlist.length <= 1) return;
@@ -9694,8 +9734,7 @@ function preloadNextPlaylistItem() {
 
     if (nextIndex !== -1 && playlist[nextIndex]?.file?.path) {
         const nextFile = playlist[nextIndex].file;
-        if (isImageFilePath(nextFile.path)) {
-            preloadImage(nextFile.path);
-        }
+        if (isImageFilePath(nextFile.path)) preloadImage(nextFile.path);
+        else preloadMedia(nextFile);
     }
 }
