@@ -1011,6 +1011,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // プレイリスト復元
                     updateMessageOverlay(`📚 プレイリスト作成中...`, 0, false);
                     playlist = await Promise.all(parsedPlaylist.map(file => createPlaylistItem(file)));
+                    playlist = playlist.filter(Boolean);
+                    synchronizeOriginalLoadOrder();
                     currentVideoIndex = parsedCurrentVideoIndex;
                     await debouncedUpdateFilterList();
                     await debouncedScrollCurrentFilterItem();
@@ -6970,6 +6972,40 @@ async function createPlaylistItem(file) {
     };
 }
 
+// プレイリストの内容を基準に originalLoadOrder を同期
+function synchronizeOriginalLoadOrder() {
+    const requiredCounts = new Map();
+    for (const item of playlist) {
+        const filePath = item?.file?.path;
+        if (filePath) {
+            requiredCounts.set(filePath, (requiredCounts.get(filePath) || 0) + 1);
+        }
+    }
+
+    const synchronizedPaths = [];
+    const synchronizedCounts = new Map();
+
+    for (const filePath of Array.isArray(originalLoadOrder) ? originalLoadOrder : []) {
+        const synchronizedCount = synchronizedCounts.get(filePath) || 0;
+        if (synchronizedCount < (requiredCounts.get(filePath) || 0)) {
+            synchronizedPaths.push(filePath);
+            synchronizedCounts.set(filePath, synchronizedCount + 1);
+        }
+    }
+
+    for (const item of playlist) {
+        const filePath = item?.file?.path;
+        const synchronizedCount = synchronizedCounts.get(filePath) || 0;
+        if (filePath && synchronizedCount < (requiredCounts.get(filePath) || 0)) {
+            synchronizedPaths.push(filePath);
+            synchronizedCounts.set(filePath, synchronizedCount + 1);
+        }
+    }
+
+    originalLoadOrder = synchronizedPaths;
+    localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
+}
+
 // プレイリストのファイル追加
 async function playlistAdd(videoFiles) {
     if (!videoFiles || videoFiles.length === 0) {
@@ -7005,15 +7041,15 @@ async function playlistAdd(videoFiles) {
         return;
     }
 
-    const isFirstTime = playlist.length === 0;
-
     // 既存の playlist の末尾に追加
     playlist.push(...mappedNewFiles);
+    const isFirstTime = playlist.length === mappedNewFiles.length;
 
     // 実際に playlist に追加された要素からパスを取得して originalLoadOrder に追加
     const addedPaths = mappedNewFiles.map(item => item.file.path);
+    if (!Array.isArray(originalLoadOrder)) originalLoadOrder = [];
     originalLoadOrder.push(...addedPaths);
-    localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
+    synchronizeOriginalLoadOrder();
 
     // もし元々リストが空だった場合は先頭の曲を再生
     if (isFirstTime) {
@@ -7039,7 +7075,17 @@ async function playlistSet(videoFiles) {
     await cleanupTempFiles();
 
     // 実際に生成に成功した要素のみを取得
-    const newPlaylist = (await Promise.all(videoFiles.map(file => createPlaylistItem(file))))
+    const uniqueVideoFiles = [];
+    const inputPaths = new Set();
+    for (const file of videoFiles) {
+        const filePath = file?.path || file?.file?.path;
+        if (filePath && !inputPaths.has(filePath)) {
+            inputPaths.add(filePath);
+            uniqueVideoFiles.push(file);
+        }
+    }
+
+    const newPlaylist = (await Promise.all(uniqueVideoFiles.map(file => createPlaylistItem(file))))
         .filter(Boolean);
 
     if (newPlaylist.length === 0) {
@@ -7053,8 +7099,8 @@ async function playlistSet(videoFiles) {
     playlist = newPlaylist;
 
     // 生成成功した playlist の要素から元の読み込み順（Base順）を作成・保存
-    originalLoadOrder = playlist.map(item => item.file.path);
-    localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
+    originalLoadOrder = [];
+    synchronizeOriginalLoadOrder();
 
     // 現状の並び替えモード（currentSortMode）を適用
     await applySort(currentSortMode);
@@ -7202,7 +7248,7 @@ async function insertFilesIntoPlaylist(files, addPosition = 0) {
     // 追加後も「現在のプレイリスト順」を「なし」の基準とする
     const currentPaths = playlist.map(item => item.file.path);
     originalLoadOrder = [...currentPaths];
-    localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
+    synchronizeOriginalLoadOrder();
 
     // shuffleOrder の最後に追加
     if (shuffleOrder && shuffleOrder.length > 0) {
@@ -7238,8 +7284,8 @@ async function removeFromPlaylist() {
     // --- originalLoadOrder から削除対象パスを除去して localStorage に保存 ---
     if (removedItem && Array.isArray(originalLoadOrder)) {
         originalLoadOrder = originalLoadOrder.filter(path => path !== removedItem.file.path);
-        localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
     }
+    synchronizeOriginalLoadOrder();
     // ---------------------------------------------------------------------------------
 
     // 削除後の新しいインデックスを計算
@@ -7798,10 +7844,8 @@ function getPlaylistInOriginalOrder() {
     const storedOriginalOrder = getStoredOriginalLoadOrder();
     if (storedOriginalOrder.length > 0) {
         originalLoadOrder = storedOriginalOrder;
-    } else if (!Array.isArray(originalLoadOrder) || originalLoadOrder.length !== playlist.length) {
-        originalLoadOrder = playlist.map(item => item.file.path);
-        localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
     }
+    synchronizeOriginalLoadOrder();
 
     // パス → アイテムのマッピングを作成（高速検索用）
     const pathToItem = new Map(
