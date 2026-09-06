@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.76.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.77.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -5147,7 +5147,7 @@ async function importSettingsFromFile(targetFilePath = null, applySettings = !ta
             if (applySettings) {
                 if (!isSecondary) {
                     // 初回起動時：設定ファイル→localStorage
-                    localSturageClearAndFile();
+                    localStorageClearAndFile();
                     Object.entries(settings).forEach(([key, value]) => {
                         if (typeof value === 'object' && value !== null) {
                             localStorageSetItemAndFile(key, JSON.stringify(value));
@@ -5306,9 +5306,9 @@ function savePlaylistAndPlaybackState() {
         localStorageSetItemAndFile('currentVideoIndex', currentVideoIndex);
         localStorageSetItemAndFile('currentTime', videoPlayer.currentTime || 0);
     } else {
-        localSturageRemoveItemAndFile('playlist');
-        localSturageRemoveItemAndFile('currentVideoIndex');
-        localSturageRemoveItemAndFile('currentTime');
+        localStorageRemoveItemAndFile('playlist');
+        localStorageRemoveItemAndFile('currentVideoIndex');
+        localStorageRemoveItemAndFile('currentTime');
     }
     if (isFilterPanelVisible) debouncedUpdateFilterList();
     debouncedScrollCurrentFilterItem();
@@ -6268,8 +6268,8 @@ function saveShuffleState() {
         localStorageSetItemAndFile('shufflePosition', shufflePosition.toString());
     } else {
         // ランダムOFFならクリア
-        localSturageRemoveItemAndFile('shuffleOrder');
-        localSturageRemoveItemAndFile('shufflePosition');
+        localStorageRemoveItemAndFile('shuffleOrder');
+        localStorageRemoveItemAndFile('shufflePosition');
     }
 }
 
@@ -6983,8 +6983,9 @@ async function playlistAdd(videoFiles) {
     // 多重を除外した新しいファイルのみを抽出（追加リスト内での多重も排除）
     const uniqueVideoFiles = [];
     for (const file of videoFiles) {
-        if (file?.path && !existingPaths.has(file.path)) {
-            existingPaths.add(file.path);
+        const filePath = file?.path || file?.file?.path;
+        if (filePath && !existingPaths.has(filePath)) {
+            existingPaths.add(filePath);
             uniqueVideoFiles.push(file);
         }
     }
@@ -6995,17 +6996,23 @@ async function playlistAdd(videoFiles) {
         return;
     }
 
+    // 実際に生成に成功した要素のみを取得
     const mappedNewFiles = (await Promise.all(uniqueVideoFiles.map(file => createPlaylistItem(file))))
         .filter(Boolean);
+
+    if (mappedNewFiles.length === 0) {
+        hideMessageOverlay();
+        return;
+    }
 
     const isFirstTime = playlist.length === 0;
 
     // 既存の playlist の末尾に追加
     playlist.push(...mappedNewFiles);
 
-    // 元の読み込み順（originalLoadOrder）にも追加パスを記録
-    const newPaths = uniqueVideoFiles.map(file => file.path);
-    originalLoadOrder.push(...newPaths);
+    // 実際に playlist に追加された要素からパスを取得して originalLoadOrder に追加
+    const addedPaths = mappedNewFiles.map(item => item.file.path);
+    originalLoadOrder.push(...addedPaths);
     localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
 
     // もし元々リストが空だった場合は先頭の曲を再生
@@ -7031,14 +7038,23 @@ async function playlistSet(videoFiles) {
     }
     await cleanupTempFiles();
 
-    // 元の読み込み順（Base順）を保存
-    const currentPaths = videoFiles.map(file => file.path);
-    originalLoadOrder = [...currentPaths];
-    localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
-
-    // playlist を初期状態（ファイル取得順）でセット
-    playlist = (await Promise.all(videoFiles.map(file => createPlaylistItem(file))))
+    // 実際に生成に成功した要素のみを取得
+    const newPlaylist = (await Promise.all(videoFiles.map(file => createPlaylistItem(file))))
         .filter(Boolean);
+
+    if (newPlaylist.length === 0) {
+        isPlaylistCreationInProgress = false;
+        hidePlaylistProgress();
+        hideMessageOverlay();
+        return;
+    }
+
+    // playlist を初期設定
+    playlist = newPlaylist;
+
+    // 生成成功した playlist の要素から元の読み込み順（Base順）を作成・保存
+    originalLoadOrder = playlist.map(item => item.file.path);
+    localStorageSetItemAndFile('originalLoadOrder', JSON.stringify(originalLoadOrder));
 
     // 現状の並び替えモード（currentSortMode）を適用
     await applySort(currentSortMode);
@@ -7290,7 +7306,7 @@ async function clearPlaylist() {
 
     // クリアしたら基準順もクリア
     originalLoadOrder = [];
-    localSturageRemoveItemAndFile('originalLoadOrder');
+    localStorageRemoveItemAndFile('originalLoadOrder');
 
     savePlaylistAndPlaybackState();
     resetShuffle();
@@ -8979,7 +8995,7 @@ async function localStorageSetItemAndFile(key, value) {
 }
 
 // localStorageバックアップファイル更新付きlocalStrage.removeItem
-async function localSturageRemoveItemAndFile(key) {
+async function localStorageRemoveItemAndFile(key) {
     // メモリ上のオブジェクトから削除
     delete localSettings[key];
         
@@ -8990,7 +9006,7 @@ async function localSturageRemoveItemAndFile(key) {
 }
 
 // localStorageバックアップファイル更新付きlocalStrage.clear
-async function localSturageClearAndFile() {
+async function localStorageClearAndFile() {
     // メモリ上のオブジェクトを空にする
     localSettings = {};
 
