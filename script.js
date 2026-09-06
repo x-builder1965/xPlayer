@@ -53,7 +53,7 @@ const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.opus', '.wma', '.aiff', '.aif', '.alac', '.ape'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'];
-const VIDEO_EXTENSIONS_CONVERT = [];  // 動画変換対象外拡張子
+const VIDEO_EXTENSIONS_CONVERT = [];        // 動画変換対象外拡張子
 const SETTINGS_FILE_REGEX = /\.(json|xpj)$/i;
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
 const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
@@ -64,9 +64,9 @@ const bgmAudio = new Audio();
 const imageThumbnailCache = new Map();		// 画像サムネイル用キャッシュ（Mapオブジェクト）
 const dragThreshold = 5;                    // ドラッグ判定用の移動閾値（手ぶれ考慮: 5ピクセル）
 const imageCache = new Map();		        // 画像キャッシュストレージ（メモリ内）
-const MAX_CACHE_SIZE = 0; 			        // メモリを圧迫しないよう保持数を制限（0は無効）
-const mediaPreloadCache = new Map();	    // 動画・音声の先読み要素キャッシュ
-const MAX_MEDIA_PRELOAD_SIZE = 0; 	        // メモリを圧迫しないよう保持数を制限（0は無効）
+const MAX_IMAGE_CACHE_SIZE = 5; 			// メモリを圧迫しないよう保持数を制限（0は無効）
+const mediaCache = new Map();	            // 動画・音声の先読み要素キャッシュ
+const MAX_MEDIA_CACHE_SIZE = 3; 	        // メモリを圧迫しないよう保持数を制限（0は無効）
 
 const SORT_MODES = {
     'none':       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
@@ -509,6 +509,8 @@ let savedAudioMotionOptions = null;
 let savedAudioMotionNodes = null;
 let savedImageBgmPaths = null;	// 複数BGMパスの保持用変数を追加
 let savedCurrentBgmIndex = null;	// 複数BGMパスのインデックス保持用変数を追加
+let savedMaxImageCacheSize = null;
+let savedMaxMediaCacheSize = null;
 
 // グローバル（共通）変数
 let localSettings = {};     // localSettingsをオブジェクトとして初期化
@@ -603,6 +605,8 @@ let currentLoadedBgmPath = null;    // BGM設定用の変数（パス管理）
 let lastEffectKey = null;		// 直前に適用されたエフェクトキーを記憶する変数
 let hasMoved = false;           // ドラッグ中にマウスが移動したかどうかのフラグ
 let forceStop = true;           // 起動時の再生一時停止判定用（アプリ起動：true、設定インポート：false）
+let maxImageCacheSize = 0;		// 画像用キャッシュサイズ（0はキャッシュ無効）
+let maxMediaCacheSize = 0;		// 動画・音声用キャッシュサイズ（0はキャッシュ無効）
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -856,6 +860,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isNaN(shufflePosition) || shufflePosition < -1) {
             shufflePosition = -1;
         }
+    }
+
+    // 画像用キャッシュサイズ復元
+    if (savedMaxImageCacheSize) {
+        maxImageCacheSize = savedMaxImageCacheSize;
+    } else {
+        maxImageCacheSize = MAX_IMAGE_CACHE_SIZE;
+    }
+    // 動画・音声用キャッシュサイズ復元
+    if (savedMaxMediaCacheSize) {
+        maxMediaCacheSize = savedMaxMediaCacheSize;
+    } else {
+        maxMediaCacheSize = MAX_MEDIA_CACHE_SIZE;
     }
 
     // コントロールサイズ適用
@@ -4057,6 +4074,8 @@ async function allLocalStorageSetting() {
         savedAudioMotionNodes = localStorage.getItem('audioMotionNodes');
         savedImageBgmPaths = localStorage.getItem('imageBgmPaths');
         savedCurrentBgmIndex = localStorage.getItem('currentBgmIndex');
+        savedMaxImageCacheSize = localStorage.getItem('maxImageCacheSize');
+        savedMaxMediaCacheSize = localStorage.getItem('maxMediaCacheSize');
         // 2. 取得情報をユーザーフォルダの xPlayerSettings.xpj に保存
         await exportSettingsToFile(settingsFilePath);
     } else {
@@ -4146,6 +4165,8 @@ async function allLocalStorageSetting() {
             savedAudioMotionNodes = getVal('audioMotionNodes', savedAudioMotionNodes);
             savedImageBgmPaths = getVal('imageBgmPaths', savedImageBgmPaths);		// 設定ファイルからの複数パス復元
             savedCurrentBgmIndex = getVal('currentBgmIndex', savedCurrentBgmIndex, '0');
+            savedMaxImageCacheSize = getVal('maxImageCacheSize', savedMaxImageCacheSize, '0');
+            savedMaxMediaCacheSize = getVal('maxMediaCacheSize', savedMaxMediaCacheSize, '0');
 
             // JSONファイルから DEFAULT_AUDIO_MOTION_OPTIONS を復元
             if (loadedSettings['audioMotionOptions']) {
@@ -4209,6 +4230,8 @@ async function allLocalStorageSetting() {
     await localStorageSetItemAndFile('audioMotionNodes', savedAudioMotionNodes);
     await localStorageSetItemAndFile('imageBgmPaths', savedImageBgmPaths);
     await localStorageSetItemAndFile('currentBgmIndex', savedCurrentBgmIndex);
+    await localStorageSetItemAndFile('maxImageCacheSize', savedMaxImageCacheSize);
+    await localStorageSetItemAndFile('maxMediaCacheSize', savedMaxMediaCacheSize);
 }
 
 // 音声トラック・字幕トラック更新
@@ -9652,7 +9675,7 @@ function createShuffleOrder() {
 // 画像をメモリ上に先読み・キャッシュする関数
 // @param {string} filePath - 画像ファイルのパス
 function preloadImage(filePath) {
-    if (MAX_CACHE_SIZE <= 0) return; // 0以下なら処理をスキップ
+    if (maxImageCacheSize <= 0) return; // 0以下なら処理をスキップ
     if (!filePath || !isImageFilePath(filePath)) return;
 
     const imageUrl = `file://${filePath.replace(/\\/g, '/')}?t=${Date.now()}`;
@@ -9666,7 +9689,7 @@ function preloadImage(filePath) {
     }
 
     // キャッシュサイズ上限に達した場合は古いものから削除（LRU風管理）
-    if (imageCache.size >= MAX_CACHE_SIZE) {
+    if (imageCache.size >= maxImageCacheSize) {
         const oldestKey = imageCache.keys().next().value;
         imageCache.delete(oldestKey);
     }
@@ -9681,7 +9704,7 @@ function preloadImage(filePath) {
 
 // 動画・音声をメモリ上のメディア要素で先読みする関数
 function preloadMedia(file) {
-    if (MAX_MEDIA_PRELOAD_SIZE <= 0) return; // 0以下なら処理をスキップ
+    if (maxMediaCacheSize <= 0) return; // 0以下なら処理をスキップ
     if (!file?.path || isImageFilePath(file.path)) return;
 
     const cleanPath = file.path.split('?')[0];
@@ -9690,30 +9713,30 @@ function preloadMedia(file) {
     if (!mediaType) return;
 
     const cacheKey = `${mediaType}:${file.path}`;
-    if (mediaPreloadCache.has(cacheKey)) {
-        const cachedMedia = mediaPreloadCache.get(cacheKey);
-        mediaPreloadCache.delete(cacheKey);
-        mediaPreloadCache.set(cacheKey, cachedMedia);
+    if (mediaCache.has(cacheKey)) {
+        const cachedMedia = mediaCache.get(cacheKey);
+        mediaCache.delete(cacheKey);
+        mediaCache.set(cacheKey, cachedMedia);
         return;
     }
 
-    if (mediaPreloadCache.size >= MAX_MEDIA_PRELOAD_SIZE) {
-        const oldestKey = mediaPreloadCache.keys().next().value;
-        const oldestMedia = mediaPreloadCache.get(oldestKey);
+    if (mediaCache.size >= maxMediaCacheSize) {
+        const oldestKey = mediaCache.keys().next().value;
+        const oldestMedia = mediaCache.get(oldestKey);
         oldestMedia?.removeAttribute('src');
         oldestMedia?.load();
-        mediaPreloadCache.delete(oldestKey);
+        mediaCache.delete(oldestKey);
     }
 
     const media = document.createElement(mediaType);
     const mediaUrl = `file://${cleanPath.replace(/\\/g, '/')}`;
     media.preload = 'auto';
     media.addEventListener('error', () => {
-        mediaPreloadCache.delete(cacheKey);
+        mediaCache.delete(cacheKey);
     }, { once: true });
     media.src = mediaUrl;
     media.load();
-    mediaPreloadCache.set(cacheKey, media);
+    mediaCache.set(cacheKey, media);
 }
 
 // 次の再生対象アイテムを取得して先読みを実行する関数
