@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.74.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.75.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1601,13 +1601,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const targetContainer = document.fullscreenElement || mainContainer;
         const menu = createAudioMotionMenu();
+        targetContainer.appendChild(menu);
+
         const containerRect = targetContainer.getBoundingClientRect();
         const btnRect = audioMotionBtn.getBoundingClientRect();
 
-        menu.style.left = `${Math.max(8, btnRect.right - containerRect.left + 2)}px`;
-        menu.style.top = `${Math.max(8, btnRect.top - containerRect.top + 2)}px`;
+        const menuWidth = menu.offsetWidth;
+        const menuHeight = menu.offsetHeight;
 
-        targetContainer.appendChild(menu);
+        let left = btnRect.right - containerRect.left + 2;
+        let top = btnRect.top - containerRect.top + 2;
+
+        if (left + menuWidth > containerRect.width) {
+            left = btnRect.left - containerRect.left - menuWidth - 2;
+        }
+
+        if (top + menuHeight > containerRect.height) {
+            top = containerRect.height - menuHeight - 8;
+        }
+
+        menu.style.left = `${Math.max(8, left)}px`;
+        menu.style.top = `${Math.max(8, top)}px`;
 
         function closeMenu(ev) {
             if (!menu.contains(ev.target) && ev.target !== audioMotionBtn) {

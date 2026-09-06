@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver5.74.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver5.75.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -1097,21 +1097,31 @@ button#modeChangeBtn.convert-active:hover,
     line-height: 1.0;
     min-width: 120px;
 }
-.track-menu {
-    max-height: 600px;
+.track-menu,
+.audio-motion-menu,
+.image-effectbgm-menu {
+    max-height: min(600px, calc(100vh - 16px));
     overflow-y: auto;
 }
-.track-menu::-webkit-scrollbar {
+.track-menu::-webkit-scrollbar,
+.audio-motion-menu::-webkit-scrollbar,
+.image-effectbgm-menu::-webkit-scrollbar {
     width: 8px;
 }
-.track-menu::-webkit-scrollbar-track {
+.track-menu::-webkit-scrollbar-track,
+.audio-motion-menu::-webkit-scrollbar-track,
+.image-effectbgm-menu::-webkit-scrollbar-track {
     background: #121212;
 }
-.track-menu::-webkit-scrollbar-thumb {
+.track-menu::-webkit-scrollbar-thumb,
+.audio-motion-menu::-webkit-scrollbar-thumb,
+.image-effectbgm-menu::-webkit-scrollbar-thumb {
     background: #999;
     border-radius: 4px;
 }
-.track-menu::-webkit-scrollbar-thumb:hover {
+.track-menu::-webkit-scrollbar-thumb:hover,
+.audio-motion-menu::-webkit-scrollbar-thumb:hover,
+.image-effectbgm-menu::-webkit-scrollbar-thumb:hover {
     background: #777;
 }
 .menu-item {
