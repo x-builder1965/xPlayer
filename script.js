@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.77.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.78.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -44,29 +44,29 @@ const {
 } = window.electronAPI;
 
 // 固定値設定
-const overlayTimeout = 3000;
-const seekSensitivity = 0.3;
-const volumeStep = 0.001;
-const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 5.0];
-const appNameAndCopyrightValue = `${appName}\n${copyright}`;
-const appNameAndCopyrightValueLine = `${appName}　${copyright}`;
-const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];  // HTML5ネイティブ対応拡張子（ブラウザが直接再生可能）
-const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.opus', '.wma', '.aiff', '.aif', '.alac', '.ape'];
-const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'];
-const VIDEO_EXTENSIONS_CONVERT = [];        // 動画変換対象外拡張子
-const SETTINGS_FILE_REGEX = /\.(json|xpj)$/i;
-const debouncedUpdateFilterList = debounce(updateFilterList, 0);      // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
-const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);
-const settingsFilePath = getUserSettingsPath();
-const pid = getPid();
-const IMAGE_DURATION = 5;                   // 画像の再生時間（秒）
-const bgmAudio = new Audio();
-const imageThumbnailCache = new Map();		// 画像サムネイル用キャッシュ（Mapオブジェクト）
-const dragThreshold = 5;                    // ドラッグ判定用の移動閾値（手ぶれ考慮: 5ピクセル）
-const imageCache = new Map();		        // 画像キャッシュストレージ（メモリ内）
-const MAX_IMAGE_CACHE_SIZE = 5; 			// メモリを圧迫しないよう保持数を制限（0は無効）
-const mediaCache = new Map();	            // 動画・音声の先読み要素キャッシュ
-const MAX_MEDIA_CACHE_SIZE = 3; 	        // メモリを圧迫しないよう保持数を制限（0は無効）
+const overlayTimeout = 3000;                    // オーバーレイ表示の自動非表示までの時間（ミリ秒）
+const seekSensitivity = 0.3;                    // シーク操作の感度（0.1～1.0）: 1.0でマウス移動量と同じ、0.5で半分、0.3で3分の1    
+const volumeStep = 0.001;                       // 音量操作のステップ値（0.001～0.1）: 0.01で1%、0.001で0.1%単位
+const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 5.0];      // 再生速度の選択肢（0.25倍速～5倍速）
+const appNameAndCopyrightValue = `${appName}\n${copyright}`;                            // アプリ名と著作権表示の値
+const appNameAndCopyrightValueLine = `${appName}　${copyright}`;                        // アプリ名と著作権表示の1行バージョン
+const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];             // 動画再生対象拡張子
+const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.opus', '.wma', '.aiff', '.aif', '.alac', '.ape'];  // 音声再生対象拡張子
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'];   // 画像再生対象拡張子
+const VIDEO_EXTENSIONS_CONVERT = [];            // 動画変換対象外拡張子
+const SETTINGS_FILE_REGEX = /\.(json|xpj)$/i;   // 設定ファイルの拡張子判定用正規表現
+const debouncedUpdateFilterList = debounce(updateFilterList, 0);                        // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
+const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);        // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedScrollCurrentFilterItem を呼び出してください。
+const settingsFilePath = getUserSettingsPath(); // 設定ファイルパス取得
+const pid = getPid();                           // プロセスID取得
+const IMAGE_DURATION = 5;                       // 画像の再生時間（秒）
+const bgmAudio = new Audio();                   // BGM再生用のAudio要素
+const imageThumbnailCache = new Map();		    // 画像サムネイル用キャッシュ（Mapオブジェクト）
+const dragThreshold = 5;                        // ドラッグ判定用の移動閾値（手ぶれ考慮: 5ピクセル）
+const imageCache = new Map();		            // 画像キャッシュストレージ（メモリ内）
+const MAX_IMAGE_CACHE_SIZE = 5; 			    // メモリを圧迫しないよう保持数を制限（0は無効）
+const mediaCache = new Map();	                // 動画・音声の先読み要素キャッシュ
+const MAX_MEDIA_CACHE_SIZE = 3; 	            // メモリを圧迫しないよう保持数を制限（0は無効）
 
 const SORT_MODES = {
     'none':       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
@@ -149,110 +149,110 @@ const DEFAULT_AUDIO_MOTION_OPTIONS = {
 };
 // オーディオモーション設定のNODE定義
 const AUDIOMOTION_NODES = {
-    'none': {    label: '（なし）', options: {} },
-    'preset1': { label: 'LEDオーディオコンポ',
-        options: {
-            mode: 3,                        // 周波数帯域の分割解像度 (1/3オクターブ表示)
-            barSpace: 0.2,                  // バー同士の隙間の比率 (バー幅の20%分空ける)
-            ledBars: true,                  // バーをLEDブロック状（点灯セグメント風）に区切って表示
-        }
+    'none':    { label: '（なし）', options: {} },
+    'preset1': { label: 'LEDオーディオコンポ', 
+        options: { 
+            mode: 3, 
+            barSpace: 0.2, 
+            ledBars: true 
+        } 
     },
-    'preset2': { label: 'レインボウ・サイバーパンク',
-        options: {
-            mode: 2,                        // 周波数帯域の分割解像度 (1/2 オクターブ表示)
-            gradient: 'rainbow',            // グラデーションテーマ (レインボーカラー)
-            showPeaks: true,                // ピーク（頂点）ホールドラインの表示を有効化
-            linearBar: true,                // バーの振幅変化を線形（リニア）スケールで計算
-            bgAlpha: 0.7,                   // Canvas背景の不透明度 (描画更新時の残像感を調整)
-            fillAlpha: 1,                   // スペクトラム内部の塗りつぶし不透明度 (0: 完全透明 ~ 1: 完全不透明)
-            reflexRatio: 0.3,               // 下部への反射（ミラー）描画の高さ比率 (本体の30%の高さ)
-            reflexAlpha: 0.5,               // 反射部分の不透明度 (ほんのり透ける40%表示)
-        }
+    'preset2': { label: 'レインボウ・サイバーパンク', 
+        options: { 
+            mode: 2, 
+            gradient: 'rainbow', 
+            showPeaks: true, 
+            linearBar: true, 
+            bgAlpha: 0.7, 
+            fillAlpha: 1, 
+            reflexRatio: 0.3, 
+            reflexAlpha: 0.5 
+        } 
     },
-    'preset3': { label: 'ミニマル・クラシック',
-        options: {
-            mode: 1,                        // 周波数帯域の分割解像度 (1/1 オクターブ：シンプルな10本前後のバー)
-            barSpace: 0.25,                 // バー同士の隙間の比率 (バー幅の25%分を空ける)
-            gradient: 'prism',              // グラデーションテーマ (プリズムカラー)
-            showBgColor: false,             // テーマ固有の背景色描画をオフ (背景透過)
-            showScaleX: false,              // X軸（周波数Hz）目盛りの表示をオフ
-            showScaleY: false,              // Y軸（音圧dB）目盛りの表示をオフ
-            showPeaks: false,               // ピーク（頂点）ラインの表示をオフ
-            outlineBars: false,             // バーの外枠（輪郭線）描画をオフ
-        }
+    'preset3': { label: 'ミニマル・クラシック',      
+        options: { 
+            mode: 1, 
+            barSpace: 0.25, 
+            gradient: 'prism', 
+            showBgColor: false, 
+            showScaleX: false, 
+            showScaleY: false, 
+            showPeaks: false, 
+            outlineBars: false 
+        } 
     },
-    'preset4': { label: 'レトロ・ヴァイブ',
-        options: {
-            mode: 0,                        // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
-            ledBars: true,                  // バーをLEDブロック状（点灯セグメント風）に分割表示
-            showPeaks: true,                // ピーク（頂点）表示を有効化
-        }
+    'preset4': { label: 'レトロ・ヴァイブ',          
+        options: { 
+            mode: 0, 
+            ledBars: true, 
+            showPeaks: true 
+        } 
     },
-    'preset5': { label: 'センタースプリット',
-        options: {
-            mode: 2,                        // 周波数帯域の分割解像度 (1/2 オクターブ表示)
-            barSpace: 0.2,                  // バー同士の隙間の比率 (バー幅の20%分を空ける)
-            gradient: 'rainbow',            // グラデーションテーマ (レインボーカラー)
-            fillAlpha: 0.85,                // スペクトラム内部の塗りつぶし不透明度 (85%表示)
-            showPeaks: false,               // ピーク（頂点）ラインの表示を有効化
-            reflexRatio: 0.5,               // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
-            reflexAlpha: 1,                 // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
-            reflexBright: false,            // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
-            reflexFit: true,                // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
-        }
+    'preset5': { label: 'センタースプリット',        
+        options: { 
+            mode: 2, 
+            barSpace: 0.2, 
+            gradient: 'rainbow', 
+            fillAlpha: 0.85, 
+            showPeaks: false, 
+            reflexRatio: 0.5, 
+            reflexAlpha: 1, 
+            reflexBright: false, 
+            reflexFit: true 
+        } 
     },
-    'preset6': { label: 'サークル・ヴォルテックス',
-        options: {
-            mode: 3,                        // 周波数帯域の分割解像度 (1/3 オクターブ表示)
-            radial: true,                   // 円形（ラジアル）表示を有効化
-            spin: true,                     // 円形ビジュアライザーの自動回転を有効化
-            spinSpeed: 1,                   // 回転速度 (正の値で時計回り、大きいほど高速)
-            gradient: 'prism',              // グラデーションテーマ (プリズムカラー)
-            mirror: 1,                      // ミラー表示 (0: なし, -1: 左右反転, 1: 左右上下反転)
-        }
+    'preset6': { label: 'サークル・ヴォルテックス',   
+        options: { 
+            mode: 3, 
+            radial: true, 
+            spin: true, 
+            spinSpeed: 1, 
+            gradient: 'prism', 
+            mirror: 1 
+        } 
     },
-    'preset7': { label: 'クリスタル・スペクトラム',
-        options: {
-            mode: 10,                       // 周波数帯域の分割解像度 (1/2 オクターブ表示)
-            barSpace: 0.25,                 // バー同士の隙間の比率 (バー幅の20%分を空ける)
-            gradient: 'rainbow',            // グラデーションテーマ (レインボーカラー)
-            showPeaks: true,                // ピーク（頂点）ラインの表示を有効化
-            lineWidth: 1,                   // バー/波形の外枠線の太さpx (4pxの輪郭線)
-            fillAlpha: 0.7,                 // スペクトラム内部の塗りつぶし不透明度 (50%表示)
-            reflexRatio: 0.5,               // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
-            reflexAlpha: 1,                 // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
-            reflexBright: 1,                // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
-            reflexFit: -1,                  // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
-            mirror: 1,                      // ミラー表示 (0: なし, -1: 左右反転, 1: 左右上下反転)
-        }
+    'preset7': { label: 'クリスタル・スペクトラム',   
+        options: { 
+            mode: 10, 
+            barSpace: 0.25, 
+            gradient: 'rainbow', 
+            showPeaks: true, 
+            lineWidth: 1, 
+            fillAlpha: 0.7, 
+            reflexRatio: 0.5, 
+            reflexAlpha: 1, 
+            reflexBright: 1, 
+            reflexFit: -1, 
+            mirror: 1 
+        } 
     },
-    'preset8': { label: 'プリズム・リフレクト',
-        options: {
-            mode: 4,                        // 周波数帯域の分割解像度 (1/2 オクターブ表示)
-            barSpace: 0.25,                 // バー同士の隙間の比率 (バー幅の20%分を空ける)
-            gradient: 'prism',              // グラデーションテーマ (プリズムカラー)
-            showPeaks: false,               // ピーク（頂点）ラインの表示を有効化
-            reflexRatio: 0.5,               // 下部への反射（ミラー）描画の高さ比率 (本体の50%の高さ)
-            reflexAlpha: 1,                 // 反射部分の不透明度 (上側と同じ 1.0 にして濃さを統一)
-            reflexBright: 1,                // 反射部分の減衰（暗くする処理）を無効化し、上下の色合いを統一
-            reflexFit: 0,                   // 本体と反射を合わせた全高がCanvas内に収まるよう自動スケーリング
-            roundBars: true,                // バーの頂点を丸く丸める
-        }
+    'preset8': { label: 'プリズム・リフレクト',       
+        options: { 
+            mode: 4, 
+            barSpace: 0.25, 
+            gradient: 'prism', 
+            showPeaks: false, 
+            reflexRatio: 0.5, 
+            reflexAlpha: 1, 
+            reflexBright: 1, 
+            reflexFit: 0, 
+            roundBars: true 
+        } 
     },
-    'preset9': { label: 'デュアルグロウ・セグメント',
-        options: {
-            mode: 10,                       // 周波数帯域の分割解像度 (0: 離散バー表示 / FFTSize依存)
-            ledBars: true,                  // バーをLEDブロック状（点灯セグメント風）に分割表示
-            showPeaks: false,               // ピーク（頂点）ラインの表示を有効化
-            gradient: 'steelblue',          // 使用するグラデーションプリセット名またはカスタム定義
-            gradientLeft: 'steelblue',      // ステレオ表示時の左チャンネル用グラデーション
-            gradientRight: 'orangered',     // ステレオ表示時の右チャンネル用グラデーション
-            channelLayout: 'dual-combined', // 音声チャンネル表示 (L/Rを合成したシングル描画)
-            lineWidth: 2,                   // バー/波形の外枠線の太さpx (4pxの輪郭線)
-            fillAlpha: 0.5,                 // スペクトラム内部の塗りつぶし不透明度 (50%表示)
-        }
+    'preset9': { label: 'デュアルグロウ・セグメント', 
+        options: { 
+            mode: 10, 
+            ledBars: true, 
+            showPeaks: false, 
+            gradient: 'steelblue', 
+            gradientLeft: 'steelblue', 
+            gradientRight: 'orangered', 
+            channelLayout: 'dual-combined', 
+            lineWidth: 2, 
+            fillAlpha: 0.5 
+        } 
     },
-    'random': { label: '（ランダム）', options: {} }
+    'random':  { label: '（ランダム）', options: {} }
 };
 // イメージエフェクト＆BGM設定のNODE定義
 const IMAGEEFFECTBGM_NODES = {
@@ -364,249 +364,250 @@ const languageMap = {
 };
 
 // DOM要素取得
-let videoPlayerElement = null;
-let audioPlayer = null;
-let videoPlayer = null;
-let videoPreview = null;
-let mainContainer = null;
-let videoContainer = null;
-let dropzone = null;
-let controls = null;
-let folderInput = null;
-let videoInput = null;
-let urlInputBtn = null;
-let urlInput = null;
-let urlClearBtn = null;
-let urlConfirmBtn = null;
-let urlInputPanel = null;
-let prevVideoBtn = null;
-let rewindBtn = null;
-let playPauseBtn = null;
-let playStopBtn = null;
-let fastForwardBtn = null;
-let nextVideoBtn = null;
-let seekBar = null;
-let volumeMuteBtn = null;
-let volumeBar = null;
-let speedSelect = null;
-let zoomBtn = null;
-let zoomPanel = null;
-let zoomBar = null;
-let zoomDisplay = null;
-let zoomResetBtn = null;
-let snapshotBtn = null;
-let aspectRatioBtn = null;
-let zoomEndBtn = null;
-let fullscreenBtn = null;
-let fitModeBtn = null;
-let filename = null;
-let filenamePanel = null;
-let timeDisplay = null;
-let volumeDisplay = null;
-let messageOverlay = null;
-let iconOverlay = null;
-let appNameAndCopyright = null;
-let wallpaperBtn = null;
-let importExportBtn = null;
-let alwaysOnTopBtn = null;
-let audioMotionBtn = null;
-let imageEffectBgmBtn = null;
-let autoShuffleBtn = null;
-let settingsBtn = null;
-let settingsPanel = null;
-let settingsCloseBtn = null;
-let helpOpenBtn = null;
-let helpCloseBtn = null;
-let helpContainer = null;
-let helpTitle = null;
-let tooltipElements = null;
-let filenameMenus = null;
-let filenameMenu = null;
-let upMovePlaylistBtn = null;
-let downMovePlaylistBtn = null;
-let addPlaylistBtn = null;
-let removePlaylistBtn = null;
-let clearPlaylistBtn = null;
-let savePlaylistBtn = null;
-let modeChangeBtn = null;
-let editPanel = null;
-let editModeBtn = null;
-let setInMarkBtn = null;
-let setOutMarkBtn = null;
-let addCutRangeBtn = null;
-let saveVideoBtn = null;
-let cutRangesList = null;
-let clearEditBtn = null;
-let inMarkDisplay = null;
-let outMarkDisplay = null;
-let editSeekBar = null;
-let cutCancelBtn = null;
-let randomPlayBtn = null;
-let repeatPlayBtn  = null;
-let joinPlaylistBtn = null;
-let sortPlaylistBtn = null;
-let playlistDisplayBtn = null;
-let filterPanel = null;
-let playlistFilterInput = null;
-let filterClearBtn = null;
-let filterList = null;
-let playlistProgressBar = null;
-let isPlaylistCreationInProgress = false;
-let darkOverlay = null;
-let voiceSelectBtn = null;
-let subtitleSelectBtn = null;
-let itemCount = null;
-let playlistPathArea = null;
-let cutTimelineContainer = null;
-let cutTimelineBar = null;
-let filterHistoryList = null;
-let changelogBtn = null;
-let changelogContent = null;
-let tableContainer = null;
-let mediaContainer = null;
-let imagePlayer = null;
-let imageWrapper = null;
-let centerControls = null;
-let centerPrevBtn = null;
-let centerPlayPauseBtn = null;
-let centerNextBtn = null;
-let imageWallpaper = null;
-let imageWallpaperImg = null;
+let videoPlayerElement = null;                  // 動画プレイヤーのDOM要素
+let audioPlayer = null;                         // 音声プレイヤーのDOM要素
+let videoPlayer = null;                         // 動画・音声共通プレイヤーのプロキシ
+let videoPreview = null;                        // シーク時の動画プレビュー要素
+let mainContainer = null;                       // アプリ全体のメインコンテナ
+let videoContainer = null;                      // メディア表示コンテナ
+let dropzone = null;                            // ファイルドロップ領域
+let controls = null;                            // 再生コントロールパネル
+let folderInput = null;                         // フォルダ選択ボタン
+let videoInput = null;                          // メディアファイル選択ボタン
+let urlInputBtn = null;                         // URL入力パネル切替ボタン
+let urlInput = null;                            // URL入力欄
+let urlClearBtn = null;                         // URL入力クリアボタン
+let urlConfirmBtn = null;                       // URL再生確定ボタン
+let urlInputPanel = null;                       // URL入力パネル
+let prevVideoBtn = null;                        // 前のメディアボタン
+let rewindBtn = null;                           // 30秒戻るボタン
+let playPauseBtn = null;                        // 再生・一時停止ボタン
+let playStopBtn = null;                         // 停止ボタン
+let fastForwardBtn = null;                      // 30秒進むボタン
+let nextVideoBtn = null;                        // 次のメディアボタン
+let seekBar = null;                             // 再生位置シークバー
+let volumeMuteBtn = null;                       // ミュート切替ボタン
+let volumeBar = null;                           // 音量バー
+let speedSelect = null;                         // 再生速度選択
+let zoomBtn = null;                             // ズームモード切替ボタン
+let zoomPanel = null;                           // ズーム操作パネル
+let zoomBar = null;                             // ズーム値スライダー
+let zoomDisplay = null;                         // ズーム値表示
+let zoomResetBtn = null;                        // ズームリセットボタン
+let snapshotBtn = null;                         // スクリーンショットボタン
+let aspectRatioBtn = null;                      // アスペクト比ボタン
+let zoomEndBtn = null;                          // ズーム終了ボタン
+let fullscreenBtn = null;                       // フルスクリーン切替ボタン
+let fitModeBtn = null;                          // 描画モード切替ボタン
+let filename = null;                            // ファイル名表示要素
+let filenamePanel = null;                       // ファイル名表示パネル
+let timeDisplay = null;                         // 再生時間表示
+let volumeDisplay = null;                       // 音量表示
+let messageOverlay = null;                      // メッセージオーバーレイ
+let iconOverlay = null;                         // 再生状態アイコンオーバーレイ
+let appNameAndCopyright = null;                 // アプリ名・著作権表示
+let wallpaperBtn = null;                        // 壁紙選択ボタン
+let importExportBtn = null;                     // 設定入出力ボタン
+let alwaysOnTopBtn = null;                      // 常に最前面ボタン
+let audioMotionBtn = null;                      // オーディオモーション設定ボタン
+let imageEffectBgmBtn = null;                   // 画像エフェクト・BGM設定ボタン
+let autoShuffleBtn = null;                      // 自動シャッフルボタン
+let settingsBtn = null;                         // 設定パネル切替ボタン
+let settingsPanel = null;                       // 設定パネル
+let settingsCloseBtn = null;                    // 設定パネル閉じるボタン
+let helpOpenBtn = null;                         // ヘルプ表示ボタン
+let helpCloseBtn = null;                        // ヘルプ閉じるボタン
+let helpContainer = null;                       // ヘルプ表示コンテナ
+let helpTitle = null;                           // ヘルプタイトル
+let tooltipElements = null;                     // ツールチップ対象要素
+let filenameMenus = null;                       // ファイル名メニュー群
+let filenameMenu = null;                        // ファイル名メニュー
+let upMovePlaylistBtn = null;                   // プレイリスト上移動ボタン
+let downMovePlaylistBtn = null;                 // プレイリスト下移動ボタン
+let addPlaylistBtn = null;                      // プレイリスト追加ボタン
+let removePlaylistBtn = null;                   // プレイリスト削除ボタン
+let clearPlaylistBtn = null;                    // プレイリストクリアボタン
+let savePlaylistBtn = null;                     // プレイリスト保存ボタン
+let modeChangeBtn = null;                       // 視聴・変換モード切替ボタン
+let editPanel = null;                           // カット編集パネル
+let editModeBtn = null;                         // 編集モード切替ボタン
+let setInMarkBtn = null;                        // 編集インマーク設定ボタン
+let setOutMarkBtn = null;                       // 編集アウトマーク設定ボタン
+let addCutRangeBtn = null;                      // カット範囲追加ボタン
+let saveVideoBtn = null;                        // カット保存ボタン
+let cutRangesList = null;                       // カット範囲一覧
+let clearEditBtn = null;                        // 編集内容クリアボタン
+let inMarkDisplay = null;                       // インマーク表示
+let outMarkDisplay = null;                      // アウトマーク表示
+let editSeekBar = null;                         // 編集用シークバー
+let cutCancelBtn = null;                        // カット・結合中止ボタン
+let randomPlayBtn = null;                       // ランダム再生ボタン
+let repeatPlayBtn = null;                       // 繰り返し再生ボタン
+let joinPlaylistBtn = null;                     // プレイリスト結合ボタン
+let sortPlaylistBtn = null;                     // プレイリスト並び替えボタン
+let playlistDisplayBtn = null;                  // プレイリスト表示形式ボタン
+let filterPanel = null;                         // プレイリストパネル
+let playlistFilterInput = null;                 // プレイリスト検索欄
+let filterClearBtn = null;                      // 検索条件クリアボタン
+let filterList = null;                          // プレイリスト一覧
+let playlistProgressBar = null;                 // プレイリスト作成進捗バー
+let isPlaylistCreationInProgress = false;       // プレイリスト作成中フラグ
+let darkOverlay = null;                         // シーク・編集時の暗幕
+let voiceSelectBtn = null;                      // 音声トラック選択ボタン
+let subtitleSelectBtn = null;                   // 字幕トラック選択ボタン
+let itemCount = null;                           // プレイリスト件数表示
+let playlistPathArea = null;                    // 再生中パス表示欄
+let cutTimelineContainer = null;                // カットタイムラインコンテナ
+let cutTimelineBar = null;                      // カットタイムラインバー
+let filterHistoryList = null;                   // フィルタ履歴一覧
+let changelogBtn = null;                        // 変更履歴切替ボタン
+let changelogContent = null;                    // 変更履歴本文
+let tableContainer = null;                      // 変更履歴テーブルコンテナ
+let mediaContainer = null;                      // メディア操作コンテナ
+let imagePlayer = null;                         // 画像プレイヤー
+let imageWrapper = null;                        // 画像表示ラッパー
+let centerControls = null;                      // センターコントロール
+let centerPrevBtn = null;                       // センター前メディアボタン
+let centerPlayPauseBtn = null;                  // センター再生・一時停止ボタン
+let centerNextBtn = null;                       // センター次メディアボタン
+let imageWallpaper = null;                      // 画像壁紙要素
+let imageWallpaperImg = null;                   // 画像壁紙表示画像
 
-// localStorage から復得
-let savedVolume = null;
-let savedPlaybackSpeed = null;
-let savedPlaylist = null;
-let savedCurrentVideoIndex = null;
-let savedCurrentTime = null;
-let savedFitMode = null;
-let savedZoom = null;
-let savedTranslateX = null;
-let savedTranslateY = null;
-let savedEditFrameRate = null;
-let savedIsRandomPlayMode = null;
-let savedIsRepeatPlayMode = null;
-let savedAutoShuffle = null;            // 全曲リピート時に周回ごと再シャッフル
-let savedShuffleOrder = null;
-let savedShufflePosition = null;
-let savedAspectRatio = null;
-let savedCurrentSortMode = null;
-let savedPlaylistDisplayMode = null;
-let savedSelectedAudioLabel = null;
-let savedSelectedAudioTrack = null;
-let savedSelectedSubtitleLabel = null;
-let savedSelectedSubtitleTrack = null;
-let savedWallpaperPath = null;
-let savedAlwaysOnTop = null;
-let savedPauseShowControls = null;
-let savedHideCenterControls = null;
-let savedAudioMotionMode = null;
-let savedImageEffectBgmMode = null;
-let savedIsImageWallpaperEnabled = null;
-let savedFilterHistory = null;
-let savedOriginalOrder = null;
-let savedAudioMotionOptions = null;
-let savedAudioMotionNodes = null;
-let savedImageBgmPaths = null;	// 複数BGMパスの保持用変数を追加
-let savedCurrentBgmIndex = null;	// 複数BGMパスのインデックス保持用変数を追加
-let savedMaxImageCacheSize = null;
-let savedMaxMediaCacheSize = null;
+// localStorage・設定ファイルから読み込む保存値の一時保持領域
+// allLocalStorageSetting() が起動時に値を取得し、DOMContentLoaded 内で各状態へ適用する。
+let savedVolume = null;                         // 保存済み音量
+let savedPlaybackSpeed = null;                  // 保存済み再生速度
+let savedPlaylist = null;                       // 保存済みプレイリスト
+let savedCurrentVideoIndex = null;              // 保存済み再生位置インデックス
+let savedCurrentTime = null;                    // 保存済み再生時間
+let savedFitMode = null;                        // 保存済み描画モード
+let savedZoom = null;                           // 保存済みズーム値
+let savedTranslateX = null;                     // 保存済み横方向パン位置
+let savedTranslateY = null;                     // 保存済み縦方向パン位置
+let savedEditFrameRate = null;                  // 保存済み編集フレームレート
+let savedIsRandomPlayMode = null;               // 保存済みランダム再生状態
+let savedIsRepeatPlayMode = null;               // 保存済み繰り返し再生モード
+let savedAutoShuffle = null;                    // 保存済み自動シャッフル状態
+let savedShuffleOrder = null;                   // 保存済みシャッフル順
+let savedShufflePosition = null;                // 保存済みシャッフル位置
+let savedAspectRatio = null;                    // 保存済みアスペクト比
+let savedCurrentSortMode = null;                // 保存済み並び替えモード
+let savedPlaylistDisplayMode = null;            // 保存済みプレイリスト表示形式
+let savedSelectedAudioLabel = null;             // 保存済み音声トラック名
+let savedSelectedAudioTrack = null;             // 保存済み音声トラック
+let savedSelectedSubtitleLabel = null;          // 保存済み字幕トラック名
+let savedSelectedSubtitleTrack = null;          // 保存済み字幕トラック
+let savedWallpaperPath = null;                  // 保存済み壁紙パス
+let savedAlwaysOnTop = null;                    // 保存済み常に最前面状態
+let savedPauseShowControls = null;              // 保存済み自動表示抑止状態
+let savedHideCenterControls = null;             // 保存済みセンターコントロール無効状態
+let savedAudioMotionMode = null;                // 保存済みオーディオモーション設定
+let savedImageEffectBgmMode = null;             // 保存済み画像エフェクト設定
+let savedIsImageWallpaperEnabled = null;        // 保存済み画像壁紙状態
+let savedFilterHistory = null;                  // 保存済みフィルタ履歴
+let savedOriginalOrder = null;                  // 保存済みプレイリスト元順
+let savedAudioMotionOptions = null;             // 保存済みオーディオモーションオプション
+let savedAudioMotionNodes = null;               // 保存済みオーディオモーション設定
+let savedImageBgmPaths = null;                  // 保存済みBGMパス一覧
+let savedCurrentBgmIndex = null;                // 保存済みBGM再生位置
+let savedMaxImageCacheSize = null;              // 保存済み画像キャッシュサイズ
+let savedMaxMediaCacheSize = null;              // 保存済みメディアキャッシュサイズ
 
 // グローバル（共通）変数
-let localSettings = {};     // localSettingsをオブジェクトとして初期化
-let Initializing = true;
-let playlist = [];
-let currentVideoIndex = 0;
-let selectedPlaylistIndex = -1;
-let timeout;
-let isDragging = false;
-let dragStartX = 0;
-let dragStartY = 0;
-let isVolumeDragging = false;
-let lastVolume = 0.2;
-let isPanning = false; // ズーム時のパン（ドラッグ移動）フラグ
-let panStartX = 0;
-let panStartY = 0;
-let translateX = 0; // ピクセル単位の平行移動量
-let translateY = 0;
-let isMouseOverControls = false;
-let saveInterval = null;
-let fitMode = 'contain';
-let zoomValue = 0;  // ズーム値（-100 ～ +200）
-let isAlwaysOnTop = false;
-let isZoomMode = false;  // ズームモード状態
-let isSettingsPanelOpen = false;
-let isHelpOpen = false;
-let isSeekDragging = false;
-let isMouseOverSeekBar = false;
-let currentConvertPromise = null;
-let isPlaying = false;
-let isConverting = false;
-let modeChange = 'video';
-let baseConvertFile = null;
-let tempConvertFile = null;
-let isEditMode = false;
-let isFilterPanelVisible = false;
-let filterText = '';
-let filterHistory = []; // フィルタ履歴
-let editInMark = -1;  // インマーク（秒）
-let editOutMark = -1; // アウトマーク（秒）
-let cutRanges = []; // 配列 of { in: seconds, out: seconds }
-let currentPlaybackRate = 1.0;   // ← 新規追加
-let isurlInputPanelVisible = false;
-let isCutEditing = false;  // カット編集中フラグ
-let isJoinEditing = false;  // カット編集中フラグ
-let isRandomPlayMode = false;     // ランダム再生（シャッフル）
-let autoShuffle = true;            // 全曲リピート時に周回ごと再シャッフル
-let isRepeatPlayMode = 'none';  // 'none' | 'all' | 'single'
-let shuffleOrder = [];           // ランダムモード用の再生順リスト（インデックス配列）
-let shufflePosition = -1;        // 現在何番目を再生中か（-1=未開始）
-let isEditSeekDragging = false;
-let isMouseOverEditSeekBar = false;
-let originalLoadOrder = [];  // プレイリストの「最初に読み込まれた順」を保持
-let hideMouseTimeout = null;
-let editFrameRate = 30;
-let currentSortMode = '（なし）';
-let currentAddMode = 'Add0';
-let playlistDisplayMode = null;
-let playlistThumbnailCache = new Map();
-let displayFormatUpdateRequested = false;
-let selectedAudioLabel = '日本語';
-let selectedAudioTrack = [];
-let selectedSubtitleLabel = '（なし）';
-let selectedSubtitleTrack = [];
-let currentAudioIndex = 0;
-let currentSubtitlesIndex = 0;
-let currentAudioTracks = [];
-let currentSubtitleTracks = [];
-let currentAudioTrack = null;
-let currentSubtitleTrack = null;
-let delConvertFile = null;
-let currentAspectRatio = 'none';
-let currentUpdateId = 0;            // 関数の外側に、現在の実行世代を管理する変数を定義します
-let scrollInterval = null;
-let scrollTimeout = null;
-let currentMediaType = 'video';
-let audioMotion = null;
-let audioMotionMode = null;
-let imageEffectBgmMode = null;
-let isImageWallpaperEnabled = null;
-let lastRandomPreset = null;		// 直前にランダムで選ばれたプリセットを保持する変数（関数の外に定義）
-let isSecondary = null;
-let disableMessageOverlay = false;
-let imageTimer = null;
-let imageCurrentTime = 0;      // 0〜5秒
-let imageProgressInterval = null;
-let pauseShowControls = false;
-let hideCenterControls = false;
-let imageBgmPaths = []; 		// 複数BGMパスの配列管理変数を追加
-let currentBgmIndex = 0;		// 複数BGMパスのインデックス管理を追加
-let currentLoadedBgmPath = null;    // BGM設定用の変数（パス管理）
-let lastEffectKey = null;		// 直前に適用されたエフェクトキーを記憶する変数
-let hasMoved = false;           // ドラッグ中にマウスが移動したかどうかのフラグ
-let forceStop = true;           // 起動時の再生一時停止判定用（アプリ起動：true、設定インポート：false）
-let maxImageCacheSize = 0;		// 画像用キャッシュサイズ（0はキャッシュ無効）
-let maxMediaCacheSize = 0;		// 動画・音声用キャッシュサイズ（0はキャッシュ無効）
+let localSettings = {};                         // 多重起動時に扱う設定値
+let Initializing = true;                        // 初期化中フラグ
+let playlist = [];                              // 現在表示中のプレイリスト
+let currentVideoIndex = 0;                      // 現在再生中のプレイリスト位置
+let selectedPlaylistIndex = -1;                 // 選択中のプレイリスト位置
+let timeout;                                    // コントロール自動非表示タイマー
+let isDragging = false;                         // メディア操作ドラッグ中フラグ
+let dragStartX = 0;                             // ドラッグ開始時のX座標
+let dragStartY = 0;                             // ドラッグ開始時のY座標
+let isVolumeDragging = false;                   // 音量ドラッグ中フラグ
+let lastVolume = 0.2;                           // ミュート解除時に戻す音量
+let isPanning = false;                          // ズーム時のパン操作中フラグ
+let panStartX = 0;                              // パン開始時のX座標
+let panStartY = 0;                              // パン開始時のY座標
+let translateX = 0;                             // メディアの横方向移動量
+let translateY = 0;                             // メディアの縦方向移動量
+let isMouseOverControls = false;                // コントロール上にマウスがあるか
+let saveInterval = null;                        // 再生状態定期保存タイマー
+let fitMode = 'contain';                        // メディア描画モード
+let zoomValue = 0;                              // ズーム値
+let isAlwaysOnTop = false;                      // 常に最前面状態
+let isZoomMode = false;                         // ズームモード状態
+let isSettingsPanelOpen = false;                // 設定パネル表示状態
+let isHelpOpen = false;                         // ヘルプ表示状態
+let isSeekDragging = false;                     // シークバー操作中フラグ
+let isMouseOverSeekBar = false;                 // シークバー上にマウスがあるか
+let currentConvertPromise = null;               // 現在の変換処理
+let isPlaying = false;                          // メディア再生中フラグ
+let isConverting = false;                       // 変換中フラグ
+let modeChange = 'video';                       // 視聴・変換モード
+let baseConvertFile = null;                     // 変換元ファイル
+let tempConvertFile = null;                     // 変換一時ファイル
+let isEditMode = false;                         // カット編集モード状態
+let isFilterPanelVisible = false;               // プレイリストパネル表示状態
+let filterText = '';                            // プレイリスト検索文字列
+let filterHistory = [];                         // プレイリスト検索履歴
+let editInMark = -1;                            // カット開始位置（秒）
+let editOutMark = -1;                           // カット終了位置（秒）
+let cutRanges = [];                             // カット範囲一覧
+let currentPlaybackRate = 1.0;                  // 現在の再生速度
+let isurlInputPanelVisible = false;             // URL入力パネル表示状態
+let isCutEditing = false;                       // カット処理中フラグ
+let isJoinEditing = false;                      // 結合処理中フラグ
+let isRandomPlayMode = false;                   // ランダム再生状態
+let autoShuffle = true;                         // 周回時の自動シャッフル状態
+let isRepeatPlayMode = 'none';                  // 繰り返し再生モード
+let shuffleOrder = [];                          // シャッフル順のインデックス配列
+let shufflePosition = -1;                       // シャッフル順の現在位置
+let isEditSeekDragging = false;                 // 編集シークバー操作中フラグ
+let isMouseOverEditSeekBar = false;             // 編集シークバー上にマウスがあるか
+let originalLoadOrder = [];                     // プレイリストの元の読み込み順
+let hideMouseTimeout = null;                    // マウスカーソル自動非表示タイマー
+let editFrameRate = 30;                         // カット編集フレームレート
+let currentSortMode = '（なし）';               // 現在の並び替えモード
+let currentAddMode = 'Add0';                    // プレイリスト追加位置モード
+let playlistDisplayMode = null;                 // プレイリスト表示形式
+let playlistThumbnailCache = new Map();         // プレイリストサムネイルキャッシュ
+let displayFormatUpdateRequested = false;       // 表示形式更新要求フラグ
+let selectedAudioLabel = '日本語';              // 選択中の音声トラック名
+let selectedAudioTrack = [];                    // 選択中の音声トラック
+let selectedSubtitleLabel = '（なし）';         // 選択中の字幕トラック名
+let selectedSubtitleTrack = [];                 // 選択中の字幕トラック
+let currentAudioIndex = 0;                      // 現在の音声トラック位置
+let currentSubtitlesIndex = 0;                  // 現在の字幕トラック位置
+let currentAudioTracks = [];                    // 検出済み音声トラック一覧
+let currentSubtitleTracks = [];                 // 検出済み字幕トラック一覧
+let currentAudioTrack = null;                   // 現在の音声トラック
+let currentSubtitleTrack = null;                // 現在の字幕トラック
+let delConvertFile = null;                      // 削除待ちの変換ファイル
+let currentAspectRatio = 'none';                // 現在のアスペクト比
+let currentUpdateId = 0;                        // プレイリスト表示更新の世代番号
+let scrollInterval = null;                      // パス表示スクロール間隔タイマー
+let scrollTimeout = null;                       // パス表示スクロール待機タイマー
+let currentMediaType = 'video';                 // 現在のメディア種別
+let audioMotion = null;                         // オーディオモーション実体
+let audioMotionMode = null;                     // オーディオモーション設定
+let imageEffectBgmMode = null;                  // 画像エフェクト・BGM設定
+let isImageWallpaperEnabled = null;             // 画像壁紙表示状態
+let lastRandomPreset = null;                    // 直前に選択したランダムプリセット
+let isSecondary = null;                         // 多重起動時のセカンダリ状態
+let disableMessageOverlay = false;              // メッセージ固定表示状態
+let imageTimer = null;                          // 画像再生タイマー
+let imageCurrentTime = 0;                       // 画像の現在再生時間
+let imageProgressInterval = null;               // 画像進捗更新タイマー
+let pauseShowControls = false;                  // コントロール自動表示抑止状態
+let hideCenterControls = false;                 // センターコントロール無効状態
+let imageBgmPaths = [];                         // 画像再生用BGMパス一覧
+let currentBgmIndex = 0;                        // 現在のBGM位置
+let currentLoadedBgmPath = null;                // 読み込み済みBGMパス
+let lastEffectKey = null;                       // 直前に適用したエフェクトキー
+let hasMoved = false;                           // ドラッグ中の移動有無
+let forceStop = true;                           // 起動時に一時停止するか
+let maxImageCacheSize = 0;                      // 画像キャッシュ上限
+let maxMediaCacheSize = 0;                      // 動画・音声キャッシュ上限
 
 // 🔲document ハンドラ登録🔲
 // DOMContentロード完了（初期処理）
@@ -681,12 +682,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ボリューム復元
-    if (savedVolume >= 0 && savedVolume <= 1) {
-        volumeBar.value = savedVolume;
-        lastVolume = savedVolume;
-        volumeMuteBtn.textContent = savedVolume === 0 ? '🔇' : '🔊';
-        volumeMuteBtn.classList.toggle('muted-active', savedVolume === 0);
-        volumeMuteBtn.setAttribute('data-tooltip', savedVolume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
+    const restoredVolume = Number(savedVolume);
+    if (Number.isFinite(restoredVolume) && restoredVolume >= 0 && restoredVolume <= 1) {
+        volumeBar.value = restoredVolume;
+        lastVolume = restoredVolume;
+        volumeMuteBtn.textContent = restoredVolume === 0 ? '🔇' : '🔊';
+        volumeMuteBtn.classList.toggle('muted-active', restoredVolume === 0);
+        volumeMuteBtn.setAttribute('data-tooltip', restoredVolume === 0 ? 'ミュート解除（Ctrl+m）' : 'ミュート（Ctrl+m）');
         updateVolumeDisplay();
     } else {
         volumeBar.value = 0.2;
@@ -736,11 +738,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // イメージ壁紙表示の復元
-    if (savedIsImageWallpaperEnabled) {
-        isImageWallpaperEnabled = savedIsImageWallpaperEnabled;
-    } else {
-        isImageWallpaperEnabled = 'false';
-    }
+    isImageWallpaperEnabled = String(savedIsImageWallpaperEnabled) === 'true' ? 'true' : 'false';
 
     // イメージBGM復元
     bgmAudio.loop = false;
@@ -757,8 +755,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // イメージBGM演奏曲の復元
-    if (savedCurrentBgmIndex !== null && !isNaN(savedCurrentBgmIndex)) {
-        currentBgmIndex = parseInt(savedCurrentBgmIndex);
+    if (savedCurrentBgmIndex !== null && Number.isInteger(Number(savedCurrentBgmIndex))) {
+        currentBgmIndex = Number(savedCurrentBgmIndex);
+        if (currentBgmIndex < 0 || currentBgmIndex >= imageBgmPaths.length) currentBgmIndex = 0;
     } else {
         currentBgmIndex = 0;
     }
@@ -772,8 +771,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ズーム値復元
-    if (savedZoom && !isNaN(savedZoom)) {
-        zoomValue = parseInt(savedZoom);
+    const restoredZoom = Number(savedZoom);
+    if (Number.isFinite(restoredZoom)) {
+        zoomValue = Math.trunc(restoredZoom);
         zoomBar.value = zoomValue.toString();
     } else {
         zoomValue = 0;
@@ -781,9 +781,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 画像移動値復元
-    if (savedTranslateX && !isNaN(savedTranslateX) && savedTranslateY && !isNaN(savedTranslateY)) {
-        translateX = parseInt(savedTranslateX);
-        translateY = parseInt(savedTranslateY);
+    const restoredTranslateX = Number(savedTranslateX);
+    const restoredTranslateY = Number(savedTranslateY);
+    if (Number.isFinite(restoredTranslateX) && Number.isFinite(restoredTranslateY)) {
+        translateX = Math.trunc(restoredTranslateX);
+        translateY = Math.trunc(restoredTranslateY);
     } else {
         translateX = 0;
         translateY = 0;
@@ -840,12 +842,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ランダム再生リスト復元
     if (savedShuffleOrder) {
         try {
-            // 変数名を parsedPlaylist に統一
             const parsedPlaylist = safeJSONParse(savedPlaylist, []);
-            shuffleOrder = safeJSONParse(savedShuffleOrder, []);
-            
-            // プレイリストの長さが変わっていたら無効化
-            if (!Array.isArray(shuffleOrder) || shuffleOrder.length !== parsedPlaylist.length) {
+            const parsedShuffleOrder = safeJSONParse(savedShuffleOrder, []);
+            const playlistLength = Array.isArray(parsedPlaylist) ? parsedPlaylist.length : 0;
+            const isValidShuffleOrder = Array.isArray(parsedShuffleOrder)
+                && parsedShuffleOrder.length === playlistLength
+                && parsedShuffleOrder.every(index => Number.isInteger(index) && index >= 0 && index < playlistLength)
+                && new Set(parsedShuffleOrder).size === playlistLength;
+            if (isValidShuffleOrder) {
+                shuffleOrder = parsedShuffleOrder;
+            } else {
                 shuffleOrder = [];
             }
         } catch (e) {
@@ -864,14 +870,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 画像用キャッシュサイズ復元
     if (savedMaxImageCacheSize !== 'null') {
-        maxImageCacheSize = savedMaxImageCacheSize;
+        const restoredImageCacheSize = Number(savedMaxImageCacheSize);
+        maxImageCacheSize = Number.isInteger(restoredImageCacheSize) && restoredImageCacheSize >= 0
+            ? restoredImageCacheSize : MAX_IMAGE_CACHE_SIZE;
     } else {
         maxImageCacheSize = MAX_IMAGE_CACHE_SIZE;
     }
     localStorageSetItemAndFile('maxImageCacheSize', maxImageCacheSize);
     // 動画・音声用キャッシュサイズ復元
     if (savedMaxMediaCacheSize !== 'null') {
-        maxMediaCacheSize = savedMaxMediaCacheSize;
+        const restoredMediaCacheSize = Number(savedMaxMediaCacheSize);
+        maxMediaCacheSize = Number.isInteger(restoredMediaCacheSize) && restoredMediaCacheSize >= 0
+            ? restoredMediaCacheSize : MAX_MEDIA_CACHE_SIZE;
     } else {
         maxMediaCacheSize = MAX_MEDIA_CACHE_SIZE;
     }
@@ -923,7 +933,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 並び替えメニューの復元
     sortPlaylistBtn.classList.remove('sorted-active', 'random-sorted-active');
-    if (!savedCurrentSortMode) {
+    if (!SORT_MODES[savedCurrentSortMode]) {
         currentSortMode = 'none';
     } else {
         currentSortMode = savedCurrentSortMode;
@@ -946,7 +956,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (savedSelectedAudioTrack) {
         try {
-            selectedAudioTrack = JSON.parse(savedSelectedAudioTrack);
+            const parsedAudioTrack = typeof savedSelectedAudioTrack === 'string'
+                ? JSON.parse(savedSelectedAudioTrack) : savedSelectedAudioTrack;
+            selectedAudioTrack = Array.isArray(parsedAudioTrack) ? parsedAudioTrack : [];
         } catch (e) {
             console.warn('selectedAudioTrack の復元に失敗:', e);
             selectedAudioTrack = [];
@@ -962,7 +974,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (savedSelectedSubtitleTrack) {
         try {
-            selectedSubtitleTrack = JSON.parse(savedSelectedSubtitleTrack);
+            const parsedSubtitleTrack = typeof savedSelectedSubtitleTrack === 'string'
+                ? JSON.parse(savedSelectedSubtitleTrack) : savedSelectedSubtitleTrack;
+            selectedSubtitleTrack = Array.isArray(parsedSubtitleTrack) ? parsedSubtitleTrack : [];
         } catch (e) {
             console.warn('selectedSubtitleTrack の復元に失敗:', e);
             selectedSubtitleTrack = [];
@@ -989,7 +1003,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 引数なし → 状態復元
         if (savedOriginalOrder) {
             try {
-                originalLoadOrder = safeJSONParse(savedOriginalOrder, []);
+            const parsedOriginalOrder = safeJSONParse(savedOriginalOrder, []);
+            originalLoadOrder = Array.isArray(parsedOriginalOrder) ? parsedOriginalOrder.filter(Boolean) : [];
             } catch (e) {
                 console.warn('originalLoadOrder の復元に失敗:', e);
                 originalLoadOrder = [];
@@ -1004,20 +1019,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const parsedPlaylist = typeof savedPlaylist === 'string' 
                     ? safeJSONParse(savedPlaylist, []) 
                     : savedPlaylist;
-                const parsedIndex = parseInt(savedCurrentVideoIndex, 10);
-                const parsedCurrentVideoIndex = (!isNaN(parsedIndex) && parsedIndex >= 0) ? parsedIndex : 0;                
-                if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0 && 
-                    !isNaN(parsedCurrentVideoIndex) && parsedCurrentVideoIndex >= 0 && parsedCurrentVideoIndex < parsedPlaylist.length) {
+                if (Array.isArray(parsedPlaylist) && parsedPlaylist.length > 0) {
                     // プレイリスト復元
                     updateMessageOverlay(`📚 プレイリスト作成中...`, 0, false);
                     playlist = await Promise.all(parsedPlaylist.map(file => createPlaylistItem(file)));
                     playlist = playlist.filter(Boolean);
+                    if (playlist.length === 0) throw new Error('復元可能なプレイリスト項目がありません');
                     synchronizeOriginalLoadOrder();
+                    const parsedIndex = Number.parseInt(savedCurrentVideoIndex, 10);
+                    const parsedCurrentVideoIndex = Number.isInteger(parsedIndex) && parsedIndex >= 0
+                        ? Math.min(parsedIndex, playlist.length - 1)
+                        : 0;
                     currentVideoIndex = parsedCurrentVideoIndex;
                     await debouncedUpdateFilterList();
                     await debouncedScrollCurrentFilterItem();
 					// 復元メディアの再生
-					await playVideo(playlist[currentVideoIndex].file, savedCurrentTime);
+                    const restoredCurrentTime = Number(savedCurrentTime);
+                    await playVideo(playlist[currentVideoIndex].file, Number.isFinite(restoredCurrentTime) && restoredCurrentTime >= 0 ? restoredCurrentTime : 0);
                     if (forceStop) {
                         // 起動時は一時停止状態にする
                         await togglePlayPause();
@@ -4471,11 +4489,15 @@ function hideMenus(hideAll = true) {
         '.add-playlist-menu',
         '.track-menu',
         '.playlist-display-menu',
-        ...(!isZoomMode || hideAll ? ['.aspect-ratio-menu'] : []),
-        ...(!isSettingsPanelOpen || hideAll ? ['.audio-motion-menu'] : []),
-        ...(!isSettingsPanelOpen || hideAll ? ['.image-effectbgm-menu'] : []),
-        ...(!isSettingsPanelOpen || hideAll ? ['.control-menu'] : []),
-        '.import-export-menu'
+        ...(!isZoomMode || hideAll ? [
+            '.aspect-ratio-menu'
+        ] : []),
+        ...(!isSettingsPanelOpen || hideAll ? [
+            '.audio-motion-menu',
+            '.image-effectbgm-menu',
+            '.control-menu',
+            '.import-export-menu'
+        ] : []),
     ];
 
     document.querySelectorAll(classes.join(', ')).forEach(m => m.remove());
