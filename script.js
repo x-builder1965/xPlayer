@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.73.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver5.74.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -4770,7 +4770,18 @@ function buildImageEffectBgmMenuContent(menu) {
                     tooltip.addEventListener('click', (e) => {
                         e.stopPropagation();
                     });
-            
+
+                    // tooltip自体の作成処理の中（tooltip = document.createElement('div'); 直後あたり）に追加
+                    tooltip.addEventListener('mouseleave', (event) => {
+                        // 親要素（bgm）に戻った場合は消さない
+                        if (bgm === event.relatedTarget || bgm.contains(event.relatedTarget)) {
+                            return;
+                        }
+                        bgm.style.background = 'none';
+                        tooltip.remove();
+                        tooltip = null;
+                    });
+
                     // --- [ポップアップ内] すべて削除ボタン ---
                     const clearAllDiv = document.createElement('div');
                     clearAllDiv.className = 'bgm-clear-all-item';
@@ -4919,35 +4930,53 @@ function buildImageEffectBgmMenuContent(menu) {
                         tooltip.appendChild(itemDiv);
                     });
                     
-                    // 1. 一旦DOMに追加（位置計算のため）
+					// 1. 一旦DOMに追加（描画サイズ計算のため）
                     bgm.appendChild(tooltip);
             
-                    // --- 2. 【位置補正処理】画面はみ出し判定と配置の自動調整 ---
+                    // --- 2. 【位置補正処理】親メニューに重ねて右下に少しずらして配置 ---
+                    const parentRect = bgm.getBoundingClientRect();
+                    
+                    // 親基準で「重ねつつ右下にズラす」オフセット値（px）
+                    const offsetX = 32; // 右へのズレ量
+                    const offsetY = 32; // 下へのズレ量
+
+                    // tooltipの基本スタイル設定（絶対配置）
+                    tooltip.style.position = 'fixed'; 
+                    tooltip.style.left = `${parentRect.left + offsetX}px`;
+                    tooltip.style.top = `${parentRect.top + offsetY}px`;
+                    tooltip.style.zIndex = '9999';
+
+                    // --- 画面外（右・下）へのはみ出し対策 ---
                     const rect = tooltip.getBoundingClientRect();
                     const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
                     const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-            
-                    // 右側にはみ出す場合は左側に配置を反転 (left: auto, right: 100%)
+
+                    // 右側にはみ出る場合は画面内に収まるよう調整
                     if (rect.right > viewportWidth) {
-                        tooltip.style.left = 'auto';
-                        tooltip.style.right = '100%';
+                        const overflowX = rect.right - viewportWidth;
+                        tooltip.style.left = `${parentRect.left + offsetX - overflowX - 8}px`;
                     }
-            
-                    // 下側にはみ出す場合は上方向に押し上げる
+
+                    // 下側にはみ出る場合は上方向に押し上げる
                     if (rect.bottom > viewportHeight) {
                         const overflowY = rect.bottom - viewportHeight;
-                        tooltip.style.top = `-${overflowY + 8}px`; // 余白(8px)を持たせて位置を上へずらす
+                        tooltip.style.top = `${parentRect.top + offsetY - overflowY - 8}px`;
                     }
                 }
             });
 
-            bgm.addEventListener('mouseleave', (event) => {
-                if (tooltip && !bgm.contains(event.relatedTarget)) {
-                    bgm.style.background = 'none';
-                    tooltip.remove();
-                    tooltip = null;
-                }
-            });
+			bgm.addEventListener('mouseleave', (event) => {
+			    // 移動先（relatedTarget）が tooltip そのもの、または tooltip の子要素である場合は消さない
+			    if (tooltip && (tooltip === event.relatedTarget || tooltip.contains(event.relatedTarget))) {
+			        return;
+			    }
+			
+			    if (tooltip) {
+			        bgm.style.background = 'none';
+			        tooltip.remove();
+			        tooltip = null;
+			    }
+			});
         
             menu.appendChild(bgm);
             return;

@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver5.72.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver5.74.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -1305,10 +1305,10 @@ button#modeChangeBtn.convert-active:hover,
     animation: effectRotate 5s ease-in-out forwards;
 }
 @keyframes effectRotate {
-    0%   { opacity: 0; transform: scale(0.2) rotate(-100deg); } /* scale: 0.7->0.2, rotate: -5deg->-30deg */
+    0%   { opacity: 0; transform: scale(0.2) rotate(-120deg); } /* scale: 0.7->0.2, rotate: -5deg->-30deg */
     20%  { opacity: 1; transform: scale(1.0) rotate(0deg); }
     80%  { opacity: 1; transform: scale(1.0) rotate(0deg); }
-    100% { opacity: 0; transform: scale(0.2) rotate(100deg); }   /* scale: 0.7->0.2, rotate: 5deg->30deg */
+    100% { opacity: 0; transform: scale(0.2) rotate(120deg); }   /* scale: 0.7->0.2, rotate: 5deg->30deg */
 }
 /* スイング/振り子（風に揺れて出現） */
 .effect-swing-top {
@@ -1321,17 +1321,18 @@ button#modeChangeBtn.convert-active:hover,
     80%  { opacity: 1; transform: rotate(0deg); }
     100% { opacity: 0; transform: rotate(45deg); }
 }
-/* スイング/扇（下軸：起き上がり・倒れ込み） */
+/* スイング/扇（扇を開く動き） */
 .effect-swing-bottom {
     animation: effectSwingBottom 5s ease-in-out forwards;
     transform-origin: bottom center;
 }
 @keyframes effectSwingBottom {
-    0%   { opacity: 0; transform: rotate(45deg); }
+    0%   { opacity: 0; transform: rotate(-45deg); }
     20%  { opacity: 1; transform: rotate(0deg); }
     80%  { opacity: 1; transform: rotate(0deg); }
-    100% { opacity: 0; transform: rotate(-45deg); }
-}/* フリップ（左右）（コインのように横回転してめくる） */
+    100% { opacity: 0; transform: rotate(45deg); }
+}
+/* フリップ（左右）（横方向に回転してめくる） */
 .effect-flip-lr {
     animation: effectFlipLR 5s ease-in-out forwards;
     backface-visibility: hidden;
@@ -1374,7 +1375,8 @@ button#modeChangeBtn.convert-active:hover,
     white-space: nowrap;
     z-index: 1000;
     max-height: 480px;
-    /* 横幅・縦幅が画面を超えないように制限を追加 */
+    min-width: 760px;       /* 最小幅を広めに指定（お好みのサイズに調整可能） */
+    width: 54vw;          /* 固定幅、または min-width と合わせて使用 */
     max-width: 54vw;
     box-sizing: border-box;
     overflow-y: auto;
