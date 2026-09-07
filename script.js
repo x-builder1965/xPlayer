@@ -1,7 +1,7 @@
 // -- script.js --------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver6.00.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver6.01.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1284,8 +1284,8 @@ function setupMaxMediaCacheSize() {
 
 // 【初期設定】コントロールサイズ適用
 function setupControlSize() {
-    let controlSizeX = calculateControlSizeX();
-    let controlSizeY = calculateControlSizeY();
+    const controlSizeX = calculateControlSizeX();
+    const controlSizeY = calculateControlSizeY();
     localStorageSetItemAndFile('controlSizeX', controlSizeX);
     localStorageSetItemAndFile('controlSizeY', controlSizeY);
     updateControlSize(controlSizeX, controlSizeY);
@@ -4844,18 +4844,18 @@ async function allLocalStorageSetting() {
             savedShufflePosition = getVal('shufflePosition', savedShufflePosition, '0');
             savedAspectRatio = getVal('aspectRatio', savedAspectRatio, 'none');
             savedCurrentSortMode = getVal('playlistSortMode', savedCurrentSortMode, 'none');
-            savedPlaylistDisplayMode = getVal('playlistDisplayMode', savedPlaylistDisplayMode, 'normal');
-            savedSelectedAudioLabel = getVal('selectedAudioLabel', savedSelectedAudioLabel);
+            savedPlaylistDisplayMode = getVal('playlistDisplayMode', savedPlaylistDisplayMode, 'list');
+            savedSelectedAudioLabel = getVal('selectedAudioLabel', savedSelectedAudioLabel,'日本語');
             savedSelectedAudioTrack = getVal('selectedAudioTrack', savedSelectedAudioTrack);
-            savedSelectedSubtitleLabel = getVal('selectedSubtitleLabel', savedSelectedSubtitleLabel);
+            savedSelectedSubtitleLabel = getVal('selectedSubtitleLabel', savedSelectedSubtitleLabel,'（なし）');
             savedSelectedSubtitleTrack = getVal('selectedSubtitleTrack', savedSelectedSubtitleTrack);
             savedWallpaperPath = getVal('wallpaperPath', savedWallpaperPath);
             savedAlwaysOnTop = String(getVal('alwaysOnTop', savedAlwaysOnTop, 'false'));
             savedPauseShowControls = String(getVal('pauseShowControls', savedPauseShowControls, 'false'));
             savedHideCenterControls = String(getVal('hideCenterControls', savedHideCenterControls, 'false'));
-            savedAudioMotionMode = getVal('audioMotionMode', savedAudioMotionMode);
-            savedImageEffectBgmMode = getVal('imageEffectBgmMode', savedImageEffectBgmMode);
-            savedIsImageWallpaperEnabled = getVal('isImageWallpaperEnabled', savedIsImageWallpaperEnabled);
+            savedAudioMotionMode = getVal('audioMotionMode', savedAudioMotionMode, 'preset1');
+            savedImageEffectBgmMode = getVal('imageEffectBgmMode', savedImageEffectBgmMode, 'effect1');
+            savedIsImageWallpaperEnabled = String(getVal('isImageWallpaperEnabled', 'false'));
             savedFilterHistory = getVal('filterHistory', savedFilterHistory);
             savedOriginalOrder = getVal('originalLoadOrder', savedOriginalOrder);
             savedAudioMotionOptions = getVal('audioMotionOptions', savedAudioMotionOptions);
@@ -5421,9 +5421,9 @@ function buildImageEffectBgmMenuContent(menu) {
                 
                 // localStorageに保存
                 if (typeof localStorageSetItemAndFile === 'function') {
-                    await localStorageSetItemAndFile('imageWallpaperEnabled', isImageWallpaperEnabled);
+                    await localStorageSetItemAndFile('isImageWallpaperEnabled', isImageWallpaperEnabled);
                 } else {
-                    localStorage.setItem('imageWallpaperEnabled', isImageWallpaperEnabled);
+                    localStorage.setItem('isImageWallpaperEnabled', isImageWallpaperEnabled);
                 }
         
                 // 背景壁紙の表示状態を即時更新
