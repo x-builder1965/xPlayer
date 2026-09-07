@@ -628,83 +628,83 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 🔲初期処理🔲
     // 【初期設定】メディア初期化（未設定状態）
-    initializeMediaPlayer();
+    setupMediaPlayerClear();
     // 【初期設定】ネットURL選択のアイコン表示更新
     updateUrlButtonIcon();
     // 【初期設定】フィルタ履歴をlocalStorageから復元
-    loadFilterHistory();
+    setupFilterHistory();
     // 【初期設定】ツールチップイベント設定
     setupTooltipEvents();
     // 【初期設定】背景壁紙の復元
-    restoreWallpaper();
+    setupWallpaper();
     // 【初期設定】背景壁紙ボタンの状態反映（設定済みなら赤、未設定なら青）
-    updateWallpaperButtonState();
+    setupWallpaperButtonState();
     // 【初期設定】コントロール表示抑止の復元
-    restorePauseShowControls();
+    setupPauseShowControls();
     // 【初期設定】センターコントロール無効の復元
-    restoreHideCenterControls();
+    setupHideCenterControls();
     // 【初期設定】ボリューム復元
-    restoreVolume();
+    setupVolume();
     // 【初期設定】再生速度復元
-    restorePlaybackSpeed();
+    setupPlaybackSpeed();
     // 【初期設定】描画モード復元
-    restoreFitMode();
+    setupFitMode();
     // 【初期設定】常に最前面復元
-    restoreAlwaysOnTop();
+    setupAlwaysOnTop();
     // 【初期設定】オーディオモーションのオプション、ノード設定を復元
-    applyAudioMotionSettings();
+    setupAudioMotionSettings();
     // 【初期設定】オーディオモーション復元
-    restoreAudioMotionMode();
+    setupAudioMotionMode();
     // 【初期設定】イメージエフェクト復元
-    restoreImageEffectBgmMode();
+    setupImageEffectBgmMode();
     // 【初期設定】イメージ壁紙表示の復元
-    restoreImageWallpaperSetting();
+    setupImageWallpaperSetting();
     // 【初期設定】イメージBGM復元
-    restoreImageBgmPaths();
+    setupImageBgmPaths();
     // 【初期設定】イメージBGM演奏曲の復元
-    restoreCurrentBgmIndex();
+    setupCurrentBgmIndex();
     // 【初期設定】音量バーの入力変更をBGM音量に同期
     setupVolumeBarSync();
     // 【初期設定】ズーム値復元
-    restoreZoomValue();
+    setupZoomValue();
     // 【初期設定】画像移動値復元
-    restoreTranslateValues();
+    setupTranslateValues();
     // 【初期設定】描画モード復元
     applyFitModeSetting(fitMode);
     // 【初期設定】プレイリスト表示モード復元
-    restorePlaylistDisplayMode();
+    setupPlaylistDisplayMode();
     // 【初期設定】アスペクト比復元
-    restoreAspectRatio();
+    setupAspectRatio();
     // 【初期設定】繰り返し再生モード復元
-    restoreRepeatPlayMode();
+    setupRepeatPlayMode();
     // 【初期設定】再生モード復元
-    restoreRandomPlayMode();
+    setupRandomPlayMode();
     // 【初期設定】自動シャッフル復元
-    restoreAutoShuffle();
+    setupAutoShuffle();
     // 【初期設定】ランダム再生リスト復元
-    restoreShuffleOrder();
+    setupShuffleOrder();
     // 【初期設定】ランダム再生ポジション復元
-    restoreShufflePosition();
+    setupShufflePosition();
     // 【初期設定】画像用キャッシュサイズ復元
-    restoreMaxImageCacheSize();
+    setupMaxImageCacheSize();
     // 【初期設定】動画・音声用キャッシュサイズ復元
-    restoreMaxMediaCacheSize();
+    setupMaxMediaCacheSize();
     // 【初期設定】コントロールサイズ適用
-    applyControlSize();
+    setupControlSize();
     // 【初期設定】Bluetooth／システムメディアキー対応（Windows11対応）
     settingBluetoothMedhiaKey();
     // 【初期設定】カット編集・結合編集のフレームレイトの復元
-    restoreEditFrameRate();
+    setupEditFrameRate();
     // 【初期設定】並び替えメニューの復元
-    restoreCurrentSortMode();
+    setupCurrentSortMode();
     // 【初期設定】音声言語の復元
-    restoreSelectedAudioLabel();
+    setupSelectedAudioLabel();
     // 【初期設定】字幕言語の復元
-    restoreSelectedSubtitleLabel();
+    setupSelectedSubtitleLabel();
     // 【初期設定】音声メニューボタン・字幕メニューボタン切替（初期化）
     updateTrackButtonsVisibility();
     // 【初期設定】プレイリストと再生状態の復元
-    restorePlaylistAndState();
+    setupPlaylistAndState();
 
     // 🔲個別イベントリスナー登録🔲
 	// 【個別イベント】🌐ネットURL選択
@@ -969,7 +969,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // 🔲初期設定関数🔲
 // 【初期設定】メディアプレーヤーの初期化
-function initializeMediaPlayer() {
+function setupMediaPlayerClear() {
     videoPlayer.removeAttribute('src');
     videoPlayer.load();
     audioPlayer.removeAttribute('src');
@@ -993,7 +993,7 @@ function setupTooltipEvents() {
 }
 
 // 【初期設定】背景壁紙の復元
-function restoreWallpaper() {
+function setupWallpaper() {
     if (savedWallpaperPath) {
         videoContainer.style.backgroundImage = savedWallpaperPath;
     } else {
@@ -1002,7 +1002,7 @@ function restoreWallpaper() {
 }
 
 // 【初期設定】背景壁紙ボタンの状態反映（設定済みなら赤、未設定なら青）
-function updateWallpaperButtonState() {
+function setupWallpaperButtonState() {
     if (wallpaperBtn) {
         if (savedWallpaperPath && savedWallpaperPath !== 'none' && savedWallpaperPath.trim() !== '') {
             wallpaperBtn.classList.add('wallpaper-active');
@@ -1014,7 +1014,7 @@ function updateWallpaperButtonState() {
 }
 
 // 【初期設定】コントロール表示抑止の復元
-function restorePauseShowControls() {
+function setupPauseShowControls() {
     if (savedPauseShowControls === 'true') {
         pauseShowControls = true;
     } else {
@@ -1023,7 +1023,7 @@ function restorePauseShowControls() {
 }
 
 // 【初期設定】センターコントロール無効の復元
-function restoreHideCenterControls() {
+function setupHideCenterControls() {
     if (savedHideCenterControls === 'true') {
         hideCenterControls = true;
     } else {
@@ -1032,7 +1032,7 @@ function restoreHideCenterControls() {
 }
 
 // 【初期設定】ボリューム復元
-function restoreVolume() {
+function setupVolume() {
     const restoredVolume = Number(savedVolume);
     if (Number.isFinite(restoredVolume) && restoredVolume >= 0 && restoredVolume <= 1) {
         volumeBar.value = restoredVolume;
@@ -1052,7 +1052,7 @@ function restoreVolume() {
 }
 
 // 【初期設定】再生速度復元
-function restorePlaybackSpeed() {
+function setupPlaybackSpeed() {
     if (savedPlaybackSpeed && !isNaN(savedPlaybackSpeed) && parseFloat(savedPlaybackSpeed) > 0) {
         currentPlaybackRate = parseFloat(savedPlaybackSpeed);
         if (speedSelect) speedSelect.value = currentPlaybackRate.toFixed(2);
@@ -1064,7 +1064,7 @@ function restorePlaybackSpeed() {
 }
 
 // 【初期設定】描画モード復元
-function restoreFitMode() {
+function setupFitMode() {
     if (savedFitMode) {
         fitMode = savedFitMode;
     } else {
@@ -1073,7 +1073,7 @@ function restoreFitMode() {
 }
 
 // 【初期設定】常に最前面復元
-async function restoreAlwaysOnTop() {
+async function setupAlwaysOnTop() {
     if (savedAlwaysOnTop === 'true') {
         isAlwaysOnTop = true;
         await setAlwaysOnTop(true);
@@ -1082,7 +1082,7 @@ async function restoreAlwaysOnTop() {
 }
 
 // 【初期設定】オーディオモーション復元
-function restoreAudioMotionMode() {
+function setupAudioMotionMode() {
     if (savedAudioMotionMode && AUDIOMOTION_NODES[savedAudioMotionMode]) {
         audioMotionMode = savedAudioMotionMode;
     } else {
@@ -1091,7 +1091,7 @@ function restoreAudioMotionMode() {
 }
 
 // 【初期設定】イメージエフェクト復元
-function restoreImageEffectBgmMode() {
+function setupImageEffectBgmMode() {
     if (savedImageEffectBgmMode && IMAGEEFFECTBGM_NODES[savedImageEffectBgmMode]) {
         imageEffectBgmMode = savedImageEffectBgmMode;
     } else {
@@ -1100,7 +1100,7 @@ function restoreImageEffectBgmMode() {
 }
 
 // 【初期設定】イメージ壁紙表示の復元
-function restoreImageWallpaperSetting() {
+function setupImageWallpaperSetting() {
     if (savedIsImageWallpaperEnabled === 'true') {
         isImageWallpaperEnabled = true;
     } else {
@@ -1109,7 +1109,7 @@ function restoreImageWallpaperSetting() {
 }
 
 // 【初期設定】イメージBGM復元
-function restoreImageBgmPaths() {
+function setupImageBgmPaths() {
     bgmAudio.loop = false;
     if (savedImageBgmPaths && savedImageBgmPaths !== 'null') {
         try {
@@ -1125,7 +1125,7 @@ function restoreImageBgmPaths() {
 }
 
 // 【初期設定】イメージBGM演奏曲の復元
-function restoreCurrentBgmIndex() {
+function setupCurrentBgmIndex() {
     if (savedCurrentBgmIndex !== null && Number.isInteger(Number(savedCurrentBgmIndex))) {
         currentBgmIndex = Number(savedCurrentBgmIndex);
         if (currentBgmIndex < 0 || currentBgmIndex >= imageBgmPaths.length) currentBgmIndex = 0;
@@ -1145,7 +1145,7 @@ function setupVolumeBarSync() {
 }
 
 // 【初期設定】ズーム値復元
-function restoreZoomValue() {
+function setupZoomValue() {
     const restoredZoom = Number(savedZoom);
     if (Number.isFinite(restoredZoom)) {
         zoomValue = Math.trunc(restoredZoom);
@@ -1157,7 +1157,7 @@ function restoreZoomValue() {
 }
 
 // 【初期設定】画像移動値復元
-function restoreTranslateValues() {
+function setupTranslateValues() {
     const restoredTranslateX = Number(savedTranslateX);
     const restoredTranslateY = Number(savedTranslateY);
     if (Number.isFinite(restoredTranslateX) && Number.isFinite(restoredTranslateY)) {
@@ -1170,7 +1170,7 @@ function restoreTranslateValues() {
 }
 
 // 【初期設定】プレイリスト表示モード復元
-function restorePlaylistDisplayMode() {
+function setupPlaylistDisplayMode() {
     playlistDisplayMode = ['list', 'thumb-list', 'thumb-small', 'thumb-medium', 'thumb-large'].includes(savedPlaylistDisplayMode) ? savedPlaylistDisplayMode : 'list';
     if (filterList) {
         filterList.classList.remove('playlist-grid', 'playlist-grid-small', 'playlist-grid-medium', 'playlist-grid-large');
@@ -1188,7 +1188,7 @@ function restorePlaylistDisplayMode() {
 }
 
 // 【初期設定】アスペクト比復元
-function restoreAspectRatio() {
+function setupAspectRatio() {
     if (savedAspectRatio && ASPECT_NODES[savedAspectRatio]) {
         currentAspectRatio = savedAspectRatio;
     } else {
@@ -1199,7 +1199,7 @@ function restoreAspectRatio() {
 }
 
 // 【初期設定】繰り返し再生モード復元
-function restoreRepeatPlayMode() {
+function setupRepeatPlayMode() {
     if (savedIsRepeatPlayMode && ['none', 'all', 'single'].includes(savedIsRepeatPlayMode)) {
         isRepeatPlayMode = savedIsRepeatPlayMode;
     } else {
@@ -1209,7 +1209,7 @@ function restoreRepeatPlayMode() {
 }
 
 // 【初期設定】再生モード復元
-function restoreRandomPlayMode() {
+function setupRandomPlayMode() {
     if (savedIsRandomPlayMode === 'true') {
         isRandomPlayMode = true;
     }
@@ -1217,7 +1217,7 @@ function restoreRandomPlayMode() {
 }
 
 // 【初期設定】自動シャッフル復元
-function restoreAutoShuffle() {
+function setupAutoShuffle() {
     if (savedAutoShuffle === 'false') {
         autoShuffle = false;
     }
@@ -1225,7 +1225,7 @@ function restoreAutoShuffle() {
 }
 
 // 【初期設定】ランダム再生リスト復元
-function restoreShuffleOrder() {
+function setupShuffleOrder() {
     if (savedShuffleOrder) {
         try {
             const parsedPlaylist = safeJSONParse(savedPlaylist, []);
@@ -1248,7 +1248,7 @@ function restoreShuffleOrder() {
 }
 
 // 【初期設定】ランダム再生ポジション復元
-function restoreShufflePosition() {
+function setupShufflePosition() {
     if (savedShufflePosition !== 'null') {
         shufflePosition = parseInt(savedShufflePosition, 10);
         if (isNaN(shufflePosition) || shufflePosition < -1) {
@@ -1258,7 +1258,7 @@ function restoreShufflePosition() {
 }
 
 // 【初期設定】画像用キャッシュサイズ復元
-function restoreMaxImageCacheSize() {
+function setupMaxImageCacheSize() {
     if (savedMaxImageCacheSize !== 'null') {
         const restoredImageCacheSize = Number(savedMaxImageCacheSize);
         maxImageCacheSize = Number.isInteger(restoredImageCacheSize) && restoredImageCacheSize >= 0
@@ -1270,7 +1270,7 @@ function restoreMaxImageCacheSize() {
 }
 
 // 【初期設定】動画・音声用キャッシュサイズ復元
-function restoreMaxMediaCacheSize() {
+function setupMaxMediaCacheSize() {
     if (savedMaxMediaCacheSize !== 'null') {
         const restoredMediaCacheSize = Number(savedMaxMediaCacheSize);
         maxMediaCacheSize = Number.isInteger(restoredMediaCacheSize) && restoredMediaCacheSize >= 0
@@ -1282,7 +1282,7 @@ function restoreMaxMediaCacheSize() {
 }
 
 // 【初期設定】コントロールサイズ適用
-function applyControlSize() {
+function setupControlSize() {
     let controlSizeX = calculateControlSizeX();
     let controlSizeY = calculateControlSizeY();
     localStorageSetItemAndFile('controlSizeX', controlSizeX);
@@ -1323,7 +1323,7 @@ function settingBluetoothMedhiaKey() {
 }
 
 // 【初期設定】カット編集・結合編集のフレームレイトの復元
-function restoreEditFrameRate() {
+function setupEditFrameRate() {
     if (!savedEditFrameRate) {
         editFrameRate = 30;
     } else {
@@ -1332,7 +1332,7 @@ function restoreEditFrameRate() {
 }
 
 // 【初期設定】並び替えメニューの復元
-function restoreCurrentSortMode() {
+function setupCurrentSortMode() {
     sortPlaylistBtn.classList.remove('sorted-active', 'random-sorted-active');
     if (!SORT_MODES[savedCurrentSortMode]) {
         currentSortMode = 'none';
@@ -1351,7 +1351,7 @@ function restoreCurrentSortMode() {
 }
 
 // 【初期設定】音声言語の復元
-function restoreSelectedAudioLabel() {
+function setupSelectedAudioLabel() {
     if (!savedSelectedAudioLabel) {
         selectedAudioLabel = '日本語';
     } else {
@@ -1371,7 +1371,7 @@ function restoreSelectedAudioLabel() {
 }
 
 // 【初期設定】字幕言語の復元
-function restoreSelectedSubtitleLabel() {
+function setupSelectedSubtitleLabel() {
     if (!savedSelectedSubtitleLabel) {
         selectedSubtitleLabel = '（なし）';
     } else {
@@ -1391,7 +1391,7 @@ function restoreSelectedSubtitleLabel() {
 }
 
 // 【初期設定】プレイリストおよび再生状態の復元
-async function restorePlaylistAndState() {
+async function setupPlaylistAndState() {
     // リロード判定（PerformanceNavigationTiming API）
     const navEntries = performance.getEntriesByType('navigation');
     const isReload = navEntries.length > 0 && navEntries[0].type === 'reload';
@@ -4907,7 +4907,7 @@ async function allLocalStorageSetting() {
 }
 
 // オーディオモーションの設定を復元・適用するヘルパー関数
-function applyAudioMotionSettings() {
+function setupAudioMotionSettings() {
     // オプションの復元
     if (savedAudioMotionOptions) {
         try {
@@ -9272,7 +9272,7 @@ async function deleteTempVideo() {
 }
 
 // フィルタ履歴をlocalStorageから復元
-function loadFilterHistory() {
+function setupFilterHistory() {
     if (savedFilterHistory) {
         try {
             // すでに配列ならそのまま使い、文字列なら JSON.parse する
