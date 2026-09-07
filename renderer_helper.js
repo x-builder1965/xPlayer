@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.02.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.03.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -485,6 +485,13 @@ function registerRepeatPlayBtnEvents() {
     });
 }
 
+// 【個別イベント】🤖自動シャッフル切替
+function registerAutoShuffleBtnEvents() {
+    autoShuffleBtn.addEventListener('click', () => {
+        toggleAutoShuffle();
+    });
+}
+
 // 【個別イベント】📺アスペクト比設定ボタン
 function registerAspectRatioBtnEvents() {
     aspectRatioBtn.addEventListener('click', (event) => {
@@ -589,13 +596,6 @@ function registerZoomEndBtnEvents() {
 function registerSettingsBtnEvents() {
     settingsBtn.addEventListener('click', () => {
         toggleSettingsPanel(!isSettingsPanelOpen);
-    });
-}
-
-// 【個別イベント】🔀自動シャッフル切替
-function registerAutoShuffleBtnEvents() {
-    autoShuffleBtn.addEventListener('click', () => {
-        toggleAutoShuffle();
     });
 }
 
@@ -2430,13 +2430,6 @@ function registerDocumentKeydownEvents() {
                 return;
             }
 
-            // 🔀自動シャッフル設定（Ctrl+w）
-            if (event.ctrlKey && event.key === 'w') {
-                event.preventDefault();
-                autoShuffleBtn.click();
-                return;
-            }
-
             // 👁️コントロール表示抑止（Ctrl+y）
             if (event.ctrlKey && event.key === 'y') {
                 event.preventDefault();
@@ -2600,6 +2593,13 @@ function registerDocumentKeydownEvents() {
         if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'r') {
             event.preventDefault();
             repeatPlayBtn.click();
+            return;
+        }
+
+        // 🤖自動シャッフル設定（Ctrl+w）
+        if (event.ctrlKey && event.key === 'w') {
+            event.preventDefault();
+            autoShuffleBtn.click();
             return;
         }
 

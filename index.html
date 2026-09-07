@@ -1,7 +1,7 @@
 <!-- -- index.html ------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -メディアプレイヤー- Ver6.02.0'; -->
+<!-- const appName = 'xPlayer -メディアプレイヤー- Ver6.03.0'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -49,6 +49,7 @@
                     <input id="playlistPathArea" type="text" readonly placeholder="再生中メディアパス" data-tooltip="再生中メディアパス">
                     <button id="randomPlayBtn" class="play-mode-btn" data-tooltip="ランダム再生 (Ctrl+r)">🔀</button>
                     <button id="repeatPlayBtn"  class="play-mode-btn" data-tooltip="繰り返し再生 (Ctrl+Shift+r)">🔁</button>
+                    <button id="autoShuffleBtn" data-tooltip="自動シャッフル設定（Ctrl+w）">🤖</button>
                 </div>
                 <div class="url-input-panel">
                     <input id="urlInput" type="text" placeholder="URLを入力" data-tooltip="URLを入力">
@@ -146,7 +147,6 @@
                 <button id="wallpaperBtn" data-tooltip="背景壁紙（Ctrl+p）">🖼️</button>
                 <button id="audioMotionBtn" data-tooltip="オーディオモーション設定（Ctrl+m）">🏳️‍🌈</button>
                 <button id="imageEffectBgmBtn" data-tooltip="イメージエフェクト＆BGM設定（Ctrl+b）">💃</button>
-                <button id="autoShuffleBtn" data-tooltip="自動シャッフル設定（Ctrl+w）">🔀</button>
                 <button id="pauseShowBtn" data-tooltip="コントロール表示抑止（Ctrl+y）">👁️</button>
                 <button id="importExportBtn" data-tooltip="設定インポート・エクスポート（Ctrl+i／Ctrl+o）">🍥</button>
                 <button id="settingsCloseBtn" data-tooltip="設定モード終了（Ctrl+q）">❌</button>
@@ -236,6 +236,13 @@
                                 <td class="key">Ctrl+Shift+r</td>
                                 <td class="mouse no-data">なし</td>
                                 <td class="note">・プレイリスト内のメディアを繰り返し再生。🔁（青）：繰返無効／🔁（赤）：全メディア繰返／🔂（黄）：１メディア繰返。</td>
+                            </tr>
+                            <tr>
+                                <td>　・自動シャッフル設定</td>
+                                <td class="icon">🤖</td>
+                                <td class="key">Ctrl+w</td>
+                                <td class="mouse no-data">なし</td>
+                                <td class="note">・ランダム再生・全繰り返し再生中に自動でシャッフルする機能の有効・無効を設定。</td>
                             </tr>
                             <tr>
                                 <td class="sub-title">📚 プレイリストパネル</td>
@@ -588,13 +595,6 @@
                                 <td class="note">・画像再生時のトラジションエフェクトの切替および再生BGMの設定。</td>
                             </tr>
                             <tr>
-                                <td>　・自動シャッフル設定</td>
-                                <td class="icon">🔀</td>
-                                <td class="key">Ctrl+w</td>
-                                <td class="mouse no-data">なし</td>
-                                <td class="note">・ランダム再生・全繰り返し再生中に自動でシャッフルする機能の有効・無効を設定。</td>
-                            </tr>
-                            <tr>
                                 <td>　・コントロール制御</td>
                                 <td class="icon">👁️</td>
                                 <td class="key">Ctrl+y</td>
@@ -720,6 +720,7 @@
             <div id="changelogBtn" class="changelog-toggle">▶ 変更履歴</div>
             <div id="changelogContent" class="changelog-container">
                 <ul class="changelog-list">
+                    <li>2026-09-08 Ver6.03.0 自動シャッフル設定（🤖）ボタン配置の変更。</li>
                     <li>2026-09-07 Ver6.02.0 script.jsを定義宣言・初期処理・イベント・ヘルパーに分割。</li>
                     <li>2026-09-07 Ver6.01.0 画像背景設定保尊・復活不良の対応。</li>
                     <li>2026-09-07 Ver6.00.0 script内全処理見直し後カプセル（function）化。</li>
@@ -1052,8 +1053,8 @@
     </div>
 
     <script src="renderer_declarat.js"></script>
-    <script src="renderer_helper.js"></script>
     <script src="renderer_initializ.js"></script>
     <script src="renderer_event.js"></script>
+    <script src="renderer_helper.js"></script>
 </body>
 </html>

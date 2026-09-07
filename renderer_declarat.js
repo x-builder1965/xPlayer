@@ -1,7 +1,7 @@
 // -- renderer_declarat.js ---------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver6.02.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver6.03.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
