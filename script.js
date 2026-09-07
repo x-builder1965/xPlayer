@@ -47,27 +47,27 @@ const {
 const overlayTimeout = 3000;                    // オーバーレイ表示の自動非表示までの時間（ミリ秒）
 const seekSensitivity = 0.3;                    // シーク操作の感度（0.1～1.0）: 1.0でマウス移動量と同じ、0.5で半分、0.3で3分の1    
 const volumeStep = 0.001;                       // 音量操作のステップ値（0.001～0.1）: 0.01で1%、0.001で0.1%単位
-const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 5.0];      // 再生速度の選択肢（0.25倍速～5倍速）
-const appNameAndCopyrightValue = `${appName}\n${copyright}`;                            // アプリ名と著作権表示の値
-const appNameAndCopyrightValueLine = `${appName}　${copyright}`;                        // アプリ名と著作権表示の1行バージョン
+const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 5.0];  // 再生速度の選択肢（0.25倍速～5倍速）
+const appNameAndCopyrightValue = `${appName}\n${copyright}`;                        // アプリ名と著作権表示の値
+const appNameAndCopyrightValueLine = `${appName}　${copyright}`;                    // アプリ名と著作権表示の1行バージョン
+const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
+const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedScrollCurrentFilterItem を呼び出してください。
+const settingsFilePath = getUserSettingsPath(); // 設定ファイルパス取得
+const pid = getPid();                           // プロセスID取得
+const bgmAudio = new Audio();                   // BGM再生用のAudio要素
+const imageThumbnailCache = new Map();		    // 画像サムネイル用キャッシュ（Mapオブジェクト）
+const dragThreshold = 5;                        // ドラッグ判定用の移動閾値（手ぶれ考慮: 5ピクセル）
+const imageCache = new Map();		            // 画像キャッシュストレージ（メモリ内）
+const mediaCache = new Map();	                // 動画・音声の先読み要素キャッシュ
+
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];             // 動画再生対象拡張子
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.opus', '.wma', '.aiff', '.aif', '.alac', '.ape'];  // 音声再生対象拡張子
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'];   // 画像再生対象拡張子
 const VIDEO_EXTENSIONS_CONVERT = [];            // 動画変換対象外拡張子
 const SETTINGS_FILE_REGEX = /\.(json|xpj)$/i;   // 設定ファイルの拡張子判定用正規表現
-const debouncedUpdateFilterList = debounce(updateFilterList, 0);                        // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
-const debouncedScrollCurrentFilterItem = debounce(scrollCurrentFilterItem, 100);        // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedScrollCurrentFilterItem を呼び出してください。
-const settingsFilePath = getUserSettingsPath(); // 設定ファイルパス取得
-const pid = getPid();                           // プロセスID取得
 const IMAGE_DURATION = 5;                       // 画像の再生時間（秒）
-const bgmAudio = new Audio();                   // BGM再生用のAudio要素
-const imageThumbnailCache = new Map();		    // 画像サムネイル用キャッシュ（Mapオブジェクト）
-const dragThreshold = 5;                        // ドラッグ判定用の移動閾値（手ぶれ考慮: 5ピクセル）
-const imageCache = new Map();		            // 画像キャッシュストレージ（メモリ内）
 const MAX_IMAGE_CACHE_SIZE = 5; 			    // メモリを圧迫しないよう保持数を制限（0は無効）
-const mediaCache = new Map();	                // 動画・音声の先読み要素キャッシュ
 const MAX_MEDIA_CACHE_SIZE = 3; 	            // メモリを圧迫しないよう保持数を制限（0は無効）
-
 const SORT_MODES = {
     'none':       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
     'path_asc':   { label: 'ファイル▲',   fn: () => [...getPlaylistInOriginalOrder()].sort((a, b) => (a.file?.path || '').localeCompare(b.file?.path || '')) },
@@ -609,11 +609,12 @@ let forceStop = true;                           // 起動時に一時停止す�
 let maxImageCacheSize = 0;                      // 画像キャッシュ上限
 let maxMediaCacheSize = 0;                      // 動画・音声キャッシュ上限
 
-// 🔲document ハンドラ登録🔲
+// 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
 document.addEventListener('DOMContentLoaded', async () => {
     Initializing = true;
 
+    // 🔲起動設定🔲
     // 多重起動（セカンダリインスタンス）判定
     isSecondary = await checkIsSecondaryInstance();
     // DOM要素を取得
@@ -626,7 +627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // リスナー登録完了後、メインプロセスへ準備完了を通知
     ipcRenderer.send('app-ready');
 
-    // 🔲初期処理🔲
+    // 🔲初期設定🔲
     // 【初期設定】メディア初期化（未設定状態）
     setupMediaPlayerClear();
     // 【初期設定】ネットURL選択のアイコン表示更新
