@@ -270,8 +270,8 @@ const IMAGEEFFECTBGM_NODES = {
     'effect7':       { label: 'ズームアウト',       className: 'effect-zoom-out' },
     'effect8':       { label: 'ポップアップ',       className: 'effect-pop' },
     'effect9':       { label: '回転フェード',       className: 'effect-rotate' },
-    'effect10':      { label: 'スイング/振り子',    className: 'effect-swing-top' },
-    'effect11':      { label: 'スイング/扇',        className: 'effect-swing-bottom' },
+    'effect10':      { label: 'スイング（振り子）', className: 'effect-swing-top' },
+    'effect11':      { label: 'スイング（扇）',     className: 'effect-swing-bottom' },
     'effect12':      { label: 'フリップ（左右）',   className: 'effect-flip-lr' },
     'effect13':      { label: 'フリップ（上下）',   className: 'effect-flip-tb' },
     'random':        { label: '（ランダム）' }
