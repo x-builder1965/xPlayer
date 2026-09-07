@@ -950,19 +950,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 	
 	// 🔲ipcRendererイベントハンドラ登録🔲
 	// 【ipcRendererイベント】自動再生指示を受信
-	ipcRegisterAutoPlayFilesEvents();
+	registerIpcRendererAutoPlayFilesEvents();
 	// 【ipcRendererイベント】起動時設定インポート指示を受信
-	ipcRegisterAutoImportSettingsEvents();
+	registerIpcRendererAutoImportSettingsEvents();
 	// 【ipcRendererイベント】変換進捗受信
-	ipcRegisterConvertProgressEvents();
+	registerIpcRendererConvertProgressEvents();
 	// 【ipcRendererイベント】字幕ファイル出力開始受信
-	ipcRegisterSubtitleExtractionProgressEvents();
+	registerIpcRendererSubtitleExtractionProgressEvents();
 	// 【ipcRendererイベント】変換エラー受信
-	ipcRegisterConvertErrorEvents();
+	registerIpcRendererConvertErrorEvents();
 	// 【ipcRendererイベント】カット進捗受信（ 詳細ペイロード対応）
-	ipcRegisterCutProgressEvents();
+	registerIpcRendererCutProgressEvents();
 	// 【ipcRendererイベント】結合進捗受信（詳細ペイロード対応）
-	ipcRegisterJoinProgressEvents();
+	registerIpcRendererJoinProgressEvents();
 
     Initializing = false;
 });
@@ -4401,7 +4401,7 @@ function registerWindowUnloadEvents() {
 
 // 🔲ipcRendererイベントハンドラ登録🔲
 // 【ipcRendererイベント】自動再生指示を受信
-function ipcRegisterAutoPlayFilesEvents() {
+function registerIpcRendererAutoPlayFilesEvents() {
     ipcRenderer.on('auto-play-files', async (event, videoFiles) => {
         if (!Array.isArray(videoFiles) || videoFiles.length === 0) return;
 
@@ -4426,7 +4426,7 @@ function ipcRegisterAutoPlayFilesEvents() {
 }
 
 // 【ipcRendererイベント】起動時設定インポート指示を受信
-function ipcRegisterAutoImportSettingsEvents() {
+function registerIpcRendererAutoImportSettingsEvents() {
     ipcRenderer.on('auto-import-settings', async (event, filePath) => {
         if (!filePath) return;
 
@@ -4443,7 +4443,7 @@ function ipcRegisterAutoImportSettingsEvents() {
 }
 
 // 【ipcRendererイベント】変換進捗受信
-function ipcRegisterConvertProgressEvents() {
+function registerIpcRendererConvertProgressEvents() {
     ipcRenderer.on('convert-progress', (e, { percent, step }) => {
         let playlisyCount = playlist.length;
         let playlisyCurrent = currentVideoIndex;
@@ -4469,7 +4469,7 @@ function ipcRegisterConvertProgressEvents() {
 }
 
 // 【ipcRendererイベント】字幕ファイル出力開始受信
-function ipcRegisterSubtitleExtractionProgressEvents() {
+function registerIpcRendererSubtitleExtractionProgressEvents() {
     ipcRenderer.on('subtitle-extraction-progress', (e, data) => {
         let playlisyCount = playlist.length;
         let playlisyCurrent = currentVideoIndex;
@@ -4483,7 +4483,7 @@ function ipcRegisterSubtitleExtractionProgressEvents() {
 }
 
 // 【ipcRendererイベント】変換エラー受信
-function ipcRegisterConvertErrorEvents() {
+function registerIpcRendererConvertErrorEvents() {
     ipcRenderer.on('convert-error', (event, msg) => {
         console.error("変換失敗:", err);
         isConverting = false;
@@ -4494,7 +4494,7 @@ function ipcRegisterConvertErrorEvents() {
 }
 
 // 【ipcRendererイベント】カット進捗受信（ 詳細ペイロード対応）
-function ipcRegisterCutProgressEvents() {
+function registerIpcRendererCutProgressEvents() {
     ipcRenderer.on('cut-progress', (event, payload) => {
         try {
             const stage = payload && payload.stage ? payload.stage : 'progress';
@@ -4548,7 +4548,7 @@ function ipcRegisterCutProgressEvents() {
 }
 
 // 【ipcRendererイベント】結合進捗受信（詳細ペイロード対応）
-function ipcRegisterJoinProgressEvents() {
+function registerIpcRendererJoinProgressEvents() {
     ipcRenderer.on('join-progress', (event, payload) => {
         try {
             const stage = payload && payload.stage ? payload.stage : 'progress';
