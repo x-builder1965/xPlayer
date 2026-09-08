@@ -1,7 +1,7 @@
 // -- renderer_initializ.js --------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.02.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.05.0';
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     isSecondary = await checkIsSecondaryInstance();
     // DOM要素を取得
     allDOMsetting();
+    // 外部HTMLのロードを並行して実行
+    helpChangelogLoad();
     // まず多重起動時の localStorage 書き込み防止を設定
     await setupLocalStorageProtection();
     // localStorageからの復元

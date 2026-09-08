@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver5.75.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver6.05.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -695,7 +695,7 @@ h1 {
 #helpCloseBtn:active {
     transform: translateY(-50%) scale(0.95);
 }
-.table-container,
+.help-table-container,
 .changelog-container {
     width: 100%;
     margin: 0 auto;
@@ -710,7 +710,7 @@ h1 {
     flex: 1;
     max-width: none;
 }
-.table-container {
+.help-table-container {
     height: calc(96vh - 7em);
 }
 table {

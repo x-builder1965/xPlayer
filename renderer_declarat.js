@@ -1,7 +1,7 @@
 // -- renderer_declarat.js ---------------------------------------------
-const copyright = 'Copyright © 2025- @x-builder, Japan';
-const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver6.03.0';
+// const copyright = 'Copyright © 2025- @x-builder, Japan';
+// const email = 'x-builder@gmail.com';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.05.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -44,6 +44,8 @@ const {
 } = window.electronAPI;
 
 // 固定値設定
+const appConfig = JSON.parse(document.getElementById('app-config').textContent);   // アプリ情報取得
+const { copyright, email, appName } = appConfig;                                   // アプリ情報展開
 const overlayTimeout = 3000;                    // オーバーレイ表示の自動非表示までの時間（ミリ秒）
 const seekSensitivity = 0.3;                    // シーク操作の感度（0.1～1.0）: 1.0でマウス移動量と同じ、0.5で半分、0.3で3分の1    
 const volumeStep = 0.001;                       // 音量操作のステップ値（0.001～0.1）: 0.01で1%、0.001で0.1%単位
@@ -458,7 +460,7 @@ let cutTimelineBar = null;                      // カットタイムライン�
 let filterHistoryList = null;                   // フィルタ履歴一覧
 let changelogBtn = null;                        // 変更履歴切替ボタン
 let changelogContent = null;                    // 変更履歴本文
-let tableContainer = null;                      // 変更履歴テーブルコンテナ
+let helpTableContainer = null;                  // 変更履歴テーブルコンテナ
 let mediaContainer = null;                      // メディア操作コンテナ
 let imagePlayer = null;                         // 画像プレイヤー
 let imageWrapper = null;                        // 画像表示ラッパー
