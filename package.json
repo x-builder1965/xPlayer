@@ -1,7 +1,7 @@
 {
   "name": "xplayer",
-  "version": "4.78.2",
-  "description": "xPlayer - Video Player",
+  "version": "6.09.0",
+  "description": "xPlayer - Multimedia Player",
   "main": "main.js",
   "author": "x-builder",
   "license": "MIT",
@@ -20,14 +20,16 @@
     "electron-builder": "^26.0.12"
   },
   "dependencies": {
+    "audiomotion-analyzer": "^4.5.4",
     "ffmpeg-static": "^5.2.0",
+    "ffprobe-static": "^3.1.0",
     "fluent-ffmpeg": "^2.1.3",
     "trash": "^10.0.0"
   },
   "build": {
     "appId": "com.xbuilder.xplayer",
     "productName": "xPlayer",
-    "copyright": "Copyright © 2025 x-builder",
+    "copyright": "Copyright © 2025- x-builder",
     "asar": true,
     "asarUnpack": [
       "**/ffmpeg-static/**",
@@ -38,14 +40,26 @@
       "output": "dist-win"
     },
     "files": [
+      "package.json",
       "main.js",
       "preload.js",
       "style.css",
       "index.html",
-      "script.js",
+      "index_helpTable.html",
+      "index_changelog.html",
+      "renderer_declarat.js",
+      "renderer_initializ.js",
+      "renderer_event.js",
+      "renderer_helper.js",
+      "control_prev.png",
+      "control_play.png",
+      "control_pause.png",
+      "control_next.png",
       "xPlayer.ico",
       "xPlayer.png",
       "xPlayer.gif",
+      "wallpaper.jpg",
+      "README.md",
       "**/*"
     ],
     "win": {
@@ -98,6 +112,150 @@
         "role": "Viewer"
       },
       {
+        "ext": "ogg",
+        "name": "OGG Video File",
+        "description": "OGG 動画ファイル",
+        "mimeType": "video/ogg",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "mov",
+        "name": "QuickTime Video File",
+        "description": "QuickTime 動画ファイル",
+        "mimeType": "video/quicktime",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "m4v",
+        "name": "M4V Video File",
+        "description": "M4V 動画ファイル",
+        "mimeType": "video/x-m4v",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "mkv",
+        "name": "Matroska Video File",
+        "description": "Matroska 動画ファイル",
+        "mimeType": "video/x-matroska",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "mp3",
+        "name": "MP3 Audio File",
+        "description": "MP3 音声ファイル",
+        "mimeType": "audio/mpeg",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "wav",
+        "name": "WAV Audio File",
+        "description": "WAV 音声ファイル",
+        "mimeType": "audio/wav",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "flac",
+        "name": "FLAC Audio File",
+        "description": "FLAC 音声ファイル",
+        "mimeType": "audio/flac",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "ogg",
+        "name": "OGG Audio File",
+        "description": "OGG 音声ファイル",
+        "mimeType": "audio/ogg",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "oga",
+        "name": "OGG Audio File",
+        "description": "OGG 音声ファイル",
+        "mimeType": "audio/ogg",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "m4a",
+        "name": "M4A Audio File",
+        "description": "M4A 音声ファイル",
+        "mimeType": "audio/mp4",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "aac",
+        "name": "AAC Audio File",
+        "description": "AAC 音声ファイル",
+        "mimeType": "audio/aac",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "opus",
+        "name": "Opus Audio File",
+        "description": "Opus 音声ファイル",
+        "mimeType": "audio/opus",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "wma",
+        "name": "WMA Audio File",
+        "description": "WMA 音声ファイル",
+        "mimeType": "audio/x-ms-wma",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "aiff",
+        "name": "AIFF Audio File",
+        "description": "AIFF 音声ファイル",
+        "mimeType": "audio/aiff",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "aif",
+        "name": "AIFF Audio File",
+        "description": "AIFF 音声ファイル",
+        "mimeType": "audio/aiff",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "alac",
+        "name": "ALAC Audio File",
+        "description": "ALAC 音声ファイル",
+        "mimeType": "audio/x-alac",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "ape",
+        "name": "Monkey's Audio File",
+        "description": "Monkey's Audio 音声ファイル",
+        "mimeType": "audio/x-ape",
+        "icon": "xPlayer.ico",
+        "role": "Viewer"
+      },
+      {
+        "ext": "xpj",
+        "name": "xPlayer Project File",
+        "description": "xPlayer 設定ファイル",
+        "mimeType": "application/x-xplayer-project",
+        "icon": "xPlayer.ico",
+        "role": "Editor"
+      },
+      {
         "ext": "amppl",
         "name": "xPlayer Playlist",
         "description": "xPlayer プレイリスト",
@@ -112,6 +270,12 @@
         "schemes": [
           "xplayer"
         ]
+      }
+    ],
+    "extraResources": [
+      {
+        "from": "extra/xPlayer_install.reg",
+        "to": "xPlayer_install.reg"
       }
     ]
   }
