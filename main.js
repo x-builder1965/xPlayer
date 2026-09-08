@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver5.71.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver6.04.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -1149,7 +1149,7 @@ ipcMain.handle('classify-path', async (event, fullPath) => {
     }
 });
 
-// 動画カット編集機能
+// 動画カット編集機能（全音声トラック保持版）
 ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPath }) => {
     return new Promise((resolve, reject) => {
         const fileName = path.basename(inputPath);
@@ -1178,15 +1178,17 @@ ipcMain.handle('cut-video', async (event, { inputPath, inTime, outTime, outputPa
             .setStartTime(inTimeStr)
             .setDuration(durationStr)
             .outputOptions([
-                '-c:v', 'libx264',
+                '-map', '0',                 // すべてのストリーム（全映像・音声・字幕等）を対象に含める
+                '-c:v', 'libx264',           // 映像コーデック
                 '-preset', 'ultrafast',      // メモリ・CPUを最も削減（必須）
-                '-crf', '30',                // 28→30に上げて処理量減（画質はHDでほぼ気にならない）
-                '-ref', '1',                 // 参照フレーム1枚だけ（メモリ激減のキモ）
+                '-crf', '30',                // 28→30に上げて処理量減
+                '-ref', '1',                 // 参照フレーム1枚だけ
                 '-bframes', '0',             // Bフレーム完全無効
                 '-bf', '0',                  // 同上（念のため両方）
                 '-g', '300',                 // GOPを長くしてバッファ減
                 '-keyint_min', '30',
-                '-c:s', 'mov_text',
+                '-c:a', 'copy',              // すべての音声トラックを再エンコードせず無劣化でそのままコピー
+                '-c:s', 'mov_text',          // 字幕コーデック設定
                 '-movflags', '+faststart',
                 '-threads', '1'              // スレッド1固定（メモリ断片化防止）
             ])
@@ -1316,7 +1318,7 @@ ipcMain.handle('cut-video-multiple', async (event, { inputPath, ranges, outputPa
 
                 const outPath = outputPath || path.join(
                     path.dirname(inputPath),
-                    `${path.parse(inputPath).name}_trimmed${path.extname(inputPath)}`
+                    `${path.parse(inputPath).name}_cut${path.extname(inputPath)}`
                 );
 
                 mainWindow.webContents.send('cut-progress', { 
@@ -1565,7 +1567,22 @@ ipcMain.handle('show-save-join-dialog', async (event, { fileName }) => {
     return result;  // { canceled: boolean, filePath?: string }
 });
 
-// 結合処理（全動画を厳密に統一フォーマットに変換 → 結合）
+// ヘルパー：動画の音声・字幕ストリーム数を解析
+function analyzeStreams(filePath) {
+    return new Promise((resolve) => {
+        ffmpeg.ffprobe(filePath, (err, metadata) => {
+            if (err || !metadata || !metadata.streams) {
+                console.warn(`ffprobe解析失敗: ${filePath}`, err);
+                return resolve({ audioCount: 1, subtitleCount: 0 });
+            }
+            const audioCount = metadata.streams.filter(s => s.codec_type === 'audio').length || 1;
+            const subtitleCount = metadata.streams.filter(s => s.codec_type === 'subtitle').length || 0;
+            resolve({ audioCount, subtitleCount });
+        });
+    });
+}
+
+// 結合処理（音声・字幕トラック数を全動画で最大値に揃えて結合）
 ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate }) => {
     if (!inputPaths || !Array.isArray(inputPaths) || inputPaths.length < 2) {
         throw new Error('結合する動画が2つ以上必要です');
@@ -1574,81 +1591,116 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
         throw new Error('出力パスが指定されていません');
     }
 
-    currentJoinTempFiles = [];      // リセット
+    currentJoinTempFiles = [];
     currentJoinConcatTxt = null;
-    isJoinCancelled = false;          // キャンセル状態をリセット
+    let dummySrtPath = null;
+    isJoinCancelled = false;
 
     return new Promise(async (resolve, reject) => {
-        let currentProc = null;
-
         try {
             mainWindow.webContents.send('join-progress', { 
                 stage: 'join-prepare', 
                 percent: 0,
                 totalVideos: inputPaths.length,
-                message: '全動画を同一フォーマットに変換中…'
+                message: '動画ストリーム（音声・字幕）解析中…'
             });
 
-            // ★ FPS検出＆決定ロジック（ここを追加）
-            const fpsList = (await Promise.all(
-                inputPaths.map(async path => {
-                    try {
-                        return await getFps(path);
-                    } catch (err) {
-                        console.warn(`FPS取得失敗: ${path}`, err);
-                        return null;
-                    }
+            // 1. 各動画の FPS・音声・字幕トラック数を一括解析
+            const videoInfos = await Promise.all(
+                inputPaths.map(async (filePath) => {
+                    const fps = await getFps(filePath).catch(() => 30);
+                    const { audioCount, subtitleCount } = await analyzeStreams(filePath);
+                    return { filePath, fps, audioCount, subtitleCount };
                 })
-            )).filter(fps => fps !== null && !isNaN(fps) && fps > 0);
+            );
 
-            let targetFps = 30;  // デフォルト
+            // 全動画中での最大音声トラック数・最大字幕トラック数を算出
+            const maxAudioTracks = Math.max(...videoInfos.map(i => i.audioCount), 1);
+            const maxSubtitleTracks = Math.max(...videoInfos.map(i => i.subtitleCount), 0);
 
-            if (fpsList.length > 0) {
-                // 多数決（最頻値）で決定
-                const fpsCounts = fpsList.reduce((acc, fps) => {
-                    acc[fps] = (acc[fps] || 0) + 1;
-                    return acc;
-                }, {});
-                targetFps = Object.keys(fpsCounts).reduce((a, b) => fpsCounts[a] > fpsCounts[b] ? a : b);
-            } else {
-                console.warn('FPS取得失敗 - デフォルト30使用');
+            // ダミー字幕（空のSRTファイル）が必要な場合、一時作成
+            if (maxSubtitleTracks > 0) {
+                dummySrtPath = path.join(os.tmpdir(), `dummy_${Date.now()}.srt`);
+                const dummySrtContent = "1\n00:00:00,000 --> 00:00:00,001\n \n";
+                await fs.writeFile(dummySrtPath, dummySrtContent, 'utf8');
             }
 
-            // ★ commonOptions を動的に生成（-r と -vf fps= を targetFps に）
-            const commonOptions = [
-                '-c:v', 'libx264',
-                '-preset', 'veryfast',
-                '-crf', '23',
-                `-vf`, `scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=${targetFps},format=yuv420p`,  // ← fps= を動的
-                '-colorspace', 'bt709',
-                '-color_primaries', 'bt709',
-                '-color_trc', 'bt709',
-                `-r`, `${targetFps}`,  // ← ここを動的
-                '-c:a', 'aac',
-                '-b:a', '192k',
-                '-ar', '48000',
-                '-movflags', '+faststart',
-                '-fflags', '+genpts',
-                '-async', '1',
-                '-max_muxing_queue_size', '9999'
-            ];
+            // FPS最頻値の決定
+            const validFpsList = videoInfos.map(i => i.fps).filter(f => f > 0);
+            let targetFps = 30;
+            if (validFpsList.length > 0) {
+                const fpsCounts = validFpsList.reduce((acc, f) => { acc[f] = (acc[f] || 0) + 1; return acc; }, {});
+                targetFps = Object.keys(fpsCounts).reduce((a, b) => fpsCounts[a] > fpsCounts[b] ? a : b);
+            }
 
-            // 変換フェーズ（以降は変更なし）
-            for (let i = 0; i < inputPaths.length; i++) {
-                if (isJoinCancelled) {
-                    break;  // 以降の変換を完全に止める
-                }
+            // 2. 事前変換フェーズ（ストリーム数を全動画で揃える）
+            for (let i = 0; i < videoInfos.length; i++) {
+                if (isJoinCancelled) break;
 
-                const input = inputPaths[i];
+                const { filePath, audioCount, subtitleCount } = videoInfos[i];
                 const tempOut = path.join(os.tmpdir(), `join_temp_${Date.now()}_${i}.mp4`);
                 currentJoinTempFiles.push(tempOut);
 
+                // --- オプション構成 ---
+                const options = [
+                    '-c:v', 'libx264',
+                    '-preset', 'veryfast',
+                    '-crf', '23',
+                    '-vf', `scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=${targetFps},format=yuv420p`,
+                    '-colorspace', 'bt709',
+                    '-color_primaries', 'bt709',
+                    '-color_trc', 'bt709',
+                    '-r', `${targetFps}`,
+                    '-c:a', 'aac',
+                    '-b:a', '192k',
+                    '-ar', '48000',
+                    '-c:s', 'mov_text',
+                    '-movflags', '+faststart',
+                    '-fflags', '+genpts',
+                    '-async', '1',
+                    '-max_muxing_queue_size', '9999'
+                ];
+
+                let command = ffmpeg(filePath);
+                let inputIndexCounter = 1; // 0番目は元の動画ファイル
+
+                const mapOptions = ['-map', '0:v:0']; // 映像
+
+                // --- 音声マッピングと補填 ---
+                for (let a = 0; a < audioCount; a++) {
+                    mapOptions.push('-map', `0:a:${a}`);
+                }
+                const missingAudio = maxAudioTracks - audioCount;
+                if (missingAudio > 0) {
+                    const audioDummyIndex = inputIndexCounter++;
+                    command.input('anullsrc=r=48000:cl=stereo').inputOptions('-f', 'lavfi');
+                    for (let m = 0; m < missingAudio; m++) {
+                        mapOptions.push('-map', `${audioDummyIndex}:a:0`);
+                    }
+                    options.push('-shortest');
+                }
+
+                // --- 字幕マッピングと補填 ---
+                for (let s = 0; s < subtitleCount; s++) {
+                    mapOptions.push('-map', `0:s:${s}`);
+                }
+                const missingSubtitles = maxSubtitleTracks - subtitleCount;
+                if (missingSubtitles > 0 && dummySrtPath) {
+                    const subDummyIndex = inputIndexCounter++;
+                    command.input(dummySrtPath);
+                    for (let ms = 0; ms < missingSubtitles; ms++) {
+                        mapOptions.push('-map', `${subDummyIndex}:s:0`);
+                    }
+                }
+
+                const finalOptions = [...mapOptions, ...options];
+
                 await new Promise((res, rej) => {
-                    const ff = ffmpeg(input)
-                        .outputOptions(commonOptions)
+                    const ff = command
+                        .outputOptions(finalOptions)
                         .on('start', () => {
                             if (isJoinCancelled) {
-                                ff.kill('SIGKILL');  // 念のため即殺
+                                ff.kill('SIGKILL');
                                 res();
                                 return;
                             }
@@ -1656,7 +1708,7 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
                             currentOutputPath = outputPath;
                         })
                         .on('progress', (progress) => {
-                            if (isJoinCancelled) return;  // 進捗送信をスキップ
+                            if (isJoinCancelled) return;
                             const filePercent = progress.percent || 0;
                             const overall = ((i + filePercent / 100) / inputPaths.length) * 100;
                             mainWindow.webContents.send('join-progress', {
@@ -1669,41 +1721,35 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
                         .on('end', res)
                         .on('error', (err) => {
                             if (err.message.includes('killed with signal SIGKILL') || isJoinCancelled) {
-                                res();  // ここは await new Promise なので resolve で抜ける
+                                res();
                                 return;
                             }
                             rej(err);
                         })
                         .save(tempOut);
                 });
+
                 if (isJoinCancelled) break;
             }
 
-
-            mainWindow.webContents.send('join-progress', { 
-                stage: 'join-start', 
-                percent: 0,
-                message: '変換完了 → 結合中…'
-            });
-
-            // ★★★ ここにフラグチェックを追加 ★★★
-            if (isJoinCancelled) {
-                cleanupJoinTempFiles();               // 一時ファイルを確実に掃除
-                currentFFmpeg = null;
-                currentOutputPath = null;
-                
-                // UIにキャンセル完了を通知（念のため再送してもOK）
-                mainWindow.webContents.send('join-progress', { 
-                    stage: 'cancelled', 
-                    message: 'ユーザーにより結合が中断されました' 
-                });
-                
-                // 処理を正常終了扱いにして抜ける
-                resolve({ cancelled: true, message: 'ユーザーによりキャンセルされました' });
-                return;   // ← これで以降の結合処理は一切実行されない
+            // 一時ダミー字幕ファイルの削除
+            if (dummySrtPath) {
+                await fs.unlink(dummySrtPath).catch(() => {});
             }
 
-            // 結合フェーズ
+            // キャンセルチェック
+            if (isJoinCancelled) {
+                cleanupJoinTempFiles();
+                currentFFmpeg = null;
+                currentOutputPath = null;
+                mainWindow.webContents.send('join-progress', { stage: 'cancelled', message: 'ユーザーにより結合が中断されました' });
+                resolve({ cancelled: true });
+                return;
+            }
+
+            // 3. 結合フェーズ（ストリーム構造が完全に揃った一時ファイルを連結）
+            mainWindow.webContents.send('join-progress', { stage: 'join-start', percent: 0, message: '全トラック（音声・字幕）整流完了 → 結合中…' });
+
             const concatList = currentJoinTempFiles.map(p => `file '${p.replace(/'/g, "\\'")}'`);
             currentJoinConcatTxt = path.join(os.tmpdir(), `join_concat_${Date.now()}.txt`);
 
@@ -1713,6 +1759,7 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
                 .input(currentJoinConcatTxt)
                 .inputOptions('-f', 'concat', '-safe', '0')
                 .outputOptions([
+                    '-map', '0',               // すべてのストリーム（映像・音声・字幕）を無損失で結合
                     '-fps_mode', 'passthrough',
                     '-c', 'copy',
                     '-movflags', '+faststart'
@@ -1723,47 +1770,35 @@ ipcMain.handle('join-videos', async (event, { inputPaths, outputPath, frameRate 
                 })
                 .on('progress', (progress) => {
                     if (progress.percent !== undefined) {
-                        mainWindow.webContents.send('join-progress', {
-                            stage: 'join',
-                            percent: progress.percent
-                        });
+                        mainWindow.webContents.send('join-progress', { stage: 'join', percent: progress.percent });
                     }
                 })
                 .on('end', () => {
                     cleanupJoinTempFiles();
                     currentFFmpeg = null;
                     currentOutputPath = null;
-                    mainWindow.webContents.send('join-progress', { 
-                        stage: 'join-done', 
-                        percent: 100, 
-                        outputPath 
-                    });
+                    mainWindow.webContents.send('join-progress', { stage: 'join-done', percent: 100, outputPath });
                     resolve({ outputPath });
                 })
                 .on('error', (err) => {
                     cleanupJoinTempFiles();
-                    if (err.message.includes('ffmpeg was killed') || 
-                        err.message.includes('killed with signal SIGKILL')) {
-                        // ユーザーキャンセルによる kill → reject せず静かに処理
-                        currentFFmpeg = null;
-                        currentOutputPath = null;
-                        // resolve するか、特別な値を返す（例: null や { cancelled: true }）
-                        resolve({ cancelled: true, message: 'ユーザーによりキャンセル' });
-                        return;
-                    }
                     currentFFmpeg = null;
                     currentOutputPath = null;
+                    if (err.message.includes('ffmpeg was killed') || err.message.includes('killed with signal SIGKILL')) {
+                        resolve({ cancelled: true });
+                        return;
+                    }
                     reject(err);
                 })
                 .save(outputPath);
+
         } catch (err) {
+            if (dummySrtPath) await fs.unlink(dummySrtPath).catch(() => {});
             cleanupJoinTempFiles();
             currentFFmpeg = null;
             currentOutputPath = null;
             reject(err);
-        }
-        // Promise の最後（resolve/reject の後ろあたり）
-        finally {
+        } finally {
             isJoinCancelled = false;
         }
     });
