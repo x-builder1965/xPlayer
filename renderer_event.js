@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.05.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.06.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -240,7 +240,8 @@ function registerPlayStopBtnEvents() {
         // 再生中アイコンを非表示にする
         if (playlistPathArea) {
             const currentPath = getCurrentPlaybackPath();
-            playlistPathArea.value = currentPath || appNameAndCopyrightValueLine;
+            // helpChangelogLoad();
+            playlistPathArea.value = currentPath || `${appName}　${copyright}`;
         }
         
         // プレイリスト更新（アイコン削除）
@@ -3009,7 +3010,8 @@ function registerIpcRendererConvertErrorEvents() {
         console.error("変換失敗:", err);
         isConverting = false;
         updateMessageOverlay(`🔄️ 変換失敗`, 6000);
-        playlistPathArea.value = appNameAndCopyrightValueLine;
+        // helpChangelogLoad();
+        playlistPathArea.value = `${appName}　${copyright}`;
         updateIconOverlay();
     });
 }

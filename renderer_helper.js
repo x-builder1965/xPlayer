@@ -1,7 +1,7 @@
 // -- renderer_helper.js -----------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.05.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.06.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -137,9 +137,15 @@ async function loadExternalHTML(elementId, filePath) {
 async function helpChangelogLoad() {
     // 外部HTMLのロードを並行して実行
     await Promise.all([
-        loadExternalHTML('helpTableContainer', 'helpTable.html'),
-        loadExternalHTML('changelogContent', 'changelog.html')
+        loadExternalHTML('helpTableContainer', 'index_helpTable.html'),
+        loadExternalHTML('appConfigContainer', 'index_changelog.html'),
+        loadExternalHTML('changelogContent', 'index_changelog.html')
     ]);
+
+    const configEl = document.getElementById('appConfig');
+    copyright = configEl?.dataset.copyright;
+    email = configEl?.dataset.email;
+    appName = configEl?.dataset.appName;
 }
 
 // ユーザーフォルダ内の設定ファイルパスを取得
@@ -188,7 +194,7 @@ async function setupLocalStorageProtection() {
 async function allLocalStorageSetting() {
     if (!isSecondary) {
         // --- 初回起動時 ---
-        appNameAndCopyright.textContent = appNameAndCopyrightValue;
+        appNameAndCopyright.textContent = `${appName}\n${copyright}`;
 
         // 1. localStorage から値を取得
         savedVolume = localStorage.getItem('volume');
@@ -233,7 +239,7 @@ async function allLocalStorageSetting() {
         await exportSettingsToFile(settingsFilePath);
     } else {
         // --- 多重起動時 ---
-        appNameAndCopyright.textContent = `🚫${appNameAndCopyrightValue}`;
+        appNameAndCopyright.textContent = `🚫${appName}\n${copyright}`;
 
         // pidあり設定ファイルの存在確認
         const pidSettingsFilePath = settingsFilePath.replace(/\.xpj$/, `_${pid}.xpj`);
@@ -2124,9 +2130,10 @@ function updatePlaylistDisplay() {
     const showPlaybackIcon = currentPath && !isVideoStopped();
     try {
         if (playlistPathArea) {
+            // helpChangelogLoad();
             playlistPathArea.value = showPlaybackIcon 
                 ? `▶️ ${currentPath}` 
-                : (currentPath || appNameAndCopyrightValueLine);
+                : (currentPath || `${appName}　${copyright}`);
         }
     } catch (e) {
         console.warn('playlistPathArea update failed', e);
@@ -2641,7 +2648,8 @@ async function setVideoSrc(file) {
                 console.error("変換失敗:", err);
                 isConverting = false;
                 updateMessageOverlay('🔄️ 変換失敗', 6000);
-                playlistPathArea.value = appNameAndCopyrightValueLine;
+                // helpChangelogLoad();
+                playlistPathArea.value = `${appName}　${copyright}`;
                 updateIconOverlay();
                 seekBar.value = 0;
                 return;
@@ -3488,7 +3496,8 @@ async function removeFromPlaylist() {
         isPlaying = false;
         videoPlayerElement.removeAttribute('src');
         audioPlayer.removeAttribute('src');
-        playlistPathArea.value = appNameAndCopyrightValueLine;
+        // helpChangelogLoad();
+        playlistPathArea.value = `${appName}　${copyright}`;
         updateIconOverlay();
         selectedPlaylistIndex = -1;
     }
@@ -3505,7 +3514,8 @@ async function clearPlaylist() {
 
     await cleanupTempFiles();
 
-    playlistPathArea.value = appNameAndCopyrightValueLine;
+    // helpChangelogLoad();
+    playlistPathArea.value = `${appName}　${copyright}`;
     updateIconOverlay();
     playStopBtn.click();
 

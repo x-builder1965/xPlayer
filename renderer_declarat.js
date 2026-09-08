@@ -1,7 +1,7 @@
 // -- renderer_declarat.js ---------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.05.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.06.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -44,14 +44,10 @@ const {
 } = window.electronAPI;
 
 // 固定値設定
-const appConfig = JSON.parse(document.getElementById('app-config').textContent);   // アプリ情報取得
-const { copyright, email, appName } = appConfig;                                   // アプリ情報展開
 const overlayTimeout = 3000;                    // オーバーレイ表示の自動非表示までの時間（ミリ秒）
 const seekSensitivity = 0.3;                    // シーク操作の感度（0.1～1.0）: 1.0でマウス移動量と同じ、0.5で半分、0.3で3分の1    
 const volumeStep = 0.001;                       // 音量操作のステップ値（0.001～0.1）: 0.01で1%、0.001で0.1%単位
 const playbackRates = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0, 5.0];  // 再生速度の選択肢（0.25倍速～5倍速）
-const appNameAndCopyrightValue = `${appName}\n${copyright}`;                        // アプリ名と著作権表示の値
-const appNameAndCopyrightValueLine = `${appName}　${copyright}`;                    // アプリ名と著作権表示の1行バージョン
 const bgmAudio = new Audio();                   // BGM再生用のAudio要素
 const imageThumbnailCache = new Map();		    // 画像サムネイル用キャッシュ（Mapオブジェクト）
 const dragThreshold = 5;                        // ドラッグ判定用の移動閾値（手ぶれ考慮: 5ピクセル）
@@ -512,6 +508,9 @@ let savedMaxImageCacheSize = null;              // 保存済み画像キャッ�
 let savedMaxMediaCacheSize = null;              // 保存済みメディアキャッシュサイズ
 
 // グローバル（共通）変数
+let copyright = "Copyright © 2025- @x-builder, Japan"
+let email = "x-builder@gmail.com"
+let appName = "xPlayer -メディアプレイヤー- VerX.XX.X"
 let localSettings = {};                         // 多重起動時に扱う設定値
 let Initializing = true;                        // 初期化中フラグ
 let playlist = [];                              // 現在表示中のプレイリスト

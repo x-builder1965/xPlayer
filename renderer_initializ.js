@@ -1,7 +1,7 @@
 // -- renderer_initializ.js --------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.05.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.06.0';
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -13,10 +13,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     isSecondary = await checkIsSecondaryInstance();
     // DOM要素を取得
     allDOMsetting();
-    // 外部HTMLのロードを並行して実行
-    helpChangelogLoad();
     // まず多重起動時の localStorage 書き込み防止を設定
     await setupLocalStorageProtection();
+    // appNameを取得（ヘルプ、変更履歴取得）
+    await helpChangelogLoad();
     // localStorageからの復元
     await allLocalStorageSetting();
 
@@ -875,6 +875,6 @@ async function setupPlaylistAndState() {
 
 // 【初期設定】復元失敗時・データ非存在時の画面表示をリセットする処理
 function resetPlaylistState() {
-    playlistPathArea.value = appNameAndCopyrightValueLine;
+    playlistPathArea.value = `${appName}　${copyright}`;
     updateIconOverlay();
 }
