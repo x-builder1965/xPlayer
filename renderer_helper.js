@@ -1,7 +1,7 @@
 // -- renderer_helper.js -----------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.06.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.07.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -160,34 +160,6 @@ async function checkInstance() {
         return await checkIsSecondaryInstance();
     }
     return false; // 万が一取得できない場合は初回起動扱い
-}
-
-// 多重起動時の localStorage 書き込み防止処理
-async function setupLocalStorageProtection() {
-    if (isSecondary) {
-        console.warn('⚠️ 多重起動を検知しました。localStorage への書き込みを無効化します。');
-
-        // 原型のメソッドを保持
-        const originalSetItem = localStorage.setItem.bind(localStorage);
-        const originalClear = localStorage.clear.bind(localStorage);
-        const originalRemoveItem = localStorage.removeItem.bind(localStorage);
-
-        // setItem をガード
-        localStorage.setItem = function (key, value) {
-            console.log(`[多重起動ガード] setItem スキップ: ${key}`);
-            // 何もせず書き込みをスキップ
-        };
-
-        // clear をガード
-        localStorage.clear = function () {
-            console.log('[多重起動ガード] clear スキップ');
-        };
-
-        // removeItem をガード
-        localStorage.removeItem = function (key) {
-            console.log(`[多重起動ガード] removeItem スキップ: ${key}`);
-        };
-    }
 }
 
 // localStorage から復元 (非同期化)
@@ -360,34 +332,6 @@ async function allLocalStorageSetting() {
     await localStorageSetItemAndFile('currentBgmIndex', savedCurrentBgmIndex);
     await localStorageSetItemAndFile('maxImageCacheSize', savedMaxImageCacheSize);
     await localStorageSetItemAndFile('maxMediaCacheSize', savedMaxMediaCacheSize);
-}
-
-// オーディオモーションの設定を復元・適用するヘルパー関数
-function setupAudioMotionSettings() {
-    // オプションの復元
-    if (savedAudioMotionOptions) {
-        try {
-            const parsed = typeof savedAudioMotionOptions === 'string'
-                ? JSON.parse(savedAudioMotionOptions)
-                : savedAudioMotionOptions;
-            Object.assign(DEFAULT_AUDIO_MOTION_OPTIONS, parsed);
-        } catch (e) {
-            console.error('audioMotionOptions の復元エラー:', e);
-        }
-    }
-    
-    // ノード設定の復元
-    if (savedAudioMotionNodes) {
-        try {
-            const parsed = typeof savedAudioMotionNodes === 'string'
-                ? JSON.parse(savedAudioMotionNodes)
-                : savedAudioMotionNodes;
-            Object.keys(AUDIOMOTION_NODES).forEach(key => delete AUDIOMOTION_NODES[key]);
-            Object.assign(AUDIOMOTION_NODES, parsed);
-        } catch (e) {
-            console.error('audioMotionNodes の復元エラー:', e);
-        }
-    }
 }
 
 // 音声トラック・字幕トラック更新
@@ -4729,33 +4673,6 @@ async function deleteTempVideo() {
         await deleteTempFile(delConvertFile);
         delConvertFile = null;  // クリア
     }
-}
-
-// フィルタ履歴をlocalStorageから復元
-function setupFilterHistory() {
-    if (savedFilterHistory) {
-        try {
-            // すでに配列ならそのまま使い、文字列なら JSON.parse する
-            if (Array.isArray(savedFilterHistory)) {
-                filterHistory = savedFilterHistory;
-            } else if (typeof savedFilterHistory === 'string') {
-                filterHistory = JSON.parse(savedFilterHistory);
-            } else {
-                filterHistory = [];
-            }
-
-            // 件数制限
-            if (filterHistory.length > 1000) {
-                filterHistory = filterHistory.slice(-1000);
-            }
-        } catch (e) {
-            console.error('filterHistory の読み込みエラー:', e);
-            filterHistory = [];
-        }
-    } else {
-        filterHistory = [];
-    }
-    updateFilterHistoryList();
 }
 
 // フィルタ履歴をlocalStorageに保存

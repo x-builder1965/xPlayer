@@ -1,7 +1,7 @@
 // -- renderer_initializ.js --------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.06.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.07.0';
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -11,12 +11,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 🔲起動設定🔲
     // 多重起動（セカンダリインスタンス）判定
     isSecondary = await checkIsSecondaryInstance();
-    // DOM要素を取得
-    allDOMsetting();
-    // まず多重起動時の localStorage 書き込み防止を設定
-    await setupLocalStorageProtection();
     // appNameを取得（ヘルプ、変更履歴取得）
     await helpChangelogLoad();
+    // DOM要素を取得
+    await allDOMsetting();
+    // まず多重起動時の localStorage 書き込み防止を設定
+    await setupLocalStorageProtection();
     // localStorageからの復元
     await allLocalStorageSetting();
 
@@ -365,6 +365,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // 🔲初期設定関数🔲
+// 多重起動時の localStorage 書き込み防止処理
+async function setupLocalStorageProtection() {
+    if (isSecondary) {
+        console.warn('⚠️ 多重起動を検知しました。localStorage への書き込みを無効化します。');
+
+        // 原型のメソッドを保持
+        const originalSetItem = localStorage.setItem.bind(localStorage);
+        const originalClear = localStorage.clear.bind(localStorage);
+        const originalRemoveItem = localStorage.removeItem.bind(localStorage);
+
+        // setItem をガード
+        localStorage.setItem = function (key, value) {
+            console.log(`[多重起動ガード] setItem スキップ: ${key}`);
+            // 何もせず書き込みをスキップ
+        };
+
+        // clear をガード
+        localStorage.clear = function () {
+            console.log('[多重起動ガード] clear スキップ');
+        };
+
+        // removeItem をガード
+        localStorage.removeItem = function (key) {
+            console.log(`[多重起動ガード] removeItem スキップ: ${key}`);
+        };
+    }
+}
+
 // 【初期設定】メディアプレーヤーの初期化
 function setupMediaPlayerClear() {
     videoPlayer.removeAttribute('src');
@@ -374,6 +402,33 @@ function setupMediaPlayerClear() {
     videoPreview.removeAttribute('src');
     videoPreview.load();
     updateMediaPlayerDisplay();
+}
+
+// フィルタ履歴をlocalStorageから復元
+function setupFilterHistory() {
+    if (savedFilterHistory) {
+        try {
+            // すでに配列ならそのまま使い、文字列なら JSON.parse する
+            if (Array.isArray(savedFilterHistory)) {
+                filterHistory = savedFilterHistory;
+            } else if (typeof savedFilterHistory === 'string') {
+                filterHistory = JSON.parse(savedFilterHistory);
+            } else {
+                filterHistory = [];
+            }
+
+            // 件数制限
+            if (filterHistory.length > 1000) {
+                filterHistory = filterHistory.slice(-1000);
+            }
+        } catch (e) {
+            console.error('filterHistory の読み込みエラー:', e);
+            filterHistory = [];
+        }
+    } else {
+        filterHistory = [];
+    }
+    updateFilterHistoryList();
 }
 
 // 【初期設定】ツールチップイベント設定
@@ -476,6 +531,34 @@ async function setupAlwaysOnTop() {
         await setAlwaysOnTop(true);
     }
     updateAlwaysOnTopButtonUI();
+}
+
+// オーディオモーションの設定を復元・適用するヘルパー関数
+function setupAudioMotionSettings() {
+    // オプションの復元
+    if (savedAudioMotionOptions) {
+        try {
+            const parsed = typeof savedAudioMotionOptions === 'string'
+                ? JSON.parse(savedAudioMotionOptions)
+                : savedAudioMotionOptions;
+            Object.assign(DEFAULT_AUDIO_MOTION_OPTIONS, parsed);
+        } catch (e) {
+            console.error('audioMotionOptions の復元エラー:', e);
+        }
+    }
+    
+    // ノード設定の復元
+    if (savedAudioMotionNodes) {
+        try {
+            const parsed = typeof savedAudioMotionNodes === 'string'
+                ? JSON.parse(savedAudioMotionNodes)
+                : savedAudioMotionNodes;
+            Object.keys(AUDIOMOTION_NODES).forEach(key => delete AUDIOMOTION_NODES[key]);
+            Object.assign(AUDIOMOTION_NODES, parsed);
+        } catch (e) {
+            console.error('audioMotionNodes の復元エラー:', e);
+        }
+    }
 }
 
 // 【初期設定】オーディオモーション復元
