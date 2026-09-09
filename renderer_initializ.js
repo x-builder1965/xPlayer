@@ -1,7 +1,7 @@
 // -- renderer_initializ.js --------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.07.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.10.0';
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -11,14 +11,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 🔲起動設定🔲
     // 多重起動（セカンダリインスタンス）判定
     isSecondary = await checkIsSecondaryInstance();
-    // appNameを取得（ヘルプ、変更履歴取得）
-    await helpChangelogLoad();
+    // ヘルプコンテナ、変更履歴コンテナ取得（appConfigを取得）
+    await setupHelpChangelogLoad();
     // DOM要素を取得
-    await allDOMsetting();
-    // まず多重起動時の localStorage 書き込み防止を設定
+    await setupAllDOMsetting();
+    // 多重起動時の localStorage 書き込み防止を設定
     await setupLocalStorageProtection();
     // localStorageからの復元
-    await allLocalStorageSetting();
+    await setupAllLocalStorageSetting();
 
     // リスナー登録完了後、メインプロセスへ準備完了を通知
     ipcRenderer.send('app-ready');
@@ -365,6 +365,132 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // 🔲初期設定関数🔲
+// // ヘルプコンテナ、変更履歴コンテナ取得（appConfigを取得）
+async function setupHelpChangelogLoad() {
+    // 外部HTMLのロードを並行して実行
+    await Promise.all([
+        loadExternalHTML('helpTableContainer', 'index_helpTable.html'),
+        loadExternalHTML('appConfigContainer', 'index_changelog.html'),
+        loadExternalHTML('changelogContent', 'index_changelog.html')
+    ]);
+
+    const configEl = document.getElementById('appConfig');
+    copyright = configEl?.dataset.copyright;
+    email = configEl?.dataset.email;
+    appName = configEl?.dataset.appName;
+}
+
+// DOM要素取得
+function setupAllDOMsetting() {
+    videoPlayerElement = document.getElementById('videoPlayer');
+    audioPlayer = document.getElementById('audioPlayer');
+    videoPlayer = createMediaPlayerProxy(videoPlayerElement, audioPlayer);
+    videoPreview = document.getElementById('videoPreview');
+    mainContainer = document.querySelector('.main-container');
+    videoContainer = document.querySelector('.video-container');
+    dropzone = document.querySelector('.video-container');
+    controls = document.querySelector('.controls');
+    folderInput = document.getElementById('folderInput');
+    videoInput = document.getElementById('videoInput');
+    urlInputBtn = document.getElementById('urlInputBtn');
+    urlInput = document.getElementById('urlInput');
+    urlClearBtn = document.getElementById('urlClearBtn');
+    urlConfirmBtn = document.getElementById('urlConfirmBtn');
+    urlInputPanel = document.querySelector('.url-input-panel');
+    prevVideoBtn = document.getElementById('prevVideoBtn');
+    rewindBtn = document.getElementById('rewindBtn');
+    playPauseBtn = document.getElementById('playPauseBtn');
+    playStopBtn = document.getElementById('playStopBtn');
+    fastForwardBtn = document.getElementById('fastForwardBtn');
+    nextVideoBtn = document.getElementById('nextVideoBtn');
+    seekBar = document.getElementById('seekBar');
+    volumeMuteBtn = document.getElementById('volumeMuteBtn');
+    volumeBar = document.getElementById('volumeBar');
+    speedSelect = document.getElementById('speedSelect');
+    zoomBtn = document.getElementById('zoomBtn');
+    zoomPanel = document.getElementById('zoomPanel');
+    zoomBar = document.getElementById('zoomBar');
+    zoomDisplay = document.getElementById('zoomDisplay');
+    zoomResetBtn = document.getElementById('zoomResetBtn');
+    snapshotBtn = document.getElementById('snapshotBtn');
+    aspectRatioBtn = document.getElementById('aspectRatioBtn');
+    zoomEndBtn = document.getElementById('zoomEndBtn');
+    fullscreenBtn = document.getElementById('fullscreenBtn');
+    fitModeBtn = document.getElementById('fitModeBtn');
+    filename = document.querySelector('.filename');
+    filenamePanel = document.querySelector('.filename-panel');
+    timeDisplay = document.getElementById('timeDisplay');
+    volumeDisplay = document.getElementById('volumeDisplay');
+    messageOverlay = document.getElementById('messageOverlay');
+    iconOverlay = document.getElementById('iconOverlay');
+    appNameAndCopyright = document.getElementById('appNameAndCopyright');
+    wallpaperBtn = document.getElementById('wallpaperBtn');
+    importExportBtn = document.getElementById('importExportBtn');
+    alwaysOnTopBtn = document.getElementById('alwaysOnTopBtn');
+    audioMotionBtn = document.getElementById('audioMotionBtn');
+    imageEffectBgmBtn = document.getElementById('imageEffectBgmBtn');
+    autoShuffleBtn = document.getElementById('autoShuffleBtn');
+    settingsBtn = document.getElementById('settingsBtn');
+    settingsPanel = document.getElementById('settingsPanel');
+    settingsCloseBtn = document.getElementById('settingsCloseBtn');
+    helpOpenBtn = document.getElementById('helpOpenBtn');
+    helpCloseBtn = document.getElementById('helpCloseBtn');
+    helpContainer = document.querySelector('.help-container');
+    helpTitle = helpContainer.querySelector('h1');
+    tooltipElements = document.querySelectorAll('[data-tooltip]');
+    filenameMenus = document.querySelector('.filename-menus');
+    filenameMenu = document.getElementById('filenameMenu');
+    upMovePlaylistBtn = document.getElementById('upMovePlaylistBtn');
+    downMovePlaylistBtn = document.getElementById('downMovePlaylistBtn');
+    addPlaylistBtn = document.getElementById('addPlaylistBtn');
+    removePlaylistBtn = document.getElementById('removePlaylistBtn');
+    clearPlaylistBtn = document.getElementById('clearPlaylistBtn');
+    savePlaylistBtn = document.getElementById('savePlaylistBtn');
+    modeChangeBtn = document.getElementById('modeChangeBtn');
+    editPanel = document.getElementById('editPanel');
+    editModeBtn = document.getElementById('editModeBtn');
+    setInMarkBtn = document.getElementById('setInMarkBtn');
+    setOutMarkBtn = document.getElementById('setOutMarkBtn');
+    addCutRangeBtn = document.getElementById('addCutRangeBtn');
+    saveVideoBtn = document.getElementById('saveVideoBtn');
+    cutRangesList = document.getElementById('cutRangesList');
+    clearEditBtn = document.getElementById('clearEditBtn');
+    inMarkDisplay = document.getElementById('inMarkDisplay');
+    outMarkDisplay = document.getElementById('outMarkDisplay');
+    editSeekBar = document.getElementById('editSeekBar');
+    cutCancelBtn = document.getElementById('cutCancelBtn');
+    randomPlayBtn = document.getElementById('randomPlayBtn');
+    repeatPlayBtn  = document.getElementById('repeatPlayBtn');
+    joinPlaylistBtn = document.getElementById('joinPlaylistBtn');
+    sortPlaylistBtn = document.getElementById('sortPlaylistBtn');
+    playlistDisplayBtn = document.getElementById('playlistDisplayBtn');
+    filterPanel = document.getElementById('filterPanel');
+    playlistFilterInput = document.getElementById('playlistFilterInput');
+    filterClearBtn = document.getElementById('filterClearBtn');
+    filterList = document.getElementById('filterList');
+    playlistProgressBar = document.getElementById('playlistProgressBar');
+    darkOverlay = document.getElementById('darkOverlay');
+    voiceSelectBtn = document.getElementById('voiceSelectBtn');
+    subtitleSelectBtn = document.getElementById('subtitleSelectBtn');
+    itemCount = document.getElementById('itemCount');
+    playlistPathArea = document.getElementById('playlistPathArea');
+    cutTimelineContainer = document.getElementById('cutTimelineContainer');
+    cutTimelineBar = document.getElementById('cutTimelineBar');
+    filterHistoryList = document.getElementById('filterHistoryList');
+    changelogBtn = document.getElementById('changelogBtn');
+    changelogContent = document.getElementById('changelogContent');
+    helpTableContainer = document.getElementById('helpTableContainer');
+    mediaContainer = document.getElementById('mediaContainer');
+    imagePlayer = document.getElementById('imagePlayer');
+    imageWrapper = document.getElementById('imageWrapper');
+    centerControls = document.getElementById('centerControls');
+    centerPrevBtn = document.getElementById('centerPrevBtn');
+    centerPlayPauseBtn = document.getElementById('centerPlayPauseBtn');
+    centerNextBtn = document.getElementById('centerNextBtn');
+    imageWallpaper = document.getElementById('imageWallpaper');
+    imageWallpaperImg = document.getElementById('imageWallpaperImg');
+}
+
 // 多重起動時の localStorage 書き込み防止処理
 async function setupLocalStorageProtection() {
     if (isSecondary) {
@@ -391,6 +517,178 @@ async function setupLocalStorageProtection() {
             console.log(`[多重起動ガード] removeItem スキップ: ${key}`);
         };
     }
+}
+
+// localStorage から復元 (非同期化)
+async function setupAllLocalStorageSetting() {
+    if (!isSecondary) {
+        // --- 初回起動時 ---
+        appNameAndCopyright.textContent = `${appName}\n${copyright}`;
+
+        // 1. localStorage から値を取得
+        savedVolume = localStorage.getItem('volume');
+        savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
+        savedPlaylist = localStorage.getItem('playlist');
+        savedCurrentVideoIndex = localStorage.getItem('currentVideoIndex');
+        savedCurrentTime = localStorage.getItem('currentTime');
+        savedFitMode = localStorage.getItem('fitMode');
+        savedZoom = localStorage.getItem('zoom');
+        savedTranslateX = localStorage.getItem('translateX');
+        savedTranslateY = localStorage.getItem('translateY');
+        savedEditFrameRate = localStorage.getItem('editFrameRate');
+        savedIsRandomPlayMode = localStorage.getItem('isRandomPlayMode');
+        savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode');
+        savedAutoShuffle = localStorage.getItem('autoShuffle');
+        savedShuffleOrder = localStorage.getItem('shuffleOrder');
+        savedShufflePosition = localStorage.getItem('shufflePosition');
+        savedAspectRatio = localStorage.getItem('aspectRatio');
+        savedCurrentSortMode = localStorage.getItem('playlistSortMode');
+        savedPlaylistDisplayMode = localStorage.getItem('playlistDisplayMode');
+        savedSelectedAudioLabel = localStorage.getItem('selectedAudioLabel');
+        savedSelectedAudioTrack = localStorage.getItem('selectedAudioTrack');
+        savedSelectedSubtitleLabel = localStorage.getItem('selectedSubtitleLabel');
+        savedSelectedSubtitleTrack = localStorage.getItem('selectedSubtitleTrack');
+        savedWallpaperPath = localStorage.getItem('wallpaperPath');
+        savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
+        savedPauseShowControls = localStorage.getItem('pauseShowControls');
+        savedHideCenterControls = localStorage.getItem('hideCenterControls');
+        savedAudioMotionMode = localStorage.getItem('audioMotionMode');
+        savedImageEffectBgmMode = localStorage.getItem('imageEffectBgmMode');
+        savedIsImageWallpaperEnabled = localStorage.getItem('isImageWallpaperEnabled');
+        savedFilterHistory = localStorage.getItem('filterHistory');
+        savedOriginalOrder = localStorage.getItem('originalLoadOrder');
+        savedAudioMotionOptions = localStorage.getItem('audioMotionOptions');
+        savedAudioMotionNodes = localStorage.getItem('audioMotionNodes');
+        savedImageBgmPaths = localStorage.getItem('imageBgmPaths');
+        savedCurrentBgmIndex = localStorage.getItem('currentBgmIndex');
+        savedMaxImageCacheSize = localStorage.getItem('maxImageCacheSize');
+        savedMaxMediaCacheSize = localStorage.getItem('maxMediaCacheSize');
+
+        // 2. 取得情報をユーザーフォルダの設定ファイルに保存
+        await exportSettingsToFile(settingsFilePath);
+    } else {
+        // --- 多重起動時 ---
+        appNameAndCopyright.textContent = `🚫${appName}\n${copyright}`;
+
+        // pidあり設定ファイルの存在確認
+        const pidSettingsFilePath = settingsFilePath.replace(/\.xpj$/, `_${pid}.xpj`);
+        let hasPidFile = false;
+        try {
+            await fs.access(pidSettingsFilePath);
+            hasPidFile = true;
+        } catch {
+            hasPidFile = false;
+        }
+        // 自動インポート時の一時停止フラグ設定（pidあり設定ファイルあり＝手動インポート）
+        forceStop = !hasPidFile;
+
+        // 設定ファイル読込
+        let loadedSettings = null;
+        if (hasPidFile) {
+            // 手動インポート（pidあり設定ファイル）
+            loadedSettings = await importSettingsFromFile(pidSettingsFilePath);
+            try {
+                await fs.unlink(pidSettingsFilePath);
+            } catch (e) {
+                console.error(`ファイル削除失敗 (${pidSettingsFilePath}):`, e);
+            }
+        } else {
+            // 自動インポート（pidなし設定ファイル）
+            loadedSettings = await importSettingsFromFile(settingsFilePath);
+        }
+
+        // 設定ファイルの設定値取得
+        if (loadedSettings) {
+            // 設定値取得のヘルパー関数
+            const getVal = (key, currentVal, defaultValue = null) => {
+                if (loadedSettings[key] !== undefined && loadedSettings[key] !== null) {
+                    return loadedSettings[key];
+                }
+                if (currentVal !== undefined && currentVal !== null) {
+                    return currentVal;
+                }
+                return defaultValue;
+            };
+
+            // 設定ファイルからの値取得
+            savedVolume = getVal('volume', savedVolume, '1.0');
+            savedPlaybackSpeed = getVal('playbackSpeed', savedPlaybackSpeed, '1.0');
+            savedPlaylist = getVal('playlist', savedPlaylist);
+            savedCurrentVideoIndex = getVal('currentVideoIndex', savedCurrentVideoIndex, '0');
+            savedCurrentTime = getVal('currentTime', savedCurrentTime, '0');
+            savedFitMode = getVal('fitMode', savedFitMode, 'contain');
+            savedZoom = getVal('zoom', savedZoom, '1.0');
+            savedTranslateX = getVal('translateX', savedTranslateX, '0');
+            savedTranslateY = getVal('translateY', savedTranslateY, '0');
+            savedEditFrameRate = getVal('editFrameRate', savedEditFrameRate, '30');
+            savedIsRandomPlayMode = String(getVal('isRandomPlayMode', savedIsRandomPlayMode, 'false'));
+            savedIsRepeatPlayMode = getVal('isRepeatPlayMode', savedIsRepeatPlayMode, 'none');
+            savedAutoShuffle = String(getVal('autoShuffle', savedAutoShuffle, 'true'));
+            savedShuffleOrder = getVal('shuffleOrder', savedShuffleOrder);
+            savedShufflePosition = getVal('shufflePosition', savedShufflePosition, '0');
+            savedAspectRatio = getVal('aspectRatio', savedAspectRatio, 'none');
+            savedCurrentSortMode = getVal('playlistSortMode', savedCurrentSortMode, 'none');
+            savedPlaylistDisplayMode = getVal('playlistDisplayMode', savedPlaylistDisplayMode, 'list');
+            savedSelectedAudioLabel = getVal('selectedAudioLabel', savedSelectedAudioLabel,'日本語');
+            savedSelectedAudioTrack = getVal('selectedAudioTrack', savedSelectedAudioTrack);
+            savedSelectedSubtitleLabel = getVal('selectedSubtitleLabel', savedSelectedSubtitleLabel,'（なし）');
+            savedSelectedSubtitleTrack = getVal('selectedSubtitleTrack', savedSelectedSubtitleTrack);
+            savedWallpaperPath = getVal('wallpaperPath', savedWallpaperPath);
+            savedAlwaysOnTop = String(getVal('alwaysOnTop', savedAlwaysOnTop, 'false'));
+            savedPauseShowControls = String(getVal('pauseShowControls', savedPauseShowControls, 'false'));
+            savedHideCenterControls = String(getVal('hideCenterControls', savedHideCenterControls, 'false'));
+            savedAudioMotionMode = getVal('audioMotionMode', savedAudioMotionMode, 'preset1');
+            savedImageEffectBgmMode = getVal('imageEffectBgmMode', savedImageEffectBgmMode, 'effect1');
+            savedIsImageWallpaperEnabled = String(getVal('isImageWallpaperEnabled', 'false'));
+            savedFilterHistory = getVal('filterHistory', savedFilterHistory);
+            savedOriginalOrder = getVal('originalLoadOrder', savedOriginalOrder);
+            savedAudioMotionOptions = getVal('audioMotionOptions', savedAudioMotionOptions);
+            savedAudioMotionNodes = getVal('audioMotionNodes', savedAudioMotionNodes);
+            savedImageBgmPaths = getVal('imageBgmPaths', savedImageBgmPaths);
+            savedCurrentBgmIndex = getVal('currentBgmIndex', savedCurrentBgmIndex, '0');
+            savedMaxImageCacheSize = getVal('maxImageCacheSize', savedMaxImageCacheSize, '0');
+            savedMaxMediaCacheSize = getVal('maxMediaCacheSize', savedMaxMediaCacheSize, '0');
+        }
+    }
+
+    // 各設定値を localStorage と同期
+    await localStorageSetItemAndFile('volume', savedVolume);
+    await localStorageSetItemAndFile('playbackSpeed', savedPlaybackSpeed);
+    await localStorageSetItemAndFile('playlist', savedPlaylist);
+    await localStorageSetItemAndFile('currentVideoIndex', savedCurrentVideoIndex);
+    await localStorageSetItemAndFile('currentTime', savedCurrentTime);
+    await localStorageSetItemAndFile('fitMode', savedFitMode);
+    await localStorageSetItemAndFile('zoom', savedZoom);
+    await localStorageSetItemAndFile('translateX', savedTranslateX);
+    await localStorageSetItemAndFile('translateY', savedTranslateY);
+    await localStorageSetItemAndFile('editFrameRate', savedEditFrameRate);
+    await localStorageSetItemAndFile('isRandomPlayMode', savedIsRandomPlayMode);
+    await localStorageSetItemAndFile('isRepeatPlayMode', savedIsRepeatPlayMode);
+    await localStorageSetItemAndFile('autoShuffle', savedAutoShuffle);
+    await localStorageSetItemAndFile('shuffleOrder', savedShuffleOrder);
+    await localStorageSetItemAndFile('shufflePosition', savedShufflePosition);
+    await localStorageSetItemAndFile('aspectRatio', savedAspectRatio);
+    await localStorageSetItemAndFile('playlistSortMode', savedCurrentSortMode);
+    await localStorageSetItemAndFile('playlistDisplayMode', savedPlaylistDisplayMode);
+    await localStorageSetItemAndFile('selectedAudioLabel', savedSelectedAudioLabel);
+    await localStorageSetItemAndFile('selectedAudioTrack', savedSelectedAudioTrack);
+    await localStorageSetItemAndFile('selectedSubtitleLabel', savedSelectedSubtitleLabel);
+    await localStorageSetItemAndFile('selectedSubtitleTrack', savedSelectedSubtitleTrack);
+    await localStorageSetItemAndFile('wallpaperPath', savedWallpaperPath);
+    await localStorageSetItemAndFile('alwaysOnTop', savedAlwaysOnTop);
+    await localStorageSetItemAndFile('pauseShowControls', savedPauseShowControls);
+    await localStorageSetItemAndFile('hideCenterControls', savedHideCenterControls);
+    await localStorageSetItemAndFile('audioMotionMode', savedAudioMotionMode);
+    await localStorageSetItemAndFile('imageEffectBgmMode', savedImageEffectBgmMode);
+    await localStorageSetItemAndFile('isImageWallpaperEnabled', savedIsImageWallpaperEnabled);
+    await localStorageSetItemAndFile('filterHistory', savedFilterHistory);
+    await localStorageSetItemAndFile('originalLoadOrder', savedOriginalOrder);
+    await localStorageSetItemAndFile('audioMotionOptions', savedAudioMotionOptions);
+    await localStorageSetItemAndFile('audioMotionNodes', savedAudioMotionNodes);
+    await localStorageSetItemAndFile('imageBgmPaths', savedImageBgmPaths);
+    await localStorageSetItemAndFile('currentBgmIndex', savedCurrentBgmIndex);
+    await localStorageSetItemAndFile('maxImageCacheSize', savedMaxImageCacheSize);
+    await localStorageSetItemAndFile('maxMediaCacheSize', savedMaxMediaCacheSize);
 }
 
 // 【初期設定】メディアプレーヤーの初期化

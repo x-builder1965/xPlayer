@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver6.09.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver6.10.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -63,13 +63,13 @@ setupTrashModule();
 // 初回起動判定
 setupFirstLaunch();
 
-// 🔲app ハンドラ登録🔲
+// 🔲appハンドラ登録🔲
 // アプリ起動処理
 registerAppWhenReady();
 // ウインドウクローズでプロセス解放
 registerAppOnWindowAllClosed();
 
-// 🔲IpcMain ハンドラ登録🔲
+// 🔲IpcMainハンドラ登録🔲
 // 初回起動判定結果返却
 registerIpcMainCheckSecondaryInstance();
 // フォルダ選択
@@ -136,7 +136,7 @@ registerIpcMainShowSaveAudioJoinDialog();
 registerIpcMainJoinAudios();
 
 
-// 🔲app ハンドラ登録関数🔲
+// 🔲appハンドラ登録関数🔲
 // アプリ起動処理
 function registerAppWhenReady() {
     app.whenReady().then(() => {
@@ -186,7 +186,7 @@ function registerAppOnWindowAllClosed() {
     });
 }
 
-// 🔲IPC ハンドラ登録関数🔲
+// 🔲ipcMainハンドラ登録関数🔲
 // 初回起動判定結果返却
 function registerIpcMainCheckSecondaryInstance() {
     ipcMain.handle('check-secondary-instance', async () => {
