@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.10.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.11.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -1849,19 +1849,33 @@ function registerDropzoneDropEvent() {
     dropzone.addEventListener('drop', async (e) => {
         e.preventDefault();
 
-        const files = Array.from(e.dataTransfer.files);
+        // 1. 同期的に File オブジェクトからパスを取得（または配列化）
+        let files = Array.from(e.dataTransfer.files);
         if (files.length === 0) return;
 
         const fullPaths = [];
         for (const file of files) {
             try {
-                const fullPath = await getFilePath(file); // ← preloadで公開済み
+                // getFilePath が非同期の場合は await しますが、
+                // 可能な限り速やかにパスだけを取り出します
+                const fullPath = await getFilePath(file);
                 if (fullPath) fullPaths.push(fullPath);
             } catch (err) {
                 console.error('getFilePath失敗:', err);
             }
         }
 
+        // --- 【重要】ファイルハンドルの後処理 ---
+        // Chromium 側に保持されている DataTransfer 情報を削除してファイルを解放
+        if (e.dataTransfer && typeof e.dataTransfer.clearData === 'function') {
+            e.dataTransfer.clearData();
+        }
+        // File オブジェクト配列の参照を破棄
+        files.length = 0;
+        files = null;
+        // ----------------------------------------
+
+        // 以降の重い処理や非同期通信（IPC）へ移行
         const settingsPath = fullPaths.find(filePath => SETTINGS_FILE_REGEX.test(filePath));
         if (settingsPath) {
             dropImportSettingsFromFile(settingsPath);
