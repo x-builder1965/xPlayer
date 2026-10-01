@@ -1,7 +1,7 @@
 // -- renderer_helper.js -----------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.10.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -491,7 +491,14 @@ function updateTimeDisplay() {
     let current = 0;
     let total = 0;
 
-    if (currentMediaType === 'image') {
+    if (currentMediaType === 'text') {
+        timeDisplay.textContent = `${Math.min(currentTextLineIndex + 1, textLines.length)} / ${textLines.length} 行`;
+            seekBar.value = textLines.length > 1
+                ? (currentTextLineIndex / (textLines.length - 1)) * 100
+                : 0;
+            updateIconOverlay();
+            return;
+    } else if (currentMediaType === 'image') {
         current = imageCurrentTime || 0;
         total = IMAGE_DURATION || 0;
     } else {
@@ -503,6 +510,22 @@ function updateTimeDisplay() {
     const duration = formatTime(total);
     timeDisplay.textContent = `${currentTime} / ${duration}`;
     updateIconOverlay();
+}
+
+function seekTextLine(lineIndex) {
+    if (!textLines.length) return;
+    const wasPlaying = isPlaying;
+    cancelTextPlayback();
+    currentTextLineIndex = Math.max(0, Math.min(textLines.length - 1, Math.round(lineIndex)));
+    saveTextLinePosition(currentTextLineIndex);
+    highlightTextLine(currentTextLineIndex);
+    updateTimeDisplay();
+    updatePlaylistDisplay();
+    if (wasPlaying) {
+        startTextPlayback(false);
+    } else {
+        isPlaying = false;
+    }
 }
 
 // 音量表示更新
@@ -1499,6 +1522,10 @@ function buildControlMenuContent(menu) {
 
 // メディアソース設定
 async function setVideoSrc(file) {
+    if (currentMediaType === 'text') {
+        cancelTextPlayback();
+    }
+
     // 既存のタイマーがあればクリア
     if (imageTimer) {
         clearTimeout(imageTimer);
@@ -1516,12 +1543,15 @@ async function setVideoSrc(file) {
     const ext = path.extname(cleanPath).toLowerCase();
     const isAudio = isAudioFilePath(file.path);
     const isImage = isImageFilePath(file.path);
+    const isText = isTextFilePath(file.path);
 
     // メディアタイプ判定
     if (isImage) {
         currentMediaType = 'image';
     } else if (isAudio) {
         currentMediaType = 'audio';
+    } else if (isText) {
+        currentMediaType = 'text';
     } else {
         currentMediaType = 'video';
     }
@@ -1579,7 +1609,47 @@ async function setVideoSrc(file) {
         updateWallpaperDisplay();       // 壁紙の非表示更新
         videoPlayerElement.style.display = 'block';
 
-        if (isVIDEO_EXTENSIONS(ext) && isAudio) {
+        if (isText) {
+            await deleteTempVideo();
+            videoPlayerElement.pause();
+            videoPlayerElement.removeAttribute('src');
+            videoPlayerElement.load();
+            audioPlayer.pause();
+            audioPlayer.removeAttribute('src');
+            audioPlayer.load();
+            videoPreview.removeAttribute('src');
+            videoPreview.load();
+
+            let content;
+            try {
+                content = await fs.readFile(file.path, 'utf8');
+            } catch (error) {
+                textReader.value = '';
+                textLines = [];
+                updateMessageOverlay(`テキストファイルを読み込めません: ${error.message}`, 6000);
+                return;
+            }
+            textReader.value = content.replace(/^\uFEFF/, '');
+            currentTextFilePath = file.path;
+            textLines = textReader.value.replace(/\r\n/g, '\n').split('\n');
+            textLineOffsets = [];
+            let lineOffset = 0;
+            for (const line of textLines) {
+                textLineOffsets.push(lineOffset);
+                lineOffset += line.length + 1;
+            }
+            const savedLine = Number(savedTextLineIndex);
+            currentTextLineIndex = savedTextLinePath === file.path && Number.isInteger(savedLine)
+                ? Math.max(0, Math.min(textLines.length - 1, savedLine))
+                : 0;
+            textLineAudioCache = new Map();
+            savedTextLineIndex = String(currentTextLineIndex);
+            savedTextLinePath = file.path;
+            localStorageSetItemAndFile('textLineIndex', savedTextLineIndex);
+            localStorageSetItemAndFile('textLinePath', savedTextLinePath);
+            baseConvertFile = null;
+            tempConvertFile = null;
+        } else if (isVIDEO_EXTENSIONS(ext) && isAudio) {
             isConverting = false;
             const mediaUrl = `file://${file.path.replace(/\\/g, '/')}`;
             videoPlayerElement.src = mediaUrl;
@@ -1642,7 +1712,7 @@ async function setVideoSrc(file) {
     await manageBgmState();
 
     // トラック情報制御（画像以外）
-    if (currentMediaType !== 'audio' && currentMediaType !== 'image') {
+    if (currentMediaType !== 'audio' && currentMediaType !== 'image' && currentMediaType !== 'text') {
         if (modeChange === 'video') {
             await updateTrack('subtitle');
         } else {
@@ -1694,6 +1764,15 @@ async function playVideo(file, currentTime) {
 
     // 動画・画像切り替え時に相互の設定（アスペクト比・描画モード・ズーム・パン）を適用
     syncDisplaySettingsToCurrentMedia();
+
+    if (currentMediaType === 'text') {
+        startTextPlayback(false);
+        preloadNextPlaylistItem();
+        updatePlaylistDisplay();
+        showControlsAndFilename();
+        updateIconOverlay();
+        return;
+    }
 
 	if (currentMediaType === 'image') {
 	    // 選択されたトランジションエフェクトを適用
@@ -1755,8 +1834,323 @@ async function playVideo(file, currentTime) {
     updateIconOverlay();
 }
 
+async function startTextPlayback(fromStart = false) {
+    if (!textLines.length || !textReader.value.trim()) {
+        updateMessageOverlay('テキストファイルに読み上げる内容がありません', 5000);
+        isPlaying = false;
+        playPauseBtn.textContent = '▶️';
+        playPauseBtn.classList.add('paused-active');
+        if (currentVideoIndex >= 0) await playNextPlaylistItem();
+        return;
+    }
+
+    if (fromStart) currentTextLineIndex = 0;
+    if (currentTextLineIndex >= textLines.length) currentTextLineIndex = 0;
+
+    const session = ++textPlaybackSession;
+    isPlaying = true;
+    playPauseBtn.textContent = '⏸️';
+    playPauseBtn.classList.remove('paused-active');
+    playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+    updatePlaylistDisplay();
+    textPlaybackTask = playTextLines(session).catch(error => {
+        if (session === textPlaybackSession) {
+            console.error('テキスト再生エラー:', error);
+            updateMessageOverlay('テキスト再生に失敗しました', 6000);
+            isPlaying = false;
+        }
+    }).finally(() => {
+        if (session === textPlaybackSession) textPlaybackTask = null;
+    });
+}
+
+function handleTextReaderInput() {
+    isTextReaderUserEditing = true;
+    textLines = textReader.value.replace(/\r\n/g, '\n').split('\n');
+    textLineOffsets = [];
+    let lineOffset = 0;
+    for (const line of textLines) {
+        textLineOffsets.push(lineOffset);
+        lineOffset += line.length + 1;
+    }
+
+    if (currentMediaType !== 'text') return;
+
+    const selectionStart = textReader.selectionStart;
+    currentTextLineIndex = 0;
+    for (let index = 1; index < textLineOffsets.length; index++) {
+        if (textLineOffsets[index] > selectionStart) break;
+        currentTextLineIndex = index;
+    }
+
+    const shouldResume = isPlaying;
+    cancelTextPlayback();
+    if (shouldResume) startTextPlayback(false);
+}
+
+function convertRubyToReading(text) {
+    return text.replace(/[｛{]([^｛｝{}｜|\r\n]+)[｜|]([^｛｝{}｜|\r\n]+)[｝}]/g, (match, kanji, reading) => reading);
+}
+
+async function playTextLines(session) {
+    while (currentTextLineIndex < textLines.length && session === textPlaybackSession) {
+        if (!await waitForTextResume(session)) return;
+
+        const lineIndex = currentTextLineIndex;
+        const line = textLines[lineIndex];
+        saveTextLinePosition(lineIndex);
+        highlightTextLine(lineIndex);
+        updateTimeDisplay();
+        updatePlaylistDisplay();
+
+        const canSpeak = isEngineReady && speakerSelect.value !== '';
+        if (canSpeak && line.trim()) {
+            prefetchTextAudio(session);
+            try {
+                const audioData = await getTextAudio(lineIndex, line.trim(), session);
+                if (session !== textPlaybackSession || !await waitForTextResume(session)) return;
+                const played = await playTextAudio(audioData, session);
+                if (!played) {
+                //     updateMessageOverlay('合成音声の再生に失敗したため、5秒表示に切り替えます', 4000);
+                    if (!await waitForTextDelay(5000, session)) return;
+                }
+            } catch (error) {
+                if (session !== textPlaybackSession) return;
+            //     console.error(`テキスト ${lineIndex + 1} 行目の音声合成に失敗:`, error);
+            //     updateMessageOverlay('音声合成に失敗したため、5秒表示に切り替えます', 4000);
+                if (!await waitForTextDelay(5000, session)) return;
+            }
+        } else if (!canSpeak) {
+            if (!await waitForTextDelay(5000, session)) return;
+        }
+
+        if (session !== textPlaybackSession) return;
+        currentTextLineIndex++;
+        pruneTextAudioCache();
+        prefetchTextAudio(session);
+    }
+
+    if (session !== textPlaybackSession) return;
+    audioPlayer.pause();
+    audioPlayer.removeAttribute('src');
+    audioPlayer.load();
+    isPlaying = false;
+    currentTextLineIndex = 0;
+    saveTextLinePosition(0);
+    updatePlaylistDisplay();
+    await playNextPlaylistItem();
+}
+
+function saveTextLinePosition(lineIndex) {
+    currentTextLineIndex = lineIndex;
+    savedTextLineIndex = String(lineIndex);
+    savedTextLinePath = currentTextFilePath || '';
+    localStorageSetItemAndFile('textLineIndex', savedTextLineIndex);
+    localStorageSetItemAndFile('textLinePath', savedTextLinePath);
+}
+
+function highlightTextLine(lineIndex) {
+    const start = textLineOffsets[lineIndex] || 0;
+    const end = start + (textLines[lineIndex] || '').length;
+    if (!isTextReaderUserEditing) {
+        textReader.focus({ preventScroll: true });
+        textReader.setSelectionRange(start, end);
+    }
+
+    if (!textReaderMeasure) {
+        textReaderMeasure = document.createElement('div');
+        textReaderMeasure.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(textReaderMeasure);
+    }
+
+    const computedStyle = window.getComputedStyle(textReader);
+    Object.assign(textReaderMeasure.style, {
+        position: 'fixed',
+        left: '-100000px',
+        top: '0',
+        visibility: 'hidden',
+        pointerEvents: 'none',
+        boxSizing: 'border-box',
+        width: `${textReader.clientWidth}px`,
+        padding: computedStyle.padding,
+        font: computedStyle.font,
+        lineHeight: computedStyle.lineHeight,
+        letterSpacing: computedStyle.letterSpacing,
+        wordSpacing: computedStyle.wordSpacing,
+        whiteSpace: computedStyle.whiteSpace,
+        overflowWrap: computedStyle.overflowWrap,
+        wordBreak: computedStyle.wordBreak,
+        tabSize: computedStyle.tabSize,
+        textIndent: computedStyle.textIndent,
+        direction: computedStyle.direction
+    });
+
+    const textValue = textReader.value;
+    if (textReaderMeasure.textContent !== textValue) {
+        textReaderMeasure.textContent = textValue;
+    }
+
+    const textNode = textReaderMeasure.firstChild;
+    let targetTop = lineIndex * (parseFloat(computedStyle.lineHeight) || 28);
+    if (textNode) {
+        const range = document.createRange();
+        range.setStart(textNode, Math.min(start, textValue.length));
+        range.setEnd(textNode, Math.min(start + 1, textValue.length));
+        const textRect = range.getBoundingClientRect();
+        if (textRect.height > 0) {
+            targetTop = textRect.top - textReaderMeasure.getBoundingClientRect().top;
+        }
+    }
+
+    textReader.scrollTo({
+        top: Math.max(0, targetTop - textReader.clientHeight * 0.3),
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+    });
+}
+
+function waitForTextResume(session) {
+    if (session !== textPlaybackSession) return Promise.resolve(false);
+    if (isPlaying) return Promise.resolve(true);
+    return new Promise(resolve => textResumeWaiters.push(() => resolve(session === textPlaybackSession && isPlaying)));
+}
+
+function wakeTextPlayback() {
+    const waiters = textResumeWaiters.splice(0);
+    waiters.forEach(resolve => resolve());
+}
+
+async function waitForTextDelay(duration, session) {
+    let remaining = duration;
+    while (remaining > 0 && session === textPlaybackSession) {
+        if (!await waitForTextResume(session)) return false;
+        const interval = Math.min(100, remaining);
+        const startedAt = Date.now();
+        await new Promise(resolve => setTimeout(resolve, interval));
+        if (isPlaying) remaining -= Date.now() - startedAt;
+    }
+    return session === textPlaybackSession;
+}
+
+function prefetchTextAudio(session) {
+    if (!isEngineReady || !speakerSelect.value || session !== textPlaybackSession) return;
+    const endIndex = Math.min(textLines.length, currentTextLineIndex + TEXT_PREFETCH_COUNT);
+    for (let index = currentTextLineIndex; index < endIndex; index++) {
+        const line = textLines[index]?.trim();
+        if (!line || textLineAudioCache.has(index) || activeTextSynthesisCount >= 2) continue;
+        getTextAudio(index, line, session).catch(() => {});
+    }
+}
+
+function getTextAudio(index, text, session) {
+    const cache = textLineAudioCache;
+    if (cache.has(index)) return cache.get(index);
+    activeTextSynthesisCount++;
+    const request = synthesizeEngineLine({
+        address: engineAddress,
+        text: convertRubyToReading(text),
+        speakerId: Number(speakerSelect.value)
+    }).then(audioData => {
+        if (session !== textPlaybackSession) throw new DOMException('Playback changed', 'AbortError');
+        return audioData;
+    }).catch(error => {
+        cache.delete(index);
+        throw error;
+    }).finally(() => {
+        activeTextSynthesisCount = Math.max(0, activeTextSynthesisCount - 1);
+    });
+    cache.set(index, request);
+    pruneTextAudioCache();
+    return request;
+}
+
+function pruneTextAudioCache() {
+    for (const index of textLineAudioCache.keys()) {
+        if (textLineAudioCache.size <= TEXT_AUDIO_CACHE_LIMIT) break;
+        if (index < currentTextLineIndex || index >= currentTextLineIndex + TEXT_PREFETCH_COUNT) {
+            textLineAudioCache.delete(index);
+        }
+    }
+}
+
+function playTextAudio(audioData, session) {
+    return new Promise(resolve => {
+        const audioUrl = URL.createObjectURL(new Blob([audioData], { type: 'audio/wav' }));
+        let completed = false;
+        const onEnded = () => finish(true);
+        const onError = () => finish(false);
+        const finish = success => {
+            if (completed) return;
+            completed = true;
+            audioPlayer.removeEventListener('ended', onEnded);
+            audioPlayer.removeEventListener('error', onError);
+            URL.revokeObjectURL(audioUrl);
+            if (textLineCancel === cancel) textLineCancel = null;
+            resolve(success);
+        };
+        const cancel = () => {
+            audioPlayer.pause();
+            finish(false);
+        };
+
+        if (session !== textPlaybackSession) {
+            URL.revokeObjectURL(audioUrl);
+            resolve();
+            return;
+        }
+        textLineCancel = cancel;
+        audioPlayer.src = audioUrl;
+        audioPlayer.playbackRate = currentPlaybackRate || 1;
+        audioPlayer.addEventListener('ended', onEnded, { once: true });
+        audioPlayer.addEventListener('error', onError, { once: true });
+        audioPlayer.play().catch(error => {
+            console.error('合成音声の再生に失敗:', error);
+            finish(false);
+        });
+    });
+}
+
+function cancelTextPlayback() {
+    textPlaybackSession++;
+    if (textLineCancel) textLineCancel();
+    textLineCancel = null;
+    audioPlayer.pause();
+    textPlaybackTask = null;
+    textLineAudioCache = new Map();
+    wakeTextPlayback();
+}
+
 // 再生/一時停止切替
 async function togglePlayPause() {
+    if (currentMediaType === 'text') {
+        if (isPlaying) {
+            isPlaying = false;
+            audioPlayer.pause();
+            playPauseBtn.textContent = '▶️';
+            playPauseBtn.classList.add('paused-active');
+            playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            stopPeriodicSave();
+        } else if (currentVideoIndex < 0) {
+            currentVideoIndex = selectedPlaylistIndex >= 0 ? selectedPlaylistIndex : 0;
+            const file = playlist[currentVideoIndex]?.file;
+            if (file) {
+                await playVideo(file, 0);
+                return;
+            }
+        } else {
+            isPlaying = true;
+            wakeTextPlayback();
+            playPauseBtn.textContent = '⏸️';
+            playPauseBtn.classList.remove('paused-active');
+            playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+            if (audioPlayer.src) audioPlayer.play().catch(() => {});
+            if (!textPlaybackTask) startTextPlayback(false);
+        }
+        updatePlaylistDisplay();
+        showControlsAndFilename();
+        updateIconOverlay();
+        return;
+    }
+
     // 停止後の再生開始インデックスを取得するヘルパー関数
     const getStartIndex = () => {
         // 一時停止からの再開
@@ -2004,12 +2398,14 @@ function decreasePlaybackRate() { changePlaybackRate(-1); }
 
 // メディアの総再生時間を取得（画像は5秒固定）
 function getMediaDuration() {
+    if (currentMediaType === 'text') return Math.max(1, textLines.length - 1);
     if (currentMediaType === 'image') return IMAGE_DURATION;
     return videoPlayer.duration || 0;
 }
 
 // メディアの現在再生時間を取得
 function getMediaCurrentTime() {
+    if (currentMediaType === 'text') return currentTextLineIndex;
     if (currentMediaType === 'image') return imageCurrentTime;
     return videoPlayer.currentTime || 0;
 }
@@ -2018,6 +2414,11 @@ function getMediaCurrentTime() {
 function setMediaCurrentTime(time) {
     const duration = getMediaDuration();
     const clampedTime = Math.max(0, Math.min(duration, time));
+
+    if (currentMediaType === 'text') {
+        seekTextLine(Math.round(clampedTime));
+        return;
+    }
 
     if (currentMediaType === 'image') {
         imageCurrentTime = clampedTime;
@@ -2098,15 +2499,29 @@ function getMediaElement() {
 function updateMediaPlayerDisplay() {
     const isAudio = currentMediaType === 'audio';
     const isImage = currentMediaType === 'image';
+    const isText = currentMediaType === 'text';
 
     // 動画プレイヤーの表示切替
     if (videoPlayerElement) {
-        videoPlayerElement.style.display = (isAudio || isImage) ? 'none' : 'block';
+        videoPlayerElement.style.display = (isAudio || isImage || isText) ? 'none' : 'block';
     }
 
     // 音声プレイヤーの表示切替
     if (audioPlayer) {
         audioPlayer.style.display = isAudio ? 'block' : 'none';
+    }
+
+    if (textReaderPanel) {
+        textReaderPanel.style.display = isText ? 'block' : 'none';
+    }
+    if (seekBar) {
+        seekBar.disabled = false;
+    }
+    if (rewindBtn) {
+        rewindBtn.setAttribute('data-tooltip', isText ? '10行戻る（Ctrl+←）' : '30秒戻る（Ctrl+←）');
+    }
+    if (fastForwardBtn) {
+        fastForwardBtn.setAttribute('data-tooltip', isText ? '10行進む（Ctrl+→）' : '30秒進む（Ctrl+→）');
     }
 
     // 画像ラッパーおよび画像要素の表示切替
@@ -2127,7 +2542,7 @@ function updateMediaPlayerDisplay() {
 function createMediaPlayerProxy(videoElement, audioElement) {
     return new Proxy(videoElement, {
         get(target, prop) {
-            const activeElement = currentMediaType === 'audio' ? audioElement : videoElement;
+            const activeElement = currentMediaType === 'audio' || currentMediaType === 'text' ? audioElement : videoElement;
             if (prop === 'src') return activeElement.src;
             if (prop === 'currentSrc') return activeElement.currentSrc;
             if (prop === 'paused') return activeElement.paused;
@@ -2177,7 +2592,7 @@ function createMediaPlayerProxy(videoElement, audioElement) {
             return Reflect.get(activeElement, prop);
         },
         set(target, prop, value) {
-            const activeElement = currentMediaType === 'audio' ? audioElement : videoElement;
+            const activeElement = currentMediaType === 'audio' || currentMediaType === 'text' ? audioElement : videoElement;
             if (prop === 'src') {
                 videoElement.src = value;
                 audioElement.src = value;
@@ -2349,6 +2764,10 @@ function isVideoStopped() {
     // 音声の場合：audioPlayer が停止中でかつ src が設定されていない場合
     if (currentMediaType === 'audio') {
         return audioPlayer.paused && !audioPlayer.src;
+    }
+
+    if (currentMediaType === 'text') {
+        return currentVideoIndex < 0 || !textReader.value;
     }
 
     // 動画の場合：videoPlayer が停止中でかつ src が設定されていない場合
@@ -3558,11 +3977,21 @@ async function updateFilterList() {
                 thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#5672f1"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="62">♬</text></svg>');
                 thumbWrap.style.background = 'rgba(0,0,0,0.2)';
             };
+            const setTextThumb = () => {
+                thumb.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="135"><rect width="100%" height="100%" fill="#3f6d66"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-size="62">🗒️</text></svg>');
+                thumbWrap.style.background = 'rgba(0,0,0,0.2)';
+            };
 
             const isAudioFile = (filePath) => {
                 if (!filePath) return false;
                 const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase();
                 return typeof AUDIO_EXTENSIONS !== 'undefined' ? AUDIO_EXTENSIONS.includes(ext) : AUDIO_EXTENSIONS.includes(ext);
+            };
+            const isTextFile = (filePath) => {
+                if (!filePath) return false;
+                const cleanPath = filePath.split('?')[0];
+                const ext = cleanPath.substring(cleanPath.lastIndexOf('.')).toLowerCase();
+                return TEXT_EXTENSIONS.includes(ext);
             };
 
             // 画像ファイルの判定関数
@@ -3574,7 +4003,9 @@ async function updateFilterList() {
             };
             
             try {
-                if (isAudioFile(item.file?.path)) {
+                if (isTextFile(item.file?.path)) {
+                    setTextThumb();
+                } else if (isAudioFile(item.file?.path)) {
                     setMusicThumb();
                 } else if (isImageFile(item.file?.path)) {
                     // 画像ファイルの場合はローカルファイルをそのままURL化してセット（高速化 & そのままサムネ化）
@@ -5129,7 +5560,7 @@ function toggleVisualizer(show) {
         videoPlayer.style.display = 'none'; // 音声時は動画エリアを非表示に
     } else {
         visualizerContainer.style.display = 'none';
-        videoPlayer.style.display = 'block'; // 動画時は動画エリアを表示
+        videoPlayer.style.display = show === 'text' ? 'none' : 'block';
     }
 }
 
@@ -5343,6 +5774,11 @@ function isImageFilePath(filePath) {
 function isAudioFilePath(filePath) {
     const ext = getMediaFileExtension(filePath);
     return AUDIO_EXTENSIONS.includes(ext);
+}
+
+function isTextFilePath(filePath) {
+    const ext = getMediaFileExtension(filePath);
+    return TEXT_EXTENSIONS.includes(ext);
 }
 
 // 動画ファイルかどうかを判定する関数

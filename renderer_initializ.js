@@ -1,7 +1,7 @@
 // -- renderer_initializ.js --------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.10.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0';
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -170,6 +170,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 	registerZoomEndBtnEvents();
 	// 【個別イベント】⚙️設定パネル切替
 	registerSettingsBtnEvents();
+    // 【個別イベント】読み上げ設定・Engine接続
+    registerReadAloudSettingsEvents();
+    // 【個別イベント】テキスト読み上げ内容の編集
+    registerTextReaderEditEvents();
 	// 【個別イベント】🔀自動シャッフル切替
 	registerAutoShuffleBtnEvents();
 	// 【個別イベント】🖼️背景壁紙選択
@@ -361,6 +365,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// 【ipcRendererイベント】結合進捗受信（詳細ペイロード対応）
 	registerIpcRendererJoinProgressEvents();
 
+    initializeSpeechEngine();
+
     Initializing = false;
 });
 
@@ -433,6 +439,12 @@ function setupAllDOMsetting() {
     settingsBtn = document.getElementById('settingsBtn');
     settingsPanel = document.getElementById('settingsPanel');
     settingsCloseBtn = document.getElementById('settingsCloseBtn');
+    readAloudSettingsBtn = document.getElementById('readAloudSettingsBtn');
+    readAloudPopup = document.getElementById('readAloudPopup');
+    engineAddressInput = document.getElementById('engineAddressInput');
+    engineConnectionBtn = document.getElementById('engineConnectionBtn');
+    engineConnectionStatus = document.getElementById('engineConnectionStatus');
+    speakerSelect = document.getElementById('speakerSelect');
     helpOpenBtn = document.getElementById('helpOpenBtn');
     helpCloseBtn = document.getElementById('helpCloseBtn');
     helpContainer = document.querySelector('.help-container');
@@ -470,6 +482,8 @@ function setupAllDOMsetting() {
     filterList = document.getElementById('filterList');
     playlistProgressBar = document.getElementById('playlistProgressBar');
     darkOverlay = document.getElementById('darkOverlay');
+    textReaderPanel = document.getElementById('textReaderPanel');
+    textReader = document.getElementById('textReader');
     voiceSelectBtn = document.getElementById('voiceSelectBtn');
     subtitleSelectBtn = document.getElementById('subtitleSelectBtn');
     itemCount = document.getElementById('itemCount');
@@ -563,6 +577,10 @@ async function setupAllLocalStorageSetting() {
         savedCurrentBgmIndex = localStorage.getItem('currentBgmIndex');
         savedMaxImageCacheSize = localStorage.getItem('maxImageCacheSize');
         savedMaxMediaCacheSize = localStorage.getItem('maxMediaCacheSize');
+        savedEngineAddress = localStorage.getItem('engineAddress');
+        savedSpeakerId = localStorage.getItem('speakerId');
+        savedTextLineIndex = localStorage.getItem('textLineIndex');
+        savedTextLinePath = localStorage.getItem('textLinePath');
 
         // 2. 取得情報をユーザーフォルダの設定ファイルに保存
         await exportSettingsToFile(settingsFilePath);
@@ -648,6 +666,10 @@ async function setupAllLocalStorageSetting() {
             savedCurrentBgmIndex = getVal('currentBgmIndex', savedCurrentBgmIndex, '0');
             savedMaxImageCacheSize = getVal('maxImageCacheSize', savedMaxImageCacheSize, '0');
             savedMaxMediaCacheSize = getVal('maxMediaCacheSize', savedMaxMediaCacheSize, '0');
+            savedEngineAddress = getVal('engineAddress', savedEngineAddress, 'http://127.0.0.1:10101');
+            savedSpeakerId = getVal('speakerId', savedSpeakerId, '');
+            savedTextLineIndex = getVal('textLineIndex', savedTextLineIndex, '0');
+            savedTextLinePath = getVal('textLinePath', savedTextLinePath, '');
         }
     }
 
@@ -689,6 +711,10 @@ async function setupAllLocalStorageSetting() {
     await localStorageSetItemAndFile('currentBgmIndex', savedCurrentBgmIndex);
     await localStorageSetItemAndFile('maxImageCacheSize', savedMaxImageCacheSize);
     await localStorageSetItemAndFile('maxMediaCacheSize', savedMaxMediaCacheSize);
+    await localStorageSetItemAndFile('engineAddress', savedEngineAddress || 'http://127.0.0.1:10101');
+    await localStorageSetItemAndFile('speakerId', savedSpeakerId || '');
+    await localStorageSetItemAndFile('textLineIndex', savedTextLineIndex || '0');
+    await localStorageSetItemAndFile('textLinePath', savedTextLinePath || '');
 }
 
 // 【初期設定】メディアプレーヤーの初期化

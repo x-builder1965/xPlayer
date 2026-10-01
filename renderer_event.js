@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.11.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -193,6 +193,7 @@ function registerPlayPauseBtnEvents() {
 // 【個別イベント】⏹️再生停止ボタン
 function registerPlayStopBtnEvents() {
     playStopBtn.addEventListener('click', () => {
+        if (currentMediaType === 'text') cancelTextPlayback();
         videoPlayer.pause();
         isPlaying = false;
         currentVideoIndex = -1; // 停止状態を明示
@@ -273,6 +274,11 @@ function registerPrevVideoBtnEvents() {
 // 【個別イベント】⏪30秒戻る（画像の場合は先頭へ戻す）
 function registerRewindBtnEvents() {
     rewindBtn.addEventListener('click', () => {
+        if (currentMediaType === 'text') {
+            seekTextLine(currentTextLineIndex - 10);
+            updateMessageOverlay(`行 ${currentTextLineIndex + 1} / ${textLines.length}`);
+            return;
+        }
         const duration = getMediaDuration();
         if (duration) {
             let newTime = getMediaCurrentTime() - 30;
@@ -287,6 +293,11 @@ function registerRewindBtnEvents() {
 // 【個別イベント】⏩30秒進む（画像の場合は末尾へ進み次のメディアへ）
 function registerFastForwardBtnEvents() {
     fastForwardBtn.addEventListener('click', () => {
+        if (currentMediaType === 'text') {
+            seekTextLine(currentTextLineIndex + 10);
+            updateMessageOverlay(`行 ${currentTextLineIndex + 1} / ${textLines.length}`);
+            return;
+        }
         const duration = getMediaDuration();
         if (duration) {
             let newTime = getMediaCurrentTime() + 30;
@@ -597,6 +608,132 @@ function registerSettingsBtnEvents() {
     settingsBtn.addEventListener('click', () => {
         toggleSettingsPanel(!isSettingsPanelOpen);
     });
+}
+
+function registerReadAloudSettingsEvents() {
+    readAloudSettingsBtn.addEventListener('click', event => {
+        event.stopPropagation();
+        readAloudPopup.style.display = readAloudPopup.style.display === 'flex' ? 'none' : 'flex';
+    });
+
+    readAloudPopup.addEventListener('click', event => event.stopPropagation());
+    document.addEventListener('click', event => {
+        if (!readAloudPopup.contains(event.target) && event.target !== readAloudSettingsBtn) {
+            readAloudPopup.style.display = 'none';
+        }
+    });
+
+    engineAddressInput.addEventListener('change', async () => {
+        engineAddress = engineAddressInput.value.trim();
+        await localStorageSetItemAndFile('engineAddress', engineAddress);
+    });
+
+    engineConnectionBtn.addEventListener('click', handleEngineConnectionToggle);
+    speakerSelect.addEventListener('change', () => {
+        textLineAudioCache = new Map();
+        localStorageSetItemAndFile('speakerId', speakerSelect.value);
+    });
+}
+
+function registerTextReaderEditEvents() {
+    textReader.addEventListener('pointerdown', () => {
+        isTextReaderUserEditing = true;
+    });
+    textReader.addEventListener('keydown', () => {
+        isTextReaderUserEditing = true;
+    });
+    textReader.addEventListener('input', handleTextReaderInput);
+    textReader.addEventListener('blur', () => {
+        isTextReaderUserEditing = false;
+    });
+}
+
+async function initializeSpeechEngine() {
+    engineAddress = savedEngineAddress || 'http://127.0.0.1:10101';
+    engineAddressInput.value = engineAddress;
+
+    try {
+        const result = await initEngine(engineAddress);
+        if (result.success) {
+            isEngineReady = true;
+            isSelfConnected = result.isSelfConnected;
+            await loadEngineSpeakers();
+            updateEngineConnectionUI(true);
+            return;
+        }
+
+        updateEngineConnectionUI(false, '起動・接続を試行中...');
+        await handleEngineConnectionToggle();
+    } catch (error) {
+        updateEngineConnectionUI(false, '接続できません');
+        console.error('AivisSpeech Engine 初期化失敗:', error);
+    }
+}
+
+async function handleEngineConnectionToggle() {
+    if (isEngineReady) {
+        engineConnectionStatus.textContent = '切断中...';
+        await disconnectEngine();
+        isEngineReady = false;
+        isSelfConnected = false;
+        speakerSelect.replaceChildren(new Option('未接続', ''));
+        updateEngineConnectionUI(false);
+        updateMessageOverlay('読み上げ Engine を切断しました');
+        return;
+    }
+
+    engineAddress = engineAddressInput.value.trim();
+    await localStorageSetItemAndFile('engineAddress', engineAddress);
+    engineConnectionBtn.disabled = true;
+    engineAddressInput.disabled = true;
+    engineConnectionStatus.textContent = '接続中...';
+
+    try {
+        const result = await connectEngine(engineAddress);
+        if (!result.success) {
+            updateEngineConnectionUI(false, result.error || '接続に失敗');
+            updateMessageOverlay(result.error || 'AivisSpeech Engine に接続できません', 6000);
+            return;
+        }
+
+        isEngineReady = true;
+        isSelfConnected = result.isSelfConnected;
+        const loaded = await loadEngineSpeakers();
+        updateEngineConnectionUI(true);
+        updateMessageOverlay(loaded ? '読み上げ Engine に接続しました' : '接続しましたが話者一覧を取得できません');
+    } catch (error) {
+        updateEngineConnectionUI(false, '接続に失敗');
+        console.error('AivisSpeech Engine 接続失敗:', error);
+    } finally {
+        engineConnectionBtn.disabled = false;
+        engineAddressInput.disabled = false;
+    }
+}
+
+async function loadEngineSpeakers() {
+    const speakers = await getEngineSpeakers(engineAddress);
+    speakerSelect.replaceChildren();
+
+    for (const speaker of speakers) {
+        for (const style of speaker.styles || []) {
+            const option = new Option(`${speaker.name} (${style.name})`, String(style.id));
+            speakerSelect.appendChild(option);
+        }
+    }
+
+    const savedId = savedSpeakerId || localStorage.getItem('speakerId');
+    if (savedId && Array.from(speakerSelect.options).some(option => option.value === String(savedId))) {
+        speakerSelect.value = String(savedId);
+    }
+    speakerSelect.disabled = !isEngineReady || speakerSelect.options.length === 0;
+    return speakerSelect.options.length > 0;
+}
+
+function updateEngineConnectionUI(connected, statusText = null) {
+    engineConnectionStatus.textContent = statusText || (connected ? '接続済み' : '未接続');
+    engineConnectionBtn.textContent = connected ? '❌' : '🔄';
+    readAloudSettingsBtn.classList.toggle('engine-connected-active', connected);
+    speakerSelect.disabled = !connected || speakerSelect.options.length === 0;
 }
 
 // 【個別イベント】🖼️背景壁紙選択
@@ -1029,6 +1166,7 @@ function registerVideoPlayerErrorEvents() {
 // 【個別イベント】再生時間更新
 function registerVideoPlayerTimeUpdateEvents() {
     videoPlayer.addEventListener('timeupdate', () => {
+        if (currentMediaType === 'text') return;
         if (!isDragging && !seekBar.matches(':active') && !isMouseOverSeekBar) {
             const value = videoPlayer.duration ? (100 / videoPlayer.duration) * videoPlayer.currentTime : 0;
             seekBar.value = value;
@@ -1058,6 +1196,7 @@ function registerVideoPlayerTimeUpdateEvents() {
 // 【個別イベント】メディア終了、次へ
 function registerVideoEndedListener() {
     videoPlayer.addEventListener('ended', async () => {
+        if (currentMediaType === 'text') return;
         videoPlayer.currentTime = 0;
         localStorageSetItemAndFile('currentTime', 0);
 
@@ -1424,6 +1563,11 @@ function registerSeekBarInputListener() {
         if (!duration) return;
 
         const time = duration * (seekBar.value / 100);
+        if (currentMediaType === 'text') {
+            const lineIndex = Math.max(0, Math.min(textLines.length - 1, Math.round(time)));
+            updateMessageOverlay(`行 ${lineIndex + 1} / ${textLines.length}`);
+            return;
+        }
         setMediaCurrentTime(time);
     
         if (currentMediaType !== 'image') {
@@ -1443,6 +1587,11 @@ function registerSeekBarChangeListener() {
         if (controls.style.opacity !== '1') return;
         const duration = getMediaDuration();
         if (!duration) return;
+
+        if (currentMediaType === 'text') {
+            seekTextLine(duration * (seekBar.value / 100));
+            return;
+        }
         
         updateTimeDisplay();
         localStorageSetItemAndFile('currentTime', getMediaCurrentTime());
@@ -1453,6 +1602,8 @@ function registerSeekBarChangeListener() {
 function registerSeekBarMouseDownListener() {
     seekBar.addEventListener('mousedown', (e) => {
         if (controls.style.opacity !== '1') return;
+
+        if (currentMediaType === 'text') return;
         
         const duration = getMediaDuration();
         if (e.button === 0 && duration) {
@@ -2441,6 +2592,13 @@ function registerDocumentKeydownEvents() {
             if (event.ctrlKey && event.key === 'b') {
                 event.preventDefault();
                 imageEffectBgmBtn.click();
+                return;
+            }
+
+            // 🔄読み上げ設定定（Ctrl+k）
+            if (event.ctrlKey && event.key === 'k') {
+                event.preventDefault();
+                readAloudSettingsBtn.click();
                 return;
             }
 

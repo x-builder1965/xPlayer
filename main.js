@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver6.10.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -13,7 +13,9 @@ const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
 const ffprobeStatic = require('ffprobe-static');
 const os = require('os');
-const { spawn, exec } = require('child_process');
+const http = require('http');
+const https = require('https');
+const { spawn, exec, execFile } = require('child_process');
 const trashModule = require('trash');
 
 // 固定値設定
@@ -30,12 +32,15 @@ const AUDIO_EXTENSIONS = [
 const IMAGE_EXTENSIONS = [
     'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp'
 ];
+const TEXT_EXTENSIONS = ['txt'];
 const VIDEO_PLAYLIST = ['amppl'];
-const SUPPORTED_MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS];
-const SUPPORTED_MEDIA_EXTENSIONS_REGEX = new RegExp(`\\.(${SUPPORTED_MEDIA_EXTENSIONS.join('|')})$`, 'i');
+const SUPPORTED_PLAYLIST_ITEM_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS, ...TEXT_EXTENSIONS];
+const SUPPORTED_PLAYLIST_ITEM_REGEX = new RegExp(`\\.(${SUPPORTED_PLAYLIST_ITEM_EXTENSIONS.join('|')})$`, 'i');
 const VIDEO_PLAYLIST_REGEX = new RegExp(`\\.(${VIDEO_PLAYLIST.join('|')})$`, 'i');
 const SETTINGS_EXTENSIONS = ['json', 'xpj'];
 const SETTINGS_FILE_REGEX = new RegExp(`\\.(${SETTINGS_EXTENSIONS.join('|')})$`, 'i');
+const DEFAULT_AIVIS_HOST = 'http://127.0.0.1:10101';
+const ENGINE_EXE = 'run.exe';
 const gotTheLock = app.requestSingleInstanceLock();     // 🔧 単一インスタンスロックの取得（重複起動の判定）
 
 // グローバル（共通）変数
@@ -50,6 +55,7 @@ let currentJoinConcatTxt = null;	// FFmpeg の concat フィルター用テキ�
 let isJoinCancelled = false;		// 結合処理のキャンセル状態フラグ（true の場合は処理を中断）
 let thumbnailCacheDir = null;		// サムネイル画像をキャッシュ保存するディレクトリのパス
 let isSecondaryInstance = false;	// 二重起動（多重起動）判定フラグ（true の場合はセカニアリインスタンスとして動作）
+let spawnedEnginePid = null;
 
 // 🔲初期処理🔲
 // 開発中セキュリティオプション設定
@@ -134,6 +140,265 @@ registerIpcMainGetVideoTracks();
 registerIpcMainShowSaveAudioJoinDialog();
 // 音声結合処理（全音声をMP3に統一変換 → concatで結合）
 registerIpcMainJoinAudios();
+// AivisSpeech Engine 接続管理
+registerIpcMainInitEngine();
+registerIpcMainConnectEngine();
+registerIpcMainDisconnectEngine();
+registerIpcMainGetEngineSpeakers();
+registerIpcMainSynthesizeEngineLine();
+
+
+// 🔲AivisSpeech Engine IPCハンドラ🔲
+function registerIpcMainInitEngine() {
+    ipcMain.handle('init-engine', async (event, address = DEFAULT_AIVIS_HOST) => ({
+        success: await checkEngineHealth(address),
+        isSelfConnected: false
+    }));
+}
+
+function registerIpcMainConnectEngine() {
+    ipcMain.handle('connect-engine', async (event, address = DEFAULT_AIVIS_HOST) => {
+        if (await checkEngineHealth(address)) {
+            return { success: true, isSelfConnected: false };
+        }
+
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(address);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Unsupported protocol');
+        } catch {
+            return { success: false, error: '接続先アドレスが正しくありません。' };
+        }
+
+        if (!['localhost', '127.0.0.1', '[::1]', '::1'].includes(parsedUrl.hostname)) {
+            return { success: false, error: 'AivisSpeech Engine サーバーに接続できませんでした。' };
+        }
+
+        const started = await startAivisEngine(parsedUrl);
+        return started
+            ? { success: true, isSelfConnected: true }
+            : { success: false, error: 'AivisSpeech Engine を起動できません。run.exe の配置を確認してください。' };
+    });
+}
+
+function registerIpcMainDisconnectEngine() {
+    ipcMain.handle('disconnect-engine', async () => {
+        if (spawnedEnginePid) {
+            const processId = spawnedEnginePid;
+            spawnedEnginePid = null;
+            await new Promise(resolve => {
+                execFile('taskkill', ['/PID', String(processId), '/T', '/F'], () => resolve());
+            });
+        }
+        return true;
+    });
+}
+
+function registerIpcMainGetEngineSpeakers() {
+    ipcMain.handle('get-engine-speakers', async (event, address = DEFAULT_AIVIS_HOST) => {
+        try {
+            const speakers = await requestEngineJson(address, '/speakers');
+            return Array.isArray(speakers) ? speakers : [];
+        } catch (error) {
+            console.error('AivisSpeech 話者一覧取得失敗:', error.message);
+            return [];
+        }
+    });
+}
+
+function registerIpcMainSynthesizeEngineLine() {
+    ipcMain.handle('synthesize-engine-line', async (event, { address, text, speakerId } = {}) => {
+        if (typeof text !== 'string' || !text.trim() || text.length > 10000) {
+            throw new Error('合成するテキストが空か、長すぎます。');
+        }
+        if (!Number.isInteger(Number(speakerId))) {
+            throw new Error('話者が選択されていません。');
+        }
+
+        const query = await requestEnginePostJson(
+            address || DEFAULT_AIVIS_HOST,
+            `/audio_query?text=${encodeURIComponent(text)}&speaker=${encodeURIComponent(speakerId)}`
+        );
+        const audioData = await requestEnginePostBuffer(
+            address || DEFAULT_AIVIS_HOST,
+            `/synthesis?speaker=${encodeURIComponent(speakerId)}`,
+            JSON.stringify(query)
+        );
+        return new Uint8Array(audioData);
+    });
+}
+
+function requestEnginePost(address, endpoint, body, responseType) {
+    return new Promise((resolve, reject) => {
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(endpoint, address);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Unsupported protocol');
+        } catch (error) {
+            reject(error);
+            return;
+        }
+
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        const requestBody = Buffer.from(body || '');
+        const request = client.request(parsedUrl, {
+            method: 'POST',
+            timeout: 120000,
+            headers: responseType === 'json'
+                ? { 'Content-Length': requestBody.length }
+                : { 'Content-Type': 'application/json', 'Content-Length': requestBody.length }
+        }, response => {
+            const chunks = [];
+            response.on('data', chunk => chunks.push(chunk));
+            response.on('end', () => {
+                const responseBody = Buffer.concat(chunks);
+                if (response.statusCode !== 200) {
+                    reject(new Error(`AivisSpeech Engine HTTP ${response.statusCode}`));
+                    return;
+                }
+                if (responseType === 'buffer') {
+                    resolve(responseBody);
+                    return;
+                }
+                try {
+                    resolve(JSON.parse(responseBody.toString('utf8')));
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        });
+        request.on('error', reject);
+        request.on('timeout', () => request.destroy(new Error('AivisSpeech Engine request timed out')));
+        if (requestBody.length > 0) request.write(requestBody);
+        request.end();
+    });
+}
+
+function requestEnginePostJson(address, endpoint) {
+    return requestEnginePost(address, endpoint, '', 'json');
+}
+
+function requestEnginePostBuffer(address, endpoint, body) {
+    return requestEnginePost(address, endpoint, body, 'buffer');
+}
+
+function requestEngineJson(address, endpoint) {
+    return new Promise((resolve, reject) => {
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(endpoint, address);
+        } catch (error) {
+            reject(error);
+            return;
+        }
+
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        const request = client.get(parsedUrl, { timeout: 3000 }, response => {
+            let body = '';
+            response.setEncoding('utf8');
+            response.on('data', chunk => body += chunk);
+            response.on('end', () => {
+                if (response.statusCode !== 200) {
+                    reject(new Error(`HTTP ${response.statusCode}`));
+                    return;
+                }
+                try {
+                    resolve(JSON.parse(body));
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        });
+        request.on('error', reject);
+        request.on('timeout', () => request.destroy(new Error('Request timed out')));
+    });
+}
+
+function checkEngineHealth(address = DEFAULT_AIVIS_HOST) {
+    return new Promise(resolve => {
+        let parsedUrl;
+        try {
+            parsedUrl = new URL('/version', address);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) return resolve(false);
+        } catch {
+            return resolve(false);
+        }
+
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        const request = client.get(parsedUrl, { timeout: 1500 }, response => {
+            response.resume();
+            resolve(response.statusCode === 200);
+        });
+        request.on('error', () => resolve(false));
+        request.on('timeout', () => {
+            request.destroy();
+            resolve(false);
+        });
+    });
+}
+
+async function startAivisEngine(parsedAddress) {
+    const enginePath = await findAivisEnginePath();
+    if (!enginePath) return false;
+
+    const port = parsedAddress.port || '10101';
+    const alreadyRunning = await checkEngineProcessRunning();
+    if (!alreadyRunning) {
+        const engineHost = parsedAddress.hostname.replace(/^\[|\]$/g, '');
+        const child = spawn(enginePath, ['--host', engineHost, '--port', String(port), '--load_all_models'], {
+            cwd: path.dirname(enginePath),
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: true
+        });
+        child.unref();
+        spawnedEnginePid = child.pid || null;
+        child.on('error', error => {
+            console.error('AivisSpeech Engine 起動失敗:', error.message);
+            if (spawnedEnginePid === child.pid) spawnedEnginePid = null;
+        });
+        child.on('exit', () => {
+            if (spawnedEnginePid === child.pid) spawnedEnginePid = null;
+        });
+    }
+
+    for (let attempt = 0; attempt < 60; attempt++) {
+        if (await checkEngineHealth(parsedAddress.href)) return true;
+        await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    return false;
+}
+
+function checkEngineProcessRunning() {
+    return new Promise(resolve => {
+        exec(`tasklist /FI "IMAGENAME eq ${ENGINE_EXE}" /NH`, (error, stdout) => {
+            resolve(!error && Boolean(stdout) && stdout.toLowerCase().includes(ENGINE_EXE));
+        });
+    });
+}
+
+async function findAivisEnginePath() {
+    const candidates = [
+        process.env.AIVIS_ENGINE_PATH,
+        path.join(__dirname, 'Resource', 'AivisSpeech-Engine', ENGINE_EXE),
+        path.join(__dirname, 'Resource', 'AivisSpeech Engine', ENGINE_EXE),
+        path.join(process.env.LOCALAPPDATA || '', 'Programs', 'AivisSpeech-Engine', ENGINE_EXE),
+        path.join(process.env.LOCALAPPDATA || '', 'AivisSpeech Engine', ENGINE_EXE),
+        path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AivisSpeech-Engine', ENGINE_EXE),
+        path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AivisSpeech Engine', ENGINE_EXE),
+        path.join('C:\\AivisSpeech-Engine', ENGINE_EXE)
+    ].filter(Boolean).map(candidate => path.basename(candidate).toLowerCase() === ENGINE_EXE
+        ? candidate
+        : path.join(candidate, ENGINE_EXE));
+
+    for (const candidate of candidates) {
+        try {
+            await fs.access(candidate);
+            return candidate;
+        } catch {}
+    }
+    return null;
+}
 
 
 // 🔲appハンドラ登録関数🔲
@@ -220,12 +485,13 @@ function registerIpcMainOpenVideoDialog() {
             properties: ['openFile', 'multiSelections'], // 複数選択可能
             filters: [
                 {
-                    name: '音声・動画・画像ファイルとプレイリスト',
-                    extensions: [...SUPPORTED_MEDIA_EXTENSIONS, ...VIDEO_PLAYLIST]
+                    name: '音声・動画・画像・テキストファイルとプレイリスト',
+                    extensions: [...SUPPORTED_PLAYLIST_ITEM_EXTENSIONS, ...VIDEO_PLAYLIST]
                 },
                 { name: '動画ファイル', extensions: VIDEO_EXTENSIONS },
                 { name: '音声ファイル', extensions: AUDIO_EXTENSIONS },
                 { name: '画像ファイル', extensions: IMAGE_EXTENSIONS },
+                { name: 'テキストファイル', extensions: TEXT_EXTENSIONS },
                 { name: 'プレイリスト', extensions: VIDEO_PLAYLIST }
             ]
         });
@@ -250,7 +516,7 @@ function registerIpcMainGetFileVideoFiles() {
             if (VIDEO_PLAYLIST_REGEX.test(filePath)) {
                 const listFiles = await processListFile(filePath);
                 selectedFiles.push(...listFiles);
-            } else if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(filePath)) {
+            } else if (SUPPORTED_PLAYLIST_ITEM_REGEX.test(filePath)) {
                 selectedFiles.push({ name: path.basename(filePath), path: filePath });
             }
         }
@@ -738,7 +1004,7 @@ function registerIpcMainClassifyPath() {
                 return { type: 'playlist', files };
             }
 
-            if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(fullPath)) {
+            if (SUPPORTED_PLAYLIST_ITEM_REGEX.test(fullPath)) {
                 // 単体音声・動画ファイル
                 return {
                     type: 'media',
@@ -1728,7 +1994,7 @@ async function processListFile(filePath) {
             fullPath = path.normalize(fullPath);
 
             // 音声・動画ファイルかチェック
-            if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(fullPath)) {
+            if (SUPPORTED_PLAYLIST_ITEM_REGEX.test(fullPath)) {
                 try {
                     await fs.access(fullPath);
                     videoFiles.push({ name: path.basename(fullPath), path: fullPath });
@@ -1757,7 +2023,7 @@ async function getVideoFilesRecursively(folderPath) {
             if (file.isDirectory()) {
                 const subFiles = await getVideoFilesRecursively(fullPath);
                 videoFiles.push(...subFiles);
-            } else if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(file.name)) {
+            } else if (SUPPORTED_PLAYLIST_ITEM_REGEX.test(file.name)) {
                 videoFiles.push({ name: file.name, path: fullPath });
             } else if (VIDEO_PLAYLIST_REGEX.test(file.name)) {
                 const listFiles = await processListFile(fullPath);
@@ -1778,7 +2044,7 @@ async function processCommandLineFile(filePath) {
             return await getVideoFilesRecursively(filePath);
         } else if (VIDEO_PLAYLIST_REGEX.test(filePath)) {
             return await processListFile(filePath);
-        } else if (SUPPORTED_MEDIA_EXTENSIONS_REGEX.test(filePath)) {
+        } else if (SUPPORTED_PLAYLIST_ITEM_REGEX.test(filePath)) {
             return [{ name: path.basename(filePath), path: filePath }];
         }
     } catch (e) {

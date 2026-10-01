@@ -1,7 +1,7 @@
 <!-- -- index.html ------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -メディアプレイヤー- Ver6.06.0'; -->
+<!-- const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -32,6 +32,9 @@
 			    </div>
 			    <div id="visualizerContainer"></div>
 			    <div id="darkOverlay"></div>
+                <div id="textReaderPanel" class="text-reader-panel">
+                    <textarea id="textReader" aria-label="テキスト読み上げ内容（編集可能）" spellcheck="false"></textarea>
+                </div>
 			</div>
             <video id="videoPreview" src="" muted></video>
             <div id="centerControls" class="center-controls">
@@ -147,9 +150,25 @@
                 <button id="wallpaperBtn" data-tooltip="背景壁紙（Ctrl+p）">🖼️</button>
                 <button id="audioMotionBtn" data-tooltip="オーディオモーション設定（Ctrl+m）">🏳️‍🌈</button>
                 <button id="imageEffectBgmBtn" data-tooltip="イメージエフェクト＆BGM設定（Ctrl+b）">💃</button>
+                <button id="readAloudSettingsBtn" data-tooltip="読み上げ設定">🔄</button>
                 <button id="pauseShowBtn" data-tooltip="コントロール表示抑止（Ctrl+y）">👁️</button>
                 <button id="importExportBtn" data-tooltip="設定インポート・エクスポート（Ctrl+i／Ctrl+o）">🍥</button>
                 <button id="settingsCloseBtn" data-tooltip="設定モード終了（Ctrl+q）">❌</button>
+                <div id="readAloudPopup" class="read-aloud-popup" role="dialog" aria-label="読み上げ設定">
+                    <div class="read-aloud-popup-header">
+                        <strong>読み上げ設定</strong>
+                        <span id="engineConnectionStatus">未接続</span>
+                    </div>
+                    <label for="engineAddressInput">接続先アドレス</label>
+                    <div class="engine-address-row">
+                        <input id="engineAddressInput" type="url" value="http://127.0.0.1:10101" spellcheck="false">
+                        <button id="engineConnectionBtn" type="button">🔄</button>
+                    </div>
+                    <label for="speakerSelect">話者</label>
+                    <select id="speakerSelect" disabled>
+                        <option value="">未接続</option>
+                    </select>
+                </div>
             </div>
             <div id="zoomPanel">
                 <button id="zoomResetBtn" data-tooltip="ズームリセット（Ctrl+0）">🔘</button>

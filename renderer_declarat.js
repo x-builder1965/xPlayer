@@ -1,7 +1,7 @@
 // -- renderer_declarat.js ---------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.06.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -40,7 +40,12 @@ const {
     checkIsSecondaryInstance,
     getPid,
     showSaveAudioJoinDialog,
-    joinAudios
+    joinAudios,
+    initEngine,
+    connectEngine,
+    disconnectEngine,
+    getEngineSpeakers,
+    synthesizeEngineLine
 } = window.electronAPI;
 
 // 固定値設定
@@ -57,6 +62,7 @@ const mediaCache = new Map();	                // 動画・音声の先読み要�
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.m4v', '.mkv'];             // 動画再生対象拡張子
 const AUDIO_EXTENSIONS = ['.mp3', '.wav', '.flac', '.ogg', '.oga', '.m4a', '.aac', '.opus', '.wma', '.aiff', '.aif', '.alac', '.ape'];  // 音声再生対象拡張子
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp'];   // 画像再生対象拡張子
+const TEXT_EXTENSIONS = ['.txt'];              // テキストファイル拡張子
 const VIDEO_EXTENSIONS_CONVERT = [];            // 動画変換対象外拡張子
 const SETTINGS_FILE_REGEX = /\.(json|xpj)$/i;   // 設定ファイルの拡張子判定用正規表現
 const IMAGE_DURATION = 5;                       // 画像の再生時間（秒）
@@ -409,6 +415,12 @@ let autoShuffleBtn = null;                      // 自動シャッフルボタ�
 let settingsBtn = null;                         // 設定パネル切替ボタン
 let settingsPanel = null;                       // 設定パネル
 let settingsCloseBtn = null;                    // 設定パネル閉じるボタン
+let readAloudSettingsBtn = null;                 // 読み上げ設定ボタン
+let readAloudPopup = null;                       // 読み上げ設定ポップアップ
+let engineAddressInput = null;                   // Engine接続先アドレス
+let engineConnectionBtn = null;                  // Engine接続・切断ボタン
+let engineConnectionStatus = null;               // Engine接続状態
+let speakerSelect = null;                        // 読み上げ話者選択
 let helpOpenBtn = null;                         // ヘルプ表示ボタン
 let helpCloseBtn = null;                        // ヘルプ閉じるボタン
 let helpContainer = null;                       // ヘルプ表示コンテナ
@@ -458,6 +470,10 @@ let changelogBtn = null;                        // 変更履歴切替ボタン
 let changelogContent = null;                    // 変更履歴本文
 let helpTableContainer = null;                  // 変更履歴テーブルコンテナ
 let mediaContainer = null;                      // メディア操作コンテナ
+let textReaderPanel = null;                     // テキスト読み上げ表示パネル
+let textReader = null;                          // 読み上げ対象テキスト
+let textReaderMeasure = null;                   // 行位置測定用の不可視テキスト面
+let isTextReaderUserEditing = false;            // テキスト読み上げ内容のユーザー編集中状態
 let imagePlayer = null;                         // 画像プレイヤー
 let imageWrapper = null;                        // 画像表示ラッパー
 let centerControls = null;                      // センターコントロール
@@ -506,6 +522,10 @@ let savedImageBgmPaths = null;                  // 保存済みBGMパス一覧
 let savedCurrentBgmIndex = null;                // 保存済みBGM再生位置
 let savedMaxImageCacheSize = null;              // 保存済み画像キャッシュサイズ
 let savedMaxMediaCacheSize = null;              // 保存済みメディアキャッシュサイズ
+let savedEngineAddress = null;                  // 保存済み Engine 接続先
+let savedSpeakerId = null;                      // 保存済み読み上げ話者 ID
+let savedTextLineIndex = null;                  // 保存済みテキスト再生行
+let savedTextLinePath = null;                   // 保存済みテキスト再生ファイル
 
 // グローバル（共通）変数
 let copyright = "Copyright © 2025- @x-builder, Japan"
@@ -605,3 +625,18 @@ let hasMoved = false;                           // ドラッグ中の移動有�
 let forceStop = true;                           // 起動時に一時停止するか
 let maxImageCacheSize = 0;                      // 画像キャッシュ上限
 let maxMediaCacheSize = 0;                      // 動画・音声キャッシュ上限
+let isEngineReady = false;                      // AivisSpeech Engine 接続状態
+let isSelfConnected = false;                    // アプリが起動した Engine かどうか
+let engineAddress = 'http://127.0.0.1:10101';    // AivisSpeech Engine 接続先
+let textLines = [];                             // 現在のテキスト行
+let textLineOffsets = [];                       // テキスト各行の文字位置
+let currentTextLineIndex = 0;                   // 現在の読み上げ行
+let currentTextFilePath = null;                 // 読み込み中のテキストファイル
+let textPlaybackSession = 0;                    // テキスト再生セッション
+let textPlaybackTask = null;                    // テキスト再生タスク
+let textLineAudioCache = new Map();             // 行ごとの合成音声キャッシュ
+let textLineCancel = null;                      // 再生中の行を中断する関数
+let textResumeWaiters = [];                     // 一時停止解除待ち
+let activeTextSynthesisCount = 0;               // 同時合成数
+const TEXT_PREFETCH_COUNT = 4;
+const TEXT_AUDIO_CACHE_LIMIT = 8;
