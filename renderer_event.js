@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.13.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -678,7 +678,7 @@ async function handleEngineConnectionToggle() {
         isSelfConnected = false;
         speakerSelect.replaceChildren(new Option('未接続', ''));
         updateEngineConnectionUI(false);
-        updateMessageOverlay('読み上げ Engine を切断しました');
+        updateMessageOverlay('Engine を切断しました');
         return;
     }
 
@@ -700,7 +700,7 @@ async function handleEngineConnectionToggle() {
         isSelfConnected = result.isSelfConnected;
         const loaded = await loadEngineSpeakers();
         updateEngineConnectionUI(true);
-        updateMessageOverlay(loaded ? '読み上げ Engine に接続しました' : '接続しましたが話者一覧を取得できません');
+        updateMessageOverlay(loaded ? 'Engine に接続しました' : '接続しましたが話者一覧を取得できません');
     } catch (error) {
         updateEngineConnectionUI(false, '接続に失敗');
         console.error('AivisSpeech Engine 接続失敗:', error);

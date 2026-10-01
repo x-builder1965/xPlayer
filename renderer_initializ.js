@@ -1,7 +1,7 @@
 // -- renderer_initializ.js --------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.13.0';
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 【個別イベント】読み上げ設定・Engine接続
     registerReadAloudSettingsEvents();
     // 【個別イベント】テキスト読み上げ内容の編集
-    registerTextReaderEditEvents();
+    // registerTextReaderEditEvents();
 	// 【個別イベント】🔀自動シャッフル切替
 	registerAutoShuffleBtnEvents();
 	// 【個別イベント】🖼️背景壁紙選択

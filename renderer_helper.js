@@ -1,7 +1,7 @@
 // -- renderer_helper.js -----------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.13.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -460,6 +460,9 @@ function hideMenus(hideAll = true) {
     ];
 
     document.querySelectorAll(classes.join(', ')).forEach(m => m.remove());
+    if (!isSettingsPanelOpen || hideAll) {
+        readAloudPopup.style.display = 'none';
+    }
 }
 
 // コントロールパネル有効化／無効化
@@ -1852,6 +1855,7 @@ async function startTextPlayback(fromStart = false) {
     playPauseBtn.textContent = '⏸️';
     playPauseBtn.classList.remove('paused-active');
     playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+    // isTextReaderUserEditing = false
     updatePlaylistDisplay();
     textPlaybackTask = playTextLines(session).catch(error => {
         if (session === textPlaybackSession) {
@@ -1865,7 +1869,7 @@ async function startTextPlayback(fromStart = false) {
 }
 
 function handleTextReaderInput() {
-    isTextReaderUserEditing = true;
+    // isTextReaderUserEditing = true;
     textLines = textReader.value.replace(/\r\n/g, '\n').split('\n');
     textLineOffsets = [];
     let lineOffset = 0;
@@ -1952,10 +1956,10 @@ function saveTextLinePosition(lineIndex) {
 function highlightTextLine(lineIndex) {
     const start = textLineOffsets[lineIndex] || 0;
     const end = start + (textLines[lineIndex] || '').length;
-    if (!isTextReaderUserEditing) {
+    // if (!isTextReaderUserEditing) {
         textReader.focus({ preventScroll: true });
         textReader.setSelectionRange(start, end);
-    }
+    // }
 
     if (!textReaderMeasure) {
         textReaderMeasure = document.createElement('div');
@@ -2644,6 +2648,9 @@ function applyZoom(zoomPercent) {
 
     targetElement.style.transformOrigin = 'center center';
     targetElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    if (currentMediaType === 'text' && textReader) {
+        textReader.style.fontSize = `${16 * scale}px`;
+    }
 
     localStorageSetItemAndFile('translateX', translateX.toString());
     localStorageSetItemAndFile('translateY', translateY.toString());

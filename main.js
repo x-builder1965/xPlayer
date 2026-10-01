@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver6.13.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -384,8 +384,10 @@ async function findAivisEnginePath() {
         path.join(__dirname, 'Resource', 'AivisSpeech Engine', ENGINE_EXE),
         path.join(process.env.LOCALAPPDATA || '', 'Programs', 'AivisSpeech-Engine', ENGINE_EXE),
         path.join(process.env.LOCALAPPDATA || '', 'AivisSpeech Engine', ENGINE_EXE),
+        path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AivisSpeech', 'AivisSpeech-Engine', ENGINE_EXE),
         path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AivisSpeech-Engine', ENGINE_EXE),
         path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AivisSpeech Engine', ENGINE_EXE),
+        'C:\\Program Files\\AivisSpeech\\AivisSpeech-Engine\\run.exe',
         path.join('C:\\AivisSpeech-Engine', ENGINE_EXE)
     ].filter(Boolean).map(candidate => path.basename(candidate).toLowerCase() === ENGINE_EXE
         ? candidate

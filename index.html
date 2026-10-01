@@ -1,7 +1,7 @@
 <!-- -- index.html ------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0'; -->
+<!-- const appName = 'xPlayer -メディアプレイヤー- Ver6.13.0'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -33,7 +33,7 @@
 			    <div id="visualizerContainer"></div>
 			    <div id="darkOverlay"></div>
                 <div id="textReaderPanel" class="text-reader-panel">
-                    <textarea id="textReader" aria-label="テキスト読み上げ内容（編集可能）" spellcheck="false"></textarea>
+                    <textarea id="textReader" readonly aria-label="テキスト読み上げ内容（編集可能）" spellcheck="false"></textarea>
                 </div>
 			</div>
             <video id="videoPreview" src="" muted></video>
@@ -165,7 +165,7 @@
                         <button id="engineConnectionBtn" type="button">🔄</button>
                     </div>
                     <label for="speakerSelect">話者</label>
-                    <select id="speakerSelect" disabled>
+                    <select id="speakerSelect" size="10" disabled>
                         <option value="">未接続</option>
                     </select>
                 </div>
