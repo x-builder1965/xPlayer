@@ -10,8 +10,6 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const { promises: fs } = require('fs');
 const os = require('os');
 const path = require('path');
-const { exec } = require('child_process');
-// 【追加】audioMotion-analyzer の読み込み
 const AudioMotionModule = require('audiomotion-analyzer');
 const AudioMotionAnalyzer = AudioMotionModule.default || AudioMotionModule;
 
