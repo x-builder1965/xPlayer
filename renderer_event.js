@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.13.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.14.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -717,6 +717,7 @@ async function loadEngineSpeakers() {
     for (const speaker of speakers) {
         for (const style of speaker.styles || []) {
             const option = new Option(`${speaker.name} (${style.name})`, String(style.id));
+            option.dataset.speakerName = speaker.name;
             speakerSelect.appendChild(option);
         }
     }

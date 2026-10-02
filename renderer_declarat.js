@@ -1,7 +1,7 @@
 // -- renderer_declarat.js ---------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.14.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -629,6 +629,7 @@ let isEngineReady = false;                      // AivisSpeech Engine 接続状�
 let isSelfConnected = false;                    // アプリが起動した Engine かどうか
 let engineAddress = 'http://127.0.0.1:10101';    // AivisSpeech Engine 接続先
 let textLines = [];                             // 現在のテキスト行
+let textLineSpeakerNames = [];                  // 行ごとの話者名（未指定は null）
 let textLineOffsets = [];                       // テキスト各行の文字位置
 let currentTextLineIndex = 0;                   // 現在の読み上げ行
 let currentTextFilePath = null;                 // 読み込み中のテキストファイル

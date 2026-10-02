@@ -1,7 +1,7 @@
 // -- renderer_helper.js -----------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.13.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.14.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1523,6 +1523,24 @@ function buildControlMenuContent(menu) {
 
 // 🔲メディア再生・制御・状態判定🔲
 
+function parseSpeakerTaggedText(content) {
+    const lines = content.replace(/\r\n/g, '\n').split('\n');
+    const speakerNames = [];
+    const displayLines = lines.map(line => {
+        const delimiterIndex = line.indexOf('||');
+        if (delimiterIndex < 0) {
+            speakerNames.push(null);
+            return line;
+        }
+
+        const speakerName = line.slice(0, delimiterIndex).trim();
+        speakerNames.push(speakerName || null);
+        return line.slice(delimiterIndex + 2);
+    });
+
+    return { lines: displayLines, speakerNames };
+}
+
 // メディアソース設定
 async function setVideoSrc(file) {
     if (currentMediaType === 'text') {
@@ -1629,12 +1647,15 @@ async function setVideoSrc(file) {
             } catch (error) {
                 textReader.value = '';
                 textLines = [];
+                textLineSpeakerNames = [];
                 updateMessageOverlay(`テキストファイルを読み込めません: ${error.message}`, 6000);
                 return;
             }
-            textReader.value = content.replace(/^\uFEFF/, '');
+            const parsedText = parseSpeakerTaggedText(content.replace(/^\uFEFF/, ''));
+            textLines = parsedText.lines;
+            textLineSpeakerNames = parsedText.speakerNames;
+            textReader.value = textLines.join('\n');
             currentTextFilePath = file.path;
-            textLines = textReader.value.replace(/\r\n/g, '\n').split('\n');
             textLineOffsets = [];
             let lineOffset = 0;
             for (const line of textLines) {
@@ -1871,6 +1892,7 @@ async function startTextPlayback(fromStart = false) {
 function handleTextReaderInput() {
     // isTextReaderUserEditing = true;
     textLines = textReader.value.replace(/\r\n/g, '\n').split('\n');
+    textLineSpeakerNames = textLines.map(() => null);
     textLineOffsets = [];
     let lineOffset = 0;
     for (const line of textLines) {
@@ -1896,6 +1918,16 @@ function convertRubyToReading(text) {
     return text.replace(/[｛{]([^｛｝{}｜|\r\n]+)[｜|]([^｛｝{}｜|\r\n]+)[｝}]/g, (match, kanji, reading) => reading);
 }
 
+function getTextLineSpeakerId(lineIndex) {
+    const speakerName = textLineSpeakerNames[lineIndex];
+    const options = Array.from(speakerSelect.options);
+    const namedSpeakerOption = speakerName
+        ? options.find(option => option.textContent === speakerName)
+            || options.find(option => option.dataset.speakerName === speakerName)
+        : null;
+    return namedSpeakerOption?.value || speakerSelect.value;
+}
+
 async function playTextLines(session) {
     while (currentTextLineIndex < textLines.length && session === textPlaybackSession) {
         if (!await waitForTextResume(session)) return;
@@ -1907,7 +1939,7 @@ async function playTextLines(session) {
         updateTimeDisplay();
         updatePlaylistDisplay();
 
-        const canSpeak = isEngineReady && speakerSelect.value !== '';
+        const canSpeak = isEngineReady && getTextLineSpeakerId(lineIndex) !== '';
         if (canSpeak && line.trim()) {
             prefetchTextAudio(session);
             try {
@@ -2036,11 +2068,11 @@ async function waitForTextDelay(duration, session) {
 }
 
 function prefetchTextAudio(session) {
-    if (!isEngineReady || !speakerSelect.value || session !== textPlaybackSession) return;
+    if (!isEngineReady || session !== textPlaybackSession) return;
     const endIndex = Math.min(textLines.length, currentTextLineIndex + TEXT_PREFETCH_COUNT);
     for (let index = currentTextLineIndex; index < endIndex; index++) {
         const line = textLines[index]?.trim();
-        if (!line || textLineAudioCache.has(index) || activeTextSynthesisCount >= 2) continue;
+        if (!line || !getTextLineSpeakerId(index) || textLineAudioCache.has(index) || activeTextSynthesisCount >= 2) continue;
         getTextAudio(index, line, session).catch(() => {});
     }
 }
@@ -2052,7 +2084,7 @@ function getTextAudio(index, text, session) {
     const request = synthesizeEngineLine({
         address: engineAddress,
         text: convertRubyToReading(text),
-        speakerId: Number(speakerSelect.value)
+        speakerId: Number(getTextLineSpeakerId(index))
     }).then(audioData => {
         if (session !== textPlaybackSession) throw new DOMException('Playback changed', 'AbortError');
         return audioData;
