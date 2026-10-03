@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.14.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.15.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -648,6 +648,24 @@ function registerTextReaderEditEvents() {
     });
 }
 
+function registerTextReaderClickEvents() {
+    textReader.addEventListener('click', (event) => {
+        if (event.button !== 0 || currentMediaType !== 'text' || !textLines.length) return;
+
+        event.stopPropagation();
+
+        const selectionStart = textReader.selectionStart;
+        let lineIndex = 0;
+        for (let index = 1; index < textLineOffsets.length; index++) {
+            if (textLineOffsets[index] > selectionStart) break;
+            lineIndex = index;
+        }
+
+        seekTextLine(lineIndex);
+        if (!isPlaying) startTextPlayback(false);
+    });
+}
+
 async function initializeSpeechEngine() {
     engineAddress = savedEngineAddress || 'http://127.0.0.1:10101';
     engineAddressInput.value = engineAddress;
@@ -1248,6 +1266,8 @@ function registerMediaDblClickListener() {
 // 【個別イベント】マウス押下
 function registerMediaMouseDownListener() {
     mediaContainer.addEventListener('mousedown', (event) => {
+        if (currentMediaType === 'text' && event.target === textReader) return;
+
         if (event.button === 0) {
             hasMoved = false; // 移動フラグをリセット
 
