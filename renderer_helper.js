@@ -1,7 +1,7 @@
 // -- renderer_helper.js -----------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.14.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -310,8 +310,8 @@ function updateControlSize(valueX, valueY) {
     const controls = document.querySelectorAll('button, input, #itemCount, #timeDisplay, #speedSelect, #volumeDisplay, #appNameAndCopyright, #zoomPanel, #settingsPanel, #filename, #filenamePanel, #playlistPathArea, #cutTimelineContainer, #cutTimelineBar');
     
     controls.forEach(control => {
-        // filter-item クラスを持つ要素はサイズ調整の対象外にする
-        if (control.classList.contains('filter-item')) {
+        // 個別にスタイル管理する要素はサイズ調整の対象外にする
+        if (control.classList.contains('filter-item') || control.closest('.speaker-list')) {
             return; // このループをスキップ
         }
 
