@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.18.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -753,10 +753,37 @@ async function previewSpeaker(speakerId, speakerName) {
 
     stopSpeakerPreview();
 
+    // 時間帯に応じた挨拶を取得する関数
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour >= 5 && hour < 11) {
+            return "おはようございます";
+        } else if (hour >= 11 && hour < 18) {
+            return "こんにちは";
+        } else {
+            return "こんばんは";
+        }
+    };
+
+    // 一言のバリエーション（必要に応じて自由に追加・編集できます）
+    const comments = [
+        "よろしくお願いします。",
+        "今日も一日がんばりましょう。",
+        "素敵な一日になりますように。",
+        "準備はバッチリです。",
+        "お話しできるのを楽しみにしています。"
+    ];
+
+    // 読み上げ文章の組み立て
+    const greeting = getGreeting();
+    const namePart = `${speakerName}です。`;
+    const comment = comments[Math.floor(Math.random() * comments.length)]; // ランダム抽出
+    const previewText = `${greeting}。${namePart}${comment}`;
+
     try {
         const audioData = await synthesizeEngineLine({
             address: engineAddress,
-            text: `はじめまして、${speakerName}です。よろしくおねがいします。`,
+            text: previewText,
             speakerId: Number(speakerId)
         });
         if (request !== speakerPreviewRequest) return;
