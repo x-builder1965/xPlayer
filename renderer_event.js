@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.15.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.16.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -632,7 +632,108 @@ function registerReadAloudSettingsEvents() {
     speakerSelect.addEventListener('change', () => {
         textLineAudioCache = new Map();
         localStorageSetItemAndFile('speakerId', speakerSelect.value);
+        renderEngineSpeakerList();
     });
+}
+
+let activeSpeakerPreview = null;
+let speakerPreviewRequest = 0;
+
+function renderEngineSpeakerList() {
+    speakerList.replaceChildren();
+    const options = Array.from(speakerSelect.options).filter(option => option.value);
+    if (options.length === 0) {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.className = 'speaker-list-empty';
+        emptyMessage.textContent = isEngineReady ? '話者が見つかりません' : '未接続';
+        speakerList.appendChild(emptyMessage);
+        return;
+    }
+
+    for (const option of options) {
+        const row = document.createElement('div');
+        row.className = 'speaker-list-row';
+
+        const selectButton = document.createElement('button');
+        selectButton.type = 'button';
+        selectButton.className = 'speaker-select-button';
+        selectButton.textContent = option.textContent;
+        selectButton.setAttribute('aria-pressed', String(option.value === speakerSelect.value));
+        selectButton.disabled = speakerSelect.disabled;
+        selectButton.addEventListener('click', () => {
+            speakerSelect.value = option.value;
+            speakerSelect.dispatchEvent(new Event('change'));
+        });
+
+        const previewButton = document.createElement('button');
+        previewButton.type = 'button';
+        previewButton.className = 'speaker-preview-button';
+        previewButton.textContent = '▶️';
+        previewButton.setAttribute('aria-label', `${option.dataset.speakerName}の音声を試聴`);
+        previewButton.title = 'この話者で試聴';
+        previewButton.disabled = !isEngineReady || speakerSelect.disabled;
+        previewButton.addEventListener('click', () => {
+            previewSpeaker(option.value, option.dataset.speakerName);
+        });
+
+        row.append(selectButton, previewButton);
+        speakerList.appendChild(row);
+    }
+}
+
+function stopSpeakerPreview() {
+    if (!activeSpeakerPreview) return;
+    activeSpeakerPreview.audio.pause();
+    activeSpeakerPreview.audio.removeAttribute('src');
+    activeSpeakerPreview.audio.load();
+    URL.revokeObjectURL(activeSpeakerPreview.url);
+    activeSpeakerPreview = null;
+}
+
+async function previewSpeaker(speakerId, speakerName) {
+    if (!isEngineReady) return;
+    const request = ++speakerPreviewRequest;
+    for (const previewButton of speakerList.querySelectorAll('.speaker-preview-button')) {
+        previewButton.disabled = true;
+    }
+
+    stopSpeakerPreview();
+
+    try {
+        const audioData = await synthesizeEngineLine({
+            address: engineAddress,
+            text: `はじめまして、${speakerName}です。よろしくおねがいします。`,
+            speakerId: Number(speakerId)
+        });
+        if (request !== speakerPreviewRequest) return;
+
+        const url = URL.createObjectURL(new Blob([audioData], { type: 'audio/wav' }));
+        const audio = new Audio(url);
+        audio.volume = Number(volumeBar.value);
+        activeSpeakerPreview = { audio, url };
+        audio.addEventListener('ended', () => {
+            if (activeSpeakerPreview?.audio !== audio) return;
+            URL.revokeObjectURL(url);
+            activeSpeakerPreview = null;
+        }, { once: true });
+        audio.addEventListener('error', () => {
+            if (activeSpeakerPreview?.audio !== audio) return;
+            URL.revokeObjectURL(url);
+            activeSpeakerPreview = null;
+            updateMessageOverlay('話者の試聴音声を再生できません', 6000);
+        }, { once: true });
+        await audio.play();
+    } catch (error) {
+        stopSpeakerPreview();
+        console.error('話者の試聴に失敗:', error);
+        updateMessageOverlay('話者の試聴に失敗しました', 6000);
+    } finally {
+        if (request === speakerPreviewRequest) {
+            for (const previewButton of speakerList.querySelectorAll('.speaker-preview-button')) {
+                previewButton.disabled = !isEngineReady || speakerSelect.disabled;
+            }
+        }
+    }
 }
 
 function registerTextReaderEditEvents() {
@@ -691,10 +792,13 @@ async function initializeSpeechEngine() {
 async function handleEngineConnectionToggle() {
     if (isEngineReady) {
         engineConnectionStatus.textContent = '切断中...';
+        speakerPreviewRequest++;
+        stopSpeakerPreview();
         await disconnectEngine();
         isEngineReady = false;
         isSelfConnected = false;
         speakerSelect.replaceChildren(new Option('未接続', ''));
+        renderEngineSpeakerList();
         updateEngineConnectionUI(false);
         updateMessageOverlay('Engine を切断しました');
         return;
@@ -745,6 +849,7 @@ async function loadEngineSpeakers() {
         speakerSelect.value = String(savedId);
     }
     speakerSelect.disabled = !isEngineReady || speakerSelect.options.length === 0;
+    renderEngineSpeakerList();
     return speakerSelect.options.length > 0;
 }
 
@@ -753,6 +858,7 @@ function updateEngineConnectionUI(connected, statusText = null) {
     engineConnectionBtn.textContent = connected ? '❌' : '🔄';
     readAloudSettingsBtn.classList.toggle('engine-connected-active', connected);
     speakerSelect.disabled = !connected || speakerSelect.options.length === 0;
+    renderEngineSpeakerList();
 }
 
 // 【個別イベント】🖼️背景壁紙選択

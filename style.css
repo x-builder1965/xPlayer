@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver6.13.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver6.16.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -383,6 +383,39 @@ video {
 }
 #engineConnectionStatus {
     color: #9fd8b2;
+}
+.speaker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+.speaker-list-empty {
+    padding: 6px;
+    color: #aab3b3;
+    font-size: 12px;
+}
+.speaker-list-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+.speaker-select-button {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background-color: #000000;
+}
+.speaker-select-button[aria-pressed="true"] {
+    background-color: #007bff;
+}
+.speaker-preview-button {
+    flex: 0 0 auto;
 }
 
 #zoomPanel {

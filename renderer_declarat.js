@@ -1,7 +1,7 @@
 // -- renderer_declarat.js ---------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.14.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.16.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -421,6 +421,7 @@ let engineAddressInput = null;                   // Engine接続先アドレス
 let engineConnectionBtn = null;                  // Engine接続・切断ボタン
 let engineConnectionStatus = null;               // Engine接続状態
 let speakerSelect = null;                        // 読み上げ話者選択
+let speakerList = null;                          // 読み上げ話者一覧
 let helpOpenBtn = null;                         // ヘルプ表示ボタン
 let helpCloseBtn = null;                        // ヘルプ閉じるボタン
 let helpContainer = null;                       // ヘルプ表示コンテナ
