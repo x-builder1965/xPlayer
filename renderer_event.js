@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.21.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.22.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -1226,7 +1226,7 @@ function registerHelpCloseBtnEvents() {
 }
 
 // 【個別イベント】更新履歴（開く）イベントリスナー
-function registerChangelogOpenBtnEvents() {
+function registerAppNameAndCopyrightEvents() {
     appNameAndCopyright.addEventListener('click', openChangelog);
 }
 
@@ -3119,6 +3119,13 @@ function registerDocumentKeydownEvents() {
         if (event.ctrlKey && event.key === 'h') {
             event.preventDefault();
             helpOpenBtn.click();
+            return;
+        }
+
+        // 変更履歴開く（Ctrl+l）
+        if (event.ctrlKey && event.key === 'l') {
+            event.preventDefault();
+            appNameAndCopyright.click();
             return;
         }
 

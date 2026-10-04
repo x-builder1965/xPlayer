@@ -1,7 +1,7 @@
 // -- renderer_initializ.js --------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.21.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.22.0';
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// 【個別イベント】❌ヘルプ（閉じる）イベントリスナー
 	registerHelpCloseBtnEvents();
 	// 【個別イベント】変更履歴（開く）イベントリスナー
-	registerChangelogOpenBtnEvents();
+	registerAppNameAndCopyrightEvents();
 	// 【個別イベント】❌変更履歴（閉じる）イベントリスナー
 	registerChangelogCloseBtnEvents();
 	// 【個別イベント】▶️メディア再生
