@@ -1,7 +1,7 @@
 // -- renderer_declarat.js ---------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.19.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -70,6 +70,9 @@ const SETTINGS_FILE_REGEX = /\.(json|xpj)$/i;   // 設定ファイルの拡張�
 const IMAGE_DURATION = 5;                       // 画像の再生時間（秒）
 const MAX_IMAGE_CACHE_SIZE = 5; 			    // メモリを圧迫しないよう保持数を制限（0は無効）
 const MAX_MEDIA_CACHE_SIZE = 3; 	            // メモリを圧迫しないよう保持数を制限（0は無効）
+const TEXT_PREFETCH_COUNT = 5;                  // テキストファイルの先読み行数（0は無効）
+const TEXT_AUDIO_CACHE_LIMIT = 10;              // テキスト音声合成のキャッシュ上限数（0は無効）
+
 const SORT_MODES = {
     'none':       { label: '（なし）',    fn: () => getPlaylistInOriginalOrder() },
     'path_asc':   { label: 'ファイル▲',   fn: () => [...getPlaylistInOriginalOrder()].sort((a, b) => (a.file?.path || '').localeCompare(b.file?.path || '')) },
@@ -364,6 +367,19 @@ const languageMap = {
     'mul': '複数言語',
     'und': '未指定',
 };
+// コメント表示用の配列
+const defaultPreviewComments = [
+    "よろしくお願いします。",
+    "今日も一日がんばりましょう。",
+    "素敵な一日になりますように。",
+    "準備はバッチリです。",
+    "お話しできるのを楽しみにしています。",
+    "最近、調子はいかがですか？",
+    "今日も無理せずいきましょうね。",
+    "何かお困りのことはありませんか？",
+    "ちょっと一息入れてくださいね。",
+    "いつでも声をかけてください。"
+]
 
 // DOM要素取得
 let videoPlayerElement = null;                  // 動画プレイヤーのDOM要素
@@ -530,6 +546,7 @@ let savedEngineAddress = null;                  // 保存済み Engine 接続先
 let savedSpeakerId = null;                      // 保存済み読み上げ話者 ID
 let savedTextLineIndex = null;                  // 保存済みテキスト再生行
 let savedTextLinePath = null;                   // 保存済みテキスト再生ファイル
+let savedPreviewComments = null;                // 保存済みプレビュー用コメント
 
 // グローバル（共通）変数
 let copyright = "Copyright © 2025- @x-builder, Japan"
@@ -643,5 +660,4 @@ let textLineAudioCache = new Map();             // 行ごとの合成音声キ�
 let textLineCancel = null;                      // 再生中の行を中断する関数
 let textResumeWaiters = [];                     // 一時停止解除待ち
 let activeTextSynthesisCount = 0;               // 同時合成数
-const TEXT_PREFETCH_COUNT = 4;
-const TEXT_AUDIO_CACHE_LIMIT = 8;
+let previewComments = [];                       // プレビュー用コメント

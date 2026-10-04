@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.18.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.19.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -756,23 +756,19 @@ async function previewSpeaker(speakerId, speakerName) {
     // 時間帯に応じた挨拶を取得する関数
     const getGreeting = () => {
         const hour = new Date().getHours();
-        if (hour >= 5 && hour < 11) {
+        if (hour >= 4 && hour < 10) {
             return "おはようございます";
-        } else if (hour >= 11 && hour < 18) {
+        } else if (hour >= 10 && hour < 19) {
             return "こんにちは";
-        } else {
+        } else if (hour >= 19 && hour < 24) {
             return "こんばんは";
+        } else {
+            return "おやすみなさい";
         }
     };
 
     // 一言のバリエーション（必要に応じて自由に追加・編集できます）
-    const comments = [
-        "よろしくお願いします。",
-        "今日も一日がんばりましょう。",
-        "素敵な一日になりますように。",
-        "準備はバッチリです。",
-        "お話しできるのを楽しみにしています。"
-    ];
+    const comments = previewComments;
 
     // 読み上げ文章の組み立て
     const greeting = getGreeting();
