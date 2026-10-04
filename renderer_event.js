@@ -613,7 +613,9 @@ function registerSettingsBtnEvents() {
 function registerReadAloudSettingsEvents() {
     readAloudSettingsBtn.addEventListener('click', event => {
         event.stopPropagation();
-        readAloudPopup.style.display = readAloudPopup.style.display === 'flex' ? 'none' : 'flex';
+        const isVisible = readAloudPopup.style.display === 'flex';
+        hideMenus();
+        readAloudPopup.style.display = isVisible ? 'none' : 'flex';
     });
 
     readAloudPopup.addEventListener('click', event => event.stopPropagation());
