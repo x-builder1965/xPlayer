@@ -1,7 +1,7 @@
 <!-- -- index.html ------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -メディアプレイヤー- Ver6.16.0'; -->
+<!-- const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -164,7 +164,10 @@
                         <input id="engineAddressInput" type="url" value="http://127.0.0.1:10101" spellcheck="false">
                         <button id="engineConnectionBtn" type="button">🔄</button>
                     </div>
-                    <label>話者</label>
+                    <div class="speaker-header">
+                        <label>話者</label>
+                        <button id="speakerAddBtn" type="button" aria-label="話者モデルを追加" title="話者モデルを追加">🎤</button>
+                    </div>
                     <select id="speakerSelect" hidden disabled>
                         <option value="">未接続</option>
                     </select>

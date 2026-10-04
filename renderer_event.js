@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.16.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -629,6 +629,7 @@ function registerReadAloudSettingsEvents() {
     });
 
     engineConnectionBtn.addEventListener('click', handleEngineConnectionToggle);
+    speakerAddBtn.addEventListener('click', addEngineSpeakerModel);
     speakerSelect.addEventListener('change', () => {
         textLineAudioCache = new Map();
         localStorageSetItemAndFile('speakerId', speakerSelect.value);
@@ -676,8 +677,59 @@ function renderEngineSpeakerList() {
             previewSpeaker(option.value, option.dataset.speakerName);
         });
 
-        row.append(selectButton, previewButton);
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'speaker-delete-button';
+        deleteButton.textContent = '🗑️';
+        deleteButton.setAttribute('aria-label', `${option.dataset.speakerName}モデルを削除`);
+        deleteButton.title = 'この話者モデルを削除';
+        deleteButton.disabled = !isEngineReady || !option.dataset.speakerUuid;
+        deleteButton.addEventListener('click', () => {
+            removeEngineSpeakerModel(option.dataset.speakerUuid, option.dataset.speakerName);
+        });
+
+        row.append(selectButton, previewButton, deleteButton);
         speakerList.appendChild(row);
+    }
+}
+
+async function addEngineSpeakerModel() {
+    if (!isEngineReady) {
+        updateMessageOverlay('先にAivisSpeech Engineへ接続してください', 6000);
+        return;
+    }
+
+    speakerAddBtn.disabled = true;
+    try {
+        const result = await installEngineSpeakerModel(engineAddress);
+        if (result.canceled) return;
+        const loaded = await loadEngineSpeakers();
+        updateMessageOverlay(loaded ? '話者モデルを追加しました' : '話者モデルを追加しましたが、話者一覧を取得できません');
+    } catch (error) {
+        console.error('話者モデル追加失敗:', error);
+        updateMessageOverlay(`話者モデルを追加できません: ${error.message}`, 6000);
+    } finally {
+        speakerAddBtn.disabled = false;
+    }
+}
+
+async function removeEngineSpeakerModel(speakerUuid, speakerName) {
+    if (!isEngineReady) return;
+    // if (!window.confirm(`「${speakerName}」の話者モデルを削除しますか？`)) return;
+
+    try {
+        const selectedSpeakerIsBeingDeleted = Array.from(speakerSelect.options)
+            .some(option => option.value === speakerSelect.value && option.dataset.speakerUuid === speakerUuid);
+        await uninstallEngineSpeakerModel(engineAddress, speakerUuid);
+        await loadEngineSpeakers();
+        if (selectedSpeakerIsBeingDeleted) {
+            speakerSelect.value = speakerSelect.options[0]?.value || '';
+            speakerSelect.dispatchEvent(new Event('change'));
+        }
+        updateMessageOverlay(`話者モデル「${speakerName}」を削除しました`);
+    } catch (error) {
+        console.error('話者モデル削除失敗:', error);
+        updateMessageOverlay(`話者モデルを削除できません: ${error.message}`, 6000);
     }
 }
 
@@ -840,6 +892,7 @@ async function loadEngineSpeakers() {
         for (const style of speaker.styles || []) {
             const option = new Option(`${speaker.name} (${style.name})`, String(style.id));
             option.dataset.speakerName = speaker.name;
+            option.dataset.speakerUuid = speaker.speaker_uuid || '';
             speakerSelect.appendChild(option);
         }
     }

@@ -1,7 +1,7 @@
 // -- renderer_initializ.js --------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.16.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0';
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -446,6 +446,7 @@ function setupAllDOMsetting() {
     engineAddressInput = document.getElementById('engineAddressInput');
     engineConnectionBtn = document.getElementById('engineConnectionBtn');
     engineConnectionStatus = document.getElementById('engineConnectionStatus');
+    speakerAddBtn = document.getElementById('speakerAddBtn');
     speakerSelect = document.getElementById('speakerSelect');
     speakerList = document.getElementById('speakerList');
     helpOpenBtn = document.getElementById('helpOpenBtn');

@@ -1,7 +1,7 @@
 // -- main.js ----------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver6.13.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -9,6 +9,8 @@ const appName = 'xPlayer -メディアプレイヤー- Ver6.13.0';
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const path = require('path');
 const { promises: fs } = require('fs');
+const fsNative = require('fs');
+const crypto = require('crypto');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegStatic = require('ffmpeg-static');
 const ffprobeStatic = require('ffprobe-static');
@@ -145,6 +147,8 @@ registerIpcMainInitEngine();
 registerIpcMainConnectEngine();
 registerIpcMainDisconnectEngine();
 registerIpcMainGetEngineSpeakers();
+registerIpcMainInstallEngineSpeakerModel();
+registerIpcMainUninstallEngineSpeakerModel();
 registerIpcMainSynthesizeEngineLine();
 
 
@@ -203,6 +207,129 @@ function registerIpcMainGetEngineSpeakers() {
             console.error('AivisSpeech 話者一覧取得失敗:', error.message);
             return [];
         }
+    });
+}
+
+function registerIpcMainInstallEngineSpeakerModel() {
+    ipcMain.handle('install-engine-speaker-model', async (event, address = DEFAULT_AIVIS_HOST) => {
+        const result = await dialog.showOpenDialog({
+            title: '話者モデルを追加',
+            filters: [
+                { name: '話者モデル', extensions: ['aivmx', 'aivm'] },
+                { name: 'すべてのファイル', extensions: ['*'] }
+            ],
+            properties: ['openFile']
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            return { canceled: true };
+        }
+
+        const filePath = result.filePaths[0];
+        await requestEngineModelInstall(address || DEFAULT_AIVIS_HOST, filePath);
+        return { canceled: false };
+    });
+}
+
+function registerIpcMainUninstallEngineSpeakerModel() {
+    ipcMain.handle('uninstall-engine-speaker-model', async (event, address = DEFAULT_AIVIS_HOST, speakerUuid) => {
+        if (typeof speakerUuid !== 'string' || !speakerUuid.trim()) {
+            throw new Error('削除する話者モデルを特定できません。');
+        }
+        const engineAddress = address || DEFAULT_AIVIS_HOST;
+        const installedModels = await requestEngineJson(engineAddress, '/aivm_models');
+        const modelEntry = Object.entries(installedModels).find(([, modelInfo]) =>
+            Array.isArray(modelInfo.speakers) && modelInfo.speakers.some(
+                librarySpeaker => librarySpeaker.speaker?.speaker_uuid === speakerUuid
+            )
+        );
+        if (!modelEntry) {
+            throw new Error(`話者 ${speakerUuid} に対応するインストール済みモデルが見つかりません。`);
+        }
+
+        const [modelUuid] = modelEntry;
+        await requestEngineDelete(
+            engineAddress,
+            `/aivm_models/${encodeURIComponent(modelUuid)}/uninstall`
+        );
+        return true;
+    });
+}
+
+async function requestEngineModelInstall(address, filePath) {
+    const fileInfo = await fs.stat(filePath);
+    if (!fileInfo.isFile()) {
+        throw new Error('選択したファイルを読み込めません。');
+    }
+
+    const boundary = `----xPlayer-${crypto.randomBytes(16).toString('hex')}`;
+    const filename = path.basename(filePath).replace(/["\r\n]/g, '_');
+    const prefix = Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: application/octet-stream\r\n\r\n`
+    );
+    const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
+    const parsedUrl = new URL('/aivm_models/install', address);
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        throw new Error('接続先アドレスが正しくありません。');
+    }
+
+    await new Promise((resolve, reject) => {
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        const request = client.request(parsedUrl, {
+            method: 'POST',
+            timeout: 120000,
+            headers: {
+                'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                'Content-Length': prefix.length + fileInfo.size + suffix.length
+            }
+        }, response => {
+            const chunks = [];
+            response.on('data', chunk => chunks.push(chunk));
+            response.on('end', () => {
+                if (response.statusCode >= 200 && response.statusCode < 300) {
+                    resolve();
+                    return;
+                }
+                const body = Buffer.concat(chunks).toString('utf8');
+                reject(new Error(`AivisSpeech Engine HTTP ${response.statusCode}${body ? `: ${body}` : ''}`));
+            });
+        });
+        const fileStream = fsNative.createReadStream(filePath);
+        request.on('error', reject);
+        request.on('timeout', () => request.destroy(new Error('AivisSpeech Engine request timed out')));
+        fileStream.on('error', error => request.destroy(error));
+        fileStream.on('end', () => request.end(suffix));
+        request.write(prefix);
+        fileStream.pipe(request, { end: false });
+    });
+}
+
+function requestEngineDelete(address, endpoint) {
+    return new Promise((resolve, reject) => {
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(endpoint, address);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Unsupported protocol');
+        } catch (error) {
+            reject(error);
+            return;
+        }
+
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        const request = client.request(parsedUrl, { method: 'DELETE', timeout: 120000 }, response => {
+            const chunks = [];
+            response.on('data', chunk => chunks.push(chunk));
+            response.on('end', () => {
+                if (response.statusCode >= 200 && response.statusCode < 300) {
+                    resolve();
+                    return;
+                }
+                const body = Buffer.concat(chunks).toString('utf8');
+                reject(new Error(`AivisSpeech Engine HTTP ${response.statusCode}${body ? `: ${body}` : ''}`));
+            });
+        });
+        request.on('error', reject);
+        request.on('timeout', () => request.destroy(new Error('AivisSpeech Engine request timed out')));
+        request.end();
     });
 }
 

@@ -1,7 +1,7 @@
 // -- preload.js -------------------------------------------------------
 const copyright = 'Copyright © 2025- @x-builder, Japan';
 const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver6.12.0';
+const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0';
 // ---------------------------------------------------------------------
 
 // 🔲共通変数設定🔲
@@ -142,5 +142,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     connectEngine: (address) => ipcRenderer.invoke('connect-engine', address),
     disconnectEngine: () => ipcRenderer.invoke('disconnect-engine'),
     getEngineSpeakers: (address) => ipcRenderer.invoke('get-engine-speakers', address),
+    installEngineSpeakerModel: (address) => ipcRenderer.invoke('install-engine-speaker-model', address),
+    uninstallEngineSpeakerModel: (address, speakerUuid) => ipcRenderer.invoke('uninstall-engine-speaker-model', address, speakerUuid),
     synthesizeEngineLine: (options) => ipcRenderer.invoke('synthesize-engine-line', options)
 });

@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver6.16.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -391,6 +391,20 @@ video {
     max-height: 220px;
     overflow-y: auto;
 }
+.speaker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+.speaker-header label {
+    margin: 0;
+}
+.speaker-header button {
+    min-width: 30px;
+    padding: 2px 5px;
+    font-size: 14px;
+}
 .speaker-list-empty {
     padding: 6px;
     color: #aab3b3;
@@ -416,6 +430,22 @@ video {
 }
 .speaker-preview-button {
     flex: 0 0 auto;
+}
+.speaker-delete-button {
+    flex: 0 0 auto;
+}
+.speaker-list::-webkit-scrollbar {
+    width: 8px;
+}
+.speaker-list::-webkit-scrollbar-track {
+    background: #121212;
+}
+.speaker-list::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 4px;
+}
+.speaker-list::-webkit-scrollbar-thumb:hover {
+    background: #777;
 }
 
 #zoomPanel {
