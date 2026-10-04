@@ -766,14 +766,27 @@ async function previewSpeaker(speakerId, speakerName) {
             return "おやすみなさい";
         }
     };
+    // 話者の名前と挨拶を組み合わせて一言を生成する関数
+    const getEnhancedRandomComment = (comments) => {
+        if (!comments || comments.length === 0) return "";
+        if (comments.length === 1) return comments[0];
 
-    // 一言のバリエーション（必要に応じて自由に追加・編集できます）
-    const comments = previewComments;
+        let randomIndex;
+        const array = new Uint32Array(1);
+
+        do {
+            crypto.getRandomValues(array);
+            randomIndex = array[0] % comments.length;
+        } while (randomIndex === lastCommentIndex);
+
+        lastCommentIndex = randomIndex;
+        return comments[randomIndex];
+    };
 
     // 読み上げ文章の組み立て
     const greeting = getGreeting();
     const namePart = `${speakerName}です。`;
-    const comment = comments[Math.floor(Math.random() * comments.length)]; // ランダム抽出
+    const comment = getEnhancedRandomComment(previewComments);
     const previewText = `${greeting}。${namePart}${comment}`;
 
     try {

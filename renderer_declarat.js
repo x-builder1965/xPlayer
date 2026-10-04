@@ -661,3 +661,4 @@ let textLineCancel = null;                      // 再生中の行を中断す�
 let textResumeWaiters = [];                     // 一時停止解除待ち
 let activeTextSynthesisCount = 0;               // 同時合成数
 let previewComments = [];                       // プレビュー用コメント
+let lastCommentIndex = -1;                      // 直前に表示したコメントのインデックス
