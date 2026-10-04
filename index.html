@@ -1,7 +1,7 @@
 <!-- -- index.html ------------------------------------------------------- -->
 <!-- const copyright = 'Copyright © 2025- @x-builder, Japan'; -->
 <!-- const email = 'x-builder@gmail.com'; -->
-<!-- const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0'; -->
+<!-- const appName = 'xPlayer -メディアプレイヤー- Ver6.21.0'; -->
 <!-- --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -184,15 +184,22 @@
                 <button id="zoomEndBtn" data-tooltip="ズームモード終了（Ctrl+z）">❌</button>
             </div>
         </div>
+        <!-- ヘルプ -->
         <div class="help-container">
             <div class="header-row">
-                <h1>xPlayer -メディアプレイヤー-</h1>
-                <button id="helpCloseBtn" data-tooltip="ヘルプ閉じる（Escape）">❌</button>
+                <h1>xPlayer -メディアプレイヤー- Ver1.00.0 ヘルプ</h1>
+                <button id="helpCloseBtn" class="btn-Close" data-tooltip="ヘルプ閉じる（Escape）">❌</button>
             </div>
             <div id="helpTableContainer" class="help-table-container"></div>
-            <div id="changelogBtn" class="changelog-toggle">▶ 変更履歴</div>
+        </div>
+        <!-- 変更履歴 -->
+        <div class="changelog-container">
+            <div class="header-row">
+                <h1>xPlayer -メディアプレイヤー- Ver1.00.0 変更履歴</h1>
+                <button id="changelogCloseBtn" class="btn-Close" data-tooltip="変更履歴閉じる（Escape）">❌</button>
+            </div>
             <div id="appConfigContainer" class="app-config-container" style="display: none;"></div>
-            <div id="changelogContent" class="changelog-container"></div>
+            <div id="changelogContent" class="changelog-Content"></div>
         </div>
     </div>
 

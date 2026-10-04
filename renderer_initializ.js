@@ -1,7 +1,7 @@
 // -- renderer_initializ.js --------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.19.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.21.0';
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -200,6 +200,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 	registerHelpOpenBtnEvents();
 	// 【個別イベント】❌ヘルプ（閉じる）イベントリスナー
 	registerHelpCloseBtnEvents();
+	// 【個別イベント】変更履歴（開く）イベントリスナー
+	registerChangelogOpenBtnEvents();
+	// 【個別イベント】❌変更履歴（閉じる）イベントリスナー
+	registerChangelogCloseBtnEvents();
 	// 【個別イベント】▶️メディア再生
 	registerVideoPlayerPlayEvents();
 	// 【個別イベント】⏸️メディア一時停止
@@ -455,6 +459,9 @@ function setupAllDOMsetting() {
     helpCloseBtn = document.getElementById('helpCloseBtn');
     helpContainer = document.querySelector('.help-container');
     helpTitle = helpContainer.querySelector('h1');
+    changelogCloseBtn = document.getElementById('changelogCloseBtn');
+    changelogContainer = document.querySelector('.changelog-container');
+    changelogTitle = changelogContainer.querySelector('h1');
     tooltipElements = document.querySelectorAll('[data-tooltip]');
     filenameMenus = document.querySelector('.filename-menus');
     filenameMenu = document.getElementById('filenameMenu');

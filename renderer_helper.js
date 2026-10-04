@@ -1,7 +1,7 @@
 // -- renderer_helper.js -----------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.21.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -802,8 +802,34 @@ function toggleHideCenterControls() {
 function openHelp() {
     videoContainer.style.display = 'none';
     helpContainer.style.display = 'block';
-    helpTitle.textContent = `${appName}`;
+    helpTitle.textContent = `${appName} ヘルプ`;
     isHelpOpen = true;
+}
+
+// ヘルプを閉じる
+function closeHelp() {
+    videoContainer.style.display = 'flex';
+    helpContainer.style.display = 'none';
+    isHelpOpen = false;
+    showControlsAndFilename();
+    updateIconOverlay();
+}
+
+// 変更履歴を開く
+function openChangelog() {
+    videoContainer.style.display = 'none';
+    changelogContainer.style.display = 'flex';
+    changelogTitle.textContent = `${appName} 変更履歴`;
+    isChangelogOpen = true;
+}
+
+// 変更履歴を閉じる
+function closeChangelog() {
+    videoContainer.style.display = 'flex';
+    changelogContainer.style.display = 'none';
+    isChangelogOpen = false;
+    showControlsAndFilename();
+    updateIconOverlay();
 }
 
 // ヘルプを閉じる

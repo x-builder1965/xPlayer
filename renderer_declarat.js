@@ -1,7 +1,7 @@
 // -- renderer_declarat.js ---------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.19.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.21.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -445,6 +445,8 @@ let helpOpenBtn = null;                         // ヘルプ表示ボタン
 let helpCloseBtn = null;                        // ヘルプ閉じるボタン
 let helpContainer = null;                       // ヘルプ表示コンテナ
 let helpTitle = null;                           // ヘルプタイトル
+let changelogCloseBtn = null;                   // 変更履歴閉じるボタン
+let changelogContainer = null;                  // 変更履歴表示コンテナ
 let tooltipElements = null;                     // ツールチップ対象要素
 let filenameMenus = null;                       // ファイル名メニュー群
 let filenameMenu = null;                        // ファイル名メニュー

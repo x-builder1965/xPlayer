@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver6.21.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -702,7 +702,7 @@ select:focus .tooltip {
 #zoomPanel #snapshotBtn:hover .tooltip,
 #zoomPanel #zoomBar:hover .tooltip,
 #zoomPanel #zoomEndBtn:hover .tooltip,
-button#helpCloseBtn:hover .tooltip {
+button.btn-Close:hover .tooltip {
     left: auto;
     right: 0;
     transform: none;
@@ -754,8 +754,9 @@ button#helpCloseBtn:hover .tooltip {
     box-shadow: 0 0 1em rgba(255, 107, 107, 0.6);
 }
 
-/* ヘルプ用設定 */
-.help-container {
+/* ヘルプ・変更履歴用設定 */
+.help-container,
+.changelog-container {
     width: 100%;
     height: 100%;
     box-sizing: border-box;
@@ -763,6 +764,24 @@ button#helpCloseBtn:hover .tooltip {
     padding: 1em;
     display: none;
     flex-direction: column;
+}
+/* スクロールバーのカスタマイズ（ダークテーマ用） */
+.body-table::-webkit-scrollbar,
+.changelog-Content::-webkit-scrollbar {
+    width: 8px;
+}
+.body-table::-webkit-scrollbar-track,
+.changelog-Content::-webkit-scrollbar-track {
+    background: #121212;
+}
+.body-table::-webkit-scrollbar-thumb,
+.changelog-Content::-webkit-scrollbar-thumb  {
+    background: #999;
+    border-radius: 4px;
+}
+.body-table::-webkit-scrollbar-thumb:hover,
+.changelog-Content::-webkit-scrollbar-thumb:hover {
+    background: #777;
 }
 .header-row {
     width: 100%;
@@ -781,7 +800,7 @@ h1 {
     position: relative;
     z-index: 1;
 }
-#helpCloseBtn {
+.btn-Close {
     position: absolute;
     right: 0;
     top: 50%;
@@ -801,16 +820,16 @@ h1 {
     transition: all 0.2s ease;
     z-index: 1000;
 }
-#helpCloseBtn:hover {
+.btn-Close:hover {
     background: rgba(255, 107, 107, 0.3);
     transform: translateY(-50%) scale(1.1);
     box-shadow: 0 0 1em rgba(255, 107, 107, 0.6);
 }
-#helpCloseBtn:active {
+.btn-Close:active {
     transform: translateY(-50%) scale(0.95);
 }
-.help-table-container,
-.changelog-container {
+/* ヘルプ用設定 */
+.help-table-container {
     width: 100%;
     margin: 0 auto;
     border: 1px solid #333;
@@ -823,9 +842,7 @@ h1 {
     flex-direction: column;
     flex: 1;
     max-width: none;
-}
-.help-table-container {
-    height: calc(96vh - 7em);
+    height: calc(96vh - 4em);
 }
 table {
     width: 100%;
@@ -846,20 +863,6 @@ table {
     overflow-y: auto;
     display: block;
 }        
-/* スクロールバーのカスタマイズ（ダークテーマ用） */
-.body-table::-webkit-scrollbar {
-    width: 8px;
-}
-.body-table::-webkit-scrollbar-track {
-    background: #121212;
-}
-.body-table::-webkit-scrollbar-thumb {
-    background: #999;
-    border-radius: 4px;
-}
-.body-table::-webkit-scrollbar-thumb:hover {
-    background: #777;
-}
 .body-table tr:hover {
     background-color: #404040;
     transition: background-color 0.3s ease;
@@ -915,6 +918,43 @@ caption {
 }
 .icon { 
     font-size: 1.2em; 
+}
+/* 変更履歴用設定 */
+.changelog-container {
+    position: fixed;
+    inset: 0;
+    width: auto;
+    height: auto;
+}
+.changelog-Content {
+    flex: 1;              /* 親要素（Flexコンテナ）の残りの高さをいっぱいに広げる */
+    min-height: 0;        /* Flexアイテム内でスクロールを正常に発生させるために必須 */
+    overflow-y: auto;     /* 溢れた内容をスクロール可能にする */
+    font-size: 1.5rem;
+    color: #ffffff;
+}
+.changelog-list {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+}
+.changelog-list li {
+    margin-bottom: 8px;
+    border-bottom: 1px solid #2a3536;
+    padding-bottom: 6px;
+    white-space: pre-wrap; /* 改行やインデントを維持 */
+}
+/* 子要素（・付きの行）のインデントを少し下げる、または装飾用 */
+.changelog-list li.sub-item {
+    padding-left: 15px;
+    color: #b0bec5;
+    border-bottom: none;
+    padding-bottom: 2px;
+    margin-bottom: 0;
+}
+.changelog-list li:hover {
+    background-color: #404040;
+    transition: background-color 0.3s ease;
 }
 
 /* 編集コントロール全体 (#editControls) */
@@ -1126,66 +1166,6 @@ button#modeChangeBtn.convert-active:hover,
 #audioMotionBtn.random-motion-active:hover,
 #imageEffectBgmBtn.random-effectbgm-active:hover {
     background: #f4d03f7a !important;   /* 黄系：１動画 */
-}
-
-/* トグル用のトリガーボタン（リンク風） */
-.changelog-toggle {
-    display: inline-block;
-    background-color: #0066cc;
-    color: #ffffff;
-    font-size: 0.9em;
-    line-height: 1.2;
-    cursor: pointer;
-    user-select: none;
-    padding: 0.4em 0.4em;
-    width: 99%;
-}
-
-/* 変更履歴のコンテナ（最初は非表示） */
-.changelog-container {
-    display: none;
-    height: calc(50vh - 7em); /* 縦長になりすぎないようスクロールを設定 */
-    overflow-y: auto;
-}
-
-/* スクロールバーのカスタマイズ（ダークテーマ用） */
-.changelog-container::-webkit-scrollbar {
-    width: 8px;
-}
-.changelog-container::-webkit-scrollbar-track {
-    background: #121212;
-}
-.changelog-container::-webkit-scrollbar-thumb {
-    background: #999;
-    border-radius: 4px;
-}
-.changelog-container::-webkit-scrollbar-thumb:hover {
-    background: #777;
-}
-
-/* 履歴リストのスタイル */
-.changelog-list {
-    list-style-type: none;
-    padding-left: 0;
-    margin: 0;
-}
-.changelog-list li {
-    margin-bottom: 8px;
-    border-bottom: 1px solid #2a3536;
-    padding-bottom: 6px;
-    white-space: pre-wrap; /* 改行やインデントを維持 */
-}
-/* 子要素（・付きの行）のインデントを少し下げる、または装飾用 */
-.changelog-list li.sub-item {
-    padding-left: 15px;
-    color: #b0bec5;
-    border-bottom: none;
-    padding-bottom: 2px;
-    margin-bottom: 0;
-}
-.changelog-list li:hover {
-    background-color: #404040;
-    transition: background-color 0.3s ease;
 }
 
 .track-menu,
