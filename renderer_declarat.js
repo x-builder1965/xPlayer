@@ -578,6 +578,7 @@ let isAlwaysOnTop = false;                      // 常に最前面状態
 let isZoomMode = false;                         // ズームモード状態
 let isSettingsPanelOpen = false;                // 設定パネル表示状態
 let isHelpOpen = false;                         // ヘルプ表示状態
+let isChangelogOpen = false;                    // 変更履歴表示状態
 let isSeekDragging = false;                     // シークバー操作中フラグ
 let isMouseOverSeekBar = false;                 // シークバー上にマウスがあるか
 let currentConvertPromise = null;               // 現在の変換処理

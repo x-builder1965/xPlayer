@@ -832,15 +832,6 @@ function closeChangelog() {
     updateIconOverlay();
 }
 
-// ヘルプを閉じる
-function closeHelp() {
-    videoContainer.style.display = 'flex';
-    helpContainer.style.display = 'none';
-    isHelpOpen = false;
-    showControlsAndFilename();
-    updateIconOverlay();
-}
-
 // 🔲各種メニュー生成・制御🔲
 
 // アスペクト比選択メニュー作成

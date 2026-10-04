@@ -7,6 +7,7 @@
 // DOMContentロード完了（初期処理）
 document.addEventListener('DOMContentLoaded', async () => {
     Initializing = true;
+    registerDocumentKeydownEvents();
 
     // 🔲起動設定🔲
     // 多重起動（セカンダリインスタンス）判定
@@ -320,8 +321,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	registerVoiceSelectBtnClickEvent();
 	// 【個別イベント】🔠字幕選択クリック時
 	registerSubtitleSelectBtnClickEvent();
-	// 【個別イベント】変更履歴の表示／非表示トグル
-	registerChangelogBtnClickEvent();
 	// 【個別イベント】センターコントロールの前へボタンクリックイベント
 	registerCenterPrevBtnClickEvent();
 	// 【個別イベント】センターコントロールの再生/一時停止ボタンクリックイベント
@@ -342,8 +341,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 	registerCenterNextBtnMouseleaveEvent();
 
 	// 🔲documentイベントリスナー登録🔲
-	// 【documentイベント】ショートカットキー（イベントリスナー）
-	registerDocumentKeydownEvents();
 	// 【documentイベント】グローバル mouseup でドラッグ終了を確実に検知
 	registerDocumentMouseupEvents();
 	// 【documentイベント】フルスクリーン変更

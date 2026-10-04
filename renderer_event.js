@@ -2559,22 +2559,6 @@ function registerSubtitleSelectBtnClickEvent() {
     });
 }
 
-// 【個別イベント】変更履歴の表示／非表示トグル
-function registerChangelogBtnClickEvent() {
-    changelogBtn.addEventListener('click', () => {
-        // 表示状態をトグル
-        if (changelogContent.style.display === 'block') {
-            changelogBtn.textContent = '▶ 変更履歴';
-            changelogContent.style.display = 'none';
-            helpTableContainer.style.height = `calc(96vh - 7em)`;
-        } else {
-            changelogBtn.textContent = '▼ 変更履歴';
-            changelogContent.style.display = 'block';
-            helpTableContainer.style.height = `calc(61.3vh - 7em)`;
-        }
-    });
-}
-
 // 【個別イベント】センターコントロールの前へボタンクリックイベント
 function registerCenterPrevBtnClickEvent() {
     centerPrevBtn.addEventListener('click', () => {
@@ -2642,6 +2626,8 @@ function registerCenterNextBtnMouseleaveEvent() {
 // 【documentイベント】ショートカットキー（イベントリスナー）
 function registerDocumentKeydownEvents() {
     document.addEventListener('keydown', async (event) => {
+        if (Initializing) return;
+
         // メディアURL入力中はショートカット無効
         if (document.activeElement === urlInput) {  
             // メディアURLクリア（Escape）
@@ -2674,6 +2660,16 @@ function registerDocumentKeydownEvents() {
             if (event.key === 'Escape') {
                 event.preventDefault();
                 helpCloseBtn.click();
+                return;
+            }
+        }
+
+        // ■変更履歴■
+        if (isChangelogOpen) {
+            // 変更履歴キャンセル（Escape）
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                changelogCloseBtn.click();
                 return;
             }
         }
