@@ -1,7 +1,7 @@
 // -- renderer_event.js ------------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.19.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.20.0';
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -193,7 +193,12 @@ function registerPlayPauseBtnEvents() {
 // 【個別イベント】⏹️再生停止ボタン
 function registerPlayStopBtnEvents() {
     playStopBtn.addEventListener('click', () => {
-        if (currentMediaType === 'text') cancelTextPlayback();
+        if (currentMediaType === 'text') {
+            cancelTextPlayback();
+            saveTextLinePosition(0);
+            textReaderPanel.style.display = 'none';
+            updateTimeDisplay();
+        }
         videoPlayer.pause();
         isPlaying = false;
         currentVideoIndex = -1; // 停止状態を明示
