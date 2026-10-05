@@ -1,7 +1,7 @@
 // -- renderer_helper.js -----------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.21.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.24.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -802,7 +802,7 @@ function toggleHideCenterControls() {
 function openHelp() {
     videoContainer.style.display = 'none';
     helpContainer.style.display = 'block';
-    helpTitle.textContent = `${appName} ヘルプ`;
+    helpTitle.textContent = `${appName} ${version} ヘルプ`;
     isHelpOpen = true;
 }
 
@@ -819,7 +819,7 @@ function closeHelp() {
 function openChangelog() {
     videoContainer.style.display = 'none';
     changelogContainer.style.display = 'flex';
-    changelogTitle.textContent = `${appName} 変更履歴`;
+    changelogTitle.textContent = `${appName} ${version} 変更履歴`;
     isChangelogOpen = true;
 }
 
@@ -1741,7 +1741,7 @@ async function setVideoSrc(file) {
                 console.error("変換失敗:", err);
                 isConverting = false;
                 updateMessageOverlay('🔄️ 変換失敗', 6000);
-                playlistPathArea.value = `${appName}　${copyright}`;
+                playlistPathArea.value = `${appName} ${version}　${copyright}`;
                 updateIconOverlay();
                 seekBar.value = 0;
                 return;
@@ -3517,7 +3517,7 @@ async function removeFromPlaylist() {
         isPlaying = false;
         videoPlayerElement.removeAttribute('src');
         audioPlayer.removeAttribute('src');
-        playlistPathArea.value = `${appName}　${copyright}`;
+        playlistPathArea.value = `${appName} ${version}　${copyright}`;
         updateIconOverlay();
         selectedPlaylistIndex = -1;
     }
@@ -3534,7 +3534,7 @@ async function clearPlaylist() {
 
     await cleanupTempFiles();
 
-    playlistPathArea.value = `${appName}　${copyright}`;
+    playlistPathArea.value = `${appName} ${version}　${copyright}`;
     updateIconOverlay();
     playStopBtn.click();
 
@@ -4258,7 +4258,7 @@ function updatePlaylistDisplay() {
         if (playlistPathArea) {
             playlistPathArea.value = showPlaybackIcon 
                 ? `▶️ ${currentPath}` 
-                : (currentPath || `${appName}　${copyright}`);
+                : (currentPath || `${appName} ${version}　${copyright}`);
         }
     } catch (e) {
         console.warn('playlistPathArea update failed', e);

@@ -1,7 +1,7 @@
 // -- renderer_declarat.js ---------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.21.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.24.0';
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -553,7 +553,8 @@ let savedPreviewComments = null;                // 保存済みプレビュー�
 // グローバル（共通）変数
 let copyright = "Copyright © 2025- @x-builder, Japan"
 let email = "x-builder@gmail.com"
-let appName = "xPlayer -メディアプレイヤー- VerX.XX.X"
+let appName = "xPlayer -メディアプレイヤー-"
+let version = "VerX.XX.X"
 let localSettings = {};                         // 多重起動時に扱う設定値
 let Initializing = true;                        // 初期化中フラグ
 let playlist = [];                              // 現在表示中のプレイリスト

@@ -1,7 +1,7 @@
 // -- renderer_initializ.js --------------------------------------------
 // const copyright = 'Copyright © 2025- @x-builder, Japan';
 // const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.22.0';
+// const appName = 'xPlayer -メディアプレイヤー- Ver6.24.0';
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -389,6 +389,7 @@ async function setupHelpChangelogLoad() {
     copyright = configEl?.dataset.copyright;
     email = configEl?.dataset.email;
     appName = configEl?.dataset.appName;
+    version = configEl?.dataset.version;
 }
 
 // DOM要素取得
@@ -547,7 +548,7 @@ async function setupLocalStorageProtection() {
 async function setupAllLocalStorageSetting() {
     if (!isSecondary) {
         // --- 初回起動時 ---
-        appNameAndCopyright.textContent = `${appName}\n${copyright}`;
+        appNameAndCopyright.textContent = `${appName} ${version}\n${copyright}`;
 
         // 1. localStorage から値を取得
         savedVolume = localStorage.getItem('volume');
@@ -597,7 +598,7 @@ async function setupAllLocalStorageSetting() {
         await exportSettingsToFile(settingsFilePath);
     } else {
         // --- 多重起動時 ---
-        appNameAndCopyright.textContent = `🚫${appName}\n${copyright}`;
+        appNameAndCopyright.textContent = `🚫${appName} ${version}\n${copyright}`;
 
         // pidあり設定ファイルの存在確認
         const pidSettingsFilePath = settingsFilePath.replace(/\.xpj$/, `_${pid}.xpj`);
@@ -1319,6 +1320,6 @@ async function setupPreviewComments() {
 
 // 【初期設定】復元失敗時・データ非存在時の画面表示をリセットする処理
 function resetPlaylistState() {
-    playlistPathArea.value = `${appName}　${copyright}`;
+    playlistPathArea.value = `${appName} ${version}　${copyright}`;
     updateIconOverlay();
 }
