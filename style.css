@@ -1,7 +1,7 @@
 /* -- style.css -------------------------------------------------------- */
 /* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
 /* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver6.23.0'; */
+/* const appName = 'xPlayer -メディアプレイヤー- Ver6.25.0'; */
 /* --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -764,6 +764,7 @@ button.btn-Close:hover .tooltip {
     padding: 1em;
     display: none;
     flex-direction: column;
+    color: var(--text-color);
 }
 /* スクロールバーのカスタマイズ（ダークテーマ用） */
 .body-table::-webkit-scrollbar,
@@ -945,21 +946,16 @@ caption {
 .changelog-list li {
     margin-top: 0.2em;
     border-bottom: 1px solid #2a3536;
-    /* padding-bottom: 0.1em; */
-    white-space: pre-wrap; /* 改行やインデントを維持 */
+    white-space: pre-wrap;
     font-size: 1.2vw;
     line-height: 1.6;
 }
-/* 子要素（・付きの行）のインデントを少し下げる、または装飾用 */
-.changelog-list li.sub-item {
-    padding-left: 15px;
-    color: #b0bec5;
-    border-bottom: none;
-    padding-bottom: 2px;
-    margin-bottom: 0;
-}
 .changelog-list li:hover {
     background-color: #404040;
+    transition: background-color 0.3s ease;
+}
+.changelog-list li.sub-title:hover {
+    background-color: #1f5388;
     transition: background-color 0.3s ease;
 }
 
