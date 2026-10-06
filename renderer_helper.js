@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.28.0'
+// version   = 'Ver6.30.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1242,9 +1242,22 @@ function buildImageEffectBgmMenuContent(menu) {
 
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
+            const wasBookReader = isBookReaderMode();
             imageEffectBgmMode = key;
             await localStorageSetItemAndFile('imageEffectBgmMode', imageEffectBgmMode);
             updateImageEffectBgm();
+            if (currentMediaType === 'image' && imagePlayer?.src) {
+                applyImageEffect();
+                if (wasBookReader && !isBookReaderMode() && isPlaying) {
+                    const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
+                    startImageProgress();
+                    imageTimer = setTimeout(async () => {
+                        imageTimer = null;
+                        stopImageProgress();
+                        await playNextPlaylistItem();
+                    }, remainingMs);
+                }
+            }
             menu.remove();
             updateMessageOverlay(`💃 ${mode.label}`);
         });
@@ -1776,7 +1789,7 @@ async function setVideoSrc(file) {
 }
 
 // メディア再生
-async function playVideo(file, currentTime) {
+async function playVideo(file, currentTime, { startBookReaderAtLastPage = false } = {}) {
     if (!file?.path) return;
 
     if (imageTimer) {
@@ -1818,7 +1831,7 @@ async function playVideo(file, currentTime) {
 
 	if (currentMediaType === 'image') {
 	    // 選択されたトランジションエフェクトを適用
-	    applyImageEffect();
+	    applyImageEffect({ startBookReaderAtLastPage });
 	
 	    playPauseBtn.textContent = '⏸️';
 	    playPauseBtn.classList.remove('paused-active');
@@ -1830,7 +1843,7 @@ async function playVideo(file, currentTime) {
 	    updateTimeDisplay();
 	
 	    // isPlaying が true の場合のみタイマーをセット
-	    if (isPlaying) {
+	    if (isPlaying && !isBookReaderMode()) {
 	        const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
 	
 	        startPeriodicSave();
@@ -2240,6 +2253,26 @@ async function togglePlayPause() {
 
     // 画像表示中のトグル処理
     if (currentMediaType === 'image') {
+        if (isBookReaderMode()) {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                playPauseBtn.textContent = '⏸️';
+                playPauseBtn.classList.remove('paused-active');
+                playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+                startPeriodicSave();
+            } else {
+                playPauseBtn.textContent = '▶️';
+                playPauseBtn.classList.add('paused-active');
+                playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+                stopPeriodicSave();
+            }
+            await manageBgmState();
+            updatePlaylistDisplay();
+            showControlsAndFilename();
+            updateIconOverlay();
+            return;
+        }
+
         // 停止状態（インデックス初期化時）からの再生の場合
         if (currentVideoIndex === -1 || !imagePlayer.getAttribute('src')) {
             currentVideoIndex = getStartIndex();
@@ -2697,14 +2730,18 @@ function applyZoom(zoomPercent) {
     const targetElement = getMediaElement();
 
     targetElement.style.transformOrigin = 'center center';
-    targetElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    zoomValue = zoomPercent;
+    if (currentMediaType === 'image' && isBookReaderMode()) {
+        applyBookReaderPage();
+    } else {
+        targetElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    }
     if (currentMediaType === 'text' && textReader) {
         textReader.style.fontSize = `${16 * scale}px`;
     }
 
     localStorageSetItemAndFile('translateX', translateX.toString());
     localStorageSetItemAndFile('translateY', translateY.toString());
-    zoomValue = zoomPercent;
     localStorageSetItemAndFile('zoom', zoomValue.toString());
     
     if (zoomDisplay) {
@@ -2786,6 +2823,9 @@ function applyAspectRatioSetting() {
 
     if (aspectRatioBtn) {
         aspectRatioBtn.classList.toggle('aspectRatio-active', currentAspectRatio !== 'none');
+    }
+    if (currentMediaType === 'image' && isBookReaderMode()) {
+        applyBookReaderPage();
     }
 }
 
@@ -5680,9 +5720,15 @@ function loadAudioMotionNodes() {
 function updateImageEffectBgm() {
     // イメージエフェクト＆BGM設定ボタンの背景色設定
     if (imageEffectBgmBtn) {
-        imageEffectBgmBtn.classList.remove('image-effectbgm-active', 'random-effectbgm-active');
+        imageEffectBgmBtn.classList.remove(
+            'image-effectbgm-active',
+            'random-effectbgm-active',
+            'book-reader-effect-active'
+        );
         if (imageEffectBgmMode === 'random') {
             imageEffectBgmBtn.classList.add('random-effectbgm-active');
+        } else if (imageEffectBgmMode === 'book-reader') {
+            imageEffectBgmBtn.classList.add('book-reader-effect-active');
         } else if (imageEffectBgmMode && imageEffectBgmMode !== 'none') {
             imageEffectBgmBtn.classList.add('image-effectbgm-active');
         }
@@ -5728,9 +5774,14 @@ async function manageBgmState() {
 }
 
 // 画像にエフェクトクラスを適用する関数
-function applyImageEffect() {
+function applyImageEffect({ startBookReaderAtLastPage = false } = {}) {
     const imageWrapper = document.getElementById('imageWrapper');
     if (!imageWrapper || !imagePlayer) return;
+
+    if (bookReaderPageAnimation) {
+        bookReaderPageAnimation.cancel();
+        bookReaderPageAnimation = null;
+    }
 
     // 1. 一旦アニメーション関連クラスをすべて除去し、CSSアニメーションをリセット
     imageWrapper.classList.remove('paused');
@@ -5742,11 +5793,33 @@ function applyImageEffect() {
         }
     });
 
+    const wasBookReader = imageWrapper.classList.contains('book-reader');
+    imageWrapper.classList.remove('book-reader');
     let activeKey = imageEffectBgmMode || 'none';
+
+    if (activeKey === 'book-reader') {
+        imageWrapper.style.animation = 'none';
+        imageWrapper.classList.remove('image-effect');
+        imageWrapper.classList.add('book-reader');
+        const pages = getBookReaderPages();
+        bookReaderPageIndex = startBookReaderAtLastPage ? pages.length - 1 : 0;
+        imageCurrentTime = 0;
+        seekBar.value = '0';
+        updateTimeDisplay();
+        if (imageTimer) clearTimeout(imageTimer);
+        imageTimer = null;
+        stopImageProgress();
+        applyBookReaderPage({ centerSmallImageAtStart: !startBookReaderAtLastPage });
+        return;
+    }
+
+    if (wasBookReader) applyAspectRatioSetting();
 
     if (activeKey === 'random') {
         const availableEffectKeys = Object.keys(IMAGEEFFECTBGM_NODES).filter(
-            key => IMAGEEFFECTBGM_NODES[key].className && key !== 'none'
+            key => IMAGEEFFECTBGM_NODES[key].className
+                && key !== 'none'
+                && IMAGEEFFECTBGM_NODES[key].manual !== true
         );
 
         if (availableEffectKeys.length > 0) {
@@ -5788,6 +5861,115 @@ function applyImageEffect() {
     imageWrapper.classList.add('image-effect');
     if (cssClass) {
         imageWrapper.classList.add(cssClass);
+    }
+}
+
+function isBookReaderMode() {
+    return IMAGEEFFECTBGM_NODES[imageEffectBgmMode]?.manual === true;
+}
+
+function getBookReaderPages({ centerSmallImageAtStart = false } = {}) {
+    if (!imagePlayer?.naturalWidth || !imagePlayer?.naturalHeight || !imageWrapper) {
+        return [{ offsetX: 0, offsetY: 0 }];
+    }
+
+    const viewWidth = imageWrapper.clientWidth;
+    const viewHeight = imageWrapper.clientHeight;
+    const boxWidth = imagePlayer.clientWidth;
+    const boxHeight = imagePlayer.clientHeight;
+    if (!viewWidth || !viewHeight || !boxWidth || !boxHeight) {
+        return [{ offsetX: 0, offsetY: 0 }];
+    }
+
+    const fit = imagePlayer.style.objectFit || fitMode;
+    const containScale = Math.min(boxWidth / imagePlayer.naturalWidth, boxHeight / imagePlayer.naturalHeight);
+    const coverScale = Math.max(boxWidth / imagePlayer.naturalWidth, boxHeight / imagePlayer.naturalHeight);
+    const renderedWidth = fit === 'fill'
+        ? boxWidth
+        : imagePlayer.naturalWidth * (fit === 'cover' ? coverScale : containScale);
+    const renderedHeight = fit === 'fill'
+        ? boxHeight
+        : imagePlayer.naturalHeight * (fit === 'cover' ? coverScale : containScale);
+    const zoomScale = (100 + zoomValue) / 100;
+    const boxLeft = imagePlayer.offsetLeft;
+    const boxTop = imagePlayer.offsetTop;
+    const contentLeft = boxLeft + boxWidth / 2 + ((boxWidth - renderedWidth) / 2 - boxWidth / 2) * zoomScale + translateX;
+    const contentTop = boxTop + boxHeight / 2 + ((boxHeight - renderedHeight) / 2 - boxHeight / 2) * zoomScale + translateY;
+    const contentWidth = renderedWidth * zoomScale;
+    const contentHeight = renderedHeight * zoomScale;
+
+    const centerHorizontally = centerSmallImageAtStart && imagePlayer.naturalWidth < viewWidth;
+    const centerVertically = centerSmallImageAtStart && imagePlayer.naturalHeight < viewHeight;
+    const getAxisOffsets = (contentStart, contentLength, viewLength, center) => {
+        if (center || contentLength <= viewLength + 1) {
+            return [(viewLength - contentLength) / 2 - contentStart];
+        }
+
+        const firstOffset = -contentStart;
+        const lastOffset = viewLength - contentStart - contentLength;
+        const offsets = [];
+        for (let offset = firstOffset; offset > lastOffset + 1; offset -= viewLength) {
+            offsets.push(offset);
+        }
+
+        // Align the final page to the image edge so the last strip is not skipped.
+        if (offsets.length === 0 || Math.abs(offsets[offsets.length - 1] - lastOffset) > 1) {
+            offsets.push(lastOffset);
+        }
+        return offsets;
+    };
+    const horizontalOffsets = getAxisOffsets(contentLeft, contentWidth, viewWidth, centerHorizontally);
+    const verticalOffsets = getAxisOffsets(contentTop, contentHeight, viewHeight, centerVertically);
+
+    return verticalOffsets.flatMap(offsetY => horizontalOffsets.map(offsetX => ({ offsetX, offsetY })));
+}
+
+function applyBookReaderPage({ centerSmallImageAtStart = false, animate = false } = {}) {
+    if (!imagePlayer || !isBookReaderMode()) return;
+
+    const pages = getBookReaderPages({ centerSmallImageAtStart });
+    bookReaderPageIndex = Math.max(0, Math.min(bookReaderPageIndex, pages.length - 1));
+    const page = pages[bookReaderPageIndex];
+    const zoomScale = (100 + zoomValue) / 100;
+    const targetTransform = `translate(${translateX + page.offsetX}px, ${translateY + page.offsetY}px) scale(${zoomScale})`;
+    const currentTransform = getComputedStyle(imagePlayer).transform;
+
+    if (bookReaderPageAnimation) {
+        bookReaderPageAnimation.cancel();
+        bookReaderPageAnimation = null;
+    }
+
+    imagePlayer.style.transform = targetTransform;
+    if (animate && currentTransform !== 'none' && currentTransform !== targetTransform) {
+        bookReaderPageAnimation = imagePlayer.animate(
+            [{ transform: currentTransform }, { transform: targetTransform }],
+            { duration: 300, easing: 'ease-in-out' }
+        );
+        const animation = bookReaderPageAnimation;
+        animation.onfinish = () => {
+            if (bookReaderPageAnimation === animation) {
+                bookReaderPageAnimation = null;
+            }
+        };
+    }
+}
+
+async function stepBookReader(direction) {
+    if (!isBookReaderMode() || currentMediaType !== 'image' || !imagePlayer?.src) return;
+
+    const pages = getBookReaderPages();
+    const targetPage = bookReaderPageIndex + direction;
+    if (targetPage >= 0 && targetPage < pages.length) {
+        bookReaderPageIndex = targetPage;
+        applyBookReaderPage({ animate: true });
+        return;
+    }
+
+    if (direction > 0) {
+        nextVideoBtn.click();
+    } else {
+        bookReaderStartAtLastPage = true;
+        prevVideoBtn.click();
     }
 }
 

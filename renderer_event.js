@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.27.0'
+// version   = 'Ver6.30.0'
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -264,12 +264,14 @@ function registerPlayStopBtnEvents() {
 function registerPrevVideoBtnEvents() {
     prevVideoBtn.addEventListener('click', async () => {
         const prevIndex = getPrevVideoIndex();
+        const startBookReaderAtLastPage = bookReaderStartAtLastPage;
+        bookReaderStartAtLastPage = false;
 
         if (prevIndex >= 0) {
             await cleanupTempFiles();
             currentVideoIndex = prevIndex;
             updatePlaylistDisplay();
-            await playVideo(playlist[currentVideoIndex].file, 0);
+            await playVideo(playlist[currentVideoIndex].file, 0, { startBookReaderAtLastPage });
             savePlaylistAndPlaybackState();
         }
         showControlsAndFilename();
@@ -1460,6 +1462,10 @@ function registerVideoEndedListener() {
 function registerMediaContextMenuListener() {
     mediaContainer.addEventListener('contextmenu', (event) => {
         event.preventDefault();
+        if (currentMediaType === 'image' && isBookReaderMode() && !event.ctrlKey) {
+            stepBookReader(event.shiftKey ? -1 : 1);
+            return;
+        }
         if (event.ctrlKey) {
             playStopBtn.click();
         } else {
@@ -1607,11 +1613,17 @@ function registerMediaMouseLeaveListener() {
 
 // 【個別イベント】マウス左クリックで表示/非表示をトグル
 function registerMediaClickListener() {
+    window.addEventListener('resize', () => {
+        if (currentMediaType === 'image' && isBookReaderMode()) {
+            applyBookReaderPage();
+        }
+    });
+
     mediaContainer.addEventListener('click', (e) => {
         if (e.button === 0) {
             // ドラッグ中・ボリュームドラッグ中・一定ピクセル以上の移動がない純粋なクリック時のみ実行
             if (!isDragging && !isVolumeDragging && !hasMoved) {
-                const isVisible = 
+                const isVisible =
                     window.getComputedStyle(controls).opacity === '1' ||
                     window.getComputedStyle(filename).opacity === '1';
                 if (isVisible) {
@@ -3062,6 +3074,13 @@ function registerDocumentKeydownEvents() {
         } 
 
         // ▶️再生／⏸️一時停止（Space／Right Click）
+        if (!event.ctrlKey && !event.altKey && !event.metaKey && event.code === 'Space' &&
+            currentMediaType === 'image' && isBookReaderMode()) {
+            event.preventDefault();
+            await stepBookReader(event.shiftKey ? -1 : 1);
+            return;
+        }
+
         if (!event.ctrlKey && event.key === ' ') {
             event.preventDefault();
             playPauseBtn.click();

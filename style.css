@@ -2,7 +2,7 @@
  copyright = 'Copyright © 2025- @x-builder, Japan'
  email     = 'x-builder@gmail.com'
  appName   = 'xPlayer -メディアプレイヤー-'
- version   = 'Ver6.28.0'
+ version   = 'Ver6.30.0'
 --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -1150,6 +1150,9 @@ button#modeChangeBtn.convert-active,
 #imageEffectBgmBtn.random-effectbgm-active {
     background: #f4d03f !important;   /* 黄系：１動画 */
 }
+#imageEffectBgmBtn.book-reader-effect-active {
+    background: #2ecc71 !important;
+}
 .mode-active:hover,
 #randomPlayBtn.active:hover,
 #editModeBtn.mode-active:hover,
@@ -1179,6 +1182,9 @@ button#modeChangeBtn.convert-active:hover,
 #audioMotionBtn.random-motion-active:hover,
 #imageEffectBgmBtn.random-effectbgm-active:hover {
     background: #f4d03f7a !important;   /* 黄系：１動画 */
+}
+#imageEffectBgmBtn.book-reader-effect-active:hover {
+    background: #27ae60 !important;
 }
 
 .track-menu,

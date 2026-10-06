@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.27.0'
+// version   = 'Ver6.30.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -280,6 +280,7 @@ const IMAGEEFFECTBGM_NODES = {
     'effect11':      { label: 'スイング（扇）',     className: 'effect-swing-bottom' },
     'effect12':      { label: 'フリップ（左右）',   className: 'effect-flip-lr' },
     'effect13':      { label: 'フリップ（上下）',   className: 'effect-flip-tb' },
+    'book-reader':   { label: '（ブックリーダー）', manual: true },
     'random':        { label: '（ランダム）' }
 };
 const JOIN_MODES = {
@@ -648,6 +649,9 @@ let imageBgmPaths = [];                         // 画像再生用BGMパス一�
 let currentBgmIndex = 0;                        // 現在のBGM位置
 let currentLoadedBgmPath = null;                // 読み込み済みBGMパス
 let lastEffectKey = null;                       // 直前に適用したエフェクトキー
+let bookReaderPageIndex = 0;                    // ブックリーダー表示位置
+let bookReaderPageAnimation = null;              // ブックリーダーのページ移動アニメーション
+let bookReaderStartAtLastPage = false;           // 前の画像をブックリーダー終端から表示するか
 let hasMoved = false;                           // ドラッグ中の移動有無
 let forceStop = true;                           // 起動時に一時停止するか
 let maxImageCacheSize = 0;                      // 画像キャッシュ上限
