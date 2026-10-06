@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.29.0'
+// version   = 'Ver6.31.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2151,14 +2151,8 @@ async function processListFile(filePath) {
 }
 
 async function extractArchive(archivePath) {
-    const stat = await fs.stat(archivePath);
-    const cacheKey = crypto
-        .createHash('sha256')
-        .update(`${path.resolve(archivePath)}\0${stat.size}\0${stat.mtimeMs}\0${stat.ctimeMs}`)
-        .digest('hex');
     const extractionRoot = path.join(app.getPath('temp'), 'xPlayer-archives');
-    const extractionPath = path.join(extractionRoot, cacheKey);
-    const completionMarker = path.join(extractionPath, '.xplayer-complete');
+    const extractionPath = path.join(extractionRoot, path.parse(archivePath).name);
 
     const activeExtraction = activeArchiveExtractions.get(extractionPath);
     if (activeExtraction) return await activeExtraction;
@@ -2166,10 +2160,10 @@ async function extractArchive(archivePath) {
     const extractionPromise = (async () => {
         await fs.mkdir(extractionRoot, { recursive: true });
         try {
-            await fs.access(completionMarker);
-            return extractionPath;
-        } catch {
-            await fs.rm(extractionPath, { recursive: true, force: true });
+            await fs.access(extractionPath);
+            await fs.rm(extractionPath, { recursive: true });
+        } catch (error) {
+            if (error.code !== 'ENOENT') throw error;
         }
 
         await fs.mkdir(extractionPath, { recursive: true });
@@ -2196,7 +2190,6 @@ async function extractArchive(archivePath) {
                     }
                 });
             });
-            await fs.writeFile(completionMarker, '');
             return extractionPath;
         } catch (error) {
             await fs.rm(extractionPath, { recursive: true, force: true });
