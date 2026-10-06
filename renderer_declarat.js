@@ -652,6 +652,7 @@ let lastEffectKey = null;                       // 直前に適用したエフ�
 let bookReaderPageIndex = 0;                    // ブックリーダー表示位置
 let bookReaderPageAnimation = null;              // ブックリーダーのページ移動アニメーション
 let bookReaderStartAtLastPage = false;           // 前の画像をブックリーダー終端から表示するか
+let bookReaderPointerY = null;                   // ブックリーダー操作時のマウスY座標
 let hasMoved = false;                           // ドラッグ中の移動有無
 let forceStop = true;                           // 起動時に一時停止するか
 let maxImageCacheSize = 0;                      // 画像キャッシュ上限

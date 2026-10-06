@@ -1463,7 +1463,7 @@ function registerMediaContextMenuListener() {
     mediaContainer.addEventListener('contextmenu', (event) => {
         event.preventDefault();
         if (currentMediaType === 'image' && isBookReaderMode() && !event.ctrlKey) {
-            stepBookReader(event.shiftKey ? -1 : 1);
+            stepBookReader(getBookReaderManualDirection(event.clientY));
             return;
         }
         if (event.ctrlKey) {
@@ -1472,6 +1472,11 @@ function registerMediaContextMenuListener() {
             playPauseBtn.click();
         }
     });
+}
+
+function getBookReaderManualDirection(clientY = bookReaderPointerY) {
+    const pointerY = Number.isFinite(clientY) ? clientY : window.innerHeight / 2;
+    return pointerY < window.innerHeight / 2 ? -1 : 1;
 }
 
 // 【個別イベント】メディアダブルクリック
@@ -1508,6 +1513,10 @@ function registerMediaMouseDownListener() {
 
 // 【個別イベント】マウス移動（ドラッグシーク）
 function registerMediaMouseMoveListener() {
+    window.addEventListener('mousemove', (event) => {
+        bookReaderPointerY = event.clientY;
+    });
+
     mediaContainer.addEventListener('mousemove', (event) => {
         // ズームモード時のパン（画像移動）
         if (isPanning) {
@@ -3077,7 +3086,7 @@ function registerDocumentKeydownEvents() {
         if (!event.ctrlKey && !event.altKey && !event.metaKey && event.code === 'Space' &&
             currentMediaType === 'image' && isBookReaderMode()) {
             event.preventDefault();
-            await stepBookReader(event.shiftKey ? -1 : 1);
+            await stepBookReader(getBookReaderManualDirection());
             return;
         }
 
