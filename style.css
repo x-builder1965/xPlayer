@@ -1314,7 +1314,10 @@ button#modeChangeBtn.convert-active:hover,
     object-fit: contain;
 }
 /* UIコントロール類は mediaContainer より上のレイヤーに配置 */
-.controls, .filename, .filter-panel, .edit-panel {
+.controls,
+.filename, 
+.filter-panel, 
+.edit-panel {
     z-index: 10;
 }
 
