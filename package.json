@@ -1,6 +1,6 @@
 {
   "name": "xplayer",
-  "version": "6.28.0",
+  "version": "6.29.0",
   "description": "xPlayer - Multimedia Player",
   "main": "main.js",
   "author": "x-builder",
@@ -20,6 +20,7 @@
     "electron-builder": "^26.0.12"
   },
   "dependencies": {
+    "7zip-bin": "^5.2.0",
     "audiomotion-analyzer": "^4.5.4",
     "ffmpeg-static": "^5.2.0",
     "ffprobe-static": "^3.1.0",
@@ -33,6 +34,7 @@
     "asar": true,
     "asarUnpack": [
       "**/ffmpeg-static/**",
+      "**/7zip-bin/**",
       "**/*.node"
     ],
     "compression": "maximum",

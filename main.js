@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.27.0'
+// version   = 'Ver6.29.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -19,6 +19,7 @@ const http = require('http');
 const https = require('https');
 const { spawn, exec, execFile } = require('child_process');
 const trashModule = require('trash');
+const sevenZipPath = require('7zip-bin').path7za.replace('app.asar', 'app.asar.unpacked');
 
 // 固定値設定
 const ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
@@ -36,6 +37,8 @@ const IMAGE_EXTENSIONS = [
 ];
 const TEXT_EXTENSIONS = ['txt'];
 const VIDEO_PLAYLIST = ['amppl'];
+const ARCHIVE_EXTENSIONS = ['zip', 'rar', '7z'];
+const ARCHIVE_REGEX = new RegExp(`\\.(${ARCHIVE_EXTENSIONS.join('|')})$`, 'i');
 const SUPPORTED_PLAYLIST_ITEM_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS, ...TEXT_EXTENSIONS];
 const SUPPORTED_PLAYLIST_ITEM_REGEX = new RegExp(`\\.(${SUPPORTED_PLAYLIST_ITEM_EXTENSIONS.join('|')})$`, 'i');
 const VIDEO_PLAYLIST_REGEX = new RegExp(`\\.(${VIDEO_PLAYLIST.join('|')})$`, 'i');
@@ -58,6 +61,7 @@ let isJoinCancelled = false;		// 結合処理のキャンセル状態フラグ�
 let thumbnailCacheDir = null;		// サムネイル画像をキャッシュ保存するディレクトリのパス
 let isSecondaryInstance = false;	// 二重起動（多重起動）判定フラグ（true の場合はセカニアリインスタンスとして動作）
 let spawnedEnginePid = null;
+const activeArchiveExtractions = new Map();
 
 // 🔲初期処理🔲
 // 開発中セキュリティオプション設定
@@ -614,14 +618,15 @@ function registerIpcMainOpenVideoDialog() {
             properties: ['openFile', 'multiSelections'], // 複数選択可能
             filters: [
                 {
-                    name: '音声・動画・画像・テキストファイルとプレイリスト',
-                    extensions: [...SUPPORTED_PLAYLIST_ITEM_EXTENSIONS, ...VIDEO_PLAYLIST]
+                    name: '音声・動画・画像・テキストファイル、プレイリスト、圧縮ファイル',
+                    extensions: [...SUPPORTED_PLAYLIST_ITEM_EXTENSIONS, ...VIDEO_PLAYLIST, ...ARCHIVE_EXTENSIONS]
                 },
                 { name: '動画ファイル', extensions: VIDEO_EXTENSIONS },
                 { name: '音声ファイル', extensions: AUDIO_EXTENSIONS },
                 { name: '画像ファイル', extensions: IMAGE_EXTENSIONS },
                 { name: 'テキストファイル', extensions: TEXT_EXTENSIONS },
-                { name: 'プレイリスト', extensions: VIDEO_PLAYLIST }
+                { name: 'プレイリスト', extensions: VIDEO_PLAYLIST },
+                { name: '圧縮ファイル', extensions: ARCHIVE_EXTENSIONS }
             ]
         });
 
@@ -645,6 +650,9 @@ function registerIpcMainGetFileVideoFiles() {
             if (VIDEO_PLAYLIST_REGEX.test(filePath)) {
                 const listFiles = await processListFile(filePath);
                 selectedFiles.push(...listFiles);
+            } else if (ARCHIVE_REGEX.test(filePath)) {
+                const extractedPath = await extractArchive(filePath);
+                selectedFiles.push(...await getVideoFilesRecursively(extractedPath, false));
             } else if (SUPPORTED_PLAYLIST_ITEM_REGEX.test(filePath)) {
                 selectedFiles.push({ name: path.basename(filePath), path: filePath });
             }
@@ -1131,6 +1139,12 @@ function registerIpcMainClassifyPath() {
                 // .ampplプレイリストファイル
                 const files = await processListFile(fullPath);
                 return { type: 'playlist', files };
+            }
+
+            if (ARCHIVE_REGEX.test(fullPath)) {
+                const extractedPath = await extractArchive(fullPath);
+                const files = await getVideoFilesRecursively(extractedPath, false);
+                return { type: 'archive', files };
             }
 
             if (SUPPORTED_PLAYLIST_ITEM_REGEX.test(fullPath)) {
@@ -2136,8 +2150,72 @@ async function processListFile(filePath) {
     return videoFiles;
 }
 
+async function extractArchive(archivePath) {
+    const stat = await fs.stat(archivePath);
+    const cacheKey = crypto
+        .createHash('sha256')
+        .update(`${path.resolve(archivePath)}\0${stat.size}\0${stat.mtimeMs}\0${stat.ctimeMs}`)
+        .digest('hex');
+    const extractionRoot = path.join(app.getPath('temp'), 'xPlayer-archives');
+    const extractionPath = path.join(extractionRoot, cacheKey);
+    const completionMarker = path.join(extractionPath, '.xplayer-complete');
+
+    const activeExtraction = activeArchiveExtractions.get(extractionPath);
+    if (activeExtraction) return await activeExtraction;
+
+    const extractionPromise = (async () => {
+        await fs.mkdir(extractionRoot, { recursive: true });
+        try {
+            await fs.access(completionMarker);
+            return extractionPath;
+        } catch {
+            await fs.rm(extractionPath, { recursive: true, force: true });
+        }
+
+        await fs.mkdir(extractionPath, { recursive: true });
+        try {
+            await new Promise((resolve, reject) => {
+                const process = spawn(sevenZipPath, [
+                    'x',
+                    archivePath,
+                    `-o${extractionPath}`,
+                    '-y',
+                    '-bd'
+                ], { windowsHide: true });
+                let stderr = '';
+                process.stderr.setEncoding('utf8');
+                process.stderr.on('data', chunk => {
+                    stderr = `${stderr}${chunk}`.slice(-4000);
+                });
+                process.once('error', reject);
+                process.once('close', code => {
+                    if (code === 0) {
+                        resolve();
+                    } else {
+                        reject(new Error(stderr.trim() || `7-Zip exited with code ${code}`));
+                    }
+                });
+            });
+            await fs.writeFile(completionMarker, '');
+            return extractionPath;
+        } catch (error) {
+            await fs.rm(extractionPath, { recursive: true, force: true });
+            throw new Error(`圧縮ファイルを展開できませんでした: ${path.basename(archivePath)} (${error.message})`);
+        }
+    })();
+
+    activeArchiveExtractions.set(extractionPath, extractionPromise);
+    try {
+        return await extractionPromise;
+    } finally {
+        if (activeArchiveExtractions.get(extractionPath) === extractionPromise) {
+            activeArchiveExtractions.delete(extractionPath);
+        }
+    }
+}
+
 // 再帰的フォルダ読み込み
-async function getVideoFilesRecursively(folderPath) {
+async function getVideoFilesRecursively(folderPath, expandArchives = true) {
     const videoFiles = [];
     try {
         const files = await fs.readdir(folderPath, { withFileTypes: true });
@@ -2150,13 +2228,21 @@ async function getVideoFilesRecursively(folderPath) {
             const fullPath = path.join(folderPath, file.name);
 
             if (file.isDirectory()) {
-                const subFiles = await getVideoFilesRecursively(fullPath);
+                const subFiles = await getVideoFilesRecursively(fullPath, expandArchives);
                 videoFiles.push(...subFiles);
             } else if (SUPPORTED_PLAYLIST_ITEM_REGEX.test(file.name)) {
                 videoFiles.push({ name: file.name, path: fullPath });
             } else if (VIDEO_PLAYLIST_REGEX.test(file.name)) {
                 const listFiles = await processListFile(fullPath);
                 videoFiles.push(...listFiles);
+            } else if (expandArchives && ARCHIVE_REGEX.test(file.name)) {
+                try {
+                    const extractedPath = await extractArchive(fullPath);
+                    const extractedFiles = await getVideoFilesRecursively(extractedPath, false);
+                    videoFiles.push(...extractedFiles);
+                } catch (e) {
+                    console.error(`圧縮ファイル読み込みエラー: ${fullPath}`, e);
+                }
             }
         }
     } catch (e) {
@@ -2173,6 +2259,9 @@ async function processCommandLineFile(filePath) {
             return await getVideoFilesRecursively(filePath);
         } else if (VIDEO_PLAYLIST_REGEX.test(filePath)) {
             return await processListFile(filePath);
+        } else if (ARCHIVE_REGEX.test(filePath)) {
+            const extractedPath = await extractArchive(filePath);
+            return await getVideoFilesRecursively(extractedPath, false);
         } else if (SUPPORTED_PLAYLIST_ITEM_REGEX.test(filePath)) {
             return [{ name: path.basename(filePath), path: filePath }];
         }
