@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.26.0'
+// version   = 'Ver6.27.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -171,17 +171,17 @@ function registerIpcMainConnectEngine() {
             parsedUrl = new URL(address);
             if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Unsupported protocol');
         } catch {
-            return { success: false, error: '接続先アドレスが正しくありません。' };
+            return { success: false, error: '🔄接続先アドレスが正しくありません。' };
         }
 
         if (!['localhost', '127.0.0.1', '[::1]', '::1'].includes(parsedUrl.hostname)) {
-            return { success: false, error: 'AivisSpeech Engine サーバーに接続できませんでした。' };
+            return { success: false, error: '🔄Engine サーバーに接続できませんでした。' };
         }
 
         const started = await startAivisEngine(parsedUrl);
         return started
             ? { success: true, isSelfConnected: true }
-            : { success: false, error: 'AivisSpeech Engine を起動できません。run.exe の配置を確認してください。' };
+            : { success: false, error: '🔄Engine を起動できません。run.exe の配置を確認してください。' };
     });
 }
 

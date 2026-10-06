@@ -2,7 +2,7 @@
  copyright = 'Copyright © 2025- @x-builder, Japan'
  email     = 'x-builder@gmail.com'
  appName   = 'xPlayer -メディアプレイヤー-'
- version   = 'Ver6.26.0'
+ version   = 'Ver6.27.0'
 --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -1676,4 +1676,18 @@ button#modeChangeBtn.convert-active:hover,
 /* ビジュアライザー */
 #visualizerContainer {
     display: none;
+}
+
+/* ローディング用オーバーレイ */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.3); /* 背景をうっすら暗くする場合 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
 }

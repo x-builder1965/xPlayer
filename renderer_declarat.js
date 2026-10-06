@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.26.0'
+// version   = 'Ver6.27.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -424,6 +424,7 @@ let timeDisplay = null;                         // 再生時間表示
 let volumeDisplay = null;                       // 音量表示
 let messageOverlay = null;                      // メッセージオーバーレイ
 let iconOverlay = null;                         // 再生状態アイコンオーバーレイ
+let loadingOverlay = null;                      // ローディング用オーバーレイ
 let appNameAndCopyright = null;                 // アプリ名・著作権表示
 let wallpaperBtn = null;                        // 壁紙選択ボタン
 let importExportBtn = null;                     // 設定入出力ボタン
@@ -667,3 +668,4 @@ let textResumeWaiters = [];                     // 一時停止解除待ち
 let activeTextSynthesisCount = 0;               // 同時合成数
 let previewComments = [];                       // プレビュー用コメント
 let lastCommentIndex = -1;                      // 直前に表示したコメントのインデックス
+let loadingRequestCount = 0;                    // ローディング表示要求カウンタ

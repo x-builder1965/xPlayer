@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.26.0'
+// version   = 'Ver6.27.0'
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -436,6 +436,7 @@ function setupAllDOMsetting() {
     volumeDisplay = document.getElementById('volumeDisplay');
     messageOverlay = document.getElementById('messageOverlay');
     iconOverlay = document.getElementById('iconOverlay');
+    loadingOverlay = document.getElementById('loading-overlay');
     appNameAndCopyright = document.getElementById('appNameAndCopyright');
     wallpaperBtn = document.getElementById('wallpaperBtn');
     importExportBtn = document.getElementById('importExportBtn');

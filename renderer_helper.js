@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.26.0'
+// version   = 'Ver6.27.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1961,7 +1961,7 @@ async function playTextLines(session) {
         if (canSpeak && line.trim()) {
             prefetchTextAudio(session);
             try {
-                const audioData = await getTextAudio(lineIndex, line.trim(), session);
+                const audioData = await withLoading(() => getTextAudio(lineIndex, line.trim(), session));
                 if (session !== textPlaybackSession || !await waitForTextResume(session)) return;
                 const played = await playTextAudio(audioData, session);
                 if (!played) {
@@ -6128,4 +6128,27 @@ function SecureRandomInt(max) {
     } while (rand >= limit);
 
     return rand % max;
+}
+
+// オーバーレイ表示・非表示切り替えヘルパー
+function showLoading(show) {
+    if (!loadingOverlay) return;
+    if (show) {
+        loadingOverlay.classList.remove('hidden');
+    } else {
+        loadingOverlay.classList.add('hidden');
+    }
+}
+
+async function withLoading(operation) {
+    loadingRequestCount++;
+    showLoading(true);
+    try {
+        return await operation();
+    } finally {
+        loadingRequestCount--;
+        if (loadingRequestCount === 0) {
+            showLoading(false);
+        }
+    }
 }

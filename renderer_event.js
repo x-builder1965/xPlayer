@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.26.0'
+// version   = 'Ver6.27.0'
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -709,7 +709,7 @@ async function addEngineSpeakerModel() {
 
     speakerAddBtn.disabled = true;
     try {
-        const result = await installEngineSpeakerModel(engineAddress);
+        const result = await withLoading(() => installEngineSpeakerModel(engineAddress));
         if (result.canceled) return;
         const loaded = await loadEngineSpeakers();
         updateMessageOverlay(loaded ? '話者モデルを追加しました' : '話者モデルを追加しましたが、話者一覧を取得できません');
@@ -728,7 +728,7 @@ async function removeEngineSpeakerModel(speakerUuid, speakerName) {
     try {
         const selectedSpeakerIsBeingDeleted = Array.from(speakerSelect.options)
             .some(option => option.value === speakerSelect.value && option.dataset.speakerUuid === speakerUuid);
-        await uninstallEngineSpeakerModel(engineAddress, speakerUuid);
+        await withLoading(() => uninstallEngineSpeakerModel(engineAddress, speakerUuid));
         await loadEngineSpeakers();
         if (selectedSpeakerIsBeingDeleted) {
             speakerSelect.value = speakerSelect.options[0]?.value || '';
@@ -796,11 +796,11 @@ async function previewSpeaker(speakerId, speakerName) {
     const previewText = `${greeting}。${namePart}${comment}`;
 
     try {
-        const audioData = await synthesizeEngineLine({
+        const audioData = await withLoading(() => synthesizeEngineLine({
             address: engineAddress,
             text: previewText,
             speakerId: Number(speakerId)
-        });
+        }));
         if (request !== speakerPreviewRequest) return;
 
         const url = URL.createObjectURL(new Blob([audioData], { type: 'audio/wav' }));
@@ -868,7 +868,7 @@ async function initializeSpeechEngine() {
     engineAddressInput.value = engineAddress;
 
     try {
-        const result = await initEngine(engineAddress);
+        const result = await withLoading(() => initEngine(engineAddress));
         if (result.success) {
             isEngineReady = true;
             isSelfConnected = result.isSelfConnected;
@@ -890,13 +890,13 @@ async function handleEngineConnectionToggle() {
         engineConnectionStatus.textContent = '切断中...';
         speakerPreviewRequest++;
         stopSpeakerPreview();
-        await disconnectEngine();
+        await withLoading(() => disconnectEngine());
         isEngineReady = false;
         isSelfConnected = false;
         speakerSelect.replaceChildren(new Option('未接続', ''));
         renderEngineSpeakerList();
         updateEngineConnectionUI(false);
-        updateMessageOverlay('Engine を切断しました');
+        updateMessageOverlay('🔄Engine を切断しました');
         return;
     }
 
@@ -907,10 +907,10 @@ async function handleEngineConnectionToggle() {
     engineConnectionStatus.textContent = '接続中...';
 
     try {
-        const result = await connectEngine(engineAddress);
+        const result = await withLoading(() => connectEngine(engineAddress));
         if (!result.success) {
             updateEngineConnectionUI(false, result.error || '接続に失敗');
-            updateMessageOverlay(result.error || 'AivisSpeech Engine に接続できません', 6000);
+            updateMessageOverlay(result.error || '🔄Engine に接続できません', 6000);
             return;
         }
 
@@ -918,7 +918,7 @@ async function handleEngineConnectionToggle() {
         isSelfConnected = result.isSelfConnected;
         const loaded = await loadEngineSpeakers();
         updateEngineConnectionUI(true);
-        updateMessageOverlay(loaded ? 'Engine に接続しました' : '接続しましたが話者一覧を取得できません');
+        updateMessageOverlay(loaded ? '🔄Engine に接続しました' : '🔄接続しましたが話者一覧を取得できません');
     } catch (error) {
         updateEngineConnectionUI(false, '接続に失敗');
         console.error('AivisSpeech Engine 接続失敗:', error);
@@ -929,7 +929,7 @@ async function handleEngineConnectionToggle() {
 }
 
 async function loadEngineSpeakers() {
-    const speakers = await getEngineSpeakers(engineAddress);
+    const speakers = await withLoading(() => getEngineSpeakers(engineAddress));
     speakerSelect.replaceChildren();
 
     for (const speaker of speakers) {
