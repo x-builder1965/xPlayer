@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.27.0'
+// version   = 'Ver6.28.0'
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -430,8 +430,8 @@ function setupAllDOMsetting() {
     zoomEndBtn = document.getElementById('zoomEndBtn');
     fullscreenBtn = document.getElementById('fullscreenBtn');
     fitModeBtn = document.getElementById('fitModeBtn');
-    filename = document.querySelector('.filename');
     filenamePanel = document.querySelector('.filename-panel');
+    filename = filenamePanel;
     timeDisplay = document.getElementById('timeDisplay');
     volumeDisplay = document.getElementById('volumeDisplay');
     messageOverlay = document.getElementById('messageOverlay');

@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.27.0'
+// version   = 'Ver6.28.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -3720,7 +3720,7 @@ function clearPlaylistFilter() {
 
 // フィルタパネルの高さを調整
 function adjustFilterPanelHeight() {
-    const filename = document.querySelector('.filename');
+    const filename = document.querySelector('.filename-panel') || document.querySelector('.filename');
     const controlsPanel = document.querySelector('.controls');
     const filterPanel = document.querySelector('.filter-panel'); // プレイリスト
     const editPanel = document.querySelector('.edit-panel'); // 編集パネル

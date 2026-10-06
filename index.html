@@ -2,7 +2,7 @@
  copyright = 'Copyright © 2025- @x-builder, Japan'
  email     = 'x-builder@gmail.com'
  appName   = 'xPlayer -メディアプレイヤー-'
- version   = 'Ver6.27.0'
+ version   = 'Ver6.28.0'
 --------------------------------------------------------------------- -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -21,11 +21,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
 <body>
+    <!-- ローディングオーバーレイ -->
     <div id="loading-overlay" class="loading-overlay hidden">
         <i class="fa fa-refresh fa-spin fa-5x fa-fw" style="color: rgb(134, 201, 228)"></i>
     </div>
+    <!-- メインコンテナ -->
     <div class="main-container">
-        <!-- 基本画面 -->
+        <!-- プレイヤー -->
         <div class="video-container">
             <!-- プレイヤーコンテナ -->
 			<div id="mediaContainer">
@@ -44,6 +46,7 @@
                 </div>
 			</div>
             <video id="videoPreview" src="" muted></video>
+            <!-- オーバーレイコンテナ -->
             <div id="centerControls" class="center-controls">
                 <img id="centerPrevBtn" src="control_prev.png" alt="前へ" class="center-btn center-btn-side" />
                 <img id="centerPlayPauseBtn" src="control_play.png" alt="再生/一時停止" class="center-btn center-btn-main" />
@@ -51,24 +54,21 @@
             </div>
             <div id="messageOverlay"></div>
             <div id="iconOverlay" class="icon-overlay"></div>
-            <!-- 再生パス・URL再生 -->
-            <div class="filename">
-                <!-- 再生パスパネル -->
-                <div class="filename-panel">
-                    <button id="modeChangeBtn" data-tooltip="視聴モード（Ctrl+v）">🎬</button>
-                    <button id="editModeBtn" data-tooltip="編集モード（Ctrl+e）">✂️</button>
-                    <button id="joinPlaylistBtn" data-tooltip="結合編集（Ctrl+j）">🎞️</button>
-                    <input id="playlistPathArea" type="text" readonly placeholder="再生中メディアパス" data-tooltip="再生中メディアパス">
-                    <button id="randomPlayBtn" class="play-mode-btn" data-tooltip="ランダム再生 (Ctrl+r)">🔀</button>
-                    <button id="repeatPlayBtn"  class="play-mode-btn" data-tooltip="繰り返し再生 (Ctrl+Shift+r)">🔁</button>
-                    <button id="autoShuffleBtn" data-tooltip="自動シャッフル設定（Ctrl+w）">🤖</button>
-                </div>
-                <!-- URL再生パネル -->
-                <div class="url-input-panel">
-                    <input id="urlInput" type="text" placeholder="URLを入力" data-tooltip="URLを入力">
-                    <button id="urlClearBtn" data-tooltip="URLクリア（Shift+C）">🔘</button>
-                    <button id="urlConfirmBtn" data-tooltip="URL再生（Enter）">✅</button>
-                </div>
+            <!-- 再生パスパネル -->
+            <div class="filename-panel">
+                <button id="modeChangeBtn" data-tooltip="視聴モード（Ctrl+v）">🎬</button>
+                <button id="editModeBtn" data-tooltip="編集モード（Ctrl+e）">✂️</button>
+                <button id="joinPlaylistBtn" data-tooltip="結合編集（Ctrl+j）">🎞️</button>
+                <input id="playlistPathArea" type="text" readonly placeholder="再生中メディアパス" data-tooltip="再生中メディアパス">
+                <button id="randomPlayBtn" class="play-mode-btn" data-tooltip="ランダム再生 (Ctrl+r)">🔀</button>
+                <button id="repeatPlayBtn"  class="play-mode-btn" data-tooltip="繰り返し再生 (Ctrl+Shift+r)">🔁</button>
+                <button id="autoShuffleBtn" data-tooltip="自動シャッフル設定（Ctrl+w）">🤖</button>
+            </div>
+            <!-- URL再生パネル -->
+            <div class="url-input-panel">
+                <input id="urlInput" type="text" placeholder="URLを入力" data-tooltip="URLを入力">
+                <button id="urlClearBtn" data-tooltip="URLクリア（Shift+C）">🔘</button>
+                <button id="urlConfirmBtn" data-tooltip="URL再生（Enter）">✅</button>
             </div>
             <!-- プレイリストパネル -->
             <div id="filterPanel" class="filter-panel">

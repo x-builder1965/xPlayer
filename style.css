@@ -2,7 +2,7 @@
  copyright = 'Copyright © 2025- @x-builder, Japan'
  email     = 'x-builder@gmail.com'
  appName   = 'xPlayer -メディアプレイヤー-'
- version   = 'Ver6.27.0'
+ version   = 'Ver6.28.0'
 --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -68,7 +68,8 @@ video {
     transition: opacity 0.2s ease;
 }
 
-.filename,
+.filename-panel,
+.url-input-panel,
 .filter-panel,
 .edit-panel, 
 .controls {
@@ -83,17 +84,26 @@ video {
     transition: opacity 0.3s ease;
     z-index: 900;
 }
-.filename {
+.filename-panel,
+.url-input-panel {
     top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
 }
 .filename-panel {
-    display: flex; 
-    gap: 6px; 
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
 }
 
 .url-input-panel {
     display: none;
+    flex-direction: row;
+    align-items: center;
     gap: 6px;
+    top: 20px;
 }
 
 .filter-panel,
