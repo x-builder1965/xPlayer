@@ -1,7 +1,8 @@
 // -- renderer_declarat.js ---------------------------------------------
-// const copyright = 'Copyright © 2025- @x-builder, Japan';
-// const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.24.0';
+// copyright = 'Copyright © 2025- @x-builder, Japan'
+// email     = 'x-builder@gmail.com'
+// appName   = 'xPlayer -メディアプレイヤー-'
+// version   = 'Ver6.26.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -445,8 +446,8 @@ let helpOpenBtn = null;                         // ヘルプ表示ボタン
 let helpCloseBtn = null;                        // ヘルプ閉じるボタン
 let helpContainer = null;                       // ヘルプ表示コンテナ
 let helpTitle = null;                           // ヘルプタイトル
-let changelogCloseBtn = null;                   // 変更履歴閉じるボタン
-let changelogContainer = null;                  // 変更履歴表示コンテナ
+let changelogCloseBtn = null;                   // 修正履歴閉じるボタン
+let changelogContainer = null;                  // 修正履歴表示コンテナ
 let tooltipElements = null;                     // ツールチップ対象要素
 let filenameMenus = null;                       // ファイル名メニュー群
 let filenameMenu = null;                        // ファイル名メニュー
@@ -488,9 +489,9 @@ let playlistPathArea = null;                    // 再生中パス表示欄
 let cutTimelineContainer = null;                // カットタイムラインコンテナ
 let cutTimelineBar = null;                      // カットタイムラインバー
 let filterHistoryList = null;                   // フィルタ履歴一覧
-let changelogBtn = null;                        // 変更履歴切替ボタン
-let changelogContent = null;                    // 変更履歴本文
-let helpTableContainer = null;                  // 変更履歴テーブルコンテナ
+let changelogBtn = null;                        // 修正履歴切替ボタン
+let changelogContent = null;                    // 修正履歴本文
+let helpTableContainer = null;                  // 修正履歴テーブルコンテナ
 let mediaContainer = null;                      // メディア操作コンテナ
 let textReaderPanel = null;                     // テキスト読み上げ表示パネル
 let textReader = null;                          // 読み上げ対象テキスト
@@ -579,7 +580,7 @@ let isAlwaysOnTop = false;                      // 常に最前面状態
 let isZoomMode = false;                         // ズームモード状態
 let isSettingsPanelOpen = false;                // 設定パネル表示状態
 let isHelpOpen = false;                         // ヘルプ表示状態
-let isChangelogOpen = false;                    // 変更履歴表示状態
+let isChangelogOpen = false;                    // 修正履歴表示状態
 let isSeekDragging = false;                     // シークバー操作中フラグ
 let isMouseOverSeekBar = false;                 // シークバー上にマウスがあるか
 let currentConvertPromise = null;               // 現在の変換処理

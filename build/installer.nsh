@@ -5,7 +5,7 @@
 ; =========================================================
 !macro customHeader
   ; デフォルトのインストール先を指定（ユーザーが変更すれば $INSTDIR にその変更値が入ります）
-  InstallDir "$PROGRAMFILES64\xPlayer"
+  InstallDir "$PROGRAMFILES64\xPlayer\Multimedia"
 !macroend
 
 

@@ -1,7 +1,8 @@
 // -- renderer_helper.js -----------------------------------------------
-// const copyright = 'Copyright © 2025- @x-builder, Japan';
-// const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.24.0';
+// copyright = 'Copyright © 2025- @x-builder, Japan'
+// email     = 'x-builder@gmail.com'
+// appName   = 'xPlayer -メディアプレイヤー-'
+// version   = 'Ver6.26.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -815,15 +816,15 @@ function closeHelp() {
     updateIconOverlay();
 }
 
-// 変更履歴を開く
+// 修正履歴を開く
 function openChangelog() {
     videoContainer.style.display = 'none';
     changelogContainer.style.display = 'flex';
-    changelogTitle.textContent = `${appName} ${version} 変更履歴`;
+    changelogTitle.textContent = `${appName} ${version} 修正履歴`;
     isChangelogOpen = true;
 }
 
-// 変更履歴を閉じる
+// 修正履歴を閉じる
 function closeChangelog() {
     videoContainer.style.display = 'flex';
     changelogContainer.style.display = 'none';

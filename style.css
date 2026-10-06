@@ -1,8 +1,9 @@
-/* -- style.css -------------------------------------------------------- */
-/* const copyright = 'Copyright © 2025- @x-builder, Japan'; */
-/* const email = 'x-builder@gmail.com'; */
-/* const appName = 'xPlayer -メディアプレイヤー- Ver6.25.0'; */
-/* --------------------------------------------------------------------- */
+/* -- style.css --------------------------------------------------------
+ copyright = 'Copyright © 2025- @x-builder, Japan'
+ email     = 'x-builder@gmail.com'
+ appName   = 'xPlayer -メディアプレイヤー-'
+ version   = 'Ver6.26.0'
+--------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
     display: flex;
@@ -754,7 +755,7 @@ button.btn-Close:hover .tooltip {
     box-shadow: 0 0 1em rgba(255, 107, 107, 0.6);
 }
 
-/* ヘルプ・変更履歴用設定 */
+/* ヘルプ・修正履歴用設定 */
 .help-container,
 .changelog-container {
     width: 100%;
@@ -920,7 +921,7 @@ caption {
 .icon { 
     font-size: 1.2em; 
 }
-/* 変更履歴用設定 */
+/* 修正履歴用設定 */
 .changelog-container {
     position: fixed;
     inset: 0;

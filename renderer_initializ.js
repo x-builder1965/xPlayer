@@ -1,7 +1,8 @@
 // -- renderer_initializ.js --------------------------------------------
-// const copyright = 'Copyright © 2025- @x-builder, Japan';
-// const email = 'x-builder@gmail.com';
-// const appName = 'xPlayer -メディアプレイヤー- Ver6.24.0';
+// copyright = 'Copyright © 2025- @x-builder, Japan'
+// email     = 'x-builder@gmail.com'
+// appName   = 'xPlayer -メディアプレイヤー-'
+// version   = 'Ver6.26.0'
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -12,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 🔲起動設定🔲
     // 多重起動（セカンダリインスタンス）判定
     isSecondary = await checkIsSecondaryInstance();
-    // ヘルプコンテナ、変更履歴コンテナ取得（appConfigを取得）
+    // ヘルプコンテナ、修正履歴コンテナ取得（appConfigを取得）
     await setupHelpChangelogLoad();
     // DOM要素を取得
     await setupAllDOMsetting();
@@ -201,9 +202,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 	registerHelpOpenBtnEvents();
 	// 【個別イベント】❌ヘルプ（閉じる）イベントリスナー
 	registerHelpCloseBtnEvents();
-	// 【個別イベント】変更履歴（開く）イベントリスナー
+	// 【個別イベント】修正履歴（開く）イベントリスナー
 	registerAppNameAndCopyrightEvents();
-	// 【個別イベント】❌変更履歴（閉じる）イベントリスナー
+	// 【個別イベント】❌修正履歴（閉じる）イベントリスナー
 	registerChangelogCloseBtnEvents();
 	// 【個別イベント】▶️メディア再生
 	registerVideoPlayerPlayEvents();
@@ -376,7 +377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // 🔲初期設定関数🔲
-// // ヘルプコンテナ、変更履歴コンテナ取得（appConfigを取得）
+// // ヘルプコンテナ、修正履歴コンテナ取得（appConfigを取得）
 async function setupHelpChangelogLoad() {
     // 外部HTMLのロードを並行して実行
     await Promise.all([

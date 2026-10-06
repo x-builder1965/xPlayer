@@ -1,9 +1,9 @@
 // -- preload.js -------------------------------------------------------
-const copyright = 'Copyright © 2025- @x-builder, Japan';
-const email = 'x-builder@gmail.com';
-const appName = 'xPlayer -メディアプレイヤー- Ver6.17.0';
+// copyright = 'Copyright © 2025- @x-builder, Japan'
+// email     = 'x-builder@gmail.com'
+// appName   = 'xPlayer -メディアプレイヤー-'
+// version   = 'Ver6.26.0'
 // ---------------------------------------------------------------------
-
 // 🔲共通変数設定🔲
 // モジュールインポート
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
