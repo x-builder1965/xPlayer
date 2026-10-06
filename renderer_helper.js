@@ -5921,7 +5921,7 @@ function getBookReaderPages({ centerSmallImageAtStart = false } = {}) {
     const horizontalOffsets = getAxisOffsets(contentLeft, contentWidth, viewWidth, centerHorizontally);
     const verticalOffsets = getAxisOffsets(contentTop, contentHeight, viewHeight, centerVertically);
 
-    return verticalOffsets.flatMap(offsetY => horizontalOffsets.map(offsetX => ({ offsetX, offsetY })));
+    return verticalOffsets.flatMap(offsetY => [...horizontalOffsets].reverse().map(offsetX => ({ offsetX, offsetY })));
 }
 
 function applyBookReaderPage({ centerSmallImageAtStart = false, animate = false } = {}) {

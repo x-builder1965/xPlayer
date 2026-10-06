@@ -280,8 +280,8 @@ const IMAGEEFFECTBGM_NODES = {
     'effect11':      { label: 'スイング（扇）',     className: 'effect-swing-bottom' },
     'effect12':      { label: 'フリップ（左右）',   className: 'effect-flip-lr' },
     'effect13':      { label: 'フリップ（上下）',   className: 'effect-flip-tb' },
-    'book-reader':   { label: '（ブックリーダー）', manual: true },
-    'random':        { label: '（ランダム）' }
+    'random':        { label: '（ランダム）' },
+    'book-reader':   { label: '（ブックリーダー）', manual: true }
 };
 const JOIN_MODES = {
     'joinVideos': { label: '🎞️ 動画結合', fn: () => joinPlaylistVideos() },
