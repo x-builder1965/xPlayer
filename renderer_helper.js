@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.37.0'
+// version   = 'Ver6.38.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -5765,6 +5765,8 @@ function toggleVisualizer(show) {
     const visualizerContainer = document.getElementById('visualizerContainer');
     const videoPlayer = document.getElementById('videoPlayer');
 
+    const showVideo = (show !== 'audio' && show !== 'text');
+
     if (show === 'audio') {
         if (audioMotionMode === 'none') {
             visualizerContainer.style.display = 'none';
@@ -5772,10 +5774,10 @@ function toggleVisualizer(show) {
             visualizerContainer.style.display = 'block';
         }
         videoPlayer.style.display = 'none'; // 音声時は動画エリアを非表示に
-    } else {
-        visualizerContainer.style.display = 'none';
-        videoPlayer.style.display = show === 'text' ? 'none' : 'block';
     }
+    // videoPlayer の表示制御
+    videoPlayer.style.visibility = showVideo ? 'visible' : 'hidden';
+    videoPlayer.style.opacity = showVideo ? '1' : '0';
 }
 
 // DEFAULT_AUDIO_MOTION_OPTIONS を localStorage に保存する
