@@ -2,7 +2,7 @@
  copyright = 'Copyright © 2025- @x-builder, Japan'
  email     = 'x-builder@gmail.com'
  appName   = 'xPlayer -メディアプレイヤー-'
- version   = 'Ver6.30.0'
+ version   = 'Ver6.37.0'
 --------------------------------------------------------------------- */
 body {
     font-family: Arial, sans-serif;
@@ -1213,7 +1213,7 @@ button#modeChangeBtn.convert-active:hover,
 .track-menu,
 .audio-motion-menu,
 .image-effectbgm-menu {
-    max-height: min(600px, calc(100vh - 16px));
+    max-height: min(400px, calc(100vh - 16px));
     overflow-y: auto;
 }
 .track-menu::-webkit-scrollbar,
@@ -1500,7 +1500,7 @@ button#modeChangeBtn.convert-active:hover,
     line-height: 1.4;
     white-space: nowrap;
     z-index: 1000;
-    max-height: 480px;
+    max-height: 400px;
     min-width: 720px;       /* 最小幅を広めに指定（お好みのサイズに調整可能） */
     max-width: 58vw;
     box-sizing: border-box;

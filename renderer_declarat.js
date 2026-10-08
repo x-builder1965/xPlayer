@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.32.0'
+// version   = 'Ver6.37.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -266,6 +266,8 @@ const IMAGEEFFECTBGM_NODES = {
     'separator1':    { isSeparator: true },
     'wallpaper-set': { label: '背景生成' },
     'separator2':    { isSeparator: true },
+    'book-reader':   { label: 'ブックリーダー', manual: true },
+    'separator3':    { isSeparator: true },
     'none':          { label: '（なし）',          className: 'effect-none' },
     'effect1':       { label: 'フェード',          className: 'effect-fade' },
     'effect2':       { label: 'スライド（左→右）',  className: 'effect-slide-lr' },
@@ -280,8 +282,7 @@ const IMAGEEFFECTBGM_NODES = {
     'effect11':      { label: 'スイング（扇）',     className: 'effect-swing-bottom' },
     'effect12':      { label: 'フリップ（左右）',   className: 'effect-flip-lr' },
     'effect13':      { label: 'フリップ（上下）',   className: 'effect-flip-tb' },
-    'random':        { label: '（ランダム）' },
-    'book-reader':   { label: '（ブックリーダー）', manual: true }
+    'random':        { label: '（ランダム）' }
 };
 const JOIN_MODES = {
     'joinVideos': { label: '🎞️ 動画結合', fn: () => joinPlaylistVideos() },

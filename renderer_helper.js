@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.35.0'
+// version   = 'Ver6.37.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1235,10 +1235,11 @@ function buildImageEffectBgmMenuContent(menu) {
 
         // エフェクトモード選択アイテムの描画（none, effect1〜6, random）
         const isSelected = imageEffectBgmMode === key;
+        const isbookReader = isBookReaderMode();
         const item = document.createElement('div');
         item.className = 'menu-item';
         item.style.color = isSelected ? '#00ccff' : '#eee';
-        item.innerHTML = (isSelected ? '✅ ' : '　　') + mode.label;
+        item.innerHTML = (isSelected ? (!isbookReader ? '✅ ' : '📗 ') : '　　') + mode.label;
 
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
