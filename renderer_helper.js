@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.30.0'
+// version   = 'Ver6.32.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1573,10 +1573,70 @@ function parseSpeakerTaggedText(content) {
 }
 
 // メディアソース設定
-async function setVideoSrc(file) {
+function clearBookReaderTransition() {
+    if (bookReaderTransitionAnimation) {
+        bookReaderTransitionAnimation.cancel();
+        bookReaderTransitionAnimation = null;
+    }
+    bookReaderTransitionOverlay?.remove();
+    bookReaderTransitionOverlay = null;
+}
+
+function prepareBookReaderSlide(direction) {
+    clearBookReaderTransition();
+
+    const wrapper = document.getElementById('imageWrapper');
+    if (!wrapper || !imagePlayer?.complete || !imagePlayer.naturalWidth) return;
+
+    const overlay = imagePlayer.cloneNode();
+    const computedStyle = getComputedStyle(imagePlayer);
+    overlay.removeAttribute('id');
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.style.position = 'absolute';
+    overlay.style.inset = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.objectFit = computedStyle.objectFit;
+    overlay.style.objectPosition = computedStyle.objectPosition;
+    overlay.style.pointerEvents = 'none';
+    overlay.style.zIndex = '2';
+    overlay.dataset.slideDirection = direction < 0 ? '-1' : '1';
+    wrapper.appendChild(overlay);
+    bookReaderTransitionOverlay = overlay;
+}
+
+function startBookReaderSlide() {
+    const overlay = bookReaderTransitionOverlay;
+    if (!overlay || bookReaderTransitionAnimation) return;
+
+    const baseTransform = overlay.style.transform;
+    const transformSuffix = baseTransform && baseTransform !== 'none' ? ` ${baseTransform}` : '';
+    const direction = Number(overlay.dataset.slideDirection);
+    const wrapper = overlay.parentElement;
+    const animation = overlay.animate(
+        [
+            { transform: `translate3d(0, 0, 0)${transformSuffix}`, opacity: 1 },
+            {
+                transform: `translate3d(${direction * wrapper.clientWidth}px, 0, 0)${transformSuffix}`,
+                opacity: 1
+            }
+        ],
+        { duration: 500, easing: 'ease-in-out', fill: 'forwards' }
+    );
+    bookReaderTransitionAnimation = animation;
+    animation.onfinish = () => {
+        if (bookReaderTransitionAnimation === animation) {
+            clearBookReaderTransition();
+        }
+    };
+}
+
+async function setVideoSrc(file, { pageTurnDirection = 1 } = {}) {
     if (currentMediaType === 'text') {
         cancelTextPlayback();
     }
+
+    clearBookReaderTransition();
 
     // 既存のタイマーがあればクリア
     if (imageTimer) {
@@ -1596,6 +1656,7 @@ async function setVideoSrc(file) {
     const isAudio = isAudioFilePath(file.path);
     const isImage = isImageFilePath(file.path);
     const isText = isTextFilePath(file.path);
+    const previousMediaType = currentMediaType;
 
     // メディアタイプ判定
     if (isImage) {
@@ -1626,6 +1687,16 @@ async function setVideoSrc(file) {
 	    } else {
 	        imageUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
 	    }
+
+        if (
+            previousMediaType === 'image'
+            && isImage
+            && isBookReaderMode()
+            && imageWrapper?.classList.contains('book-reader')
+            && imagePlayer.src !== imageUrl
+        ) {
+            prepareBookReaderSlide(pageTurnDirection);
+        }
 	
 	    // 2. 表示用 Image の読み込み完了を待機（キャッシュがあれば一瞬で完了）
 	    const loadImagePromise = new Promise((resolve) => {
@@ -1654,6 +1725,7 @@ async function setVideoSrc(file) {
 	
 	    // 画像のデコード/ロード完了まで確実に待機
 	    await loadImagePromise;
+        requestAnimationFrame(startBookReaderSlide);
     } else {
         // 画像以外を表示する場合は img および 壁紙を非表示に
         imagePlayer.style.display = 'none';
@@ -1789,7 +1861,7 @@ async function setVideoSrc(file) {
 }
 
 // メディア再生
-async function playVideo(file, currentTime, { startBookReaderAtLastPage = false } = {}) {
+async function playVideo(file, currentTime, { startBookReaderAtLastPage = false, pageTurnDirection = 1 } = {}) {
     if (!file?.path) return;
 
     if (imageTimer) {
@@ -1815,7 +1887,7 @@ async function playVideo(file, currentTime, { startBookReaderAtLastPage = false 
             }
         }
     }
-    await setVideoSrc(file);
+    await setVideoSrc(file, { pageTurnDirection });
 
     // 動画・画像切り替え時に相互の設定（アスペクト比・描画モード・ズーム・パン）を適用
     syncDisplaySettingsToCurrentMedia();
@@ -5809,7 +5881,7 @@ function applyImageEffect({ startBookReaderAtLastPage = false } = {}) {
         if (imageTimer) clearTimeout(imageTimer);
         imageTimer = null;
         stopImageProgress();
-        applyBookReaderPage({ centerSmallImageAtStart: !startBookReaderAtLastPage });
+        applyBookReaderPage();
         return;
     }
 
@@ -5868,7 +5940,7 @@ function isBookReaderMode() {
     return IMAGEEFFECTBGM_NODES[imageEffectBgmMode]?.manual === true;
 }
 
-function getBookReaderPages({ centerSmallImageAtStart = false } = {}) {
+function getBookReaderPages() {
     if (!imagePlayer?.naturalWidth || !imagePlayer?.naturalHeight || !imageWrapper) {
         return [{ offsetX: 0, offsetY: 0 }];
     }
@@ -5898,10 +5970,8 @@ function getBookReaderPages({ centerSmallImageAtStart = false } = {}) {
     const contentWidth = renderedWidth * zoomScale;
     const contentHeight = renderedHeight * zoomScale;
 
-    const centerHorizontally = centerSmallImageAtStart && imagePlayer.naturalWidth < viewWidth;
-    const centerVertically = centerSmallImageAtStart && imagePlayer.naturalHeight < viewHeight;
-    const getAxisOffsets = (contentStart, contentLength, viewLength, center) => {
-        if (center || contentLength <= viewLength + 1) {
+    const getAxisOffsets = (contentStart, contentLength, viewLength) => {
+        if (contentLength <= viewLength + 1) {
             return [(viewLength - contentLength) / 2 - contentStart];
         }
 
@@ -5918,16 +5988,16 @@ function getBookReaderPages({ centerSmallImageAtStart = false } = {}) {
         }
         return offsets;
     };
-    const horizontalOffsets = getAxisOffsets(contentLeft, contentWidth, viewWidth, centerHorizontally);
-    const verticalOffsets = getAxisOffsets(contentTop, contentHeight, viewHeight, centerVertically);
+    const horizontalOffsets = getAxisOffsets(contentLeft, contentWidth, viewWidth);
+    const verticalOffsets = getAxisOffsets(contentTop, contentHeight, viewHeight);
 
     return verticalOffsets.flatMap(offsetY => [...horizontalOffsets].reverse().map(offsetX => ({ offsetX, offsetY })));
 }
 
-function applyBookReaderPage({ centerSmallImageAtStart = false, animate = false } = {}) {
+function applyBookReaderPage({ animate = false } = {}) {
     if (!imagePlayer || !isBookReaderMode()) return;
 
-    const pages = getBookReaderPages({ centerSmallImageAtStart });
+    const pages = getBookReaderPages();
     bookReaderPageIndex = Math.max(0, Math.min(bookReaderPageIndex, pages.length - 1));
     const page = pages[bookReaderPageIndex];
     const zoomScale = (100 + zoomValue) / 100;
@@ -5940,6 +6010,7 @@ function applyBookReaderPage({ centerSmallImageAtStart = false, animate = false 
     }
 
     imagePlayer.style.transform = targetTransform;
+    startBookReaderSlide();
     if (animate && currentTransform !== 'none' && currentTransform !== targetTransform) {
         bookReaderPageAnimation = imagePlayer.animate(
             [{ transform: currentTransform }, { transform: targetTransform }],

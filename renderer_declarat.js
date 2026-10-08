@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.30.0'
+// version   = 'Ver6.32.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -651,6 +651,8 @@ let currentLoadedBgmPath = null;                // 読み込み済みBGMパス
 let lastEffectKey = null;                       // 直前に適用したエフェクトキー
 let bookReaderPageIndex = 0;                    // ブックリーダー表示位置
 let bookReaderPageAnimation = null;              // ブックリーダーのページ移動アニメーション
+let bookReaderTransitionOverlay = null;            // 画像切り替え時のスライド対象画像
+let bookReaderTransitionAnimation = null;          // 画像切り替え時のスライドアニメーション
 let bookReaderStartAtLastPage = false;           // 前の画像をブックリーダー終端から表示するか
 let bookReaderPointerY = null;                   // ブックリーダー操作時のマウスY座標
 let hasMoved = false;                           // ドラッグ中の移動有無

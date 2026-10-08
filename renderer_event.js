@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.30.0'
+// version   = 'Ver6.32.0'
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -271,7 +271,7 @@ function registerPrevVideoBtnEvents() {
             await cleanupTempFiles();
             currentVideoIndex = prevIndex;
             updatePlaylistDisplay();
-            await playVideo(playlist[currentVideoIndex].file, 0, { startBookReaderAtLastPage });
+            await playVideo(playlist[currentVideoIndex].file, 0, { startBookReaderAtLastPage, pageTurnDirection: -1 });
             savePlaylistAndPlaybackState();
         }
         showControlsAndFilename();
