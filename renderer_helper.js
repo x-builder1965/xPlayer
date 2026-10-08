@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.32.0'
+// version   = 'Ver6.33.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1688,13 +1688,28 @@ async function setVideoSrc(file, { pageTurnDirection = 1 } = {}) {
 	        imageUrl = `file://${file.path.replace(/\\/g, '/')}?t=${Date.now()}`;
 	    }
 
-        if (
+        const shouldSlideBookReaderImage = (
             previousMediaType === 'image'
-            && isImage
             && isBookReaderMode()
             && imageWrapper?.classList.contains('book-reader')
             && imagePlayer.src !== imageUrl
-        ) {
+        );
+
+        if (shouldSlideBookReaderImage) {
+            // Decode the next image before replacing the visible one to avoid a blank frame.
+            const stagedImage = new Image();
+            const stagedImageLoad = new Promise((resolve) => {
+                stagedImage.onload = resolve;
+                stagedImage.onerror = resolve;
+                stagedImage.src = imageUrl;
+                if (stagedImage.complete) resolve();
+            });
+            await stagedImageLoad;
+            if (stagedImage.naturalWidth && typeof stagedImage.decode === 'function') {
+                await stagedImage.decode().catch(error => {
+                    console.warn('ブックリーダー画像の事前デコードに失敗:', error);
+                });
+            }
             prepareBookReaderSlide(pageTurnDirection);
         }
 	
