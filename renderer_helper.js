@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.34.0'
+// version   = 'Ver6.35.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1246,6 +1246,13 @@ function buildImageEffectBgmMenuContent(menu) {
             imageEffectBgmMode = key;
             await localStorageSetItemAndFile('imageEffectBgmMode', imageEffectBgmMode);
             updateImageEffectBgm();
+            if (!wasBookReader && isBookReaderMode()) {
+                // ブックリーダーのプリリセット
+                zoomResetBtn.click();
+                zoomEndBtn.click();
+                zoomBtn.click();
+                setPlayerMuted(true);
+            }
             if (currentMediaType === 'image' && imagePlayer?.src) {
                 applyImageEffect();
                 if (wasBookReader && !isBookReaderMode() && isPlaying) {
@@ -1271,6 +1278,28 @@ function buildImageEffectBgmMenuContent(menu) {
 
         menu.appendChild(item);
     });
+}
+
+function setPlayerMuted(setMute = null) {
+    if (setMute === false || (setMute === null && videoPlayer.volume === 0)) {
+        videoPlayer.volume = lastVolume || 0.2;
+        bgmAudio.volume = videoPlayer.volume; // BGMも一緒に更新
+        volumeBar.value = videoPlayer.volume;
+        volumeMuteBtn.textContent = '🔊';
+        volumeMuteBtn.classList.remove('muted-active');
+        volumeMuteBtn.setAttribute('data-tooltip', 'ミュート（Ctrl+m）');
+    } else if (setMute === true || (setMute === null && videoPlayer.volume !== 0)) {
+        lastVolume = videoPlayer.volume;
+        videoPlayer.volume = 0;
+        bgmAudio.volume = 0; // BGMも一緒に更新
+        volumeBar.value = 0;
+        volumeMuteBtn.textContent = '🔇';
+        volumeMuteBtn.classList.add('muted-active');
+        volumeMuteBtn.setAttribute('data-tooltip', 'ミュート解除（Ctrl+m）');
+    }
+    updateVolumeDisplay();
+    volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
+    localStorageSetItemAndFile('volume', videoPlayer.volume);
 }
 
 // メニューコンテナ生成関数

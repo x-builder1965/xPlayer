@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.34.0'
+// version   = 'Ver6.35.0'
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -337,26 +337,8 @@ function registerNextVideoBtnEvents() {
 // 【個別イベント】🔊／🔇ミュート/解除
 function registerVolumeMuteBtnEvents() {
     volumeMuteBtn.addEventListener('click', () => {
-        if (videoPlayer.volume === 0) {
-            videoPlayer.volume = lastVolume || 0.2;
-            bgmAudio.volume = videoPlayer.volume; // BGMも一緒に更新
-            volumeBar.value = videoPlayer.volume;
-            volumeMuteBtn.textContent = '🔊';
-            volumeMuteBtn.classList.remove('muted-active');
-            volumeMuteBtn.setAttribute('data-tooltip', 'ミュート（Ctrl+m）');
-        } else {
-            lastVolume = videoPlayer.volume;
-            videoPlayer.volume = 0;
-            bgmAudio.volume = 0; // BGMも一緒に更新
-            volumeBar.value = 0;
-            volumeMuteBtn.textContent = '🔇';
-            volumeMuteBtn.classList.add('muted-active');
-            volumeMuteBtn.setAttribute('data-tooltip', 'ミュート解除（Ctrl+m）');
-        }
-        updateVolumeDisplay();
+        setPlayerMuted();
         updateMessageOverlay(`${videoPlayer.volume === 0 ? '🔇' : '🔊'} ${Math.round(videoPlayer.volume * 100)}%`);
-        volumeMuteBtn.classList.toggle('muted-active', videoPlayer.volume === 0);
-        localStorageSetItemAndFile('volume', videoPlayer.volume);
         updateIconOverlay();
     });
 }
