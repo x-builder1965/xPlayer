@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.32.0'
+// version   = 'Ver6.34.0'
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -1530,8 +1530,9 @@ function registerMediaMouseMoveListener() {
 
             panStartX = event.clientX;
             panStartY = event.clientY;
-            translateX += deltaX;
-            translateY += deltaY;
+            const panBounds = getMediaPanBounds();
+            translateX = Math.max(panBounds.horizontal[0], Math.min(panBounds.horizontal[1], translateX + deltaX));
+            translateY = Math.max(panBounds.vertical[0], Math.min(panBounds.vertical[1], translateY + deltaY));
             const scale = (100 + zoomValue) / 100;
             
             // 画像の場合も imagePlayer 本体に transform を適用（親の imageWrapper のアニメーションと分離）

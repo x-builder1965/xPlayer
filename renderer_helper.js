@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.33.0'
+// version   = 'Ver6.34.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -5953,6 +5953,45 @@ function applyImageEffect({ startBookReaderAtLastPage = false } = {}) {
 
 function isBookReaderMode() {
     return IMAGEEFFECTBGM_NODES[imageEffectBgmMode]?.manual === true;
+}
+
+function getMediaPanBounds() {
+    const element = currentMediaType === 'image' ? imagePlayer : videoPlayerElement;
+    const viewport = currentMediaType === 'image' ? imageWrapper : mediaContainer;
+    const sourceWidth = currentMediaType === 'image' ? imagePlayer?.naturalWidth : videoPlayerElement?.videoWidth;
+    const sourceHeight = currentMediaType === 'image' ? imagePlayer?.naturalHeight : videoPlayerElement?.videoHeight;
+    if (!element || !viewport || !sourceWidth || !sourceHeight) {
+        return { horizontal: [translateX, translateX], vertical: [translateY, translateY] };
+    }
+
+    const viewWidth = viewport.clientWidth;
+    const viewHeight = viewport.clientHeight;
+    const boxWidth = element.clientWidth;
+    const boxHeight = element.clientHeight;
+    if (!viewWidth || !viewHeight || !boxWidth || !boxHeight) {
+        return { horizontal: [translateX, translateX], vertical: [translateY, translateY] };
+    }
+
+    const fit = element.style.objectFit || fitMode;
+    const containScale = Math.min(boxWidth / sourceWidth, boxHeight / sourceHeight);
+    const coverScale = Math.max(boxWidth / sourceWidth, boxHeight / sourceHeight);
+    const zoomScale = (100 + zoomValue) / 100;
+    const contentWidth = (fit === 'fill'
+        ? boxWidth
+        : sourceWidth * (fit === 'cover' ? coverScale : containScale)) * zoomScale;
+    const contentHeight = (fit === 'fill'
+        ? boxHeight
+        : sourceHeight * (fit === 'cover' ? coverScale : containScale)) * zoomScale;
+    const getAxisBounds = (boxStart, boxLength, contentLength, viewLength) => {
+        const contentStart = boxStart + boxLength / 2 + ((boxLength - contentLength / zoomScale) / 2 - boxLength / 2) * zoomScale;
+        if (contentLength <= viewLength + 1) return [0, 0];
+        return [viewLength - contentStart - contentLength, -contentStart];
+    };
+
+    return {
+        horizontal: getAxisBounds(element.offsetLeft, boxWidth, contentWidth, viewWidth),
+        vertical: getAxisBounds(element.offsetTop, boxHeight, contentHeight, viewHeight)
+    };
 }
 
 function getBookReaderPages() {
