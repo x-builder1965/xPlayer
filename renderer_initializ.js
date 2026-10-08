@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.28.0'
+// version   = 'Ver6.36.0'
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -553,48 +553,48 @@ async function setupAllLocalStorageSetting() {
         appNameAndCopyright.textContent = `${appName} ${version}\n${copyright}`;
 
         // 1. localStorage から値を取得
-        savedVolume = localStorage.getItem('volume');
-        savedPlaybackSpeed = localStorage.getItem('playbackSpeed');
+        savedVolume = localStorage.getItem('volume') || '1.0';
+        savedPlaybackSpeed = localStorage.getItem('playbackSpeed') || '1.0';
         savedPlaylist = localStorage.getItem('playlist');
-        savedCurrentVideoIndex = localStorage.getItem('currentVideoIndex');
-        savedCurrentTime = localStorage.getItem('currentTime');
-        savedFitMode = localStorage.getItem('fitMode');
-        savedZoom = localStorage.getItem('zoom');
-        savedTranslateX = localStorage.getItem('translateX');
-        savedTranslateY = localStorage.getItem('translateY');
-        savedEditFrameRate = localStorage.getItem('editFrameRate');
-        savedIsRandomPlayMode = localStorage.getItem('isRandomPlayMode');
-        savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode');
-        savedAutoShuffle = localStorage.getItem('autoShuffle');
+        savedCurrentVideoIndex = localStorage.getItem('currentVideoIndex') || '0';
+        savedCurrentTime = localStorage.getItem('currentTime') || '0';
+        savedFitMode = localStorage.getItem('fitMode') || 'contain';
+        savedZoom = localStorage.getItem('zoom') || '1.0';
+        savedTranslateX = localStorage.getItem('translateX') || '0';
+        savedTranslateY = localStorage.getItem('translateY') || '0';
+        savedEditFrameRate = localStorage.getItem('editFrameRate') || '30';
+        savedIsRandomPlayMode = localStorage.getItem('isRandomPlayMode') || 'false';
+        savedIsRepeatPlayMode = localStorage.getItem('isRepeatPlayMode') || 'none';
+        savedAutoShuffle = localStorage.getItem('autoShuffle') || 'true';
         savedShuffleOrder = localStorage.getItem('shuffleOrder');
-        savedShufflePosition = localStorage.getItem('shufflePosition');
-        savedAspectRatio = localStorage.getItem('aspectRatio');
-        savedCurrentSortMode = localStorage.getItem('playlistSortMode');
-        savedPlaylistDisplayMode = localStorage.getItem('playlistDisplayMode');
-        savedSelectedAudioLabel = localStorage.getItem('selectedAudioLabel');
+        savedShufflePosition = localStorage.getItem('shufflePosition') || '0';
+        savedAspectRatio = localStorage.getItem('aspectRatio') || 'none';
+        savedCurrentSortMode = localStorage.getItem('playlistSortMode') || 'none';
+        savedPlaylistDisplayMode = localStorage.getItem('playlistDisplayMode') || 'list';
+        savedSelectedAudioLabel = localStorage.getItem('selectedAudioLabel') || '日本語';
         savedSelectedAudioTrack = localStorage.getItem('selectedAudioTrack');
-        savedSelectedSubtitleLabel = localStorage.getItem('selectedSubtitleLabel');
+        savedSelectedSubtitleLabel = localStorage.getItem('selectedSubtitleLabel') || '（なし）';
         savedSelectedSubtitleTrack = localStorage.getItem('selectedSubtitleTrack');
         savedWallpaperPath = localStorage.getItem('wallpaperPath');
-        savedAlwaysOnTop = localStorage.getItem('alwaysOnTop');
-        savedPauseShowControls = localStorage.getItem('pauseShowControls');
-        savedHideCenterControls = localStorage.getItem('hideCenterControls');
-        savedAudioMotionMode = localStorage.getItem('audioMotionMode');
-        savedImageEffectBgmMode = localStorage.getItem('imageEffectBgmMode');
-        savedIsImageWallpaperEnabled = localStorage.getItem('isImageWallpaperEnabled');
+        savedAlwaysOnTop = localStorage.getItem('alwaysOnTop') || 'false';
+        savedPauseShowControls = localStorage.getItem('pauseShowControls') || 'false';
+        savedHideCenterControls = localStorage.getItem('hideCenterControls') || 'false';
+        savedAudioMotionMode = localStorage.getItem('audioMotionMode') || 'preset1';
+        savedImageEffectBgmMode = localStorage.getItem('imageEffectBgmMode') || 'effect1';
+        savedIsImageWallpaperEnabled = localStorage.getItem('isImageWallpaperEnabled') || 'false';
         savedFilterHistory = localStorage.getItem('filterHistory');
         savedOriginalOrder = localStorage.getItem('originalLoadOrder');
         savedAudioMotionOptions = localStorage.getItem('audioMotionOptions');
         savedAudioMotionNodes = localStorage.getItem('audioMotionNodes');
         savedImageBgmPaths = localStorage.getItem('imageBgmPaths');
-        savedCurrentBgmIndex = localStorage.getItem('currentBgmIndex');
-        savedMaxImageCacheSize = localStorage.getItem('maxImageCacheSize');
-        savedMaxMediaCacheSize = localStorage.getItem('maxMediaCacheSize');
-        savedEngineAddress = localStorage.getItem('engineAddress');
-        savedSpeakerId = localStorage.getItem('speakerId');
-        savedTextLineIndex = localStorage.getItem('textLineIndex');
-        savedTextLinePath = localStorage.getItem('textLinePath');
-        savedPreviewComments = localStorage.getItem('previewComments');
+        savedCurrentBgmIndex = localStorage.getItem('currentBgmIndex') || '0';
+        savedMaxImageCacheSize = localStorage.getItem('maxImageCacheSize') || '0';
+        savedMaxMediaCacheSize = localStorage.getItem('maxMediaCacheSize') || '0';
+        savedEngineAddress = localStorage.getItem('engineAddress') || 'http://127.0.0.1:10101';
+        savedSpeakerId = localStorage.getItem('speakerId') || '';
+        savedTextLineIndex = localStorage.getItem('textLineIndex') || '0';
+        savedTextLinePath = localStorage.getItem('textLinePath') || '';
+        savedPreviewComments = localStorage.getItem('previewComments') || defaultPreviewComments;
 
         // 2. 取得情報をユーザーフォルダの設定ファイルに保存
         await exportSettingsToFile(settingsFilePath);
@@ -726,11 +726,11 @@ async function setupAllLocalStorageSetting() {
     await localStorageSetItemAndFile('currentBgmIndex', savedCurrentBgmIndex);
     await localStorageSetItemAndFile('maxImageCacheSize', savedMaxImageCacheSize);
     await localStorageSetItemAndFile('maxMediaCacheSize', savedMaxMediaCacheSize);
-    await localStorageSetItemAndFile('engineAddress', savedEngineAddress || 'http://127.0.0.1:10101');
-    await localStorageSetItemAndFile('speakerId', savedSpeakerId || '');
-    await localStorageSetItemAndFile('textLineIndex', savedTextLineIndex || '0');
-    await localStorageSetItemAndFile('textLinePath', savedTextLinePath || '');
-    await localStorageSetItemAndFile('previewComments', savedPreviewComments || '');
+    await localStorageSetItemAndFile('engineAddress', savedEngineAddress);
+    await localStorageSetItemAndFile('speakerId', savedSpeakerId);
+    await localStorageSetItemAndFile('textLineIndex', savedTextLineIndex);
+    await localStorageSetItemAndFile('textLinePath', savedTextLinePath);
+    await localStorageSetItemAndFile('previewComments', savedPreviewComments);
 }
 
 // 【初期設定】メディアプレーヤーの初期化
