@@ -6128,37 +6128,8 @@ function applyBookReaderPage({ animate = false } = {}) {
     }
 }
 
-// 現在の translateX / translateY に最も近い BookReader ページインデックスを取得する関数
-function syncBookReaderPageIndex() {
-    if (!isBookReaderMode()) return;
-    
-    const pages = getBookReaderPages();
-    if (!pages || pages.length === 0) return;
-
-    // 現在の表示位置（page.offsetX / offsetY）に最も距離が近いページを探す
-    let closestIndex = 0;
-    let minDistance = Infinity;
-
-    pages.forEach((page, index) => {
-        // page.offsetX, page.offsetY は基準からの差分なので、現在の位置との差を計測
-        const dx = page.offsetX;
-        const dy = page.offsetY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < minDistance) {
-            minDistance = distance;
-            closestIndex = index;
-        }
-    });
-
-    bookReaderPageIndex = closestIndex;
-}
-
 async function stepBookReader(direction) {
     if (!isBookReaderMode() || currentMediaType !== 'image' || !imagePlayer?.src) return;
-
-    // ★ 右クリック（スライド）前に、パン移動後の現在位置に合わせてインデックスを同期する
-    syncBookReaderPageIndex();
 
     const pages = getBookReaderPages();
     const targetPage = bookReaderPageIndex + direction;
