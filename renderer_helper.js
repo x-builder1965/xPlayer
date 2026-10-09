@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.38.0'
+// version   = 'Ver6.39.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -6087,7 +6087,13 @@ function applyBookReaderPage({ animate = false } = {}) {
     bookReaderPageIndex = Math.max(0, Math.min(bookReaderPageIndex, pages.length - 1));
     const page = pages[bookReaderPageIndex];
     const zoomScale = (100 + zoomValue) / 100;
-    const targetTransform = `translate(${translateX + page.offsetX}px, ${translateY + page.offsetY}px) scale(${zoomScale})`;
+
+    // スライド後の目標位置を translateX / translateY に反映
+    translateX = translateX + page.offsetX;
+    translateY = translateY + page.offsetY;
+
+    // DOM の設定時は translateX / translateY のみを使用（二重加算を防止）
+    const targetTransform = `translate(${translateX}px, ${translateY}px) scale(${zoomScale})`;
     const currentTransform = getComputedStyle(imagePlayer).transform;
 
     if (bookReaderPageAnimation) {
