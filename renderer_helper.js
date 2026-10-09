@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.40.0'
+// version   = 'Ver6.41.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1946,9 +1946,12 @@ async function playVideo(file, currentTime, { startBookReaderAtLastPage = false,
         return;
     }
 
-	if (currentMediaType === 'image') {
-	    // 選択されたトランジションエフェクトを適用
-	    applyImageEffect({ startBookReaderAtLastPage });
+    if (currentMediaType === 'image') {
+        // 選択されたトランジションエフェクトを適用
+        // startBookReaderAtLastPage が引数で指定されていればそれを使い、
+        // 指定（false）かつグローバル変数が true の場合はグローバル側の値を優先して引き渡す
+        const shouldStartAtLast = startBookReaderAtLastPage || bookReaderStartAtLastPage;
+        applyImageEffect({ startBookReaderAtLastPage: shouldStartAtLast });
 	
 	    playPauseBtn.textContent = '⏸️';
 	    playPauseBtn.classList.remove('paused-active');
@@ -5893,7 +5896,7 @@ async function manageBgmState() {
 }
 
 // 画像にエフェクトクラスを適用する関数
-function applyImageEffect({ startBookReaderAtLastPage = false } = {}) {
+function applyImageEffect({ startBookReaderAtLastPage = bookReaderStartAtLastPage } = {}) {
     const imageWrapper = document.getElementById('imageWrapper');
     if (!imageWrapper || !imagePlayer) return;
 
@@ -5904,7 +5907,7 @@ function applyImageEffect({ startBookReaderAtLastPage = false } = {}) {
 
     // 1. 一旦アニメーション関連クラスをすべて除去し、CSSアニメーションをリセット
     imageWrapper.classList.remove('paused');
-    imageWrapper.style.animation = 'none'; // アニメーションを明示的に一時解除
+    imageWrapper.style.animation = 'none';
 
     Object.values(IMAGEEFFECTBGM_NODES).forEach(node => {
         if (node.className) {
@@ -5920,8 +5923,16 @@ function applyImageEffect({ startBookReaderAtLastPage = false } = {}) {
         imageWrapper.style.animation = 'none';
         imageWrapper.classList.remove('image-effect');
         imageWrapper.classList.add('book-reader');
+        
+        // ★ 画像切替時は位置座標を初期化する
+        translateX = 0;
+        translateY = 0;
+
         const pages = getBookReaderPages();
+        // ★ 前画像から戻ってきた場合は最後のページ、通常切替時は最初のページに設定
         bookReaderPageIndex = startBookReaderAtLastPage ? pages.length - 1 : 0;
+        bookReaderStartAtLastPage = false; // 消費したのでリセット
+
         imageCurrentTime = 0;
         seekBar.value = '0';
         updateTimeDisplay();
