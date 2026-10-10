@@ -6132,6 +6132,21 @@ async function stepBookReader(direction) {
     if (!isBookReaderMode() || currentMediaType !== 'image' || !imagePlayer?.src) return;
 
     const pages = getBookReaderPages();
+    
+    // ★ 追加：自由パンなどでインデックスがズレている可能性があるため、
+    // 現在のページ配列の中から「オフセットが 0 (または現在位置)」に一番近いインデックスを逆算して同期する
+    let currentNearestIndex = 0;
+    let minCurrentDist = Infinity;
+    pages.forEach((page, index) => {
+        // offsetX, offsetY が一番 0 に近い（現在位置に最も一致している）ものを探す
+        const dist = Math.hypot(page.offsetX, page.offsetY);
+        if (dist < minCurrentDist) {
+            minCurrentDist = dist;
+            currentNearestIndex = index;
+        }
+    });
+    bookReaderPageIndex = currentNearestIndex; // 正しい現在地インデックスに補正
+
     const currentPage = pages[bookReaderPageIndex];
 
     // 1. 表示中の画像分割ページの offsetY が 0 以外（※誤差吸収のため 0.01 以上）の場合
