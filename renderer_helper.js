@@ -6132,6 +6132,47 @@ async function stepBookReader(direction) {
     if (!isBookReaderMode() || currentMediaType !== 'image' || !imagePlayer?.src) return;
 
     const pages = getBookReaderPages();
+    const currentPage = pages[bookReaderPageIndex];
+
+    // 1. 表示中の画像分割ページの offsetY が 0 以外（※誤差吸収のため 0.01 以上）の場合
+    if (currentPage && (Math.abs(currentPage.offsetX) > 0.01 || Math.abs(currentPage.offsetY) > 0.01)) {
+        
+        // directionの進行方向にあるページ群の中から、現在位置に一番近いページを探す
+        let closestIndex = -1;
+        let minDistance = Infinity;
+
+        pages.forEach((page, index) => {
+            // direction > 0（次へ）なら現在より後ろのオフセット、
+            // direction < 0（前へ）なら現在より手前のオフセットに対象を限定
+            const diffY = page.offsetY - currentPage.offsetY;
+            const diffX = page.offsetX - currentPage.offsetX;
+            const isTargetDirection = direction > 0 ? ((diffX < 0) || (diffY < 0)) : ((diffX > 0) || (diffY > 0));
+
+            if (isTargetDirection) {
+                // 距離（ユークリッド距離、またはY軸中心の距離）を計算
+                const distance = Math.hypot(page.offsetX - currentPage.offsetX, page.offsetY - currentPage.offsetY);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestIndex = index;
+                }
+            }
+        });
+
+        // 進行方向に近い分割ページが見つかった場合、その位置へ更新して改ページ
+        if (closestIndex !== -1) {
+            bookReaderPageIndex = closestIndex;
+            applyBookReaderPage({ animate: true });
+            return;
+        }
+        
+        // もし進行方向に次の分割ページがない場合は、直接 0 に収束させて終了
+        currentPage.offsetY = 0;
+        currentPage.offsetX = 0;
+        applyBookReaderPage({ animate: true });
+        return;
+    }
+
+    // 2. offsetY === 0 の場合、従来の改ページロジックを実行
     const targetPage = bookReaderPageIndex + direction;
     
     if (targetPage >= 0 && targetPage < pages.length) {
