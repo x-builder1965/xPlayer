@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.35.0'
+// version   = 'Ver6.42.0'
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -187,7 +187,7 @@ function registerPlaylistPathAreaBlurEvents() {
 // 【個別イベント】▶️／⏸️再生/一時停止
 function registerPlayPauseBtnEvents() {
     playPauseBtn.addEventListener('click', async () => {
-        await togglePlayPause()
+        await togglePlayPause();
     });
 }
 
@@ -204,6 +204,8 @@ function registerPlayStopBtnEvents() {
         isPlaying = false;
         currentVideoIndex = -1; // 停止状態を明示
 
+        // ブックリーダーの自動ページ送りを停止
+        toggleAutoPageTurning(false);
         // 画像表示用タイマーを停止
         if (currentMediaType === 'image') {
             clearTimeout(imageTimer);
@@ -241,6 +243,7 @@ function registerPlayStopBtnEvents() {
         playPauseBtn.textContent = '▶️';
         playPauseBtn.classList.add('paused-active');
         playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+        toggleAutoPageTurning(false);
         stopPeriodicSave();
         showControlsAndFilename();
         
@@ -282,6 +285,11 @@ function registerPrevVideoBtnEvents() {
 // 【個別イベント】⏪30秒戻る（画像の場合は先頭へ戻す）
 function registerRewindBtnEvents() {
     rewindBtn.addEventListener('click', () => {
+        if (isBookReaderMode() && currentMediaType === 'image') {
+            // 画面上部で右クリック時と同じ挙動（前ページへ）
+            stepBookReader(-1); // -1 = 前へ（上部クリック相当）
+            return;
+        }
         if (currentMediaType === 'text') {
             seekTextLine(currentTextLineIndex - 10);
             updateMessageOverlay(`行 ${currentTextLineIndex + 1} / ${textLines.length}`);
@@ -301,6 +309,11 @@ function registerRewindBtnEvents() {
 // 【個別イベント】⏩30秒進む（画像の場合は末尾へ進み次のメディアへ）
 function registerFastForwardBtnEvents() {
     fastForwardBtn.addEventListener('click', () => {
+        if (isBookReaderMode() && currentMediaType === 'image') {
+            // 画面下部で右クリック時と同じ挙動（次ページへ）
+            stepBookReader(1); // 1 = 次へ（下部クリック相当）
+            return;
+        }
         if (currentMediaType === 'text') {
             seekTextLine(currentTextLineIndex + 10);
             updateMessageOverlay(`行 ${currentTextLineIndex + 1} / ${textLines.length}`);
@@ -1358,6 +1371,7 @@ function registerVideoPlayerErrorEvents() {
             playPauseBtn.textContent = '▶️';
             playPauseBtn.classList.add('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            toggleAutoPageTurning(false);
             updateIconOverlay();
 
             // エラー内容に応じてメッセージを細かく分ける（任意）

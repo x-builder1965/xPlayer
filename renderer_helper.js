@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.41.0'
+// version   = 'Ver6.42.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1247,6 +1247,7 @@ function buildImageEffectBgmMenuContent(menu) {
             imageEffectBgmMode = key;
             await localStorageSetItemAndFile('imageEffectBgmMode', imageEffectBgmMode);
             updateImageEffectBgm();
+            toggleAutoPageTurning(false);
             if (!wasBookReader && isBookReaderMode()) {
                 // ブックリーダーのプリリセット
                 zoomResetBtn.click();
@@ -1677,7 +1678,8 @@ async function setVideoSrc(file, { pageTurnDirection = 1 } = {}) {
     playPauseBtn.textContent = '⏸️';
     playPauseBtn.classList.remove('paused-active');
     playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-    
+    toggleAutoPageTurning(autoPageTurning);
+
     let cleanPath = file.path;
     if (cleanPath.includes('?')) {
         cleanPath = cleanPath.split('?')[0];
@@ -1956,7 +1958,8 @@ async function playVideo(file, currentTime, { startBookReaderAtLastPage = false,
 	    playPauseBtn.textContent = '⏸️';
 	    playPauseBtn.classList.remove('paused-active');
 	    playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-	
+        toggleAutoPageTurning(autoPageTurning);
+
 	    imageCurrentTime = (!isNaN(currentTime) && currentTime >= 0) ? Math.min(IMAGE_DURATION, currentTime) : 0;
 	    
 	    seekBar.value = (100 / IMAGE_DURATION) * imageCurrentTime;
@@ -1994,6 +1997,7 @@ async function playVideo(file, currentTime, { startBookReaderAtLastPage = false,
             playPauseBtn.textContent = '▶️';
             playPauseBtn.classList.add('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            toggleAutoPageTurning(false);
             stopPeriodicSave();
         });
 
@@ -2015,6 +2019,8 @@ async function startTextPlayback(fromStart = false) {
         isPlaying = false;
         playPauseBtn.textContent = '▶️';
         playPauseBtn.classList.add('paused-active');
+        playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+        toggleAutoPageTurning(false);
         if (currentVideoIndex >= 0) await playNextPlaylistItem();
         return;
     }
@@ -2027,7 +2033,7 @@ async function startTextPlayback(fromStart = false) {
     playPauseBtn.textContent = '⏸️';
     playPauseBtn.classList.remove('paused-active');
     playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-    // isTextReaderUserEditing = false
+    toggleAutoPageTurning(true);
     updatePlaylistDisplay();
     textPlaybackTask = playTextLines(session).catch(error => {
         if (session === textPlaybackSession) {
@@ -2315,6 +2321,7 @@ async function togglePlayPause() {
             playPauseBtn.textContent = '▶️';
             playPauseBtn.classList.add('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            toggleAutoPageTurning(false);
             stopPeriodicSave();
         } else if (currentVideoIndex < 0) {
             currentVideoIndex = selectedPlaylistIndex >= 0 ? selectedPlaylistIndex : 0;
@@ -2329,6 +2336,7 @@ async function togglePlayPause() {
             playPauseBtn.textContent = '⏸️';
             playPauseBtn.classList.remove('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+            toggleAutoPageTurning(true);
             if (audioPlayer.src) audioPlayer.play().catch(() => {});
             if (!textPlaybackTask) startTextPlayback(false);
         }
@@ -2379,11 +2387,13 @@ async function togglePlayPause() {
                 playPauseBtn.textContent = '⏸️';
                 playPauseBtn.classList.remove('paused-active');
                 playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+                toggleAutoPageTurning(true);
                 startPeriodicSave();
             } else {
                 playPauseBtn.textContent = '▶️';
                 playPauseBtn.classList.add('paused-active');
                 playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+                toggleAutoPageTurning(false);
                 stopPeriodicSave();
             }
             await manageBgmState();
@@ -2420,6 +2430,7 @@ async function togglePlayPause() {
             playPauseBtn.textContent = '▶️';
             playPauseBtn.classList.add('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            toggleAutoPageTurning(false);
             stopPeriodicSave();
         } else {
             // 【一時停止中 → 再開】
@@ -2430,7 +2441,8 @@ async function togglePlayPause() {
             playPauseBtn.textContent = '⏸️';
             playPauseBtn.classList.remove('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-            
+            toggleAutoPageTurning(true);
+
             startPeriodicSave();
             startImageProgress();
 
@@ -2467,6 +2479,7 @@ async function togglePlayPause() {
             playPauseBtn.textContent = '⏸️';
             playPauseBtn.classList.remove('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+            toggleAutoPageTurning(true);
         }
 
         if (modeChange === 'convert') {
@@ -2486,6 +2499,7 @@ async function togglePlayPause() {
             playPauseBtn.textContent = '▶️';
             playPauseBtn.classList.add('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            toggleAutoPageTurning(false);
             stopPeriodicSave();
         });
     } else {
@@ -2493,6 +2507,7 @@ async function togglePlayPause() {
         playPauseBtn.textContent = '▶️';
         playPauseBtn.classList.add('paused-active');
         playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+        toggleAutoPageTurning(false);
         localStorageSetItemAndFile('currentTime', videoPlayer.currentTime);
         stopPeriodicSave();
     }
@@ -5194,6 +5209,7 @@ function updateEditModeButtonUI() {
             playPauseBtn.textContent = '▶️';
             playPauseBtn.classList.add('paused-active');
             playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+            toggleAutoPageTurning(false);
             localStorageSetItemAndFile('currentTime', videoPlayer.currentTime);
             stopPeriodicSave();
         }
@@ -6564,4 +6580,40 @@ async function withLoading(operation) {
             showLoading(false);
         }
     }
+}
+
+// 【自動ページ送り機能の制御】
+function toggleAutoPageTurning(option = null) {
+    if (!isBookReaderMode() || currentMediaType !== 'image') return;
+
+    if (option === null) {
+        autoPageTurning = !autoPageTurning;
+    } else {
+        autoPageTurning = option;
+    }
+    if (autoPageTurning) {
+        // 重複タイマーを防ぐため、既存のタイマーがあればクリア
+        clearInterval(autoPageTimer);
+        autoPageTimer = null;
+        // 5秒間隔で画面下部での右クリック（次ページへ）と同じ挙動を実行
+        autoPageTimer = setInterval(() => {
+            if (isBookReaderMode() && currentMediaType === 'image') {
+                stepBookReader(1); // 1 = 次へ（下部クリック相当）
+            }
+        }, 5000);
+
+        isPlaying = true;
+        playPauseBtn.textContent = '⏸️';
+        playPauseBtn.classList.remove('paused-active');
+        playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+    } else {
+        clearInterval(autoPageTimer);
+        autoPageTimer = null;
+
+        isPlaying = false;
+        playPauseBtn.textContent = '▶️';
+        playPauseBtn.classList.add('paused-active');
+        playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
+    }
+    updateIconOverlay();
 }
