@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.42.0'
+// version   = 'Ver6.43.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -750,13 +750,13 @@ function updateCenterControlsVisibility(compulsion = false) {
 // 再生/一時停止アイコンの同期切り替え関数
 function updateCenterPlayPauseIcon() {
     // コントロールパネルの表示／非表示状態が確定するまで待つ
-    setTimeout(() => {
-        if (playPauseBtn.textContent === '▶️') {
+    // setTimeout(() => {
+        if (playPauseBtn.textContent.startsWith('▶️')) {
             centerPlayPauseBtn.src = 'control_play.png';
         } else {
             centerPlayPauseBtn.src = 'control_pause.png';
         }
-    }, 100);
+    // }, 100);
 }
 
 // コントロールパネル＆再生中パスパネル自動非表示無効
