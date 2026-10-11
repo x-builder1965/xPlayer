@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.44.0'
+// version   = 'Ver6.45.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -6582,6 +6582,9 @@ async function withLoading(operation) {
     }
 }
 
+// 排他制御用のガードフラグ（ファイルスコープ等で保持）
+let isTransitioning = false;
+
 // 自動ページ送り機能の制御
 function toggleAutoPageTurning(option = null) {
     if (!isBookReaderMode() || currentMediaType !== 'image') return;
@@ -6597,37 +6600,51 @@ function toggleAutoPageTurning(option = null) {
         clearTimeout(imageTimer);
         imageTimer = null;
     }
-    stopImageProgress(); // プログレスも一旦停止
+    stopImageProgress();
 
     if (autoPageTurning) {
-        // ブックリーダーの1ページあたりの基準秒数（例: 5.0秒）
         const bookPageDuration = 5.0; 
-        
-        // 再生速度を考慮した実効ミリ秒を算出
         const rate = currentPlaybackRate || 1.0;
         const remainingMs = ((bookPageDuration - imageCurrentTime) / rate) * 1000;
 
-        // 初回または再開時にプログレス進行を開始
         startBookReaderProgress(bookPageDuration);
 
-        // setTimeout を用いたページ送りタイマーの設定
         imageTimer = setTimeout(async () => {
             imageTimer = null;
             stopImageProgress();
 
-            // 次のページが存在するか確認、または次へ進める処理
+            // ★ 根本対策 1: 既に移行処理中（非同期処理の待機中）であれば、多重発火として弾く
+            if (isTransitioning) return;
+
             const pages = getBookReaderPages();
+            
             if (bookReaderPageIndex < pages.length - 1) {
-                // まだページがある場合は次ページへ進み、タイマーを再セットしてループ継続
-                stepBookReader(1); // 1 = 次へ
+                // まだページがある場合
+                stepBookReader(1);
                 imageCurrentTime = 0;
                 
                 if (autoPageTurning && isPlaying) {
-                    toggleAutoPageTurning(true); // 次ページのタイマーを再起的に仕掛ける
+                    toggleAutoPageTurning(true);
                 }
             } else {
-                // 最後のページに達した場合は次のプレイリスト項目へ進む
-                await playNextPlaylistItem();
+                // ==========================================
+                // 最後のページに達した場合（プレイリスト切替）
+                // ==========================================
+                isTransitioning = true; // ★ 排他ロックをかける（ここで多重発火を完全にブロック）
+
+                try {
+                    // 次のプレイリスト項目へ進む（非同期処理）
+                    await playNextPlaylistItem();
+
+                    // ★ 移行完了後、まだ自動送りが有効であれば次の画像の1ページ目から自動再開
+                    if (autoPageTurning && isBookReaderMode() && currentMediaType === 'image') {
+                        imageCurrentTime = 0;
+                        toggleAutoPageTurning(true);
+                    }
+                } finally {
+                    // ★ 処理が完了したら必ずロックを解除
+                    isTransitioning = false;
+                }
             }
         }, remainingMs > 0 ? remainingMs : 0);
 
@@ -6637,6 +6654,7 @@ function toggleAutoPageTurning(option = null) {
         playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
         startPeriodicSave();
     } else {
+        isTransitioning = false; // 手動停止時などにリセット
         stopImageProgress();
         stopPeriodicSave();
 
