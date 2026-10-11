@@ -6582,9 +6582,6 @@ async function withLoading(operation) {
     }
 }
 
-// 排他制御用のガードフラグ（ファイルスコープ等で保持）
-let isTransitioning = false;
-
 // 自動ページ送り機能の制御
 function toggleAutoPageTurning(option = null) {
     if (!isBookReaderMode() || currentMediaType !== 'image') return;

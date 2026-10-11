@@ -1864,7 +1864,7 @@ function registerSeekBarMouseDownListener() {
             const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
             const time = duration * percent;
 
-            if (currentMediaType !== 'image') {
+            if (currentMediaType !== 'text') {
                 // videoPreview ではなく、計算した time をメディアに適用
                 setMediaCurrentTime(time);
                 if (currentMediaType === 'video' && videoPreview) {

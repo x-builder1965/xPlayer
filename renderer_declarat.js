@@ -678,3 +678,4 @@ let previewComments = [];                       // プレビュー用コメン�
 let lastCommentIndex = -1;                      // 直前に表示したコメントのインデックス
 let loadingRequestCount = 0;                    // ローディング表示要求カウンタ
 let autoPageTurning = false;                    // 自動ページ送り状態
+let isTransitioning = false;                    // 排他制御用のガードフラグ（ファイルスコープ等で保持）
