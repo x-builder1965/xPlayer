@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.43.0'
+// version   = 'Ver6.44.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -900,7 +900,7 @@ function createAudioMotionMenu() {
     return menu;
 }
 
-// オーディオモーシュン設定メニューコンテンツ作成・再描画関数
+// イメージエフェクト&BGM設定メニューコンテンツ作成・再描画関数
 function buildImageEffectBgmMenuContent(menu) {
     menu.innerHTML = '';
 
@@ -6582,7 +6582,7 @@ async function withLoading(operation) {
     }
 }
 
-// 【自動ページ送り機能の制御】
+// 自動ページ送り機能の制御
 function toggleAutoPageTurning(option = null) {
     if (!isBookReaderMode() || currentMediaType !== 'image') return;
 
@@ -6591,24 +6591,54 @@ function toggleAutoPageTurning(option = null) {
     } else {
         autoPageTurning = option;
     }
+
+    // 既存の imageTimer をクリア
+    if (imageTimer) {
+        clearTimeout(imageTimer);
+        imageTimer = null;
+    }
+    stopImageProgress(); // プログレスも一旦停止
+
     if (autoPageTurning) {
-        // 重複タイマーを防ぐため、既存のタイマーがあればクリア
-        clearInterval(autoPageTimer);
-        autoPageTimer = null;
-        // 5秒間隔で画面下部での右クリック（次ページへ）と同じ挙動を実行
-        autoPageTimer = setInterval(() => {
-            if (isBookReaderMode() && currentMediaType === 'image') {
-                stepBookReader(1); // 1 = 次へ（下部クリック相当）
+        // ブックリーダーの1ページあたりの基準秒数（例: 5.0秒）
+        const bookPageDuration = 5.0; 
+        
+        // 再生速度を考慮した実効ミリ秒を算出
+        const rate = currentPlaybackRate || 1.0;
+        const remainingMs = ((bookPageDuration - imageCurrentTime) / rate) * 1000;
+
+        // 初回または再開時にプログレス進行を開始
+        startBookReaderProgress(bookPageDuration);
+
+        // setTimeout を用いたページ送りタイマーの設定
+        imageTimer = setTimeout(async () => {
+            imageTimer = null;
+            stopImageProgress();
+
+            // 次のページが存在するか確認、または次へ進める処理
+            const pages = getBookReaderPages();
+            if (bookReaderPageIndex < pages.length - 1) {
+                // まだページがある場合は次ページへ進み、タイマーを再セットしてループ継続
+                stepBookReader(1); // 1 = 次へ
+                imageCurrentTime = 0;
+                
+                if (autoPageTurning && isPlaying) {
+                    toggleAutoPageTurning(true); // 次ページのタイマーを再起的に仕掛ける
+                }
+            } else {
+                // 最後のページに達した場合は次のプレイリスト項目へ進む
+                await playNextPlaylistItem();
             }
-        }, 5000);
+        }, remainingMs > 0 ? remainingMs : 0);
 
         isPlaying = true;
         playPauseBtn.textContent = '⏸️';
         playPauseBtn.classList.remove('paused-active');
         playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
+        startPeriodicSave();
     } else {
-        clearInterval(autoPageTimer);
-        autoPageTimer = null;
+        stopImageProgress();
+        stopPeriodicSave();
 
         isPlaying = false;
         playPauseBtn.textContent = '▶️';
@@ -6616,4 +6646,28 @@ function toggleAutoPageTurning(option = null) {
         playPauseBtn.setAttribute('data-tooltip', '再生（Space／Right Click）');
     }
     updateIconOverlay();
+}
+
+// ブックリーダー自動ページ送り用のプログレス更新関数
+function startBookReaderProgress(durationSec) {
+    if (imageProgressInterval) clearInterval(imageProgressInterval);
+
+    seekBar.value = (100 / durationSec) * imageCurrentTime;
+    updateTimeDisplay();
+
+    let lastTimestamp = performance.now();
+
+    imageProgressInterval = setInterval(() => {
+        const now = performance.now();
+        const delta = ((now - lastTimestamp) / 1000) * (currentPlaybackRate || 1.0);
+        lastTimestamp = now;
+
+        if (imageCurrentTime < durationSec) {
+            imageCurrentTime = Math.min(durationSec, imageCurrentTime + delta);
+            seekBar.value = (100 / durationSec) * imageCurrentTime;
+            updateTimeDisplay();
+        } else {
+            stopImageProgress();
+        }
+    }, 50);
 }

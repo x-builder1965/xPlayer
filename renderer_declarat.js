@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.42.0'
+// version   = 'Ver6.44.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -678,4 +678,3 @@ let previewComments = [];                       // プレビュー用コメン�
 let lastCommentIndex = -1;                      // 直前に表示したコメントのインデックス
 let loadingRequestCount = 0;                    // ローディング表示要求カウンタ
 let autoPageTurning = false;                    // 自動ページ送り状態
-let autoPageTimer = null;                       // 自動ページ送り用のタイマーID
