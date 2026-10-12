@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.45.0'
+// version   = 'Ver6.46.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -6685,4 +6685,21 @@ function startBookReaderProgress(durationSec) {
             stopImageProgress();
         }
     }, 50);
+}
+
+// 右クリックのページ送り判定
+function getBookReaderManualDirection(event) {
+    const rect = mediaContainer.getBoundingClientRect();
+    // イベントのclientX、またはフォールバックとしてコンテナの中央を使用
+    const clientX = (event && Number.isFinite(event.clientX)) ? event.clientX : (rect.left + rect.width / 2);
+    const x = clientX - rect.left;
+    const third = rect.width / 3;
+
+    if (x < third) {
+        return -1; // 左側：前ページへ
+    } else if (x > third * 2) {
+        return 1;  // 右側：次ページへ
+    } else {
+        return 0;  // 中央：既存機能（再生・一時停止）
+    }
 }

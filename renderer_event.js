@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.42.0'
+// version   = 'Ver6.46.0'
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -1458,21 +1458,23 @@ function registerVideoEndedListener() {
 function registerMediaContextMenuListener() {
     mediaContainer.addEventListener('contextmenu', (event) => {
         event.preventDefault();
+        
         if (currentMediaType === 'image' && isBookReaderMode() && !event.ctrlKey) {
-            stepBookReader(getBookReaderManualDirection(event.clientY));
-            return;
+            const direction = getBookReaderManualDirection(event);
+            // 中央（direction === 0）以外の場合はページ送り実行
+            if (direction !== 0) {
+                stepBookReader(direction);
+                return;
+            }
+            // 中央の場合は下の既存機能（再生・一時停止）へ進む
         }
+
         if (event.ctrlKey) {
             playStopBtn.click();
         } else {
             playPauseBtn.click();
         }
     });
-}
-
-function getBookReaderManualDirection(clientY = bookReaderPointerY) {
-    const pointerY = Number.isFinite(clientY) ? clientY : window.innerHeight / 2;
-    return pointerY < window.innerHeight / 2 ? -1 : 1;
 }
 
 // 【個別イベント】メディアダブルクリック
