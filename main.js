@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.31.0'
+// version   = 'Ver6.47.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -2022,16 +2022,53 @@ function setupDevSecurityOptions() {
         // または BrowserWindow で webSecurity: false を使用
     }
 }
+
 // キャッシュ対策（起動前に設定）
 // - 書き込み可能なキャッシュディレクトリを事前に作成
 // - Chromium の GPU shader disk cache を無効化して関連ワーニングを抑制
+// - 24時間を経過した古いキャッシュサブディレクトリを自動削除
 function setupCacheSettings() {
     try {
         const cacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'Cache');
         thumbnailCacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'thumbnails');
-        // 非同期でディレクトリ作成（失敗しても致命的でないので catch で無視）
-        fs.mkdir(cacheDir, { recursive: true }).catch(() => {});
-        fs.mkdir(thumbnailCacheDir, { recursive: true }).catch(() => {});
+
+        // 古いディレクトリを削除するヘルパー関数
+        const removeOldDirectories = async (targetDir) => {
+            try {
+                const entries = await fs.readdir(targetDir, { withFileTypes: true });
+                const now = Date.now();
+                const twentyFourHoursMs = 24 * 60 * 60 * 1000; // 24時間（ミリ秒）
+
+                for (const entry of entries) {
+                    if (entry.isDirectory()) {
+                        const subDirPath = path.join(targetDir, entry.name);
+                        const stats = await fs.stat(subDirPath);
+                        
+                        // 作成日時を取得（取得できない環境を考慮して更新日時mtimeをフォールバックに利用）
+                        const createdTime = (stats.birthtimeMs && stats.birthtimeMs > 0) 
+                            ? stats.birthtimeMs 
+                            : stats.mtimeMs;
+
+                        // 現在日時から24時間を超えている場合は削除
+                        if (now - createdTime > twentyFourHoursMs) {
+                            await fs.rm(subDirPath, { recursive: true, force: true });
+                        }
+                    }
+                }
+            } catch (err) {
+                // ディレクトリが存在しない場合や読み取りエラーは非致命的なので無視
+            }
+        };
+
+        // 非同期でディレクトリ作成と古いキャッシュのクリーンアップを実行
+        fs.mkdir(cacheDir, { recursive: true })
+            .then(() => removeOldDirectories(cacheDir))
+            .catch(() => {});
+            
+        fs.mkdir(thumbnailCacheDir, { recursive: true })
+            .then(() => removeOldDirectories(thumbnailCacheDir))
+            .catch(() => {});
+
         // Chromium のディスクキャッシュ先をアプリ管理下のディレクトリに変更
         if (app && app.commandLine && typeof app.commandLine.appendSwitch === 'function') {
             app.commandLine.appendSwitch('disk-cache-dir', cacheDir);
@@ -2041,6 +2078,7 @@ function setupCacheSettings() {
         console.warn('Cache setup failed (non-fatal):', e);
     }
 }
+
 // FFmpeg パス設定（asarUnpack 対応）
 function setupFfmpegPathSetting() {
     ffmpeg.setFfmpegPath(ffmpegPath);
@@ -2159,6 +2197,38 @@ async function extractArchive(archivePath) {
 
     const extractionPromise = (async () => {
         await fs.mkdir(extractionRoot, { recursive: true });
+
+        // xPlayer-archives 内の古い（24時間以上経過した）サブディレクトリを削除するクリーンアップ処理
+        try {
+            const entries = await fs.readdir(extractionRoot, { withFileTypes: true });
+            const now = Date.now();
+            const twentyFourHoursMs = 24 * 60 * 60 * 1000; // 24時間（ミリ秒）
+
+            for (const entry of entries) {
+                if (entry.isDirectory()) {
+                    const subDirPath = path.join(extractionRoot, entry.name);
+                    try {
+                        const stats = await fs.stat(subDirPath);
+                        // 作成日時を取得（取得できない環境を考慮して更新日時mtimeをフォールバックに利用）
+                        const createdTime = (stats.birthtimeMs && stats.birthtimeMs > 0) 
+                            ? stats.birthtimeMs 
+                            : stats.mtimeMs;
+
+                        // 現在日時から24時間を超えている場合は削除
+                        if (now - createdTime > twentyFourHoursMs) {
+                            await fs.rm(subDirPath, { recursive: true, force: true });
+                        }
+                    } catch (statErr) {
+                        // 個別のファイル/ディレクトリの読み取り・削除失敗は全体を止めないよう無視
+                        console.error(`個別のファイル/ディレクトリの読み取り・削除失敗`, statErr);
+                    }
+                }
+            }
+        } catch (cleanupError) {
+            // クリーンアップ中のエラーは非致命的なのでログに留めるか無視
+            console.error(`クリーンアップ中のエラー`, cleanupError);
+        }
+
         try {
             await fs.access(extractionPath);
             await fs.rm(extractionPath, { recursive: true });
