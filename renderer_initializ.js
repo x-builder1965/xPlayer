@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.36.0'
+// version   = 'Ver6.49.0'
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -1274,7 +1274,6 @@ async function setupPlaylistAndState() {
                     ? restoredCurrentTime 
                     : 0;
 
-                autoPageTurning = true;
                 await playVideo(playlist[currentVideoIndex].file, targetTime);
 
                 if (forceStop) {

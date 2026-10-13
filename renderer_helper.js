@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.48.0'
+// version   = 'Ver6.49.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1243,12 +1243,11 @@ function buildImageEffectBgmMenuContent(menu) {
 
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
-            const wasBookReader = isBookReaderMode();
             imageEffectBgmMode = key;
             await localStorageSetItemAndFile('imageEffectBgmMode', imageEffectBgmMode);
             updateImageEffectBgm();
             toggleAutoPageTurning(false);
-            if (!wasBookReader && isBookReaderMode()) {
+            if (isBookReaderMode()) {
                 // ブックリーダーのプリリセット
                 zoomResetBtn.click();
                 zoomEndBtn.click();
@@ -1257,6 +1256,7 @@ function buildImageEffectBgmMenuContent(menu) {
             }
             if (currentMediaType === 'image' && imagePlayer?.src) {
                 applyImageEffect();
+                const wasBookReader = isBookReaderMode();
                 if (wasBookReader && !isBookReaderMode() && isPlaying) {
                     const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
                     startImageProgress();
@@ -1678,7 +1678,7 @@ async function setVideoSrc(file, { pageTurnDirection = 1 } = {}) {
     playPauseBtn.textContent = '⏸️';
     playPauseBtn.classList.remove('paused-active');
     playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-    toggleAutoPageTurning(autoPageTurning);
+    toggleAutoPageTurning(isPlaying);
 
     let cleanPath = file.path;
     if (cleanPath.includes('?')) {
@@ -1958,7 +1958,7 @@ async function playVideo(file, currentTime, { startBookReaderAtLastPage = false,
 	    playPauseBtn.textContent = '⏸️';
 	    playPauseBtn.classList.remove('paused-active');
 	    playPauseBtn.setAttribute('data-tooltip', '一時停止（Space／Right Click）');
-        toggleAutoPageTurning(autoPageTurning);
+        toggleAutoPageTurning(isPlaying);
 
 	    imageCurrentTime = (!isNaN(currentTime) && currentTime >= 0) ? Math.min(IMAGE_DURATION, currentTime) : 0;
 	    
@@ -3508,6 +3508,10 @@ async function playlistSet(videoFiles) {
     currentVideoIndex = 0;
     selectedPlaylistIndex = 0;
     await playVideo(playlist[currentVideoIndex].file, 0);
+    if (!isBookReaderMode() || currentMediaType !== 'image') {
+        if (imageTimer) clearTimeout(imageTimer);
+        imageTimer = null;
+    }
     savePlaylistAndPlaybackState();
     resetShuffle();
     saveShuffleState();
@@ -6584,12 +6588,12 @@ async function withLoading(operation) {
 
 // 自動ページ送り機能の制御
 function toggleAutoPageTurning(option = null) {
-    if (!isBookReaderMode() || currentMediaType !== 'image') return;
+    if (!isBookReaderMode() || currentMediaType !== 'image')  return;
 
     if (option === null) {
-        autoPageTurning = !autoPageTurning;
+        isPlaying = !isPlaying;
     } else {
-        autoPageTurning = option;
+        isPlaying = option;
     }
 
     // 既存の imageTimer をクリア
@@ -6599,7 +6603,7 @@ function toggleAutoPageTurning(option = null) {
     }
     stopImageProgress();
 
-    if (autoPageTurning) {
+    if (isPlaying && isBookReaderMode() && currentMediaType === 'image') {
         const bookPageDuration = 5.0; 
         const rate = currentPlaybackRate || 1.0;
         const remainingMs = ((bookPageDuration - imageCurrentTime) / rate) * 1000;
@@ -6620,7 +6624,7 @@ function toggleAutoPageTurning(option = null) {
                 stepBookReader(1);
                 imageCurrentTime = 0;
                 
-                if (autoPageTurning && isPlaying) {
+                if (isPlaying) {
                     toggleAutoPageTurning(true);
                 }
             } else {
@@ -6634,7 +6638,7 @@ function toggleAutoPageTurning(option = null) {
                     await playNextPlaylistItem();
 
                     // ★ 移行完了後、まだ自動送りが有効であれば次の画像の1ページ目から自動再開
-                    if (autoPageTurning && isBookReaderMode() && currentMediaType === 'image') {
+                    if (isPlaying && isBookReaderMode() && currentMediaType === 'image') {
                         imageCurrentTime = 0;
                         toggleAutoPageTurning(true);
                     }
