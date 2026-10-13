@@ -1274,6 +1274,7 @@ async function setupPlaylistAndState() {
                     ? restoredCurrentTime 
                     : 0;
 
+                autoPageTurning = true;
                 await playVideo(playlist[currentVideoIndex].file, targetTime);
 
                 if (forceStop) {

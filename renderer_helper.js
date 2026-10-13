@@ -1918,7 +1918,6 @@ async function playVideo(file, currentTime, { startBookReaderAtLastPage = false,
     stopImageProgress();
 
     isPlaying = true;
-    autoPageTurning = true;
     selectedPlaylistIndex = currentVideoIndex;
 
     // ランダム再生 ON ＆ 並び順が「（ランダム）」以外（ファイル名▲等）の場合、
