@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.46.0'
+// version   = 'Ver6.48.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1918,6 +1918,7 @@ async function playVideo(file, currentTime, { startBookReaderAtLastPage = false,
     stopImageProgress();
 
     isPlaying = true;
+    autoPageTurning = true;
     selectedPlaylistIndex = currentVideoIndex;
 
     // ランダム再生 ON ＆ 並び順が「（ランダム）」以外（ファイル名▲等）の場合、
