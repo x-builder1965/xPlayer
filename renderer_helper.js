@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.49.0'
+// version   = 'Ver6.50.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -1243,20 +1243,25 @@ function buildImageEffectBgmMenuContent(menu) {
 
         item.addEventListener('click', async (event) => {
             event.stopPropagation();
+            const wasBookReader = isBookReaderMode();
             imageEffectBgmMode = key;
             await localStorageSetItemAndFile('imageEffectBgmMode', imageEffectBgmMode);
             updateImageEffectBgm();
             toggleAutoPageTurning(false);
             if (isBookReaderMode()) {
-                // ブックリーダーのプリリセット
+                // ブックリーダーのプリセット
                 zoomResetBtn.click();
                 zoomEndBtn.click();
                 zoomBtn.click();
                 setPlayerMuted(true);
+            } else if (wasBookReader && !isBookReaderMode()) {
+                // ブックリーダー以外のプリセット
+                zoomResetBtn.click();
+                zoomEndBtn.click();
+                setPlayerMuted(false);
             }
             if (currentMediaType === 'image' && imagePlayer?.src) {
                 applyImageEffect();
-                const wasBookReader = isBookReaderMode();
                 if (wasBookReader && !isBookReaderMode() && isPlaying) {
                     const remainingMs = ((IMAGE_DURATION - imageCurrentTime) / (currentPlaybackRate || 1.0)) * 1000;
                     startImageProgress();
