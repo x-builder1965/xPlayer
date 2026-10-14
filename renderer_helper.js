@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.50.0'
+// version   = 'Ver6.51.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -3513,10 +3513,29 @@ async function playlistSet(videoFiles) {
     currentVideoIndex = 0;
     selectedPlaylistIndex = 0;
     await playVideo(playlist[currentVideoIndex].file, 0);
-    if (!isBookReaderMode() || currentMediaType !== 'image') {
+    if (currentMediaType === 'image') {
+        if (isBookReaderMode()) {
+            await togglePlayPause();
+            // ブックリーダーのプリセット
+            zoomResetBtn.click();
+            zoomEndBtn.click();
+            zoomBtn.click();
+            setPlayerMuted(true);
+        } else {
+            // ブックリーダー以外のプリセット
+            zoomResetBtn.click();
+            zoomEndBtn.click();
+            setPlayerMuted(false);
+        }
+    } else {
         if (imageTimer) clearTimeout(imageTimer);
         imageTimer = null;
+        // ブックリーダー以外のプリセット
+        zoomResetBtn.click();
+        zoomEndBtn.click();
+        setPlayerMuted(false);
     }
+
     savePlaylistAndPlaybackState();
     resetShuffle();
     saveShuffleState();
