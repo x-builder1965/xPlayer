@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.51.0'
+// version   = 'Ver6.52.0'
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -286,7 +286,7 @@ function registerPrevVideoBtnEvents() {
     });
 }
 
-// 【個別イベント】⏪30秒戻る（画像の場合は先頭へ戻す）
+// 【個別イベント】⏪戻る（画像の場合は先頭へ戻す）
 function registerRewindBtnEvents() {
     rewindBtn.addEventListener('click', () => {
         if (isBookReaderMode() && currentMediaType === 'image') {
@@ -310,7 +310,7 @@ function registerRewindBtnEvents() {
     });
 }
 
-// 【個別イベント】⏩30秒進む（画像の場合は末尾へ進み次のメディアへ）
+// 【個別イベント】⏩進む（画像の場合は末尾へ進み次のメディアへ）
 function registerFastForwardBtnEvents() {
     fastForwardBtn.addEventListener('click', () => {
         if (isBookReaderMode() && currentMediaType === 'image') {
@@ -621,6 +621,7 @@ function registerSettingsBtnEvents() {
     });
 }
 
+// 【個別イベント】🔊音声合成設定パネル切替イベント
 function registerReadAloudSettingsEvents() {
     readAloudSettingsBtn.addEventListener('click', event => {
         event.stopPropagation();
@@ -650,193 +651,7 @@ function registerReadAloudSettingsEvents() {
     });
 }
 
-let activeSpeakerPreview = null;
-let speakerPreviewRequest = 0;
-
-function renderEngineSpeakerList() {
-    speakerList.replaceChildren();
-    const options = Array.from(speakerSelect.options).filter(option => option.value);
-    if (options.length === 0) {
-        const emptyMessage = document.createElement('div');
-        emptyMessage.className = 'speaker-list-empty';
-        emptyMessage.textContent = isEngineReady ? '話者が見つかりません' : '未接続';
-        speakerList.appendChild(emptyMessage);
-        return;
-    }
-
-    for (const option of options) {
-        const row = document.createElement('div');
-        row.className = 'speaker-list-row';
-
-        const selectButton = document.createElement('button');
-        selectButton.type = 'button';
-        selectButton.className = 'speaker-select-button';
-        selectButton.textContent = option.textContent;
-        selectButton.setAttribute('aria-pressed', String(option.value === speakerSelect.value));
-        selectButton.disabled = speakerSelect.disabled;
-        selectButton.addEventListener('click', () => {
-            speakerSelect.value = option.value;
-            speakerSelect.dispatchEvent(new Event('change'));
-        });
-
-        const previewButton = document.createElement('button');
-        previewButton.type = 'button';
-        previewButton.className = 'speaker-preview-button';
-        previewButton.textContent = '▶️';
-        previewButton.setAttribute('aria-label', `${option.dataset.speakerName}の音声を試聴`);
-        previewButton.title = 'この話者で試聴';
-        previewButton.disabled = !isEngineReady || speakerSelect.disabled;
-        previewButton.addEventListener('click', () => {
-            previewSpeaker(option.value, option.dataset.speakerName);
-        });
-
-        const deleteButton = document.createElement('button');
-        deleteButton.type = 'button';
-        deleteButton.className = 'speaker-delete-button';
-        deleteButton.textContent = '🗑️';
-        deleteButton.setAttribute('aria-label', `${option.dataset.speakerName}モデルを削除`);
-        deleteButton.title = 'この話者モデルを削除';
-        deleteButton.disabled = !isEngineReady || !option.dataset.speakerUuid;
-        deleteButton.addEventListener('click', () => {
-            removeEngineSpeakerModel(option.dataset.speakerUuid, option.dataset.speakerName);
-        });
-
-        row.append(selectButton, previewButton, deleteButton);
-        speakerList.appendChild(row);
-    }
-}
-
-async function addEngineSpeakerModel() {
-    if (!isEngineReady) {
-        updateMessageOverlay('先にAivisSpeech Engineへ接続してください', 6000);
-        return;
-    }
-
-    speakerAddBtn.disabled = true;
-    try {
-        const result = await withLoading(() => installEngineSpeakerModel(engineAddress));
-        if (result.canceled) return;
-        const loaded = await loadEngineSpeakers();
-        updateMessageOverlay(loaded ? '話者モデルを追加しました' : '話者モデルを追加しましたが、話者一覧を取得できません');
-    } catch (error) {
-        console.error('話者モデル追加失敗:', error);
-        updateMessageOverlay(`話者モデルを追加できません: ${error.message}`, 6000);
-    } finally {
-        speakerAddBtn.disabled = false;
-    }
-}
-
-async function removeEngineSpeakerModel(speakerUuid, speakerName) {
-    if (!isEngineReady) return;
-    // if (!window.confirm(`「${speakerName}」の話者モデルを削除しますか？`)) return;
-
-    try {
-        const selectedSpeakerIsBeingDeleted = Array.from(speakerSelect.options)
-            .some(option => option.value === speakerSelect.value && option.dataset.speakerUuid === speakerUuid);
-        await withLoading(() => uninstallEngineSpeakerModel(engineAddress, speakerUuid));
-        await loadEngineSpeakers();
-        if (selectedSpeakerIsBeingDeleted) {
-            speakerSelect.value = speakerSelect.options[0]?.value || '';
-            speakerSelect.dispatchEvent(new Event('change'));
-        }
-        updateMessageOverlay(`話者モデル「${speakerName}」を削除しました`);
-    } catch (error) {
-        console.error('話者モデル削除失敗:', error);
-        updateMessageOverlay(`話者モデルを削除できません: ${error.message}`, 6000);
-    }
-}
-
-function stopSpeakerPreview() {
-    if (!activeSpeakerPreview) return;
-    activeSpeakerPreview.audio.pause();
-    activeSpeakerPreview.audio.removeAttribute('src');
-    activeSpeakerPreview.audio.load();
-    URL.revokeObjectURL(activeSpeakerPreview.url);
-    activeSpeakerPreview = null;
-}
-
-async function previewSpeaker(speakerId, speakerName) {
-    if (!isEngineReady) return;
-    const request = ++speakerPreviewRequest;
-    for (const previewButton of speakerList.querySelectorAll('.speaker-preview-button')) {
-        previewButton.disabled = true;
-    }
-
-    stopSpeakerPreview();
-
-    // 時間帯に応じた挨拶を取得する関数
-    const getGreeting = () => {
-        const hour = new Date().getHours();
-        if (hour >= 4 && hour < 10) {
-            return "おはようございます";
-        } else if (hour >= 10 && hour < 19) {
-            return "こんにちは";
-        } else if (hour >= 19 && hour < 24) {
-            return "こんばんは";
-        } else {
-            return "おやすみなさい";
-        }
-    };
-    // 話者の名前と挨拶を組み合わせて一言を生成する関数
-    const getEnhancedRandomComment = (comments) => {
-        if (!comments || comments.length === 0) return "";
-        if (comments.length === 1) return comments[0];
-
-        let randomIndex;
-        const array = new Uint32Array(1);
-
-        do {
-            crypto.getRandomValues(array);
-            randomIndex = array[0] % comments.length;
-        } while (randomIndex === lastCommentIndex);
-
-        lastCommentIndex = randomIndex;
-        return comments[randomIndex];
-    };
-
-    // 読み上げ文章の組み立て
-    const greeting = getGreeting();
-    const namePart = `${speakerName}です。`;
-    const comment = getEnhancedRandomComment(previewComments);
-    const previewText = `${greeting}。${namePart}${comment}`;
-
-    try {
-        const audioData = await withLoading(() => synthesizeEngineLine({
-            address: engineAddress,
-            text: previewText,
-            speakerId: Number(speakerId)
-        }));
-        if (request !== speakerPreviewRequest) return;
-
-        const url = URL.createObjectURL(new Blob([audioData], { type: 'audio/wav' }));
-        const audio = new Audio(url);
-        audio.volume = Number(volumeBar.value);
-        activeSpeakerPreview = { audio, url };
-        audio.addEventListener('ended', () => {
-            if (activeSpeakerPreview?.audio !== audio) return;
-            URL.revokeObjectURL(url);
-            activeSpeakerPreview = null;
-        }, { once: true });
-        audio.addEventListener('error', () => {
-            if (activeSpeakerPreview?.audio !== audio) return;
-            URL.revokeObjectURL(url);
-            activeSpeakerPreview = null;
-            updateMessageOverlay('話者の試聴音声を再生できません', 6000);
-        }, { once: true });
-        await audio.play();
-    } catch (error) {
-        stopSpeakerPreview();
-        console.error('話者の試聴に失敗:', error);
-        updateMessageOverlay('話者の試聴に失敗しました', 6000);
-    } finally {
-        if (request === speakerPreviewRequest) {
-            for (const previewButton of speakerList.querySelectorAll('.speaker-preview-button')) {
-                previewButton.disabled = !isEngineReady || speakerSelect.disabled;
-            }
-        }
-    }
-}
-
+// 【個別イベント】テキストリーダー編集開始／終了イベント
 function registerTextReaderEditEvents() {
     textReader.addEventListener('pointerdown', () => {
         isTextReaderUserEditing = true;
@@ -850,6 +665,7 @@ function registerTextReaderEditEvents() {
     });
 }
 
+// 【個別イベント】テキストリーダークリックイベント
 function registerTextReaderClickEvents() {
     textReader.addEventListener('click', (event) => {
         if (event.button !== 0 || currentMediaType !== 'text' || !textLines.length) return;
@@ -866,101 +682,6 @@ function registerTextReaderClickEvents() {
         seekTextLine(lineIndex);
         if (!isPlaying) startTextPlayback(false);
     });
-}
-
-async function initializeSpeechEngine() {
-    engineAddress = savedEngineAddress || 'http://127.0.0.1:10101';
-    engineAddressInput.value = engineAddress;
-
-    try {
-        const result = await withLoading(() => initEngine(engineAddress));
-        if (result.success) {
-            isEngineReady = true;
-            isSelfConnected = result.isSelfConnected;
-            await loadEngineSpeakers();
-            updateEngineConnectionUI(true);
-            return;
-        }
-
-        updateEngineConnectionUI(false, '起動・接続を試行中...');
-        await handleEngineConnectionToggle();
-    } catch (error) {
-        updateEngineConnectionUI(false, '接続できません');
-        console.error('AivisSpeech Engine 初期化失敗:', error);
-    }
-}
-
-async function handleEngineConnectionToggle() {
-    if (isEngineReady) {
-        engineConnectionStatus.textContent = '切断中...';
-        speakerPreviewRequest++;
-        stopSpeakerPreview();
-        await withLoading(() => disconnectEngine());
-        isEngineReady = false;
-        isSelfConnected = false;
-        speakerSelect.replaceChildren(new Option('未接続', ''));
-        renderEngineSpeakerList();
-        updateEngineConnectionUI(false);
-        updateMessageOverlay('🔄Engine を切断しました');
-        return;
-    }
-
-    engineAddress = engineAddressInput.value.trim();
-    await localStorageSetItemAndFile('engineAddress', engineAddress);
-    engineConnectionBtn.disabled = true;
-    engineAddressInput.disabled = true;
-    engineConnectionStatus.textContent = '接続中...';
-
-    try {
-        const result = await withLoading(() => connectEngine(engineAddress));
-        if (!result.success) {
-            updateEngineConnectionUI(false, result.error || '接続に失敗');
-            updateMessageOverlay(result.error || '🔄Engine に接続できません', 6000);
-            return;
-        }
-
-        isEngineReady = true;
-        isSelfConnected = result.isSelfConnected;
-        const loaded = await loadEngineSpeakers();
-        updateEngineConnectionUI(true);
-        updateMessageOverlay(loaded ? '🔄Engine に接続しました' : '🔄接続しましたが話者一覧を取得できません');
-    } catch (error) {
-        updateEngineConnectionUI(false, '接続に失敗');
-        console.error('AivisSpeech Engine 接続失敗:', error);
-    } finally {
-        engineConnectionBtn.disabled = false;
-        engineAddressInput.disabled = false;
-    }
-}
-
-async function loadEngineSpeakers() {
-    const speakers = await withLoading(() => getEngineSpeakers(engineAddress));
-    speakerSelect.replaceChildren();
-
-    for (const speaker of speakers) {
-        for (const style of speaker.styles || []) {
-            const option = new Option(`${speaker.name} (${style.name})`, String(style.id));
-            option.dataset.speakerName = speaker.name;
-            option.dataset.speakerUuid = speaker.speaker_uuid || '';
-            speakerSelect.appendChild(option);
-        }
-    }
-
-    const savedId = savedSpeakerId || localStorage.getItem('speakerId');
-    if (savedId && Array.from(speakerSelect.options).some(option => option.value === String(savedId))) {
-        speakerSelect.value = String(savedId);
-    }
-    speakerSelect.disabled = !isEngineReady || speakerSelect.options.length === 0;
-    renderEngineSpeakerList();
-    return speakerSelect.options.length > 0;
-}
-
-function updateEngineConnectionUI(connected, statusText = null) {
-    engineConnectionStatus.textContent = statusText || (connected ? '接続済み' : '未接続');
-    engineConnectionBtn.textContent = connected ? '❌' : '🔄';
-    readAloudSettingsBtn.classList.toggle('engine-connected-active', connected);
-    speakerSelect.disabled = !connected || speakerSelect.options.length === 0;
-    renderEngineSpeakerList();
 }
 
 // 【個別イベント】🖼️背景壁紙選択

@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.51.0'
+// version   = 'Ver6.52.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -516,6 +516,7 @@ function updateTimeDisplay() {
     updateIconOverlay();
 }
 
+// テキスト行のシーク関数
 function seekTextLine(lineIndex) {
     if (!textLines.length) return;
     const wasPlaying = isPlaying;
@@ -834,7 +835,6 @@ function closeChangelog() {
 }
 
 // 🔲各種メニュー生成・制御🔲
-
 // アスペクト比選択メニュー作成
 function createAspectRatioMenu() {
     const menu = document.createElement('div');
@@ -1287,6 +1287,7 @@ function buildImageEffectBgmMenuContent(menu) {
     });
 }
 
+// ミュート切替関数（引数で強制的にミュートON/OFFも可能）
 function setPlayerMuted(setMute = null) {
     if (setMute === false || (setMute === null && videoPlayer.volume === 0)) {
         videoPlayer.volume = lastVolume || 0.2;
@@ -1589,7 +1590,7 @@ function buildControlMenuContent(menu) {
 }
 
 // 🔲メディア再生・制御・状態判定🔲
-
+// 話者名付きテキストの解析関数
 function parseSpeakerTaggedText(content) {
     const lines = content.replace(/\r\n/g, '\n').split('\n');
     const speakerNames = [];
@@ -1618,6 +1619,7 @@ function clearBookReaderTransition() {
     bookReaderTransitionOverlay = null;
 }
 
+// ブックリーダー画像スライド準備関数
 function prepareBookReaderSlide(direction) {
     clearBookReaderTransition();
 
@@ -1641,6 +1643,7 @@ function prepareBookReaderSlide(direction) {
     bookReaderTransitionOverlay = overlay;
 }
 
+// ブックリーダー画像スライドアニメーション開始関数
 function startBookReaderSlide() {
     const overlay = bookReaderTransitionOverlay;
     if (!overlay || bookReaderTransitionAnimation) return;
@@ -1667,6 +1670,7 @@ function startBookReaderSlide() {
     };
 }
 
+// メディアソース設定関数
 async function setVideoSrc(file, { pageTurnDirection = 1 } = {}) {
     if (currentMediaType === 'text') {
         cancelTextPlayback();
@@ -2018,6 +2022,7 @@ async function playVideo(file, currentTime, { startBookReaderAtLastPage = false,
     updateIconOverlay();
 }
 
+// テキスト再生開始関数
 async function startTextPlayback(fromStart = false) {
     if (!textLines.length || !textReader.value.trim()) {
         updateMessageOverlay('テキストファイルに読み上げる内容がありません', 5000);
@@ -2051,6 +2056,7 @@ async function startTextPlayback(fromStart = false) {
     });
 }
 
+// テキストリーダーの入力変更時の処理
 function handleTextReaderInput() {
     // isTextReaderUserEditing = true;
     textLines = textReader.value.replace(/\r\n/g, '\n').split('\n');
@@ -2076,10 +2082,12 @@ function handleTextReaderInput() {
     if (shouldResume) startTextPlayback(false);
 }
 
+// ルビ表記を読み仮名に変換する関数
 function convertRubyToReading(text) {
     return text.replace(/[｛{]([^｛｝{}｜|\r\n]+)[｜|]([^｛｝{}｜|\r\n]+)[｝}]/g, (match, kanji, reading) => reading);
 }
 
+// テキスト行の話者IDを取得
 function getTextLineSpeakerId(lineIndex) {
     const speakerName = textLineSpeakerNames[lineIndex];
     const options = Array.from(speakerSelect.options);
@@ -2090,6 +2098,7 @@ function getTextLineSpeakerId(lineIndex) {
     return namedSpeakerOption?.value || speakerSelect.value;
 }
 
+// テキスト行の再生処理
 async function playTextLines(session) {
     while (currentTextLineIndex < textLines.length && session === textPlaybackSession) {
         if (!await waitForTextResume(session)) return;
@@ -2139,6 +2148,7 @@ async function playTextLines(session) {
     await playNextPlaylistItem();
 }
 
+// テキスト行の位置を保存
 function saveTextLinePosition(lineIndex) {
     currentTextLineIndex = lineIndex;
     savedTextLineIndex = String(lineIndex);
@@ -2147,6 +2157,7 @@ function saveTextLinePosition(lineIndex) {
     localStorageSetItemAndFile('textLinePath', savedTextLinePath);
 }
 
+// テキスト行のハイライト表示
 function highlightTextLine(lineIndex) {
     const start = textLineOffsets[lineIndex] || 0;
     const end = start + (textLines[lineIndex] || '').length;
@@ -2206,17 +2217,20 @@ function highlightTextLine(lineIndex) {
     });
 }
 
+// テキスト再生の一時停止解除待機
 function waitForTextResume(session) {
     if (session !== textPlaybackSession) return Promise.resolve(false);
     if (isPlaying) return Promise.resolve(true);
     return new Promise(resolve => textResumeWaiters.push(() => resolve(session === textPlaybackSession && isPlaying)));
 }
 
+// テキスト再生の一時停止解除
 function wakeTextPlayback() {
     const waiters = textResumeWaiters.splice(0);
     waiters.forEach(resolve => resolve());
 }
 
+// テキスト再生の遅延を待機
 async function waitForTextDelay(duration, session) {
     let remaining = duration;
     while (remaining > 0 && session === textPlaybackSession) {
@@ -2229,6 +2243,7 @@ async function waitForTextDelay(duration, session) {
     return session === textPlaybackSession;
 }
 
+// テキスト音声合成の事前取得（キャッシュ付き）
 function prefetchTextAudio(session) {
     if (!isEngineReady || session !== textPlaybackSession) return;
     const endIndex = Math.min(textLines.length, currentTextLineIndex + TEXT_PREFETCH_COUNT);
@@ -2239,6 +2254,7 @@ function prefetchTextAudio(session) {
     }
 }
 
+// テキスト音声合成の取得（キャッシュ付き）
 function getTextAudio(index, text, session) {
     const cache = textLineAudioCache;
     if (cache.has(index)) return cache.get(index);
@@ -2261,6 +2277,7 @@ function getTextAudio(index, text, session) {
     return request;
 }
 
+// キャッシュの上限を超えた場合、現在再生中の行の前後以外のキャッシュを削除
 function pruneTextAudioCache() {
     for (const index of textLineAudioCache.keys()) {
         if (textLineAudioCache.size <= TEXT_AUDIO_CACHE_LIMIT) break;
@@ -2270,6 +2287,7 @@ function pruneTextAudioCache() {
     }
 }
 
+// テキスト音声再生
 function playTextAudio(audioData, session) {
     return new Promise(resolve => {
         const audioUrl = URL.createObjectURL(new Blob([audioData], { type: 'audio/wav' }));
@@ -2307,6 +2325,7 @@ function playTextAudio(audioData, session) {
     });
 }
 
+// テキスト再生キャンセル
 function cancelTextPlayback() {
     textPlaybackSession++;
     if (textLineCancel) textLineCancel();
@@ -3333,7 +3352,6 @@ function saveShuffleState() {
 }
 
 // 🔲プレイリスト操作・構築・保存🔲
-
 // プレイリスト項目を共通形式へ正規化
 async function createPlaylistItem(file) {
     const fileData = typeof file === 'string' ? {} : (file?.file || file || {});
@@ -4761,7 +4779,6 @@ function hideHistoryList() {
 }
 
 // 🔲音声・字幕トラック制御🔲
-
 // 音声トラック・字幕トラック更新
 async function updateTrack(type) {
     let videondex = currentVideoIndex;
@@ -5187,7 +5204,6 @@ function updateVideoSubtitle(label, trackObj) {
 }
 
 // 🔲編集・結合・変換・FFmpeg関連🔲
-
 // カット範囲を時間順にソート＆マージ
 function getSortedAndMergedCutRanges() {
     if (!cutRanges || cutRanges.length === 0) return [];
@@ -5578,7 +5594,6 @@ async function deleteTempVideo() {
 }
 
 // 🔲外部URL・Web入力🔲
-
 // URL入力欄非表示
 function hideURLInputControls() {
     urlInputPanel.style.display = 'none';
@@ -5743,7 +5758,6 @@ function extractYouTubeVideoId(url) {
 }
 
 // 🔲ビジュアライザー・画像エフェクト・BGM🔲
-
 // オーディオモーションの初期化関数
 function updateAudioMotion() {
     if (audioMotionBtn) {
@@ -6038,10 +6052,12 @@ function applyImageEffect({ startBookReaderAtLastPage = bookReaderStartAtLastPag
     }
 }
 
+// BookReaderモードかどうかを判定する関数
 function isBookReaderMode() {
     return IMAGEEFFECTBGM_NODES[imageEffectBgmMode]?.manual === true;
 }
 
+// BookReaderモードのパン制限範囲を計算する関数
 function getMediaPanBounds() {
     const element = currentMediaType === 'image' ? imagePlayer : videoPlayerElement;
     const viewport = currentMediaType === 'image' ? imageWrapper : mediaContainer;
@@ -6081,6 +6097,7 @@ function getMediaPanBounds() {
     };
 }
 
+// BookReaderモードのページ数とオフセットを計算する関数
 function getBookReaderPages() {
     if (!imagePlayer?.naturalWidth || !imagePlayer?.naturalHeight || !imageWrapper) {
         return [{ offsetX: 0, offsetY: 0 }];
@@ -6135,6 +6152,7 @@ function getBookReaderPages() {
     return verticalOffsets.flatMap(offsetY => [...horizontalOffsets].reverse().map(offsetX => ({ offsetX, offsetY })));
 }
 
+// BookReaderモードのページを適用する関数
 function applyBookReaderPage({ animate = false } = {}) {
     if (!imagePlayer || !isBookReaderMode()) return;
 
@@ -6172,6 +6190,7 @@ function applyBookReaderPage({ animate = false } = {}) {
     }
 }
 
+// 進行方向に応じてページをめくる関数
 async function stepBookReader(direction) {
     if (!isBookReaderMode() || currentMediaType !== 'image' || !imagePlayer?.src) return;
 
@@ -6290,6 +6309,7 @@ function isAudioFilePath(filePath) {
     return AUDIO_EXTENSIONS.includes(ext);
 }
 
+// テキストファイルかどうかを判定する関数
 function isTextFilePath(filePath) {
     const ext = getMediaFileExtension(filePath);
     return TEXT_EXTENSIONS.includes(ext);
@@ -6329,7 +6349,6 @@ function pathToFileUrl(filePath) {
 }
 
 // 🔲キャッシュ・サムネイル・プリロード（先読み）🔲
-
 // プレイリストサムネイルのキャッシュ
 async function getPlaylistThumbnailDataUrl(filePath, size = 180) {
     if (!filePath) return '';
@@ -6597,6 +6616,7 @@ function showLoading(show) {
     }
 }
 
+// 非同期処理中のローディング表示を管理するヘルパー関数
 async function withLoading(operation) {
     loadingRequestCount++;
     showLoading(true);
@@ -6729,5 +6749,270 @@ function getBookReaderManualDirection(event) {
         return 1;  // 右側：次ページへ
     } else {
         return 0;  // 中央：既存機能（再生・一時停止）
+    }
+}
+
+// AivisSpeech Engine 接続／切断
+async function handleEngineConnectionToggle() {
+    if (isEngineReady) {
+        engineConnectionStatus.textContent = '切断中...';
+        speakerPreviewRequest++;
+        stopSpeakerPreview();
+        await withLoading(() => disconnectEngine());
+        isEngineReady = false;
+        isSelfConnected = false;
+        speakerSelect.replaceChildren(new Option('未接続', ''));
+        renderEngineSpeakerList();
+        updateEngineConnectionUI(false);
+        updateMessageOverlay('🔄Engine を切断しました');
+        return;
+    }
+
+    engineAddress = engineAddressInput.value.trim();
+    await localStorageSetItemAndFile('engineAddress', engineAddress);
+    engineConnectionBtn.disabled = true;
+    engineAddressInput.disabled = true;
+    engineConnectionStatus.textContent = '接続中...';
+
+    try {
+        const result = await withLoading(() => connectEngine(engineAddress));
+        if (!result.success) {
+            updateEngineConnectionUI(false, result.error || '接続に失敗');
+            updateMessageOverlay(result.error || '🔄Engine に接続できません', 6000);
+            return;
+        }
+
+        isEngineReady = true;
+        isSelfConnected = result.isSelfConnected;
+        const loaded = await loadEngineSpeakers();
+        updateEngineConnectionUI(true);
+        updateMessageOverlay(loaded ? '🔄Engine に接続しました' : '🔄接続しましたが話者一覧を取得できません');
+    } catch (error) {
+        updateEngineConnectionUI(false, '接続に失敗');
+        console.error('AivisSpeech Engine 接続失敗:', error);
+    } finally {
+        engineConnectionBtn.disabled = false;
+        engineAddressInput.disabled = false;
+    }
+}
+
+// 話者一覧の取得とUI更新
+async function loadEngineSpeakers() {
+    const speakers = await withLoading(() => getEngineSpeakers(engineAddress));
+    speakerSelect.replaceChildren();
+
+    for (const speaker of speakers) {
+        for (const style of speaker.styles || []) {
+            const option = new Option(`${speaker.name} (${style.name})`, String(style.id));
+            option.dataset.speakerName = speaker.name;
+            option.dataset.speakerUuid = speaker.speaker_uuid || '';
+            speakerSelect.appendChild(option);
+        }
+    }
+
+    const savedId = savedSpeakerId || localStorage.getItem('speakerId');
+    if (savedId && Array.from(speakerSelect.options).some(option => option.value === String(savedId))) {
+        speakerSelect.value = String(savedId);
+    }
+    speakerSelect.disabled = !isEngineReady || speakerSelect.options.length === 0;
+    renderEngineSpeakerList();
+    return speakerSelect.options.length > 0;
+}
+
+// AivisSpeech Engine 接続状態のUI更新
+function updateEngineConnectionUI(connected, statusText = null) {
+    engineConnectionStatus.textContent = statusText || (connected ? '接続済み' : '未接続');
+    engineConnectionBtn.textContent = connected ? '❌' : '🔄';
+    readAloudSettingsBtn.classList.toggle('engine-connected-active', connected);
+    speakerSelect.disabled = !connected || speakerSelect.options.length === 0;
+    renderEngineSpeakerList();
+}
+
+// 話者モデルリスト描画
+function renderEngineSpeakerList() {
+    speakerList.replaceChildren();
+    const options = Array.from(speakerSelect.options).filter(option => option.value);
+    if (options.length === 0) {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.className = 'speaker-list-empty';
+        emptyMessage.textContent = isEngineReady ? '話者が見つかりません' : '未接続';
+        speakerList.appendChild(emptyMessage);
+        return;
+    }
+
+    for (const option of options) {
+        const row = document.createElement('div');
+        row.className = 'speaker-list-row';
+
+        const selectButton = document.createElement('button');
+        selectButton.type = 'button';
+        selectButton.className = 'speaker-select-button';
+        selectButton.textContent = option.textContent;
+        selectButton.setAttribute('aria-pressed', String(option.value === speakerSelect.value));
+        selectButton.disabled = speakerSelect.disabled;
+        selectButton.addEventListener('click', () => {
+            speakerSelect.value = option.value;
+            speakerSelect.dispatchEvent(new Event('change'));
+        });
+
+        const previewButton = document.createElement('button');
+        previewButton.type = 'button';
+        previewButton.className = 'speaker-preview-button';
+        previewButton.textContent = '▶️';
+        previewButton.setAttribute('aria-label', `${option.dataset.speakerName}の音声を試聴`);
+        previewButton.title = 'この話者で試聴';
+        previewButton.disabled = !isEngineReady || speakerSelect.disabled;
+        previewButton.addEventListener('click', () => {
+            previewSpeaker(option.value, option.dataset.speakerName);
+        });
+
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'speaker-delete-button';
+        deleteButton.textContent = '🗑️';
+        deleteButton.setAttribute('aria-label', `${option.dataset.speakerName}モデルを削除`);
+        deleteButton.title = 'この話者モデルを削除';
+        deleteButton.disabled = !isEngineReady || !option.dataset.speakerUuid;
+        deleteButton.addEventListener('click', () => {
+            removeEngineSpeakerModel(option.dataset.speakerUuid, option.dataset.speakerName);
+        });
+
+        row.append(selectButton, previewButton, deleteButton);
+        speakerList.appendChild(row);
+    }
+}
+
+// 話者モデル追加
+async function addEngineSpeakerModel() {
+    if (!isEngineReady) {
+        updateMessageOverlay('先にAivisSpeech Engineへ接続してください', 6000);
+        return;
+    }
+
+    speakerAddBtn.disabled = true;
+    try {
+        const result = await withLoading(() => installEngineSpeakerModel(engineAddress));
+        if (result.canceled) return;
+        const loaded = await loadEngineSpeakers();
+        updateMessageOverlay(loaded ? '話者モデルを追加しました' : '話者モデルを追加しましたが、話者一覧を取得できません');
+    } catch (error) {
+        console.error('話者モデル追加失敗:', error);
+        updateMessageOverlay(`話者モデルを追加できません: ${error.message}`, 6000);
+    } finally {
+        speakerAddBtn.disabled = false;
+    }
+}
+
+// 話者モデル削除
+async function removeEngineSpeakerModel(speakerUuid, speakerName) {
+    if (!isEngineReady) return;
+    // if (!window.confirm(`「${speakerName}」の話者モデルを削除しますか？`)) return;
+
+    try {
+        const selectedSpeakerIsBeingDeleted = Array.from(speakerSelect.options)
+            .some(option => option.value === speakerSelect.value && option.dataset.speakerUuid === speakerUuid);
+        await withLoading(() => uninstallEngineSpeakerModel(engineAddress, speakerUuid));
+        await loadEngineSpeakers();
+        if (selectedSpeakerIsBeingDeleted) {
+            speakerSelect.value = speakerSelect.options[0]?.value || '';
+            speakerSelect.dispatchEvent(new Event('change'));
+        }
+        updateMessageOverlay(`話者モデル「${speakerName}」を削除しました`);
+    } catch (error) {
+        console.error('話者モデル削除失敗:', error);
+        updateMessageOverlay(`話者モデルを削除できません: ${error.message}`, 6000);
+    }
+}
+
+// 話者コッメント試聴停止
+function stopSpeakerPreview() {
+    if (!activeSpeakerPreview) return;
+    activeSpeakerPreview.audio.pause();
+    activeSpeakerPreview.audio.removeAttribute('src');
+    activeSpeakerPreview.audio.load();
+    URL.revokeObjectURL(activeSpeakerPreview.url);
+    activeSpeakerPreview = null;
+}
+
+// 話者コッメント試聴
+async function previewSpeaker(speakerId, speakerName) {
+    if (!isEngineReady) return;
+    const request = ++speakerPreviewRequest;
+    for (const previewButton of speakerList.querySelectorAll('.speaker-preview-button')) {
+        previewButton.disabled = true;
+    }
+
+    stopSpeakerPreview();
+
+    // 時間帯に応じた挨拶を取得する関数
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour >= 4 && hour < 10) {
+            return "おはようございます";
+        } else if (hour >= 10 && hour < 19) {
+            return "こんにちは";
+        } else if (hour >= 19 && hour < 24) {
+            return "こんばんは";
+        } else {
+            return "おやすみなさい";
+        }
+    };
+    // 話者の名前と挨拶を組み合わせて一言を生成する関数
+    const getEnhancedRandomComment = (comments) => {
+        if (!comments || comments.length === 0) return "";
+        if (comments.length === 1) return comments[0];
+
+        let randomIndex;
+        const array = new Uint32Array(1);
+
+        do {
+            crypto.getRandomValues(array);
+            randomIndex = array[0] % comments.length;
+        } while (randomIndex === lastCommentIndex);
+
+        lastCommentIndex = randomIndex;
+        return comments[randomIndex];
+    };
+
+    // 読み上げ文章の組み立て
+    const greeting = getGreeting();
+    const namePart = `${speakerName}です。`;
+    const comment = getEnhancedRandomComment(previewComments);
+    const previewText = `${greeting}。${namePart}${comment}`;
+
+    try {
+        const audioData = await withLoading(() => synthesizeEngineLine({
+            address: engineAddress,
+            text: previewText,
+            speakerId: Number(speakerId)
+        }));
+        if (request !== speakerPreviewRequest) return;
+
+        const url = URL.createObjectURL(new Blob([audioData], { type: 'audio/wav' }));
+        const audio = new Audio(url);
+        audio.volume = Number(volumeBar.value);
+        activeSpeakerPreview = { audio, url };
+        audio.addEventListener('ended', () => {
+            if (activeSpeakerPreview?.audio !== audio) return;
+            URL.revokeObjectURL(url);
+            activeSpeakerPreview = null;
+        }, { once: true });
+        audio.addEventListener('error', () => {
+            if (activeSpeakerPreview?.audio !== audio) return;
+            URL.revokeObjectURL(url);
+            activeSpeakerPreview = null;
+            updateMessageOverlay('話者の試聴音声を再生できません', 6000);
+        }, { once: true });
+        await audio.play();
+    } catch (error) {
+        stopSpeakerPreview();
+        console.error('話者の試聴に失敗:', error);
+        updateMessageOverlay('話者の試聴に失敗しました', 6000);
+    } finally {
+        if (request === speakerPreviewRequest) {
+            for (const previewButton of speakerList.querySelectorAll('.speaker-preview-button')) {
+                previewButton.disabled = !isEngineReady || speakerSelect.disabled;
+            }
+        }
     }
 }

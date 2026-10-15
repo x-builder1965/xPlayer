@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.47.0'
+// version   = 'Ver6.52.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -146,393 +146,119 @@ registerIpcMainGetVideoTracks();
 registerIpcMainShowSaveAudioJoinDialog();
 // 音声結合処理（全音声をMP3に統一変換 → concatで結合）
 registerIpcMainJoinAudios();
+// 音声合成（1行）ハンドラ
+registerIpcMainSynthesizeEngineLine();
 // AivisSpeech Engine 接続管理
 registerIpcMainInitEngine();
+// AivisSpeech Engine 接続ハンドラ
 registerIpcMainConnectEngine();
+// AivisSpeech Engine 切断ハンドラ
 registerIpcMainDisconnectEngine();
+// AivisSpeech Engine 話者一覧取得ハンドラ
 registerIpcMainGetEngineSpeakers();
+// AivisSpeech Engine 話者モデル追加ハンドラ
 registerIpcMainInstallEngineSpeakerModel();
+// AivisSpeech Engine 話者モデル削除ハンドラ
 registerIpcMainUninstallEngineSpeakerModel();
-registerIpcMainSynthesizeEngineLine();
 
-
-// 🔲AivisSpeech Engine IPCハンドラ🔲
-function registerIpcMainInitEngine() {
-    ipcMain.handle('init-engine', async (event, address = DEFAULT_AIVIS_HOST) => ({
-        success: await checkEngineHealth(address),
-        isSelfConnected: false
-    }));
-}
-
-function registerIpcMainConnectEngine() {
-    ipcMain.handle('connect-engine', async (event, address = DEFAULT_AIVIS_HOST) => {
-        if (await checkEngineHealth(address)) {
-            return { success: true, isSelfConnected: false };
-        }
-
-        let parsedUrl;
-        try {
-            parsedUrl = new URL(address);
-            if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Unsupported protocol');
-        } catch {
-            return { success: false, error: '🔄接続先アドレスが正しくありません。' };
-        }
-
-        if (!['localhost', '127.0.0.1', '[::1]', '::1'].includes(parsedUrl.hostname)) {
-            return { success: false, error: '🔄Engine サーバーに接続できませんでした。' };
-        }
-
-        const started = await startAivisEngine(parsedUrl);
-        return started
-            ? { success: true, isSelfConnected: true }
-            : { success: false, error: '🔄Engine を起動できません。run.exe の配置を確認してください。' };
-    });
-}
-
-function registerIpcMainDisconnectEngine() {
-    ipcMain.handle('disconnect-engine', async () => {
-        if (spawnedEnginePid) {
-            const processId = spawnedEnginePid;
-            spawnedEnginePid = null;
-            await new Promise(resolve => {
-                execFile('taskkill', ['/PID', String(processId), '/T', '/F'], () => resolve());
-            });
-        }
-        return true;
-    });
-}
-
-function registerIpcMainGetEngineSpeakers() {
-    ipcMain.handle('get-engine-speakers', async (event, address = DEFAULT_AIVIS_HOST) => {
-        try {
-            const speakers = await requestEngineJson(address, '/speakers');
-            return Array.isArray(speakers) ? speakers : [];
-        } catch (error) {
-            console.error('AivisSpeech 話者一覧取得失敗:', error.message);
-            return [];
-        }
-    });
-}
-
-function registerIpcMainInstallEngineSpeakerModel() {
-    ipcMain.handle('install-engine-speaker-model', async (event, address = DEFAULT_AIVIS_HOST) => {
-        const result = await dialog.showOpenDialog({
-            title: '話者モデルを追加',
-            filters: [
-                { name: '話者モデル', extensions: ['aivmx', 'aivm'] },
-                { name: 'すべてのファイル', extensions: ['*'] }
-            ],
-            properties: ['openFile']
-        });
-        if (result.canceled || result.filePaths.length === 0) {
-            return { canceled: true };
-        }
-
-        const filePath = result.filePaths[0];
-        await requestEngineModelInstall(address || DEFAULT_AIVIS_HOST, filePath);
-        return { canceled: false };
-    });
-}
-
-function registerIpcMainUninstallEngineSpeakerModel() {
-    ipcMain.handle('uninstall-engine-speaker-model', async (event, address = DEFAULT_AIVIS_HOST, speakerUuid) => {
-        if (typeof speakerUuid !== 'string' || !speakerUuid.trim()) {
-            throw new Error('削除する話者モデルを特定できません。');
-        }
-        const engineAddress = address || DEFAULT_AIVIS_HOST;
-        const installedModels = await requestEngineJson(engineAddress, '/aivm_models');
-        const modelEntry = Object.entries(installedModels).find(([, modelInfo]) =>
-            Array.isArray(modelInfo.speakers) && modelInfo.speakers.some(
-                librarySpeaker => librarySpeaker.speaker?.speaker_uuid === speakerUuid
-            )
-        );
-        if (!modelEntry) {
-            throw new Error(`話者 ${speakerUuid} に対応するインストール済みモデルが見つかりません。`);
-        }
-
-        const [modelUuid] = modelEntry;
-        await requestEngineDelete(
-            engineAddress,
-            `/aivm_models/${encodeURIComponent(modelUuid)}/uninstall`
-        );
-        return true;
-    });
-}
-
-async function requestEngineModelInstall(address, filePath) {
-    const fileInfo = await fs.stat(filePath);
-    if (!fileInfo.isFile()) {
-        throw new Error('選択したファイルを読み込めません。');
+// 🔲初期処理🔲
+// 開発中セキュリティオプション設定
+function setupDevSecurityOptions() {
+    if (process.env.NODE_ENV === 'development') {
+        app.commandLine.appendSwitch('disable-web-security');
+        // または BrowserWindow で webSecurity: false を使用
     }
+}
 
-    const boundary = `----xPlayer-${crypto.randomBytes(16).toString('hex')}`;
-    const filename = path.basename(filePath).replace(/["\r\n]/g, '_');
-    const prefix = Buffer.from(
-        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: application/octet-stream\r\n\r\n`
-    );
-    const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
-    const parsedUrl = new URL('/aivm_models/install', address);
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-        throw new Error('接続先アドレスが正しくありません。');
-    }
+// キャッシュ対策（起動前に設定）
+// - 書き込み可能なキャッシュディレクトリを事前に作成
+// - Chromium の GPU shader disk cache を無効化して関連ワーニングを抑制
+// - 24時間を経過した古いキャッシュサブディレクトリを自動削除
+function setupCacheSettings() {
+    try {
+        const cacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'Cache');
+        thumbnailCacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'thumbnails');
 
-    await new Promise((resolve, reject) => {
-        const client = parsedUrl.protocol === 'https:' ? https : http;
-        const request = client.request(parsedUrl, {
-            method: 'POST',
-            timeout: 120000,
-            headers: {
-                'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                'Content-Length': prefix.length + fileInfo.size + suffix.length
+        // 古いディレクトリを削除するヘルパー関数
+        const removeOldDirectories = async (targetDir) => {
+            try {
+                const entries = await fs.readdir(targetDir, { withFileTypes: true });
+                const now = Date.now();
+                const twentyFourHoursMs = 24 * 60 * 60 * 1000; // 24時間（ミリ秒）
+
+                for (const entry of entries) {
+                    if (entry.isDirectory()) {
+                        const subDirPath = path.join(targetDir, entry.name);
+                        const stats = await fs.stat(subDirPath);
+                        
+                        // 作成日時を取得（取得できない環境を考慮して更新日時mtimeをフォールバックに利用）
+                        const createdTime = (stats.birthtimeMs && stats.birthtimeMs > 0) 
+                            ? stats.birthtimeMs 
+                            : stats.mtimeMs;
+
+                        // 現在日時から24時間を超えている場合は削除
+                        if (now - createdTime > twentyFourHoursMs) {
+                            await fs.rm(subDirPath, { recursive: true, force: true });
+                        }
+                    }
+                }
+            } catch (err) {
+                // ディレクトリが存在しない場合や読み取りエラーは非致命的なので無視
             }
-        }, response => {
-            const chunks = [];
-            response.on('data', chunk => chunks.push(chunk));
-            response.on('end', () => {
-                if (response.statusCode >= 200 && response.statusCode < 300) {
-                    resolve();
-                    return;
-                }
-                const body = Buffer.concat(chunks).toString('utf8');
-                reject(new Error(`AivisSpeech Engine HTTP ${response.statusCode}${body ? `: ${body}` : ''}`));
-            });
-        });
-        const fileStream = fsNative.createReadStream(filePath);
-        request.on('error', reject);
-        request.on('timeout', () => request.destroy(new Error('AivisSpeech Engine request timed out')));
-        fileStream.on('error', error => request.destroy(error));
-        fileStream.on('end', () => request.end(suffix));
-        request.write(prefix);
-        fileStream.pipe(request, { end: false });
-    });
-}
+        };
 
-function requestEngineDelete(address, endpoint) {
-    return new Promise((resolve, reject) => {
-        let parsedUrl;
-        try {
-            parsedUrl = new URL(endpoint, address);
-            if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Unsupported protocol');
-        } catch (error) {
-            reject(error);
-            return;
+        // 非同期でディレクトリ作成と古いキャッシュのクリーンアップを実行
+        fs.mkdir(cacheDir, { recursive: true })
+            .then(() => removeOldDirectories(cacheDir))
+            .catch(() => {});
+            
+        fs.mkdir(thumbnailCacheDir, { recursive: true })
+            .then(() => removeOldDirectories(thumbnailCacheDir))
+            .catch(() => {});
+
+        // Chromium のディスクキャッシュ先をアプリ管理下のディレクトリに変更
+        if (app && app.commandLine && typeof app.commandLine.appendSwitch === 'function') {
+            app.commandLine.appendSwitch('disk-cache-dir', cacheDir);
+            app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
         }
-
-        const client = parsedUrl.protocol === 'https:' ? https : http;
-        const request = client.request(parsedUrl, { method: 'DELETE', timeout: 120000 }, response => {
-            const chunks = [];
-            response.on('data', chunk => chunks.push(chunk));
-            response.on('end', () => {
-                if (response.statusCode >= 200 && response.statusCode < 300) {
-                    resolve();
-                    return;
-                }
-                const body = Buffer.concat(chunks).toString('utf8');
-                reject(new Error(`AivisSpeech Engine HTTP ${response.statusCode}${body ? `: ${body}` : ''}`));
-            });
-        });
-        request.on('error', reject);
-        request.on('timeout', () => request.destroy(new Error('AivisSpeech Engine request timed out')));
-        request.end();
-    });
+    } catch (e) {
+        console.warn('Cache setup failed (non-fatal):', e);
+    }
 }
 
-function registerIpcMainSynthesizeEngineLine() {
-    ipcMain.handle('synthesize-engine-line', async (event, { address, text, speakerId } = {}) => {
-        if (typeof text !== 'string' || !text.trim() || text.length > 10000) {
-            throw new Error('合成するテキストが空か、長すぎます。');
-        }
-        if (!Number.isInteger(Number(speakerId))) {
-            throw new Error('話者が選択されていません。');
-        }
-
-        const query = await requestEnginePostJson(
-            address || DEFAULT_AIVIS_HOST,
-            `/audio_query?text=${encodeURIComponent(text)}&speaker=${encodeURIComponent(speakerId)}`
-        );
-        const audioData = await requestEnginePostBuffer(
-            address || DEFAULT_AIVIS_HOST,
-            `/synthesis?speaker=${encodeURIComponent(speakerId)}`,
-            JSON.stringify(query)
-        );
-        return new Uint8Array(audioData);
-    });
+// FFmpeg パス設定（asarUnpack 対応）
+function setupFfmpegPathSetting() {
+    ffmpeg.setFfmpegPath(ffmpegPath);
+    ffmpeg.setFfprobePath(ffprobePath);
 }
 
-function requestEnginePost(address, endpoint, body, responseType) {
-    return new Promise((resolve, reject) => {
-        let parsedUrl;
-        try {
-            parsedUrl = new URL(endpoint, address);
-            if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Unsupported protocol');
-        } catch (error) {
-            reject(error);
-            return;
-        }
-
-        const client = parsedUrl.protocol === 'https:' ? https : http;
-        const requestBody = Buffer.from(body || '');
-        const request = client.request(parsedUrl, {
-            method: 'POST',
-            timeout: 120000,
-            headers: responseType === 'json'
-                ? { 'Content-Length': requestBody.length }
-                : { 'Content-Type': 'application/json', 'Content-Length': requestBody.length }
-        }, response => {
-            const chunks = [];
-            response.on('data', chunk => chunks.push(chunk));
-            response.on('end', () => {
-                const responseBody = Buffer.concat(chunks);
-                if (response.statusCode !== 200) {
-                    reject(new Error(`AivisSpeech Engine HTTP ${response.statusCode}`));
-                    return;
-                }
-                if (responseType === 'buffer') {
-                    resolve(responseBody);
-                    return;
-                }
-                try {
-                    resolve(JSON.parse(responseBody.toString('utf8')));
-                } catch (error) {
-                    reject(error);
-                }
-            });
-        });
-        request.on('error', reject);
-        request.on('timeout', () => request.destroy(new Error('AivisSpeech Engine request timed out')));
-        if (requestBody.length > 0) request.write(requestBody);
-        request.end();
-    });
+// trash の取得（ESM対応）
+function setupTrashModule() {
+    try {
+        trash = trashModule.default || trashModule;  // default 優先
+    } catch (err) {
+        console.error('trash モジュール読み込み失敗:', err);
+        trash = null;
+    }
 }
 
-function requestEnginePostJson(address, endpoint) {
-    return requestEnginePost(address, endpoint, '', 'json');
-}
-
-function requestEnginePostBuffer(address, endpoint, body) {
-    return requestEnginePost(address, endpoint, body, 'buffer');
-}
-
-function requestEngineJson(address, endpoint) {
-    return new Promise((resolve, reject) => {
-        let parsedUrl;
-        try {
-            parsedUrl = new URL(endpoint, address);
-        } catch (error) {
-            reject(error);
-            return;
-        }
-
-        const client = parsedUrl.protocol === 'https:' ? https : http;
-        const request = client.get(parsedUrl, { timeout: 3000 }, response => {
-            let body = '';
-            response.setEncoding('utf8');
-            response.on('data', chunk => body += chunk);
-            response.on('end', () => {
-                if (response.statusCode !== 200) {
-                    reject(new Error(`HTTP ${response.statusCode}`));
-                    return;
-                }
-                try {
-                    resolve(JSON.parse(body));
-                } catch (error) {
-                    reject(error);
-                }
-            });
-        });
-        request.on('error', reject);
-        request.on('timeout', () => request.destroy(new Error('Request timed out')));
-    });
-}
-
-function checkEngineHealth(address = DEFAULT_AIVIS_HOST) {
-    return new Promise(resolve => {
-        let parsedUrl;
-        try {
-            parsedUrl = new URL('/version', address);
-            if (!['http:', 'https:'].includes(parsedUrl.protocol)) return resolve(false);
-        } catch {
-            return resolve(false);
-        }
-
-        const client = parsedUrl.protocol === 'https:' ? https : http;
-        const request = client.get(parsedUrl, { timeout: 1500 }, response => {
-            response.resume();
-            resolve(response.statusCode === 200);
-        });
-        request.on('error', () => resolve(false));
-        request.on('timeout', () => {
-            request.destroy();
-            resolve(false);
-        });
-    });
-}
-
-async function startAivisEngine(parsedAddress) {
-    const enginePath = await findAivisEnginePath();
-    if (!enginePath) return false;
-
-    const port = parsedAddress.port || '10101';
-    const alreadyRunning = await checkEngineProcessRunning();
-    if (!alreadyRunning) {
-        const engineHost = parsedAddress.hostname.replace(/^\[|\]$/g, '');
-        const child = spawn(enginePath, ['--host', engineHost, '--port', String(port), '--load_all_models'], {
-            cwd: path.dirname(enginePath),
-            detached: true,
-            stdio: 'ignore',
-            windowsHide: true
-        });
-        child.unref();
-        spawnedEnginePid = child.pid || null;
-        child.on('error', error => {
-            console.error('AivisSpeech Engine 起動失敗:', error.message);
-            if (spawnedEnginePid === child.pid) spawnedEnginePid = null;
-        });
-        child.on('exit', () => {
-            if (spawnedEnginePid === child.pid) spawnedEnginePid = null;
+// 初回起動判定
+function setupFirstLaunch() {
+    if (!gotTheLock) {
+        // 2つ目以降の起動（重複起動）の場合
+        isSecondaryInstance = true;
+        // 重複起動時も一時的なバックグラウンド処理や設定同期のため即時quitせずフラグのみ保持するか、
+        // あるいは後続の処理で設定を同期させます。
+    } else {
+        // 初回起動（プライマリインスタンス）の場合、2つ目が起動された際のイベントをキャッチ
+        app.on('second-instance', (event, commandLine, workingDirectory) => {
+            if (mainWindow) {
+                if (mainWindow.isMinimized()) mainWindow.restore();
+                mainWindow.focus();
+            }
         });
     }
-
-    for (let attempt = 0; attempt < 60; attempt++) {
-        if (await checkEngineHealth(parsedAddress.href)) return true;
-        await new Promise(resolve => setTimeout(resolve, 2000));
-    }
-    return false;
 }
-
-function checkEngineProcessRunning() {
-    return new Promise(resolve => {
-        exec(`tasklist /FI "IMAGENAME eq ${ENGINE_EXE}" /NH`, (error, stdout) => {
-            resolve(!error && Boolean(stdout) && stdout.toLowerCase().includes(ENGINE_EXE));
-        });
-    });
-}
-
-async function findAivisEnginePath() {
-    const candidates = [
-        process.env.AIVIS_ENGINE_PATH,
-        path.join(__dirname, 'Resource', 'AivisSpeech-Engine', ENGINE_EXE),
-        path.join(__dirname, 'Resource', 'AivisSpeech Engine', ENGINE_EXE),
-        path.join(process.env.LOCALAPPDATA || '', 'Programs', 'AivisSpeech-Engine', ENGINE_EXE),
-        path.join(process.env.LOCALAPPDATA || '', 'AivisSpeech Engine', ENGINE_EXE),
-        path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AivisSpeech', 'AivisSpeech-Engine', ENGINE_EXE),
-        path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AivisSpeech-Engine', ENGINE_EXE),
-        path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AivisSpeech Engine', ENGINE_EXE),
-        'C:\\Program Files\\AivisSpeech\\AivisSpeech-Engine\\run.exe',
-        path.join('C:\\AivisSpeech-Engine', ENGINE_EXE)
-    ].filter(Boolean).map(candidate => path.basename(candidate).toLowerCase() === ENGINE_EXE
-        ? candidate
-        : path.join(candidate, ENGINE_EXE));
-
-    for (const candidate of candidates) {
-        try {
-            await fs.access(candidate);
-            return candidate;
-        } catch {}
-    }
-    return null;
-}
-
 
 // 🔲appハンドラ登録関数🔲
 // アプリ起動処理
@@ -1855,261 +1581,297 @@ function registerIpcMainShowSaveAudioJoinDialog() {
 
 // 音声結合処理（全音声をMP3に統一変換 → concatで結合）
 function registerIpcMainJoinAudios() {
-ipcMain.handle('join-audios', async (event, { inputPaths, outputPath }) => {
-    if (!inputPaths || !Array.isArray(inputPaths) || inputPaths.length < 2) {
-        throw new Error('結合する音声が2つ以上必要です');
-    }
-    if (!outputPath) {
-        throw new Error('出力パスが指定されていません');
-    }
+    ipcMain.handle('join-audios', async (event, { inputPaths, outputPath }) => {
+        if (!inputPaths || !Array.isArray(inputPaths) || inputPaths.length < 2) {
+            throw new Error('結合する音声が2つ以上必要です');
+        }
+        if (!outputPath) {
+            throw new Error('出力パスが指定されていません');
+        }
 
-    currentJoinTempFiles = [];      // リセット
-    currentJoinConcatTxt = null;
-    isJoinCancelled = false;          // キャンセル状態をリセット
+        currentJoinTempFiles = [];      // リセット
+        currentJoinConcatTxt = null;
+        isJoinCancelled = false;          // キャンセル状態をリセット
 
-    return new Promise(async (resolve, reject) => {
-        try {
-            mainWindow.webContents.send('join-progress', { 
-                stage: 'join-prepare', 
-                percent: 0,
-                totalVideos: inputPaths.length,
-                message: '全音声を同一フォーマット(MP3)に変換中…'
-            });
-
-            // MP3フォーマット統一用の共通オプション
-            const commonAudioOptions = [
-                '-vn',                  // 映像ストリームを除外
-                '-c:a', 'libmp3lame',   // MP3エンコーダ
-                '-b:a', '192k',         // ビットレート 192kbps
-                '-ar', '48000',         // サンプリングレート 48kHz
-                '-ac', '2',             // ステレオ(2ch)
-                '-fflags', '+genpts'
-            ];
-
-            // 1. 変換フェーズ (全音声を標準的な一時MP3ファイルに変換)
-            for (let i = 0; i < inputPaths.length; i++) {
-                if (isJoinCancelled) break;
-
-                const input = inputPaths[i];
-                const tempOut = path.join(os.tmpdir(), `join_audio_temp_${Date.now()}_${i}.mp3`);
-                currentJoinTempFiles.push(tempOut);
-
-                await new Promise((res, rej) => {
-                    const ff = ffmpeg(input)
-                        .outputOptions(commonAudioOptions)
-                        .on('start', () => {
-                            if (isJoinCancelled) {
-                                ff.kill('SIGKILL');
-                                res();
-                                return;
-                            }
-                            currentFFmpeg = ff;
-                            currentOutputPath = outputPath;
-                        })
-                        .on('progress', (progress) => {
-                            if (isJoinCancelled) return;
-                            const filePercent = progress.percent || 0;
-                            const overall = ((i + filePercent / 100) / inputPaths.length) * 100;
-                            mainWindow.webContents.send('join-progress', {
-                                stage: 'convert-pre',
-                                percent: overall,
-                                currentFile: i + 1,
-                                totalFiles: inputPaths.length
-                            });
-                        })
-                        .on('end', res)
-                        .on('error', (err) => {
-                            if (err.message.includes('killed with signal SIGKILL') || isJoinCancelled) {
-                                res();
-                                return;
-                            }
-                            rej(err);
-                        })
-                        .save(tempOut);
+        return new Promise(async (resolve, reject) => {
+            try {
+                mainWindow.webContents.send('join-progress', { 
+                    stage: 'join-prepare', 
+                    percent: 0,
+                    totalVideos: inputPaths.length,
+                    message: '全音声を同一フォーマット(MP3)に変換中…'
                 });
 
-                if (isJoinCancelled) break;
-            }
+                // MP3フォーマット統一用の共通オプション
+                const commonAudioOptions = [
+                    '-vn',                  // 映像ストリームを除外
+                    '-c:a', 'libmp3lame',   // MP3エンコーダ
+                    '-b:a', '192k',         // ビットレート 192kbps
+                    '-ar', '48000',         // サンプリングレート 48kHz
+                    '-ac', '2',             // ステレオ(2ch)
+                    '-fflags', '+genpts'
+                ];
 
-            mainWindow.webContents.send('join-progress', { 
-                stage: 'join-start', 
-                percent: 0,
-                message: '変換完了 → 結合中…'
-            });
+                // 1. 変換フェーズ (全音声を標準的な一時MP3ファイルに変換)
+                for (let i = 0; i < inputPaths.length; i++) {
+                    if (isJoinCancelled) break;
 
-            // キャンセルチェック
-            if (isJoinCancelled) {
+                    const input = inputPaths[i];
+                    const tempOut = path.join(os.tmpdir(), `join_audio_temp_${Date.now()}_${i}.mp3`);
+                    currentJoinTempFiles.push(tempOut);
+
+                    await new Promise((res, rej) => {
+                        const ff = ffmpeg(input)
+                            .outputOptions(commonAudioOptions)
+                            .on('start', () => {
+                                if (isJoinCancelled) {
+                                    ff.kill('SIGKILL');
+                                    res();
+                                    return;
+                                }
+                                currentFFmpeg = ff;
+                                currentOutputPath = outputPath;
+                            })
+                            .on('progress', (progress) => {
+                                if (isJoinCancelled) return;
+                                const filePercent = progress.percent || 0;
+                                const overall = ((i + filePercent / 100) / inputPaths.length) * 100;
+                                mainWindow.webContents.send('join-progress', {
+                                    stage: 'convert-pre',
+                                    percent: overall,
+                                    currentFile: i + 1,
+                                    totalFiles: inputPaths.length
+                                });
+                            })
+                            .on('end', res)
+                            .on('error', (err) => {
+                                if (err.message.includes('killed with signal SIGKILL') || isJoinCancelled) {
+                                    res();
+                                    return;
+                                }
+                                rej(err);
+                            })
+                            .save(tempOut);
+                    });
+
+                    if (isJoinCancelled) break;
+                }
+
+                mainWindow.webContents.send('join-progress', { 
+                    stage: 'join-start', 
+                    percent: 0,
+                    message: '変換完了 → 結合中…'
+                });
+
+                // キャンセルチェック
+                if (isJoinCancelled) {
+                    cleanupJoinTempFiles();
+                    currentFFmpeg = null;
+                    currentOutputPath = null;
+                    
+                    mainWindow.webContents.send('join-progress', { 
+                        stage: 'cancelled', 
+                        message: 'ユーザーにより音声結合が中断されました' 
+                    });
+                    
+                    resolve({ cancelled: true, message: 'ユーザーによりキャンセルされました' });
+                    return;
+                }
+
+                // 2. 結合フェーズ (concat demuxer による高速・無劣化結合)
+                const concatList = currentJoinTempFiles.map(p => `file '${p.replace(/'/g, "\\'")}'`);
+                currentJoinConcatTxt = path.join(os.tmpdir(), `join_audio_concat_${Date.now()}.txt`);
+
+                await fs.writeFile(currentJoinConcatTxt, concatList.join('\n'), 'utf8');
+
+                const ff = ffmpeg()
+                    .input(currentJoinConcatTxt)
+                    .inputOptions('-f', 'concat', '-safe', '0')
+                    .outputOptions([
+                        '-c', 'copy' // 一時MP3ファイルを無劣化ストリームコピー結合
+                    ])
+                    .on('start', () => {
+                        currentFFmpeg = ff;
+                        currentOutputPath = outputPath;
+                    })
+                    .on('progress', (progress) => {
+                        if (progress.percent !== undefined) {
+                            mainWindow.webContents.send('join-progress', {
+                                stage: 'join',
+                                percent: progress.percent
+                            });
+                        }
+                    })
+                    .on('end', () => {
+                        cleanupJoinTempFiles();
+                        currentFFmpeg = null;
+                        currentOutputPath = null;
+                        mainWindow.webContents.send('join-progress', { 
+                            stage: 'join-done', 
+                            percent: 100, 
+                            outputPath 
+                        });
+                        resolve({ outputPath });
+                    })
+                    .on('error', (err) => {
+                        cleanupJoinTempFiles();
+                        if (err.message.includes('ffmpeg was killed') || 
+                            err.message.includes('killed with signal SIGKILL')) {
+                            currentFFmpeg = null;
+                            currentOutputPath = null;
+                            resolve({ cancelled: true, message: 'ユーザーによりキャンセル' });
+                            return;
+                        }
+                        currentFFmpeg = null;
+                        currentOutputPath = null;
+                        reject(err);
+                    })
+                    .save(outputPath);
+
+            } catch (err) {
                 cleanupJoinTempFiles();
                 currentFFmpeg = null;
                 currentOutputPath = null;
-                
-                mainWindow.webContents.send('join-progress', { 
-                    stage: 'cancelled', 
-                    message: 'ユーザーにより音声結合が中断されました' 
-                });
-                
-                resolve({ cancelled: true, message: 'ユーザーによりキャンセルされました' });
-                return;
+                reject(err);
+            } finally {
+                isJoinCancelled = false;
             }
+        });
+    });
+}
 
-            // 2. 結合フェーズ (concat demuxer による高速・無劣化結合)
-            const concatList = currentJoinTempFiles.map(p => `file '${p.replace(/'/g, "\\'")}'`);
-            currentJoinConcatTxt = path.join(os.tmpdir(), `join_audio_concat_${Date.now()}.txt`);
+// 音声合成（1行）ハンドラ
+function registerIpcMainSynthesizeEngineLine() {
+    ipcMain.handle('synthesize-engine-line', async (event, { address, text, speakerId } = {}) => {
+        if (typeof text !== 'string' || !text.trim() || text.length > 10000) {
+            throw new Error('合成するテキストが空か、長すぎます。');
+        }
+        if (!Number.isInteger(Number(speakerId))) {
+            throw new Error('話者が選択されていません。');
+        }
 
-            await fs.writeFile(currentJoinConcatTxt, concatList.join('\n'), 'utf8');
+        const query = await requestEnginePostJson(
+            address || DEFAULT_AIVIS_HOST,
+            `/audio_query?text=${encodeURIComponent(text)}&speaker=${encodeURIComponent(speakerId)}`
+        );
+        const audioData = await requestEnginePostBuffer(
+            address || DEFAULT_AIVIS_HOST,
+            `/synthesis?speaker=${encodeURIComponent(speakerId)}`,
+            JSON.stringify(query)
+        );
+        return new Uint8Array(audioData);
+    });
+}
 
-            const ff = ffmpeg()
-                .input(currentJoinConcatTxt)
-                .inputOptions('-f', 'concat', '-safe', '0')
-                .outputOptions([
-                    '-c', 'copy' // 一時MP3ファイルを無劣化ストリームコピー結合
-                ])
-                .on('start', () => {
-                    currentFFmpeg = ff;
-                    currentOutputPath = outputPath;
-                })
-                .on('progress', (progress) => {
-                    if (progress.percent !== undefined) {
-                        mainWindow.webContents.send('join-progress', {
-                            stage: 'join',
-                            percent: progress.percent
-                        });
-                    }
-                })
-                .on('end', () => {
-                    cleanupJoinTempFiles();
-                    currentFFmpeg = null;
-                    currentOutputPath = null;
-                    mainWindow.webContents.send('join-progress', { 
-                        stage: 'join-done', 
-                        percent: 100, 
-                        outputPath 
-                    });
-                    resolve({ outputPath });
-                })
-                .on('error', (err) => {
-                    cleanupJoinTempFiles();
-                    if (err.message.includes('ffmpeg was killed') || 
-                        err.message.includes('killed with signal SIGKILL')) {
-                        currentFFmpeg = null;
-                        currentOutputPath = null;
-                        resolve({ cancelled: true, message: 'ユーザーによりキャンセル' });
-                        return;
-                    }
-                    currentFFmpeg = null;
-                    currentOutputPath = null;
-                    reject(err);
-                })
-                .save(outputPath);
+// AivisSpeech Engine 初期化ハンドラ
+function registerIpcMainInitEngine() {
+    ipcMain.handle('init-engine', async (event, address = DEFAULT_AIVIS_HOST) => ({
+        success: await checkEngineHealth(address),
+        isSelfConnected: false
+    }));
+}
 
-        } catch (err) {
-            cleanupJoinTempFiles();
-            currentFFmpeg = null;
-            currentOutputPath = null;
-            reject(err);
-        } finally {
-            isJoinCancelled = false;
+// AivisSpeech Engine 接続ハンドラ
+function registerIpcMainConnectEngine() {
+    ipcMain.handle('connect-engine', async (event, address = DEFAULT_AIVIS_HOST) => {
+        if (await checkEngineHealth(address)) {
+            return { success: true, isSelfConnected: false };
+        }
+
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(address);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Unsupported protocol');
+        } catch {
+            return { success: false, error: '🔄接続先アドレスが正しくありません。' };
+        }
+
+        if (!['localhost', '127.0.0.1', '[::1]', '::1'].includes(parsedUrl.hostname)) {
+            return { success: false, error: '🔄Engine サーバーに接続できませんでした。' };
+        }
+
+        const started = await startAivisEngine(parsedUrl);
+        return started
+            ? { success: true, isSelfConnected: true }
+            : { success: false, error: '🔄Engine を起動できません。run.exe の配置を確認してください。' };
+    });
+}
+
+// AivisSpeech Engine 切断ハンドラ
+function registerIpcMainDisconnectEngine() {
+    ipcMain.handle('disconnect-engine', async () => {
+        if (spawnedEnginePid) {
+            const processId = spawnedEnginePid;
+            spawnedEnginePid = null;
+            await new Promise(resolve => {
+                execFile('taskkill', ['/PID', String(processId), '/T', '/F'], () => resolve());
+            });
+        }
+        return true;
+    });
+}
+
+// AivisSpeech Engine 話者一覧取得ハンドラ
+function registerIpcMainGetEngineSpeakers() {
+    ipcMain.handle('get-engine-speakers', async (event, address = DEFAULT_AIVIS_HOST) => {
+        try {
+            const speakers = await requestEngineJson(address, '/speakers');
+            return Array.isArray(speakers) ? speakers : [];
+        } catch (error) {
+            console.error('AivisSpeech 話者一覧取得失敗:', error.message);
+            return [];
         }
     });
-});
+}
+
+// AivisSpeech Engine 話者モデル追加ハンドラ
+function registerIpcMainInstallEngineSpeakerModel() {
+    ipcMain.handle('install-engine-speaker-model', async (event, address = DEFAULT_AIVIS_HOST) => {
+        const result = await dialog.showOpenDialog({
+            title: '話者モデルを追加',
+            filters: [
+                { name: '話者モデル', extensions: ['aivmx', 'aivm'] },
+                { name: 'すべてのファイル', extensions: ['*'] }
+            ],
+            properties: ['openFile']
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            return { canceled: true };
+        }
+
+        const filePath = result.filePaths[0];
+        await requestEngineModelInstall(address || DEFAULT_AIVIS_HOST, filePath);
+        return { canceled: false };
+    });
+}
+
+// AivisSpeech Engine 話者モデル削除ハンドラ
+function registerIpcMainUninstallEngineSpeakerModel() {
+    ipcMain.handle('uninstall-engine-speaker-model', async (event, address = DEFAULT_AIVIS_HOST, speakerUuid) => {
+        if (typeof speakerUuid !== 'string' || !speakerUuid.trim()) {
+            throw new Error('削除する話者モデルを特定できません。');
+        }
+        const engineAddress = address || DEFAULT_AIVIS_HOST;
+        const installedModels = await requestEngineJson(engineAddress, '/aivm_models');
+        const modelEntry = Object.entries(installedModels).find(([, modelInfo]) =>
+            Array.isArray(modelInfo.speakers) && modelInfo.speakers.some(
+                librarySpeaker => librarySpeaker.speaker?.speaker_uuid === speakerUuid
+            )
+        );
+        if (!modelEntry) {
+            throw new Error(`話者 ${speakerUuid} に対応するインストール済みモデルが見つかりません。`);
+        }
+
+        const [modelUuid] = modelEntry;
+        await requestEngineDelete(
+            engineAddress,
+            `/aivm_models/${encodeURIComponent(modelUuid)}/uninstall`
+        );
+        return true;
+    });
 }
 
 // 🔲共通関数🔲
-// 開発中セキュリティオプション設定
-function setupDevSecurityOptions() {
-    if (process.env.NODE_ENV === 'development') {
-        app.commandLine.appendSwitch('disable-web-security');
-        // または BrowserWindow で webSecurity: false を使用
-    }
-}
-
-// キャッシュ対策（起動前に設定）
-// - 書き込み可能なキャッシュディレクトリを事前に作成
-// - Chromium の GPU shader disk cache を無効化して関連ワーニングを抑制
-// - 24時間を経過した古いキャッシュサブディレクトリを自動削除
-function setupCacheSettings() {
-    try {
-        const cacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'Cache');
-        thumbnailCacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'thumbnails');
-
-        // 古いディレクトリを削除するヘルパー関数
-        const removeOldDirectories = async (targetDir) => {
-            try {
-                const entries = await fs.readdir(targetDir, { withFileTypes: true });
-                const now = Date.now();
-                const twentyFourHoursMs = 24 * 60 * 60 * 1000; // 24時間（ミリ秒）
-
-                for (const entry of entries) {
-                    if (entry.isDirectory()) {
-                        const subDirPath = path.join(targetDir, entry.name);
-                        const stats = await fs.stat(subDirPath);
-                        
-                        // 作成日時を取得（取得できない環境を考慮して更新日時mtimeをフォールバックに利用）
-                        const createdTime = (stats.birthtimeMs && stats.birthtimeMs > 0) 
-                            ? stats.birthtimeMs 
-                            : stats.mtimeMs;
-
-                        // 現在日時から24時間を超えている場合は削除
-                        if (now - createdTime > twentyFourHoursMs) {
-                            await fs.rm(subDirPath, { recursive: true, force: true });
-                        }
-                    }
-                }
-            } catch (err) {
-                // ディレクトリが存在しない場合や読み取りエラーは非致命的なので無視
-            }
-        };
-
-        // 非同期でディレクトリ作成と古いキャッシュのクリーンアップを実行
-        fs.mkdir(cacheDir, { recursive: true })
-            .then(() => removeOldDirectories(cacheDir))
-            .catch(() => {});
-            
-        fs.mkdir(thumbnailCacheDir, { recursive: true })
-            .then(() => removeOldDirectories(thumbnailCacheDir))
-            .catch(() => {});
-
-        // Chromium のディスクキャッシュ先をアプリ管理下のディレクトリに変更
-        if (app && app.commandLine && typeof app.commandLine.appendSwitch === 'function') {
-            app.commandLine.appendSwitch('disk-cache-dir', cacheDir);
-            app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
-        }
-    } catch (e) {
-        console.warn('Cache setup failed (non-fatal):', e);
-    }
-}
-
-// FFmpeg パス設定（asarUnpack 対応）
-function setupFfmpegPathSetting() {
-    ffmpeg.setFfmpegPath(ffmpegPath);
-    ffmpeg.setFfprobePath(ffprobePath);
-}
-// trash の取得（ESM対応）
-function setupTrashModule() {
-    try {
-        trash = trashModule.default || trashModule;  // default 優先
-    } catch (err) {
-        console.error('trash モジュール読み込み失敗:', err);
-        trash = null;
-    }
-}
-// 初回起動判定
-function setupFirstLaunch() {
-    if (!gotTheLock) {
-        // 2つ目以降の起動（重複起動）の場合
-        isSecondaryInstance = true;
-        // 重複起動時も一時的なバックグラウンド処理や設定同期のため即時quitせずフラグのみ保持するか、
-        // あるいは後続の処理で設定を同期させます。
-    } else {
-        // 初回起動（プライマリインスタンス）の場合、2つ目が起動された際のイベントをキャッチ
-        app.on('second-instance', (event, commandLine, workingDirectory) => {
-            if (mainWindow) {
-                if (mainWindow.isMinimized()) mainWindow.restore();
-                mainWindow.focus();
-            }
-        });
-    }
-}
 // ウィンドウ作成
 function createWindow() {
     const win = new BrowserWindow({
@@ -2188,6 +1950,7 @@ async function processListFile(filePath) {
     return videoFiles;
 }
 
+// 圧縮ファイル展開（7-Zip利用）
 async function extractArchive(archivePath) {
     const extractionRoot = path.join(app.getPath('temp'), 'xPlayer-archives');
     const extractionPath = path.join(extractionRoot, path.parse(archivePath).name);
@@ -2903,4 +2666,266 @@ async function cutCopyModeGeneric(inputPath, validKeeps, outPath, tmpExt) {
         console.error('コピーモードエラー:', copyErr);
         throw new Error('高速モードでの処理に失敗しました: ' + copyErr.message);
     }
+}
+
+// AivisSpeech Engine 話者モデル追加リクエスト
+async function requestEngineModelInstall(address, filePath) {
+    const fileInfo = await fs.stat(filePath);
+    if (!fileInfo.isFile()) {
+        throw new Error('選択したファイルを読み込めません。');
+    }
+
+    const boundary = `----xPlayer-${crypto.randomBytes(16).toString('hex')}`;
+    const filename = path.basename(filePath).replace(/["\r\n]/g, '_');
+    const prefix = Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: application/octet-stream\r\n\r\n`
+    );
+    const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
+    const parsedUrl = new URL('/aivm_models/install', address);
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        throw new Error('接続先アドレスが正しくありません。');
+    }
+
+    await new Promise((resolve, reject) => {
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        const request = client.request(parsedUrl, {
+            method: 'POST',
+            timeout: 120000,
+            headers: {
+                'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                'Content-Length': prefix.length + fileInfo.size + suffix.length
+            }
+        }, response => {
+            const chunks = [];
+            response.on('data', chunk => chunks.push(chunk));
+            response.on('end', () => {
+                if (response.statusCode >= 200 && response.statusCode < 300) {
+                    resolve();
+                    return;
+                }
+                const body = Buffer.concat(chunks).toString('utf8');
+                reject(new Error(`AivisSpeech Engine HTTP ${response.statusCode}${body ? `: ${body}` : ''}`));
+            });
+        });
+        const fileStream = fsNative.createReadStream(filePath);
+        request.on('error', reject);
+        request.on('timeout', () => request.destroy(new Error('AivisSpeech Engine request timed out')));
+        fileStream.on('error', error => request.destroy(error));
+        fileStream.on('end', () => request.end(suffix));
+        request.write(prefix);
+        fileStream.pipe(request, { end: false });
+    });
+}
+
+// AivisSpeech Engine 話者モデル削除リクエスト
+function requestEngineDelete(address, endpoint) {
+    return new Promise((resolve, reject) => {
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(endpoint, address);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Unsupported protocol');
+        } catch (error) {
+            reject(error);
+            return;
+        }
+
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        const request = client.request(parsedUrl, { method: 'DELETE', timeout: 120000 }, response => {
+            const chunks = [];
+            response.on('data', chunk => chunks.push(chunk));
+            response.on('end', () => {
+                if (response.statusCode >= 200 && response.statusCode < 300) {
+                    resolve();
+                    return;
+                }
+                const body = Buffer.concat(chunks).toString('utf8');
+                reject(new Error(`AivisSpeech Engine HTTP ${response.statusCode}${body ? `: ${body}` : ''}`));
+            });
+        });
+        request.on('error', reject);
+        request.on('timeout', () => request.destroy(new Error('AivisSpeech Engine request timed out')));
+        request.end();
+    });
+}
+
+// AivisSpeech Engine POST リクエスト作成（共通）
+function requestEnginePost(address, endpoint, body, responseType) {
+    return new Promise((resolve, reject) => {
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(endpoint, address);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Unsupported protocol');
+        } catch (error) {
+            reject(error);
+            return;
+        }
+
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        const requestBody = Buffer.from(body || '');
+        const request = client.request(parsedUrl, {
+            method: 'POST',
+            timeout: 120000,
+            headers: responseType === 'json'
+                ? { 'Content-Length': requestBody.length }
+                : { 'Content-Type': 'application/json', 'Content-Length': requestBody.length }
+        }, response => {
+            const chunks = [];
+            response.on('data', chunk => chunks.push(chunk));
+            response.on('end', () => {
+                const responseBody = Buffer.concat(chunks);
+                if (response.statusCode !== 200) {
+                    reject(new Error(`AivisSpeech Engine HTTP ${response.statusCode}`));
+                    return;
+                }
+                if (responseType === 'buffer') {
+                    resolve(responseBody);
+                    return;
+                }
+                try {
+                    resolve(JSON.parse(responseBody.toString('utf8')));
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        });
+        request.on('error', reject);
+        request.on('timeout', () => request.destroy(new Error('AivisSpeech Engine request timed out')));
+        if (requestBody.length > 0) request.write(requestBody);
+        request.end();
+    });
+}
+
+// AivisSpeech Engine POST リクエスト（JSON応答）作成
+function requestEnginePostJson(address, endpoint) {
+    return requestEnginePost(address, endpoint, '', 'json');
+}
+
+// AivisSpeech Engine POST リクエスト（バイナリ応答）作成
+function requestEnginePostBuffer(address, endpoint, body) {
+    return requestEnginePost(address, endpoint, body, 'buffer');
+}
+
+// AivisSpeech Engine リクエスト電文作成
+function requestEngineJson(address, endpoint) {
+    return new Promise((resolve, reject) => {
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(endpoint, address);
+        } catch (error) {
+            reject(error);
+            return;
+        }
+
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        const request = client.get(parsedUrl, { timeout: 3000 }, response => {
+            let body = '';
+            response.setEncoding('utf8');
+            response.on('data', chunk => body += chunk);
+            response.on('end', () => {
+                if (response.statusCode !== 200) {
+                    reject(new Error(`HTTP ${response.statusCode}`));
+                    return;
+                }
+                try {
+                    resolve(JSON.parse(body));
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        });
+        request.on('error', reject);
+        request.on('timeout', () => request.destroy(new Error('Request timed out')));
+    });
+}
+
+// AivisSpeech Engine 実行中検査
+function checkEngineHealth(address = DEFAULT_AIVIS_HOST) {
+    return new Promise(resolve => {
+        let parsedUrl;
+        try {
+            parsedUrl = new URL('/version', address);
+            if (!['http:', 'https:'].includes(parsedUrl.protocol)) return resolve(false);
+        } catch {
+            return resolve(false);
+        }
+
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        const request = client.get(parsedUrl, { timeout: 1500 }, response => {
+            response.resume();
+            resolve(response.statusCode === 200);
+        });
+        request.on('error', () => resolve(false));
+        request.on('timeout', () => {
+            request.destroy();
+            resolve(false);
+        });
+    });
+}
+
+// AivisSpeech Engine を起動する関数（ローカル接続用）
+async function startAivisEngine(parsedAddress) {
+    const enginePath = await findAivisEnginePath();
+    if (!enginePath) return false;
+
+    const port = parsedAddress.port || '10101';
+    const alreadyRunning = await checkEngineProcessRunning();
+    if (!alreadyRunning) {
+        const engineHost = parsedAddress.hostname.replace(/^\[|\]$/g, '');
+        const child = spawn(enginePath, ['--host', engineHost, '--port', String(port), '--load_all_models'], {
+            cwd: path.dirname(enginePath),
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: true
+        });
+        child.unref();
+        spawnedEnginePid = child.pid || null;
+        child.on('error', error => {
+            console.error('AivisSpeech Engine 起動失敗:', error.message);
+            if (spawnedEnginePid === child.pid) spawnedEnginePid = null;
+        });
+        child.on('exit', () => {
+            if (spawnedEnginePid === child.pid) spawnedEnginePid = null;
+        });
+    }
+
+    for (let attempt = 0; attempt < 60; attempt++) {
+        if (await checkEngineHealth(parsedAddress.href)) return true;
+        await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    return false;
+}
+
+// AivisSpeech Engine プロセスが実行中か確認する関数
+function checkEngineProcessRunning() {
+    return new Promise(resolve => {
+        exec(`tasklist /FI "IMAGENAME eq ${ENGINE_EXE}" /NH`, (error, stdout) => {
+            resolve(!error && Boolean(stdout) && stdout.toLowerCase().includes(ENGINE_EXE));
+        });
+    });
+}
+
+// AivisSpeech Engine 実行ファイルパス探索関数
+async function findAivisEnginePath() {
+    const candidates = [
+        process.env.AIVIS_ENGINE_PATH,
+        path.join(__dirname, 'Resource', 'AivisSpeech-Engine', ENGINE_EXE),
+        path.join(__dirname, 'Resource', 'AivisSpeech Engine', ENGINE_EXE),
+        path.join(process.env.LOCALAPPDATA || '', 'Programs', 'AivisSpeech-Engine', ENGINE_EXE),
+        path.join(process.env.LOCALAPPDATA || '', 'AivisSpeech Engine', ENGINE_EXE),
+        path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AivisSpeech', 'AivisSpeech-Engine', ENGINE_EXE),
+        path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AivisSpeech-Engine', ENGINE_EXE),
+        path.join(process.env.ProgramFiles || 'C:\\Program Files', 'AivisSpeech Engine', ENGINE_EXE),
+        'C:\\Program Files\\AivisSpeech\\AivisSpeech-Engine\\run.exe',
+        path.join('C:\\AivisSpeech-Engine', ENGINE_EXE)
+    ].filter(Boolean).map(candidate => path.basename(candidate).toLowerCase() === ENGINE_EXE
+        ? candidate
+        : path.join(candidate, ENGINE_EXE));
+
+    for (const candidate of candidates) {
+        try {
+            await fs.access(candidate);
+            return candidate;
+        } catch {}
+    }
+    return null;
 }

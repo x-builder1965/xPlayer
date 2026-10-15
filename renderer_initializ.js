@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.49.0'
+// version   = 'Ver6.52.0'
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -371,6 +371,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 	// 【ipcRendererイベント】結合進捗受信（詳細ペイロード対応）
 	registerIpcRendererJoinProgressEvents();
 
+    // 【初期設定】AivisSpeech Engine 初期化
     initializeSpeechEngine();
 
     Initializing = false;
@@ -1324,4 +1325,27 @@ async function setupPreviewComments() {
 function resetPlaylistState() {
     playlistPathArea.value = `${appName} ${version}　${copyright}`;
     updateIconOverlay();
+}
+
+// 【初期設定】AivisSpeech Engine 初期化
+async function initializeSpeechEngine() {
+    engineAddress = savedEngineAddress || 'http://127.0.0.1:10101';
+    engineAddressInput.value = engineAddress;
+
+    try {
+        const result = await withLoading(() => initEngine(engineAddress));
+        if (result.success) {
+            isEngineReady = true;
+            isSelfConnected = result.isSelfConnected;
+            await loadEngineSpeakers();
+            updateEngineConnectionUI(true);
+            return;
+        }
+
+        updateEngineConnectionUI(false, '起動・接続を試行中...');
+        await handleEngineConnectionToggle();
+    } catch (error) {
+        updateEngineConnectionUI(false, '接続できません');
+        console.error('AivisSpeech Engine 初期化失敗:', error);
+    }
 }

@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.49.0'
+// version   = 'Ver6.52.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -618,9 +618,9 @@ let currentAddMode = 'Add0';                    // プレイリスト追加位�
 let playlistDisplayMode = null;                 // プレイリスト表示形式
 let playlistThumbnailCache = new Map();         // プレイリストサムネイルキャッシュ
 let displayFormatUpdateRequested = false;       // 表示形式更新要求フラグ
-let selectedAudioLabel = '日本語';              // 選択中の音声トラック名
+let selectedAudioLabel = '日本語';               // 選択中の音声トラック名
 let selectedAudioTrack = [];                    // 選択中の音声トラック
-let selectedSubtitleLabel = '（なし）';         // 選択中の字幕トラック名
+let selectedSubtitleLabel = '（なし）';          // 選択中の字幕トラック名
 let selectedSubtitleTrack = [];                 // 選択中の字幕トラック
 let currentAudioIndex = 0;                      // 現在の音声トラック位置
 let currentSubtitlesIndex = 0;                  // 現在の字幕トラック位置
@@ -651,18 +651,18 @@ let currentBgmIndex = 0;                        // 現在のBGM位置
 let currentLoadedBgmPath = null;                // 読み込み済みBGMパス
 let lastEffectKey = null;                       // 直前に適用したエフェクトキー
 let bookReaderPageIndex = 0;                    // ブックリーダー表示位置
-let bookReaderPageAnimation = null;              // ブックリーダーのページ移動アニメーション
-let bookReaderTransitionOverlay = null;            // 画像切り替え時のスライド対象画像
-let bookReaderTransitionAnimation = null;          // 画像切り替え時のスライドアニメーション
-let bookReaderStartAtLastPage = false;           // 前の画像をブックリーダー終端から表示するか
-let bookReaderPointerY = null;                   // ブックリーダー操作時のマウスY座標
+let bookReaderPageAnimation = null;             // ブックリーダーのページ移動アニメーション
+let bookReaderTransitionOverlay = null;         // 画像切り替え時のスライド対象画像
+let bookReaderTransitionAnimation = null;       // 画像切り替え時のスライドアニメーション
+let bookReaderStartAtLastPage = false;          // 前の画像をブックリーダー終端から表示するか
+let bookReaderPointerY = null;                  // ブックリーダー操作時のマウスY座標
 let hasMoved = false;                           // ドラッグ中の移動有無
 let forceStop = true;                           // 起動時に一時停止するか
 let maxImageCacheSize = 0;                      // 画像キャッシュ上限
 let maxMediaCacheSize = 0;                      // 動画・音声キャッシュ上限
 let isEngineReady = false;                      // AivisSpeech Engine 接続状態
 let isSelfConnected = false;                    // アプリが起動した Engine かどうか
-let engineAddress = 'http://127.0.0.1:10101';    // AivisSpeech Engine 接続先
+let engineAddress = 'http://127.0.0.1:10101';   // AivisSpeech Engine 接続先
 let textLines = [];                             // 現在のテキスト行
 let textLineSpeakerNames = [];                  // 行ごとの話者名（未指定は null）
 let textLineOffsets = [];                       // テキスト各行の文字位置
@@ -678,3 +678,6 @@ let previewComments = [];                       // プレビュー用コメン�
 let lastCommentIndex = -1;                      // 直前に表示したコメントのインデックス
 let loadingRequestCount = 0;                    // ローディング表示要求カウンタ
 let isTransitioning = false;                    // 排他制御用のガードフラグ（ファイルスコープ等で保持）
+let activeSpeakerPreview = null;                // 現在プレビュー中の話者情報
+let speakerPreviewRequest = 0;                  // プレビュー要求の世代番号
+
