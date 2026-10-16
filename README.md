@@ -11,7 +11,7 @@ xPlayer は、Windows で動画・音声・画像・文章を「すぐ開いて�
 2. 再生したいファイルをドラッグ＆ドロップするか、ファイル選択を行う
 3. 再生・速度調整・編集・プレイリスト管理などを利用する
 
-> Web上の動画（YouTube / Twitch / 各種URL）は、外部ブラウザ（Chrome または Edge）でポップアップ再生できます。
+> **Note:** Web上の動画（YouTube / Twitch / 各種URL）は、外部ブラウザ（Chrome または Edge）でポップアップ再生できます。
 
 ## こんな場面に便利です
 
@@ -31,13 +31,15 @@ xPlayer は、Windows で動画・音声・画像・文章を「すぐ開いて�
   - フォルダ・ファイル選択 / ドラッグ＆ドロップ / エクスプローラーからのダブルクリック（関連付け）による再生に対応
   - プレイリストファイル（`.amppl`）の読み込みに対応  
   - **対応フォーマット:**  
-    - 動画：`mp4`, `mkv`, `webm`, `avi`, `flv`, `mov`, `wmv`, `mpg`, `mpeg`, `ts`, `mts`, `m2ts`, `vob`, `ogv`, `3gp`, `m4v`, `asf`  
-    - 音声：`mp3`, `wav`, `flac`, `ogg`, `oga`, `m4a`, `aac`, `opus`, `wma`, `aiff`, `aif`, `alac`, `ape`, `m4b`, `mid`, `midi`  
+    - 動画：`mp4`, `webm`, `ogg`, `mov`, `m4v`, `mkv`  
+    - 音声：`mp3`, `wav`, `flac`, `ogg`, `oga`, `m4a`, `aac`, `opus`, `wma`, `aiff`, `aif`, `alac`, `ape`  
     - 画像：`jpg`, `jpeg`, `png`, `gif`, `bmp`, `tiff`, `webp`
     - 文章：`txt`
-    - 圧縮：`zip`, `7z`（圧縮された動画、音声、画像、文章を再生可能）
-  - HTML5 ネイティブ再生に対応する形式（`mp4`, `webm`, `ogg`, `mov`, `m4v`, 一部 `mkv`）はダイレクト再生  
-  - 変換モードでは **FFmpeg** により動画を `mp4`、音声を `mp3` に変換（動画は音声トラック選択とテキスト字幕の `vtt` 抽出に対応）
+    - 圧縮：`zip`, `7z`, `rar`, `tar`, `gz`, `bz2`, `xz`, `iso`（圧縮された動画、音声、画像、文章を再生可能）
+  - HTML5 ネイティブ再生に対応する形式（対応フォーマット）はダイレクト再生、それ以外は **FFmpeg** で自動変換し再生  
+  - 変換は動画を `mp4`、音声を `mp3` に変換（動画は音声トラック選択とテキスト字幕の `vtt` 抽出に対応）
+
+> **Note:** rar圧縮ファイルの解凍には完全版7-zipのインストールが必要です。
 
 - **▶️ 再生制御**  
   - 基本操作（再生：▶️・一時停止：⏸️ / 停止：⏹️ / 送り・戻し：⏪⏩ / 前後トラック移動：⏮️⏭️）  
@@ -155,10 +157,12 @@ npm run sign           # 署名付きビルド（環境変数 CSC_KEY_PASSWORD �
 - **[audioMotion-analyzer](https://github.com/hvianna/audioMotion-analyzer)** (MIT License) - オーディオビジュアル表示
 - **[electron-builder](https://www.electron.build/)** (MIT License) - アプリケーションのビルド・パッケージング
 - **[trash](https://github.com/sindresorhus/trash)** (MIT License) - ファイル削除処理
+- **[7-Zip / 7za](https://www.7-zip.org/)** (GNU LGPL v2.1 / unRAR restriction) - 圧縮ファイル展開処理
 
 ### 商標・権利表記
 - Electron は OpenJS Foundation の商標または登録商標です。
 - FFmpeg は Fabrice Bellard 氏および FFmpeg プロジェクトの商標または登録商標です。
+- 7-Zip は Igor Pavlov 氏の登録商標または商標です。
 - Windows, Snipping Tool および  Microsoft Edge は Microsoft Corporation の米国およびその他の国における登録商標です。
 - Google Chrome および YouTube は Google LLC の登録商標です。
 - Twitch は Twitch Interactive, Inc. の登録商標です。

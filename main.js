@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.52.0'
+// version   = 'Ver6.55.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -19,7 +19,7 @@ const http = require('http');
 const https = require('https');
 const { spawn, exec, execFile } = require('child_process');
 const trashModule = require('trash');
-const sevenZipPath = require('7zip-bin').path7za.replace('app.asar', 'app.asar.unpacked');
+const standard7zPath = 'C:\\Program Files\\7-Zip\\7z.exe';
 
 // 固定値設定
 const ffmpegPath = ffmpegStatic.replace('app.asar', 'app.asar.unpacked');
@@ -37,7 +37,7 @@ const IMAGE_EXTENSIONS = [
 ];
 const TEXT_EXTENSIONS = ['txt'];
 const VIDEO_PLAYLIST = ['amppl'];
-const ARCHIVE_EXTENSIONS = ['zip', 'rar', '7z'];
+const ARCHIVE_EXTENSIONS = ['zip', '7z', 'rar', 'tar', 'gz', 'bz2', 'xz', 'iso'];
 const ARCHIVE_REGEX = new RegExp(`\\.(${ARCHIVE_EXTENSIONS.join('|')})$`, 'i');
 const SUPPORTED_PLAYLIST_ITEM_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS, ...TEXT_EXTENSIONS];
 const SUPPORTED_PLAYLIST_ITEM_REGEX = new RegExp(`\\.(${SUPPORTED_PLAYLIST_ITEM_EXTENSIONS.join('|')})$`, 'i');
@@ -47,6 +47,7 @@ const SETTINGS_FILE_REGEX = new RegExp(`\\.(${SETTINGS_EXTENSIONS.join('|')})$`,
 const DEFAULT_AIVIS_HOST = 'http://127.0.0.1:10101';
 const ENGINE_EXE = 'run.exe';
 const gotTheLock = app.requestSingleInstanceLock();     // 🔧 単一インスタンスロックの取得（重複起動の判定）
+const activeArchiveExtractions = new Map();
 
 // グローバル（共通）変数
 let trash;							// 動的インポートした trash パッケージ（ESM対応）の保持用変数
@@ -60,8 +61,8 @@ let currentJoinConcatTxt = null;	// FFmpeg の concat フィルター用テキ�
 let isJoinCancelled = false;		// 結合処理のキャンセル状態フラグ（true の場合は処理を中断）
 let thumbnailCacheDir = null;		// サムネイル画像をキャッシュ保存するディレクトリのパス
 let isSecondaryInstance = false;	// 二重起動（多重起動）判定フラグ（true の場合はセカニアリインスタンスとして動作）
-let spawnedEnginePid = null;
-const activeArchiveExtractions = new Map();
+let spawnedEnginePid = null;        // AivisSpeech Engine を spawn で起動した場合の PID（プロセスID）を保持
+let sevenZipPath = null;            // 7-Zip のパス（標準インストール先 or ユーザー指定のパス）を保持
 
 // 🔲初期処理🔲
 // 開発中セキュリティオプション設定
@@ -72,6 +73,8 @@ setupCacheSettings();
 setupFfmpegPathSetting();
 // trash の取得（ESM対応）
 setupTrashModule();
+// 7-Zip のパス設定
+setupSevenZipPath();
 // 初回起動判定
 setupFirstLaunch();
 
@@ -239,6 +242,20 @@ function setupTrashModule() {
     } catch (err) {
         console.error('trash モジュール読み込み失敗:', err);
         trash = null;
+    }
+}
+
+// 7-Zip のパス設定
+function setupSevenZipPath() {
+    if (fsNative.existsSync(standard7zPath)) {
+        sevenZipPath = standard7zPath; // インストール版の完全な7z.exeを優先
+    } else {
+        // 従来のモジュール（7zip-binなど）をフォールバックとして利用
+        try {
+            sevenZipPath = require('7zip-bin').path7za;
+        } catch (err) {
+            sevenZipPath = '7z'; // パスが通っている環境変数頼み
+        }
     }
 }
 
