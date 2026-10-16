@@ -35,7 +35,7 @@ xPlayer は、Windows で動画・音声・画像・文章を「すぐ開いて�
     - 音声：`mp3`, `wav`, `flac`, `ogg`, `oga`, `m4a`, `aac`, `opus`, `wma`, `aiff`, `aif`, `alac`, `ape`  
     - 画像：`jpg`, `jpeg`, `png`, `gif`, `bmp`, `tiff`, `webp`
     - 文章：`txt`
-    - 圧縮：`zip`, `7z`, `rar`, `tar`, `gz`, `bz2`, `xz`, `iso`（圧縮された動画、音声、画像、文章を再生可能）
+    - 圧縮：`zip`, `7z`, `rar`, `epub`, `tar`, `gz`, `bz2`, `xz`, `iso`（圧縮された動画、音声、画像、文章を再生可能）
   - HTML5 ネイティブ再生に対応する形式（対応フォーマット）はダイレクト再生、それ以外は **FFmpeg** で自動変換し再生  
   - 変換は動画を `mp4`、音声を `mp3` に変換（動画は音声トラック選択とテキスト字幕の `vtt` 抽出に対応）
 
