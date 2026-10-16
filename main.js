@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.55.0'
+// version   = 'Ver6.56.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -37,7 +37,7 @@ const IMAGE_EXTENSIONS = [
 ];
 const TEXT_EXTENSIONS = ['txt'];
 const VIDEO_PLAYLIST = ['amppl'];
-const ARCHIVE_EXTENSIONS = ['zip', '7z', 'rar', 'tar', 'gz', 'bz2', 'xz', 'iso'];
+const ARCHIVE_EXTENSIONS = ['zip', '7z', 'rar', 'tar', 'gz', 'bz2', 'xz', 'iso', 'epub'];
 const ARCHIVE_REGEX = new RegExp(`\\.(${ARCHIVE_EXTENSIONS.join('|')})$`, 'i');
 const SUPPORTED_PLAYLIST_ITEM_EXTENSIONS = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS, ...TEXT_EXTENSIONS];
 const SUPPORTED_PLAYLIST_ITEM_REGEX = new RegExp(`\\.(${SUPPORTED_PLAYLIST_ITEM_EXTENSIONS.join('|')})$`, 'i');
