@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.26.0'
+// version   = 'Ver6.57.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -13,47 +13,7 @@ const path = require('path');
 const AudioMotionModule = require('audiomotion-analyzer');
 const AudioMotionAnalyzer = AudioMotionModule.default || AudioMotionModule;
 
-// 🔲初期処理🔲
-// 🔧 起動時対応: キャッシュディレクトリを事前に作成し、
-// 一部ライブラリが出す "Unable to create cache" ワーニングを抑制します。
-// - ユーザーのホームに .cache と AppData\Local\xPlayerCache を作ります（存在しなくても安全）。
-// - console.warn をラップして該当メッセージを無視します（副作用を最小化するため限定的に）。
-(async () => {
-    try {
-        const home = os.homedir();
-        const possibleCacheDirs = [
-            path.join(home, '.cache'),
-            path.join(home, 'AppData', 'Local', 'xPlayerCache')
-        ];
-        for (const d of possibleCacheDirs) {
-            try {
-                await fs.mkdir(d, { recursive: true });
-            } catch (err) {
-                // 作成失敗は重大ではないので無視（権限などの問題があれば警告は抑制）
-            }
-        }
-    } catch (e) {
-        // ここでのエラーは無視
-    }
-
-    // 特定ワーニングの抑制（内容が変わらない限りのみ抑制）
-    try {
-        const origWarn = console.warn.bind(console);
-        console.warn = (...args) => {
-            try {
-                if (args && args.length > 0 && typeof args[0] === 'string' && args[0].includes('Unable to create cache')) {
-                    return; // 抑制
-                }
-            } catch (e) {
-                // エラーが起きたら通常の warn を呼ぶ
-            }
-            origWarn(...args);
-        };
-    } catch (e) {
-        // 抑制処理に失敗してもアプリは継続
-    }
-})();
-
+// 🔲AudioMotionAPI🔲
 let audioMotionInstance = null; // 実体を preload 内部で管理
 contextBridge.exposeInMainWorld('AudioMotionAPI', {
     // 初期化またはオプションの更新を一括で行う関数
@@ -90,7 +50,7 @@ contextBridge.exposeInMainWorld('AudioMotionAPI', {
     }
 });
 
-// 🔲基本API🔲
+// 🔲electronAPI🔲
 contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer: {
         invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
