@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.56.0'
+// version   = 'Ver6.57.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -59,7 +59,6 @@ let currentTmpDir = null;			// 現在の処理で使用している一時ディ�
 let currentJoinTempFiles = [];		// 結合処理時に使用する一時変換ファイルリスト（結合前の一時ファイル群）
 let currentJoinConcatTxt = null;	// FFmpeg の concat フィルター用テキストファイル（リスト）のパス
 let isJoinCancelled = false;		// 結合処理のキャンセル状態フラグ（true の場合は処理を中断）
-let thumbnailCacheDir = null;		// サムネイル画像をキャッシュ保存するディレクトリのパス
 let isSecondaryInstance = false;	// 二重起動（多重起動）判定フラグ（true の場合はセカニアリインスタンスとして動作）
 let spawnedEnginePid = null;        // AivisSpeech Engine を spawn で起動した場合の PID（プロセスID）を保持
 let sevenZipPath = null;            // 7-Zip のパス（標準インストール先 or ユーザー指定のパス）を保持
@@ -67,8 +66,6 @@ let sevenZipPath = null;            // 7-Zip のパス（標準インストー�
 // 🔲初期処理🔲
 // 開発中セキュリティオプション設定
 setupDevSecurityOptions();
-// キャッシュ対策（起動前に設定）
-setupCacheSettings();
 // FFmpeg パス設定（asarUnpack 対応）
 setupFfmpegPathSetting();
 // trash の取得（ESM対応）
@@ -170,62 +167,6 @@ function setupDevSecurityOptions() {
     if (process.env.NODE_ENV === 'development') {
         app.commandLine.appendSwitch('disable-web-security');
         // または BrowserWindow で webSecurity: false を使用
-    }
-}
-
-// キャッシュ対策（起動前に設定）
-// - 書き込み可能なキャッシュディレクトリを事前に作成
-// - Chromium の GPU shader disk cache を無効化して関連ワーニングを抑制
-// - 24時間を経過した古いキャッシュサブディレクトリを自動削除
-function setupCacheSettings() {
-    try {
-        const cacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'Cache');
-        thumbnailCacheDir = path.join((app && app.getPath) ? app.getPath('userData') : os.homedir(), 'xPlayerCache', 'thumbnails');
-
-        // 古いディレクトリを削除するヘルパー関数
-        const removeOldDirectories = async (targetDir) => {
-            try {
-                const entries = await fs.readdir(targetDir, { withFileTypes: true });
-                const now = Date.now();
-                const twentyFourHoursMs = 24 * 60 * 60 * 1000; // 24時間（ミリ秒）
-
-                for (const entry of entries) {
-                    if (entry.isDirectory()) {
-                        const subDirPath = path.join(targetDir, entry.name);
-                        const stats = await fs.stat(subDirPath);
-                        
-                        // 作成日時を取得（取得できない環境を考慮して更新日時mtimeをフォールバックに利用）
-                        const createdTime = (stats.birthtimeMs && stats.birthtimeMs > 0) 
-                            ? stats.birthtimeMs 
-                            : stats.mtimeMs;
-
-                        // 現在日時から24時間を超えている場合は削除
-                        if (now - createdTime > twentyFourHoursMs) {
-                            await fs.rm(subDirPath, { recursive: true, force: true });
-                        }
-                    }
-                }
-            } catch (err) {
-                // ディレクトリが存在しない場合や読み取りエラーは非致命的なので無視
-            }
-        };
-
-        // 非同期でディレクトリ作成と古いキャッシュのクリーンアップを実行
-        fs.mkdir(cacheDir, { recursive: true })
-            .then(() => removeOldDirectories(cacheDir))
-            .catch(() => {});
-            
-        fs.mkdir(thumbnailCacheDir, { recursive: true })
-            .then(() => removeOldDirectories(thumbnailCacheDir))
-            .catch(() => {});
-
-        // Chromium のディスクキャッシュ先をアプリ管理下のディレクトリに変更
-        if (app && app.commandLine && typeof app.commandLine.appendSwitch === 'function') {
-            app.commandLine.appendSwitch('disk-cache-dir', cacheDir);
-            app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
-        }
-    } catch (e) {
-        console.warn('Cache setup failed (non-fatal):', e);
     }
 }
 
@@ -807,7 +748,7 @@ function registerIpcMainGenerateVideoThumbnail() {
     ipcMain.handle('generate-video-thumbnail', async (event, { filePath, size = 180 }) => {
         if (!filePath) return null;
 
-        const tempDir = thumbnailCacheDir || path.join(app.getPath('userData'), 'xPlayerCache', 'thumbnails');
+        const tempDir = path.join(app.getPath('temp'), 'xPlayer-thumbnails');
         await fs.mkdir(tempDir, { recursive: true });
         
         const crypto = require('crypto');
