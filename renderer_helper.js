@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.54.0'
+// version   = 'Ver6.58.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -6080,14 +6080,13 @@ function getMediaPanBounds() {
 
     const fit = element.style.objectFit || fitMode;
     const containScale = Math.min(boxWidth / sourceWidth, boxHeight / sourceHeight);
-    const coverScale = Math.max(boxWidth / sourceWidth, boxHeight / sourceHeight);
     const zoomScale = (100 + zoomValue) / 100;
-    const contentWidth = (fit === 'fill'
-        ? boxWidth
-        : sourceWidth * (fit === 'cover' ? coverScale : containScale)) * zoomScale;
-    const contentHeight = (fit === 'fill'
-        ? boxHeight
-        : sourceHeight * (fit === 'cover' ? coverScale : containScale)) * zoomScale;
+    const contentWidth = fit === 'cover'
+        ? boxWidth * zoomScale
+        : (fit === 'fill' ? boxWidth : sourceWidth * containScale) * zoomScale;
+    const contentHeight = fit === 'cover'
+        ? boxHeight * zoomScale
+        : (fit === 'fill' ? boxHeight : sourceHeight * containScale) * zoomScale;
     const getAxisBounds = (boxStart, boxLength, contentLength, viewLength) => {
         const contentStart = boxStart + boxLength / 2 + ((boxLength - contentLength / zoomScale) / 2 - boxLength / 2) * zoomScale;
         if (contentLength <= viewLength + 1) return [0, 0];
@@ -6116,13 +6115,12 @@ function getBookReaderPages() {
 
     const fit = imagePlayer.style.objectFit || fitMode;
     const containScale = Math.min(boxWidth / imagePlayer.naturalWidth, boxHeight / imagePlayer.naturalHeight);
-    const coverScale = Math.max(boxWidth / imagePlayer.naturalWidth, boxHeight / imagePlayer.naturalHeight);
     const renderedWidth = fit === 'fill'
         ? boxWidth
-        : imagePlayer.naturalWidth * (fit === 'cover' ? coverScale : containScale);
+        : fit === 'cover' ? boxWidth : imagePlayer.naturalWidth * containScale;
     const renderedHeight = fit === 'fill'
         ? boxHeight
-        : imagePlayer.naturalHeight * (fit === 'cover' ? coverScale : containScale);
+        : fit === 'cover' ? boxHeight : imagePlayer.naturalHeight * containScale;
     const zoomScale = (100 + zoomValue) / 100;
     const boxLeft = imagePlayer.offsetLeft;
     const boxTop = imagePlayer.offsetTop;
