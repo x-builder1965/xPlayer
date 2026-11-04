@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.52.0'
+// version   = 'Ver6.59.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -483,7 +483,6 @@ let playlistFilterInput = null;                 // プレイリスト検索欄
 let filterClearBtn = null;                      // 検索条件クリアボタン
 let filterList = null;                          // プレイリスト一覧
 let playlistProgressBar = null;                 // プレイリスト作成進捗バー
-let isPlaylistCreationInProgress = false;       // プレイリスト作成中フラグ
 let darkOverlay = null;                         // シーク・編集時の暗幕
 let voiceSelectBtn = null;                      // 音声トラック選択ボタン
 let subtitleSelectBtn = null;                   // 字幕トラック選択ボタン
@@ -680,4 +679,4 @@ let loadingRequestCount = 0;                    // ローディング表示要�
 let isTransitioning = false;                    // 排他制御用のガードフラグ（ファイルスコープ等で保持）
 let activeSpeakerPreview = null;                // 現在プレビュー中の話者情報
 let speakerPreviewRequest = 0;                  // プレビュー要求の世代番号
-
+let isPlaylistCreationInProgress = false;       // プレイリスト作成中フラグ

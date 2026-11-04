@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.58.0'
+// version   = 'Ver6.59.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 const debouncedUpdateFilterList = debounce(updateFilterList, 0);                    // 実際にイベントリスナー（inputなど）に登録する際は、この debouncedUpdateFilterList を呼び出してください。
@@ -3436,131 +3436,186 @@ async function playlistAdd(videoFiles) {
         return;
     }
 
-    // 既存のプレイリスト内のパス一覧
-    const existingPaths = new Set(playlist.map(item => item?.file?.path));
+    // 【対応①】多重実行（レースコンディション）のガード
+    // 別の追加処理やプレイリスト生成が走っている最中の場合は、二重追加やデータ競合を防ぐため弾く
+    if (isPlaylistCreationInProgress) {
+        console.warn('Playlist modification is already in progress. Skipping overlapping add request.');
+        return;
+    }
 
-    // 多重を除外した新しいファイルのみを抽出（追加リスト内での多重も排除）
-    const uniqueVideoFiles = [];
-    for (const file of videoFiles) {
-        const filePath = file?.path || file?.file?.path;
-        if (filePath && !existingPaths.has(filePath)) {
-            existingPaths.add(filePath);
-            uniqueVideoFiles.push(file);
+    isPlaylistCreationInProgress = true;
+
+    try {
+        // 既存のプレイリスト内のパス一覧
+        const existingPaths = new Set(playlist.map(item => item?.file?.path));
+
+        // 多重を除外した新しいファイルのみを抽出（追加リスト内での多重も排除）
+        const uniqueVideoFiles = [];
+        for (const file of videoFiles) {
+            const filePath = file?.path || file?.file?.path;
+            if (filePath && !existingPaths.has(filePath)) {
+                existingPaths.add(filePath);
+                uniqueVideoFiles.push(file);
+            }
         }
-    }
 
-    // すべて多重していて追加対象がない場合は中断
-    if (uniqueVideoFiles.length === 0) {
+        // すべて多重していて追加対象がない場合は中断
+        if (uniqueVideoFiles.length === 0) {
+            hideMessageOverlay();
+            return;
+        }
+
+        // 【対応②】Promise.all による一斉並列化の負荷を抑えるため、
+        // 順次処理（for...of）にするか、あるいは安全な並列数で処理する
+        const mappedNewFiles = [];
+        for (const file of uniqueVideoFiles) {
+            const item = await createPlaylistItem(file);
+            if (item) mappedNewFiles.push(item);
+        }
+
+        if (mappedNewFiles.length === 0) {
+            hideMessageOverlay();
+            return;
+        }
+
+        // 既存の playlist の末尾に追加
+        playlist.push(...mappedNewFiles);
+        const isFirstTime = playlist.length === mappedNewFiles.length;
+
+        // 実際に playlist に追加された要素からパスを取得して originalLoadOrder に追加
+        const addedPaths = mappedNewFiles.map(item => item.file.path);
+        if (!Array.isArray(originalLoadOrder)) originalLoadOrder = [];
+        originalLoadOrder.push(...addedPaths);
+        synchronizeOriginalLoadOrder();
+
+        // もし元々リストが空だった場合は先頭の曲を再生
+        if (isFirstTime) {
+            currentVideoIndex = 0;
+            selectedPlaylistIndex = 0;
+            // 【対応③】非同期のメディア読み込みを確実に await する
+            await playVideo(playlist[currentVideoIndex].file, 0);
+        }
+
+        // 【対応④】現在のソートモード（currentSortMode）が適用されている場合、
+        // 単純に末尾に追加しただけだとソート順が崩れるため、必要に応じて再ソートをかける
+        if (typeof currentSortMode !== 'undefined' && currentSortMode && currentSortMode !== 'default') {
+            await applySort(currentSortMode);
+        }
+
+        savePlaylistAndPlaybackState();
+        saveShuffleState();
+        updateIconOverlay();
+
+    } catch (error) {
+        console.error('Failed to add files to playlist:', error);
+    } finally {
+        // 【対応①の必須処理】成功・失敗に関わらず必ずロックを解除
+        isPlaylistCreationInProgress = false;
         hideMessageOverlay();
-        return;
     }
-
-    // 実際に生成に成功した要素のみを取得
-    const mappedNewFiles = (await Promise.all(uniqueVideoFiles.map(file => createPlaylistItem(file))))
-        .filter(Boolean);
-
-    if (mappedNewFiles.length === 0) {
-        hideMessageOverlay();
-        return;
-    }
-
-    // 既存の playlist の末尾に追加
-    playlist.push(...mappedNewFiles);
-    const isFirstTime = playlist.length === mappedNewFiles.length;
-
-    // 実際に playlist に追加された要素からパスを取得して originalLoadOrder に追加
-    const addedPaths = mappedNewFiles.map(item => item.file.path);
-    if (!Array.isArray(originalLoadOrder)) originalLoadOrder = [];
-    originalLoadOrder.push(...addedPaths);
-    synchronizeOriginalLoadOrder();
-
-    // もし元々リストが空だった場合は先頭の曲を再生
-    if (isFirstTime) {
-        currentVideoIndex = 0;
-        selectedPlaylistIndex = 0;
-        await playVideo(playlist[currentVideoIndex].file, 0);
-    }
-
-    savePlaylistAndPlaybackState();
-    // シャッフル状態の維持/更新が必要な場合はここで調整
-    saveShuffleState();
-    updateIconOverlay();
 }
 
 // プレイリストのファイル設定
 async function playlistSet(videoFiles) {
-    if (!videoFiles || videoFiles.length === 0) {
-        isPlaylistCreationInProgress = false;
-        hidePlaylistProgress();
-        hideMessageOverlay();
+    // 【対応②】多重実行のガード（すでに処理中の場合は重複実行を防ぐ）
+    if (isPlaylistCreationInProgress) {
+        console.warn('Playlist creation is already in progress. Skipping overlapping request.');
         return;
     }
-    await cleanupTempFiles();
 
-    // 実際に生成に成功した要素のみを取得
-    const uniqueVideoFiles = [];
-    const inputPaths = new Set();
-    for (const file of videoFiles) {
-        const filePath = file?.path || file?.file?.path;
-        if (filePath && !inputPaths.has(filePath)) {
-            inputPaths.add(filePath);
-            uniqueVideoFiles.push(file);
+    isPlaylistCreationInProgress = true;
+    showPlaylistProgress(); // 必要に応じてプログレス表示を開始
+
+    try {
+        if (!videoFiles || videoFiles.length === 0) {
+            hidePlaylistProgress();
+            hideMessageOverlay();
+            return;
         }
-    }
+        await cleanupTempFiles();
 
-    const newPlaylist = (await Promise.all(uniqueVideoFiles.map(file => createPlaylistItem(file))))
-        .filter(Boolean);
+        // 実際に生成に成功した要素のみを取得
+        const uniqueVideoFiles = [];
+        const inputPaths = new Set();
+        for (const file of videoFiles) {
+            const filePath = file?.path || file?.file?.path;
+            if (filePath && !inputPaths.has(filePath)) {
+                inputPaths.add(filePath);
+                uniqueVideoFiles.push(file);
+            }
+        }
 
-    if (newPlaylist.length === 0) {
-        isPlaylistCreationInProgress = false;
-        hidePlaylistProgress();
-        hideMessageOverlay();
-        return;
-    }
+        // 【対応①】大量ファイル時の高負荷を防ぐため、並列数制御やチャンク処理にするか、
+        // あるいは順次処理（for...of）にすることでディスクやCPUへの過負荷を防ぐ
+        const newPlaylist = [];
+        for (const file of uniqueVideoFiles) {
+            const item = await createPlaylistItem(file);
+            if (item) newPlaylist.push(item);
+        }
 
-    // playlist を初期設定
-    playlist = newPlaylist;
+        if (newPlaylist.length === 0) {
+            hidePlaylistProgress();
+            hideMessageOverlay();
+            return;
+        }
 
-    // 生成成功した playlist の要素から元の読み込み順（Base順）を作成・保存
-    originalLoadOrder = [];
-    synchronizeOriginalLoadOrder();
+        // playlist を初期設定
+        playlist = newPlaylist;
 
-    // 現状の並び替えモード（currentSortMode）を適用
-    await applySort(currentSortMode);
+        // 生成成功した playlist の要素から元の読み込み順（Base順）を作成・保存
+        originalLoadOrder = [];
+        synchronizeOriginalLoadOrder();
 
-    currentVideoIndex = 0;
-    selectedPlaylistIndex = 0;
-    await playVideo(playlist[currentVideoIndex].file, 0);
-    if (currentMediaType === 'image') {
-        if (isBookReaderMode()) {
-            await togglePlayPause();
-            // ブックリーダーのプリセット
-            zoomResetBtn.click();
-            zoomEndBtn.click();
-            zoomBtn.click();
-            setPlayerMuted(true);
+        // 現状の並び替えモード（currentSortMode）を適用
+        await applySort(currentSortMode);
+
+        currentVideoIndex = 0;
+        selectedPlaylistIndex = 0;
+
+        // 【対応③】非同期の動画・メディア読み込みが完全に終わるのを await する
+        await playVideo(playlist[currentVideoIndex].file, 0);
+
+        // メディアの読み込み（または初期化）が完了した安全なタイミングでUI操作を実行
+        if (currentMediaType === 'image') {
+            if (isBookReaderMode()) {
+                await togglePlayPause();
+                // ブックリーダーのプリセット
+                zoomResetBtn.click();
+                zoomEndBtn.click();
+                zoomBtn.click();
+                setPlayerMuted(true);
+            } else {
+                // ブックリーダー以外のプリセット
+                zoomResetBtn.click();
+                zoomEndBtn.click();
+                setPlayerMuted(false);
+            }
+            toggleSettingsPanel(true);
         } else {
+            if (imageTimer) clearTimeout(imageTimer);
+            imageTimer = null;
             // ブックリーダー以外のプリセット
             zoomResetBtn.click();
             zoomEndBtn.click();
             setPlayerMuted(false);
+            toggleSettingsPanel(false);
         }
-        toggleSettingsPanel(true);
-    } else {
-        if (imageTimer) clearTimeout(imageTimer);
-        imageTimer = null;
-        // ブックリーダー以外のプリセット
-        zoomResetBtn.click();
-        zoomEndBtn.click();
-        setPlayerMuted(false);
-        toggleSettingsPanel(false);
-    }
 
-    savePlaylistAndPlaybackState();
-    resetShuffle();
-    saveShuffleState();
-    updateIconOverlay();
-    setPlaylistProgress(100);
+        savePlaylistAndPlaybackState();
+        resetShuffle();
+        saveShuffleState();
+        updateIconOverlay();
+        setPlaylistProgress(100);
+
+    } catch (error) {
+        console.error('Failed to set playlist:', error);
+        // エラー時のフォールバック処理
+    } finally {
+        // 【対応②】処理が成功・失敗どちらであっても必ずフラグを元に戻す
+        isPlaylistCreationInProgress = false;
+        hidePlaylistProgress();
+        hideMessageOverlay();
+    }
 }
 
 // 上へ移動
@@ -3851,7 +3906,7 @@ async function addFilesToPlaylist(getPathsFn, getFilesFn) {
 
 // プレイリスト作成中の進捗バー表示
 function showPlaylistProgress(resetProgress = true) {
-    isPlaylistCreationInProgress = true;
+    // isPlaylistCreationInProgress = true;
     if (playlistProgressBar) {
         if (resetProgress) {
             playlistProgressBar.style.width = '0%';
@@ -5810,10 +5865,17 @@ function updateAudioMotion() {
     }
 
     // 選択されたノードを取得（存在しないキーの場合は default を参照）
-    const presetNode = AUDIOMOTION_NODES[targetMode] || AUDIOMOTION_NODES['none'];
+    const presetNode = AUDIOMOTION_NODES[targetMode] || AUDIOMOTION_NODES['none'] || { options: {} };
 
     // デフォルトオプションに選択プリセットの固有設定をマージ
-    const newOptions = Object.assign({}, DEFAULT_AUDIO_MOTION_OPTIONS, presetNode.options);
+    const presetOptions = presetNode.options;
+    const newOptions = Object.assign(
+        {},
+        DEFAULT_AUDIO_MOTION_OPTIONS,
+        presetOptions && typeof presetOptions === 'object' && !Array.isArray(presetOptions)
+            ? presetOptions
+            : {}
+    );
 
     try {
         // preload 側の実体に対して処理を委託する

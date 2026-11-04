@@ -894,6 +894,12 @@ function setupAudioMotionSettings() {
             const parsed = typeof savedAudioMotionNodes === 'string'
                 ? JSON.parse(savedAudioMotionNodes)
                 : savedAudioMotionNodes;
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) ||
+                !Object.prototype.hasOwnProperty.call(parsed, 'none') ||
+                !parsed.none || typeof parsed.none !== 'object' || Array.isArray(parsed.none) ||
+                Object.values(parsed).some(node => !node || typeof node !== 'object' || Array.isArray(node))) {
+                throw new TypeError('audioMotionNodes の形式が不正です');
+            }
             Object.keys(AUDIOMOTION_NODES).forEach(key => delete AUDIOMOTION_NODES[key]);
             Object.assign(AUDIOMOTION_NODES, parsed);
         } catch (e) {
