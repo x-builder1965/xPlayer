@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.52.0'
+// version   = 'Ver6.60.0'
 // ---------------------------------------------------------------------
 // 🔲初期処理🔲
 // DOMContentロード完了（初期処理）
@@ -1339,6 +1339,20 @@ async function initializeSpeechEngine() {
     engineAddressInput.value = engineAddress;
 
     try {
+        if (isSecondary) {
+            // ローディングCDNの読み込みが完了するまで待機（最大1000ms）
+            await new Promise((resolve) => {
+                if (document.readyState === 'complete') {
+                    resolve();
+                } else {
+                    const timer = setTimeout(resolve, 1000);
+                    window.addEventListener('load', () => {
+                        clearTimeout(timer);
+                        resolve();
+                    }, { once: true });
+                }
+            });
+        }
         const result = await withLoading(() => initEngine(engineAddress));
         if (result.success) {
             isEngineReady = true;
