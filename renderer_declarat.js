@@ -680,3 +680,4 @@ let isTransitioning = false;                    // 排他制御用のガード�
 let activeSpeakerPreview = null;                // 現在プレビュー中の話者情報
 let speakerPreviewRequest = 0;                  // プレビュー要求の世代番号
 let isPlaylistCreationInProgress = false;       // プレイリスト作成中フラグ
+let loadingIconFontPromise = null;              // オーバーレイ表示・非表示切り替えヘルパー
