@@ -8,11 +8,12 @@
 // DOMContentロード完了（初期処理）
 document.addEventListener('DOMContentLoaded', async () => {
     Initializing = true;
-    registerDocumentKeydownEvents();
 
     // 🔲起動設定🔲
     // 多重起動（セカンダリインスタンス）判定
     isSecondary = await checkIsSecondaryInstance();
+    // FontAwesome のロード準備
+    await setupFontAwesomeLoad();
     // ヘルプコンテナ、修正履歴コンテナ取得（appConfigを取得）
     await setupHelpChangelogLoad();
     // DOM要素を取得
@@ -346,7 +347,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 	registerDocumentMouseupEvents();
 	// 【documentイベント】フルスクリーン変更
 	registerDocumentFullscreenchangeEvents();
-	
+    // 【documentイベント】ショートカットキー（イベントリスナー）
+    registerDocumentKeydownEvents();
+
 	// 🔲windowイベントリスナー登録🔲
 	// 【windowイベント】ウィンドウリサイズ
 	registerWindowResizeEvents();
@@ -545,6 +548,12 @@ async function setupLocalStorageProtection() {
             console.log(`[多重起動ガード] removeItem スキップ: ${key}`);
         };
     }
+}
+
+// FontAwesome のロード準備
+async function setupFontAwesomeLoad() {
+    loadingOverlay = document.getElementById('loading-overlay');
+    await prepareLoadingIconFont();
 }
 
 // localStorage から復元 (非同期化)
