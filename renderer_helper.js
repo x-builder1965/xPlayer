@@ -6670,10 +6670,80 @@ function SecureRandomInt(max) {
 }
 
 // オーバーレイ表示・非表示切り替えヘルパー
+let loadingIconFontPromise = null;
+
+function prepareLoadingIconFont() {
+    if (!loadingIconFontPromise) {
+        loadingIconFontPromise = (async () => {
+            const stylesheetLink = document.getElementById('font-awesome-css');
+            if (!stylesheetLink) {
+                throw new Error('Font Awesome stylesheet link was not found');
+            }
+
+            const icon = loadingOverlay.querySelector('.loading-icon');
+            if (!icon) {
+                throw new Error('Font Awesome loading icon was not found');
+            }
+
+            const hasFontAwesomeStyles = () => getComputedStyle(icon).fontFamily
+                .split(',')
+                .some((family) => family.trim().replace(/^['"]|['"]$/g, '') === 'FontAwesome');
+
+            await new Promise((resolve, reject) => {
+                let timeoutId;
+                let settled = false;
+                const cleanup = () => {
+                    clearTimeout(timeoutId);
+                    stylesheetLink.removeEventListener('load', onLoad);
+                    stylesheetLink.removeEventListener('error', onError);
+                };
+                const finish = (error = null) => {
+                    if (settled) return;
+                    settled = true;
+                    cleanup();
+                    if (error) reject(error);
+                    else resolve();
+                };
+                const onLoad = () => {
+                    if (hasFontAwesomeStyles()) {
+                        finish();
+                    } else {
+                        finish(new Error('Font Awesome stylesheet loaded without the icon styles'));
+                    }
+                };
+                const onError = () => finish(new Error('Font Awesome stylesheet failed to load'));
+
+                stylesheetLink.addEventListener('load', onLoad);
+                stylesheetLink.addEventListener('error', onError);
+                timeoutId = setTimeout(
+                    () => finish(new Error('Timed out waiting for Font Awesome stylesheet')),
+                    5000
+                );
+
+                if (hasFontAwesomeStyles()) finish();
+            });
+
+            if (!document.fonts) throw new Error('Font Loading API is not available');
+            const loadedFonts = await document.fonts.load('68px FontAwesome', '\uf021');
+            if (!loadedFonts.some((fontFace) => fontFace.status === 'loaded')
+                || !document.fonts.check('68px FontAwesome', '\uf021')) {
+                throw new Error('Font Awesome icon font did not load');
+            }
+
+            loadingOverlay.classList.add('font-awesome-ready');
+        })().catch((error) => {
+            console.error('ローディングアイコン用 Font Awesome の読み込みに失敗しました:', error);
+        });
+    }
+
+    return loadingIconFontPromise;
+}
+
 function showLoading(show) {
     if (!loadingOverlay) return;
     if (show) {
         loadingOverlay.classList.remove('hidden');
+        prepareLoadingIconFont();
     } else {
         loadingOverlay.classList.add('hidden');
     }

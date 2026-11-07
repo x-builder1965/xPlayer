@@ -18,12 +18,13 @@
     <!-- Noto Sans JP の 400(Regular) と 900(Black) を読み込み -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;900&display=swap" rel="stylesheet">
     <!-- Font Awesome の 4.7.0 を読み込み -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link id="font-awesome-css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
 <body>
     <!-- ローディングオーバーレイ -->
-    <div id="loading-overlay" class="loading-overlay hidden">
-        <i class="fa fa-refresh fa-spin fa-5x fa-fw" style="color: rgb(134, 201, 228)"></i>
+    <div id="loading-overlay" class="loading-overlay hidden" role="status" aria-label="読み込み中">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <i class="fa fa-refresh fa-spin fa-5x fa-fw loading-icon" aria-hidden="true"></i>
     </div>
     <!-- メインコンテナ -->
     <div class="main-container">

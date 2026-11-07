@@ -1339,20 +1339,6 @@ async function initializeSpeechEngine() {
     engineAddressInput.value = engineAddress;
 
     try {
-        if (isSecondary) {
-            // ローディングCDNの読み込みが完了するまで待機（最大3000ms）
-            await new Promise((resolve) => {
-                // if (document.readyState === 'complete') {
-                //     resolve();
-                // } else {
-                    const timer = setTimeout(resolve, 3000);
-                    window.addEventListener('load', () => {
-                        clearTimeout(timer);
-                        resolve();
-                    }, { once: true });
-                // }
-            });
-        }
         const result = await withLoading(() => initEngine(engineAddress));
         if (result.success) {
             isEngineReady = true;
