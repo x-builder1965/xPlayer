@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.57.0'
+// version   = 'Ver6.61.0'
 // ---------------------------------------------------------------------
 // 🔲共通変数設定🔲
 // モジュールインポート
@@ -1966,7 +1966,10 @@ async function extractArchive(archivePath) {
                     `-o${extractionPath}`,
                     '-y',
                     '-bd'
-                ], { windowsHide: true });
+                ], {
+                    windowsHide: true,
+                    stdio: ['ignore', 'ignore', 'pipe']
+                });
                 let stderr = '';
                 process.stderr.setEncoding('utf8');
                 process.stderr.on('data', chunk => {

@@ -2,7 +2,7 @@
 // copyright = 'Copyright © 2025- @x-builder, Japan'
 // email     = 'x-builder@gmail.com'
 // appName   = 'xPlayer -メディアプレイヤー-'
-// version   = 'Ver6.52.0'
+// version   = 'Ver6.61.0'
 // ---------------------------------------------------------------------
 // 🔲個別イベントリスナー登録関数🔲
 // 【個別イベント】🌐ネットURL選択
@@ -1988,43 +1988,68 @@ function registerDropzoneDropEvent() {
         if (files.length === 0) return;
 
         const fullPaths = [];
-        for (const file of files) {
+        let isPlaylistLoadingOverlayShown = false;
+        let hasDropError = false;
+        const releaseDroppedFiles = () => {
+            if (files === null) return;
             try {
-                // getFilePath が非同期の場合は await しますが、
-                // 可能な限り速やかにパスだけを取り出します
-                const fullPath = await getFilePath(file);
-                if (fullPath) fullPaths.push(fullPath);
+                if (e.dataTransfer && typeof e.dataTransfer.clearData === 'function') {
+                    e.dataTransfer.clearData();
+                }
             } catch (err) {
-                console.error('getFilePath失敗:', err);
+                console.error('ドロップしたファイル情報の解放に失敗しました:', err);
+            }
+
+            files.length = 0;
+            files = null;
+        };
+
+        try {
+            for (const file of files) {
+                try {
+                    // getFilePath が非同期の場合は await しますが、
+                    // 可能な限り速やかにパスだけを取り出します
+                    const fullPath = await getFilePath(file);
+                    if (fullPath) fullPaths.push(fullPath);
+                } catch (err) {
+                    console.error('getFilePath失敗:', err);
+                }
+            }
+
+            // --- 【重要】ファイルハンドルの後処理 ---
+            // Chromium 側に保持されている DataTransfer 情報を削除してファイルを解放
+            releaseDroppedFiles();
+            // ----------------------------------------
+
+            // 以降の重い処理や非同期通信（IPC）へ移行
+            const settingsPath = fullPaths.find(filePath => SETTINGS_FILE_REGEX.test(filePath));
+            if (settingsPath) {
+                await dropImportSettingsFromFile(settingsPath);
+            } else {
+                // Ctrlキー（MacのCmdキー含む）が押されているか判定
+                const isAppend = e.ctrlKey || e.metaKey;
+                const actionText = isAppend ? '追加' : '作成';
+                updateMessageOverlay(`📚 プレイリスト${actionText}中...`, 0, false);
+                isPlaylistLoadingOverlayShown = true;
+
+                if (fullPaths.length > 0) {
+                    // isAppend フラグを渡す
+                    await addFilesFromPaths(fullPaths, isAppend);
+                }
+            }
+        } catch (err) {
+            console.error('ドラッグ＆ドロップ処理エラー:', err);
+            hasDropError = true;
+        } finally {
+            releaseDroppedFiles();
+            if (isPlaylistLoadingOverlayShown) {
+                hideMessageOverlay(true);
             }
         }
 
-        // --- 【重要】ファイルハンドルの後処理 ---
-        // Chromium 側に保持されている DataTransfer 情報を削除してファイルを解放
-        if (e.dataTransfer && typeof e.dataTransfer.clearData === 'function') {
-            e.dataTransfer.clearData();
+        if (hasDropError) {
+            updateMessageOverlay('📚 ファイルのドロップ処理に失敗しました', 6000);
         }
-        // File オブジェクト配列の参照を破棄
-        files.length = 0;
-        files = null;
-        // ----------------------------------------
-
-        // 以降の重い処理や非同期通信（IPC）へ移行
-        const settingsPath = fullPaths.find(filePath => SETTINGS_FILE_REGEX.test(filePath));
-        if (settingsPath) {
-            dropImportSettingsFromFile(settingsPath);
-        } else {
-            // Ctrlキー（MacのCmdキー含む）が押されているか判定
-            const isAppend = e.ctrlKey || e.metaKey;
-            const actionText = isAppend ? '追加' : '作成';
-            updateMessageOverlay(`📚 プレイリスト${actionText}中...`, 0, false);
-            
-            if (fullPaths.length > 0) {
-                // isAppend フラグを渡す
-                await addFilesFromPaths(fullPaths, isAppend);
-            }
-        }
-        hideMessageOverlay(true);
     });
 }
 
